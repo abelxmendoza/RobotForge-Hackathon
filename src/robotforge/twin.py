@@ -65,7 +65,7 @@ def generate_sdf(spec: RobotSpec) -> str:
             f'<cylinder><radius>{r}</radius><length>{spec.wheel.width_m}</length>'
             f'</cylinder></geometry></visual>',
             '  </link>',
-            f'  <joint name="wheel_{label}_joint" type="revolve">',
+            f'  <joint name="wheel_{label}_joint" type="revolute">',
             f'    <parent>base_link</parent><child>wheel_{label}</child>',
             '    <axis><xyz>0 1 0</xyz>'
             '<dynamics><damping>0.1</damping></dynamics></axis>',
@@ -127,17 +127,32 @@ def _yaw_from_quat(x: float, y: float, z: float, w: float) -> float:
 
 
 _ODOM_POSE = re.compile(
-    r"position\s*\{\s*x:\s*([-\d.e+]+)\s*y:\s*([-\d.e+]+)\s*z:\s*[-\d.e+]+\s*\}\s*"
-    r"orientation\s*\{\s*x:\s*([-\d.e+]+)\s*y:\s*([-\d.e+]+)\s*"
-    r"z:\s*([-\d.e+]+)\s*w:\s*([-\d.e+]+)\s*\}", re.M)
+    r"position\s*\{(?P<pos>[^}]*)\}\s*orientation\s*\{(?P<ori>[^}]*)\}", re.M)
+
+
+def _odom_field(block: str, name: str, default: float = 0.0) -> float:
+    m = re.search(name + r":\s*([-\d.e+]+)", block)
+    return float(m.group(1)) if m else default
 
 
 def parse_last_odom(text: str) -> tuple[float, float, float]:
-    """Return (x, y, heading_deg) from the last odometry pose in gz echo text."""
+    """Return (x, y, heading_deg) from the last odometry pose in gz echo text.
+
+    Protobuf text output omits scalar fields whose value is zero, so any
+    component (position z, quaternion x/y, ...) may be absent; absent means
+    0.0 (and an absent quaternion w means the identity value 1.0 is wrong
+    only when w is exactly 0, which planar motion never produces here).
+    """
     matches = _ODOM_POSE.findall(text)
     if not matches:
         raise TwinError("no odometry poses captured from the twin run")
-    x, y, qx, qy, qz, qw = (float(v) for v in matches[-1])
+    pos, ori = matches[-1]
+    x = _odom_field(pos, "x")
+    y = _odom_field(pos, "y")
+    qx = _odom_field(ori, "x")
+    qy = _odom_field(ori, "y")
+    qz = _odom_field(ori, "z")
+    qw = _odom_field(ori, "w", 1.0)
     return x, y, _yaw_from_quat(qx, qy, qz, qw)
 
 
