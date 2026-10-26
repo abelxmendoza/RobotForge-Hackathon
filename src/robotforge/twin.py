@@ -156,10 +156,41 @@ def parse_last_odom(text: str) -> tuple[float, float, float]:
     return x, y, _yaw_from_quat(qx, qy, qz, qw)
 
 
+def distance_between(start: tuple[float, float, float],
+                      pose: tuple[float, float, float]) -> float:
+    """Planar distance (m) traveled from start pose to pose."""
+    return math.hypot(pose[0] - start[0], pose[1] - start[1])
+
+
+def heading_change_deg(start_heading: float, heading: float) -> float:
+    """Shortest signed heading change from start_heading to heading, in
+    (-180, 180] degrees — safe across the +/-180 wrap."""
+    return (heading - start_heading + 180.0) % 360.0 - 180.0
+
+
+def drive_reached(start: tuple[float, float, float],
+                  pose: tuple[float, float, float], target_m: float) -> bool:
+    return distance_between(start, pose) >= target_m
+
+
+def turn_reached(start_heading: float, heading: float,
+                 target_deg: float) -> bool:
+    return abs(heading_change_deg(start_heading, heading)) >= target_deg
+
+
 def run_motion_check(spec: RobotSpec, workdir: Path, *,
                      drive_m: float = 1.0, speed_mps: float = 0.25,
                      turn_deg: float = 90.0, turn_rate_dps: float = 45.0) -> dict:
     """Run drive + turn in headless Gazebo; return measured results.
+
+    Closed-loop stop: each phase commands a constant velocity and watches
+    the odometry stream, issuing the stop as soon as the measured distance
+    / heading change reaches the commanded target (no fixed-duration timing
+    and no anticipatory offset). The reported measurements are read from
+    odometry after the robot settles, exactly as the earlier open-loop runs
+    measured them — any residual overshoot is the honest result. Each phase
+    has a hard timeout at 3x its nominal duration: on timeout the robot is
+    stopped and TwinError raised instead of returning a number.
 
     Raises TwinError on any step that fails — the caller must surface that,
     never a fabricated measurement.
@@ -181,7 +212,21 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
         echo = subprocess.Popen(["gz", "topic", "-e", "-t", "/odom"],
                                 stdout=odom_log.open("w"),
                                 stderr=subprocess.DEVNULL)
-        time.sleep(1.0)
+
+        def latest_pose() -> tuple[float, float, float] | None:
+            try:
+                return parse_last_odom(odom_log.read_text())
+            except (TwinError, OSError):
+                return None
+
+        def await_pose(timeout_s: float) -> tuple[float, float, float]:
+            deadline = time.monotonic() + timeout_s
+            while time.monotonic() < deadline:
+                pose = latest_pose()
+                if pose is not None:
+                    return pose
+                time.sleep(0.05)
+            raise TwinError("no odometry poses captured from the twin run")
 
         def pub(linear: float, angular: float) -> None:
             subprocess.run(
@@ -190,17 +235,43 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
                 check=True, timeout=10,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+        def run_phase(start, reached, timeout_s: float, phase: str) -> None:
+            """Poll odometry until reached(pose); raise TwinError on timeout.
+
+            The caller issues the stop command after this returns or raises.
+            """
+            deadline = time.monotonic() + timeout_s
+            while time.monotonic() < deadline:
+                pose = latest_pose()
+                if pose is not None and reached(start, pose):
+                    return
+                time.sleep(0.05)
+            raise TwinError(
+                f"{phase} phase: target not reached within {timeout_s:.1f} s")
+
+        start_pose = await_pose(10.0)
+
+        # Drive phase: stop when measured distance reaches the target.
         pub(speed_mps, 0.0)
-        time.sleep(drive_m / speed_mps)
-        pub(0.0, 0.0)
+        try:
+            run_phase(start_pose,
+                      lambda s, p: drive_reached(s, p, drive_m),
+                      3.0 * drive_m / speed_mps, "drive")
+        finally:
+            pub(0.0, 0.0)
         time.sleep(1.0)  # settle; drive measurement taken here
         mid = odom_log.read_text() if odom_log.exists() else ""
-        dx, dy, _ = parse_last_odom(mid)
-        measured_drive = math.hypot(dx, dy)
+        mx, my, mid_heading = parse_last_odom(mid)
+        measured_drive = math.hypot(mx - start_pose[0], my - start_pose[1])
 
+        # Turn phase: stop when measured heading change reaches the target.
         pub(0.0, math.radians(turn_rate_dps))
-        time.sleep(turn_deg / turn_rate_dps)
-        pub(0.0, 0.0)
+        try:
+            run_phase(mid_heading,
+                      lambda s, p: turn_reached(s, p[2], turn_deg),
+                      3.0 * turn_deg / turn_rate_dps, "turn")
+        finally:
+            pub(0.0, 0.0)
         time.sleep(1.0)
         final = odom_log.read_text()
         _, _, heading = parse_last_odom(final)

@@ -125,6 +125,98 @@ def test_live_describe_connector_http_error_raises():
             os.environ["RF_META_API_HELPER"] = old
 
 
+def test_parse_odom_tolerates_omitted_zero_fields():
+    """Protobuf text omits zero-valued fields: at rest / planar motion the
+    echo has no position z and no quaternion x/y. The parser must default
+    absent components to 0.0 instead of failing to match."""
+    import math
+
+    from robotforge.twin import parse_last_odom
+
+    text = (
+        "pose {\n"
+        "  position {\n"
+        "    x: 1.5\n"
+        "    y: -0.25\n"
+        "  }\n"
+        "  orientation {\n"
+        "    z: 0.7071\n"
+        "    w: 0.7071\n"
+        "  }\n"
+        "}\n")
+    x, y, heading = parse_last_odom(text)
+    assert math.isclose(x, 1.5) and math.isclose(y, -0.25)
+    assert math.isclose(heading, 90.0, abs_tol=0.01)
+
+    rest = (
+        "pose {\n"
+        "  position {\n"
+        "    x: 0.5\n"
+        "    y: 0.5\n"
+        "  }\n"
+        "  orientation {\n"
+        "    w: 1\n"
+        "  }\n"
+        "}\n")
+    x, y, heading = parse_last_odom(rest)
+    assert math.isclose(x, 0.5) and math.isclose(y, 0.5)
+    assert math.isclose(heading, 0.0, abs_tol=0.01)
+
+
+def test_parse_odom_full_fields_still_parse():
+    import math
+
+    from robotforge.twin import parse_last_odom
+
+    text = (
+        "pose {\n"
+        "  position {\n"
+        "    x: 0.1\n"
+        "    y: 0.2\n"
+        "    z: 0.0\n"
+        "  }\n"
+        "  orientation {\n"
+        "    x: 0.0\n"
+        "    y: 0.0\n"
+        "    z: 0.0\n"
+        "    w: 1.0\n"
+        "  }\n"
+        "}\n")
+    x, y, heading = parse_last_odom(text)
+    assert math.isclose(x, 0.1) and math.isclose(y, 0.2)
+    assert math.isclose(heading, 0.0, abs_tol=0.01)
+
+
+def test_gate_sdf_uses_revolute_joints():
+    from robotforge.twin import generate_sdf
+
+    spec = RobotSpec.from_json(EXAMPLE.read_text())
+    sdf = generate_sdf(spec)
+    assert 'type="revolute"' in sdf
+    assert 'type="revolve"' not in sdf
+
+
+def test_distance_and_heading_helpers():
+    import math
+
+    from robotforge.twin import (distance_between, drive_reached,
+                                 heading_change_deg, turn_reached)
+
+    assert math.isclose(distance_between((0, 0, 0), (3, 4, 0)), 5.0)
+    assert math.isclose(distance_between((1, 1, 0), (1, 1, 0)), 0.0)
+    # Wraparound-safe heading deltas
+    assert math.isclose(heading_change_deg(170.0, -170.0), 20.0)
+    assert math.isclose(heading_change_deg(-170.0, 170.0), -20.0)
+    assert math.isclose(heading_change_deg(0.0, 90.0), 90.0)
+    assert math.isclose(heading_change_deg(10.0, 10.0), 0.0)
+    # Stop conditions
+    assert not drive_reached((0, 0, 0), (0.99, 0, 0), 1.0)
+    assert drive_reached((0, 0, 0), (1.0, 0, 0), 1.0)
+    assert drive_reached((2, 2, 0), (2, 3.5, 0), 1.0)
+    assert not turn_reached(170.0, -175.0, 90.0)   # only 15 deg so far
+    assert turn_reached(170.0, -100.0, 90.0)       # wrapped through 180
+
+
 _MOCK_LIVE_SPEC = {
     "name": "pathfinder-live",
     "description": "Four-wheel skid-steer rover (mocked live parse).",
