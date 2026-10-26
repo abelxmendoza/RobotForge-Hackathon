@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from robotforge import twin
 from robotforge.gate import (DEFAULT_THRESHOLDS, FAIL, MARGINAL, PASS,
                              evaluate_drive, evaluate_run, evaluate_turn)
 from robotforge.schema import RobotSpec
@@ -49,6 +50,39 @@ def test_sdf_well_formed_with_diffdrive():
     assert sdf.count("<left_joint>") == 2 and sdf.count("<right_joint>") == 2
     world = generate_world(spec, "/tmp/model.sdf")
     ET.fromstring(world)
+
+
+class _DummyBindingsTransport:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+class _DummyCliTransport:
+    def __init__(self, *args, **kwargs):
+        pass
+
+
+def test_transport_selection_prefers_bindings_then_falls_back():
+    orig_import = twin._import_bindings
+    orig_bindings = twin._BindingsTransport
+    orig_cli = twin._CliTransport
+    try:
+        twin._BindingsTransport = _DummyBindingsTransport
+        twin._CliTransport = _DummyCliTransport
+        # Bindings importable -> bindings transport is chosen.
+        twin._import_bindings = lambda: (object, object, object)
+        transport, name = twin.make_transport(Path("/tmp/odom.txt"))
+        assert isinstance(transport, _DummyBindingsTransport)
+        assert name == "gz-transport bindings (gz.transport13)"
+        # Bindings not importable -> streamed-CLI fallback is chosen.
+        twin._import_bindings = lambda: None
+        transport, name = twin.make_transport(Path("/tmp/odom.txt"))
+        assert isinstance(transport, _DummyCliTransport)
+        assert name == "gz CLI (streamed)"
+    finally:
+        twin._import_bindings = orig_import
+        twin._BindingsTransport = orig_bindings
+        twin._CliTransport = orig_cli
 
 
 def test_parse_last_odom():

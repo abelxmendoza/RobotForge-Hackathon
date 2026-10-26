@@ -10,6 +10,12 @@ Runner contract: works on the verified stack (Ubuntu 24.04, Gazebo Harmonic,
 topic, captures the DiffDrive odometry stream, and returns the measured
 distance / heading for the gate. It never fabricates a result: any failure
 to run raises TwinError with the step that failed.
+
+Command publish + odometry read go through a transport (see
+make_transport): the in-process gz-transport Python bindings when they are
+importable — one persistent publisher/subscriber, no per-command process
+spawns — with the streamed `gz topic` CLI pair kept as an automatic
+fallback. The transport used is printed at the start of every run.
 """
 from __future__ import annotations
 
@@ -19,6 +25,8 @@ import re
 import select
 import signal
 import subprocess
+import sys
+import threading
 import time
 from pathlib import Path
 
@@ -284,6 +292,139 @@ class _CmdVelStream:
             self._proc = None
 
 
+# ------------------------------------------------------------- transports
+def _import_bindings():
+    """Import the gz-transport Python bindings (gz.transport13 +
+    gz.msgs10), returning (Node, Twist, Odometry) — or None when they are
+    not importable on this machine.
+
+    The gz.msgs10 modules are generated protobuf code that predates the
+    protobuf runtime newer user site-packages install (protobuf >= 4
+    refuses the old generated descriptors), so the first import can fail
+    even though the bindings are installed. Selecting the pure-Python
+    protobuf implementation before the first msgs import sidesteps that
+    version wall: the wire format is identical, only (de)serialization
+    speed changes, and Twist/Odometry at odometry rates are far too
+    small for that to matter. When protobuf is already loaded with a
+    working implementation, the import simply succeeds as-is.
+    """
+    try:
+        from gz.transport13 import Node
+    except Exception:
+        return None
+    if "google.protobuf" not in sys.modules:
+        os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION",
+                              "python")
+    try:
+        from gz.msgs10.odometry_pb2 import Odometry
+        from gz.msgs10.twist_pb2 import Twist
+    except Exception:
+        return None
+    return Node, Twist, Odometry
+
+
+class _BindingsTransport:
+    """Cmd_vel publish + odometry subscribe in-process via one persistent
+    gz-transport Node.
+
+    The current Twist is re-published at 20 Hz by a daemon thread — the
+    same streaming contract as _CmdVelStream, minus the ~0.85 s process
+    startup per publish and the dropped one-shot publishes — and the
+    /odom subscription callback keeps the latest pose plus its header
+    stamp. Odometry is tee'd to the run log in protobuf text form,
+    mirroring the CLI stream's odom.txt.
+    """
+
+    _RATE_HZ = 20.0
+
+    def __init__(self, log_path: Path, bindings):
+        Node, Twist, Odometry = bindings
+        self._Twist = Twist
+        self._node = Node()
+        self._pub = self._node.advertise("/cmd_vel", Twist)
+        self._lock = threading.Lock()
+        self._linear = 0.0
+        self._angular = 0.0
+        self.latest: tuple[float, float, float] | None = None
+        self.latest_stamp: tuple[int, int] | None = None
+        self._log = log_path.open("ab")
+        self._closed = False
+        self._node.subscribe(Odometry, "/odom", self._on_odom)
+        self._thread = threading.Thread(target=self._publish_loop,
+                                         daemon=True)
+        self._thread.start()
+
+    def _on_odom(self, msg) -> None:
+        p = msg.pose.position
+        q = msg.pose.orientation
+        with self._lock:
+            self.latest = (p.x, p.y, _yaw_from_quat(q.x, q.y, q.z, q.w))
+            self.latest_stamp = (msg.header.stamp.sec,
+                                 msg.header.stamp.nsec)
+        try:
+            self._log.write((str(msg) + "\n").encode())
+            self._log.flush()
+        except Exception:
+            pass  # the log is for inspection; never let it kill odometry
+
+    def _publish_loop(self) -> None:
+        period = 1.0 / self._RATE_HZ
+        while not self._closed:
+            with self._lock:
+                linear, angular = self._linear, self._angular
+            msg = self._Twist()
+            msg.linear.x = linear
+            msg.angular.z = angular
+            self._pub.publish(msg)
+            time.sleep(period)
+
+    def set(self, linear: float, angular: float) -> None:
+        with self._lock:
+            self._linear, self._angular = linear, angular
+
+    def poll(self) -> tuple[float, float, float] | None:
+        with self._lock:
+            return self.latest
+
+    def close(self) -> None:
+        self.set(0.0, 0.0)
+        time.sleep(0.15)  # let a few zero Twists out before teardown
+        self._closed = True
+        self._thread.join(timeout=1.0)
+        self._log.close()
+
+
+class _CliTransport:
+    """Adapter giving the streamed-CLI pair (_OdomStream + _CmdVelStream)
+    the same set/poll/close interface as _BindingsTransport."""
+
+    def __init__(self, log_path: Path):
+        self._odom = _OdomStream(log_path)
+        self._cmd = _CmdVelStream()
+
+    def set(self, linear: float, angular: float) -> None:
+        self._cmd.set(linear, angular)
+
+    def poll(self) -> tuple[float, float, float] | None:
+        return self._odom.poll()
+
+    def close(self) -> None:
+        self._cmd.stop()
+        self._odom.close()
+
+
+def make_transport(log_path: Path):
+    """Return (transport, name): the gz-transport bindings when they are
+    importable, otherwise the streamed-CLI fallback. The name is printed
+    at the start of every run, so a result always states how the twin was
+    actuated and measured."""
+    bindings = _import_bindings()
+    if bindings is not None:
+        return _BindingsTransport(log_path, bindings), \
+            "gz-transport bindings (gz.transport13)"
+    return _CliTransport(log_path), "gz CLI (streamed)"
+
+
 def _pose_stable(a: tuple[float, float, float],
                  b: tuple[float, float, float]) -> bool:
     """True when two poses are the same within odometry noise (robot
@@ -300,7 +441,10 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
     Closed-loop stop: each phase streams a constant velocity command and
     watches the odometry stream, switching to a streamed stop as soon as
     the measured distance / heading change reaches the commanded target
-    (no fixed-duration timing and no anticipatory offset). Measurements
+    (no fixed-duration timing and no anticipatory offset). Commands and
+    odometry flow through make_transport() — the gz-transport bindings
+    when importable, else the streamed gz CLI — and the chosen transport
+    is printed as `transport: ...` before the run. Measurements
     are read from odometry once the pose has settled — stability detected
     from the stream, minimum 1 s — the same post-settle measurement the
     earlier open-loop runs took; any residual overshoot is the honest
@@ -319,18 +463,18 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
 
     gz = subprocess.Popen(["gz", "sim", "-s", "-r", str(world)],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    odom: _OdomStream | None = None
-    cmd = _CmdVelStream()
+    transport = None
     try:
         time.sleep(4.0)  # world load
         if gz.poll() is not None:
             raise TwinError("gz sim exited during startup")
-        odom = _OdomStream(workdir / "odom.txt")
+        transport, transport_name = make_transport(workdir / "odom.txt")
+        print(f"transport: {transport_name}")
 
         def await_pose(timeout_s: float) -> tuple[float, float, float]:
             deadline = time.monotonic() + timeout_s
             while time.monotonic() < deadline:
-                pose = odom.poll()
+                pose = transport.poll()
                 if pose is not None:
                     return pose
                 time.sleep(0.02)
@@ -341,7 +485,7 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
             timeout. The caller owns the stop command."""
             deadline = time.monotonic() + timeout_s
             while time.monotonic() < deadline:
-                pose = odom.poll()
+                pose = transport.poll()
                 if pose is not None and reached(pose):
                     return
                 time.sleep(0.02)
@@ -353,10 +497,10 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
             (pose stable for 0.3 s), at least min_s, at most cap_s."""
             start = time.monotonic()
             last_change = start
-            prev = odom.poll()
+            prev = transport.poll()
             while True:
                 now = time.monotonic()
-                pose = odom.poll()
+                pose = transport.poll()
                 if pose is not None and prev is not None \
                         and not _pose_stable(prev, pose):
                     last_change = now
@@ -374,30 +518,29 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
         start_pose = await_pose(10.0)
 
         # Drive phase: stream the velocity; stop at the target distance.
-        cmd.set(speed_mps, 0.0)
+        transport.set(speed_mps, 0.0)
         try:
             run_phase(lambda p: drive_reached(start_pose, p, drive_m),
                       3.0 * drive_m / speed_mps, "drive")
         finally:
-            cmd.set(0.0, 0.0)
+            transport.set(0.0, 0.0)
         mid_pose = settle()
         measured_drive = distance_between(start_pose, mid_pose)
 
         # Turn phase: stream the rate; stop at the target heading change.
-        cmd.set(0.0, math.radians(turn_rate_dps))
+        transport.set(0.0, math.radians(turn_rate_dps))
         try:
             run_phase(lambda p: turn_reached(mid_pose[2], p[2], turn_deg),
                       3.0 * turn_deg / turn_rate_dps, "turn")
         finally:
-            cmd.set(0.0, 0.0)
+            transport.set(0.0, 0.0)
         final_pose = settle()
         return {"drive": {"commanded_m": drive_m, "measured_m": measured_drive},
                 "turn": {"commanded_deg": turn_deg,
                          "measured_deg": final_pose[2]}}
     finally:
-        cmd.stop()
-        if odom is not None:
-            odom.close()
+        if transport is not None:
+            transport.close()
         gz.terminate()
         try:
             gz.wait(timeout=5)
