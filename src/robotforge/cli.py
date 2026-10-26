@@ -7,7 +7,9 @@ import sys
 from pathlib import Path
 
 from .describe import describe_live, describe_mock
+from .gate import evaluate_drive, evaluate_run, evaluate_turn
 from .schema import RobotSpec, SpecError
+from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
 from .validate import has_errors, validate
 
@@ -36,6 +38,13 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("spec")
     u.add_argument("--out", required=True)
 
+    g = sub.add_parser("run-gate", help="spawn the twin in headless Gazebo and "
+                                       "run the motion acceptance gate")
+    g.add_argument("spec")
+    g.add_argument("--workdir", default="build/gate-run")
+    g.add_argument("--drive-m", type=float, default=1.0)
+    g.add_argument("--turn-deg", type=float, default=90.0)
+
     args = p.parse_args(argv)
     try:
         if args.cmd == "describe":
@@ -60,7 +69,26 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.out).write_text(generate_urdf(spec))
             print(f"URDF written to {args.out}")
             return 0
-    except SpecError as exc:
+        if args.cmd == "run-gate":
+            rc = _print_findings(spec)
+            if rc:
+                print("refusing to run the gate on an invalid spec",
+                      file=sys.stderr)
+                return rc
+            res = run_motion_check(spec, Path(args.workdir),
+                                   drive_m=args.drive_m, turn_deg=args.turn_deg)
+            report = evaluate_run([
+                evaluate_drive(res["drive"]["commanded_m"],
+                               res["drive"]["measured_m"]),
+                evaluate_turn(res["turn"]["commanded_deg"],
+                              res["turn"]["measured_deg"]),
+            ])
+            for c in report.checks:
+                print(f"[{c.verdict}] {c.name}: commanded {c.commanded}, "
+                      f"measured {c.measured:.3f}, error {c.error} {c.unit}")
+            print(f"GATE: {report.verdict}")
+            return 0 if report.verdict != "FAIL" else 1
+    except (SpecError, TwinError) as exc:
         print(f"spec error: {exc}", file=sys.stderr)
         return 2
     return 0

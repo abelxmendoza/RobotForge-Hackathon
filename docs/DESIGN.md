@@ -37,16 +37,18 @@ digital twin in simulation.
 | Web demo | `web/` | day 4–6 |
 | SAM 3.1 photo → parts (stretch) | — | only if core is green |
 
-## Motion gate thresholds — OPEN DECISION (Abel)
+## Motion gate thresholds — DECIDED (Abel, 2026-10-26)
 
-Draft (from pre-window planning, undecided): position error ≤5% of commanded distance
-= pass, >10% = fail, between = marginal; heading error ≤3° pass, ≤6° marginal.
-To be confirmed before the gate is coded.
+Position error ≤5% of commanded distance = PASS, >10% = FAIL, between = MARGINAL.
+Heading error ≤5° = PASS, >10° = FAIL, between = MARGINAL. (The pre-window draft's
+3°/6° heading band was loosened deliberately: pathfinder is skid-steer, and skid
+turning scrubs laterally, so 3° would grade the physics model rather than the robot.)
+Implemented in `gate.py` as `DEFAULT_THRESHOLDS`.
 
-## Second reference robot — OPEN DECISION (Abel)
+## Second reference robot — DECIDED (Abel, 2026-10-26)
 
-For cross-checking the gate beyond the demo robot: candidates Andino (open-source
-differential robot, ROS 2 native) or Leo Rover. Lean: Andino.
+**Andino** (open-source differential-drive robot, ROS 2 native, published
+dimensions and Gazebo models) cross-checks the gate beyond the demo robot.
 
 ## Demo discipline (from the Official Rules, Oct 25, 2026)
 
