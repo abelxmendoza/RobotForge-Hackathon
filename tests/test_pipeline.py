@@ -56,3 +56,85 @@ def test_urdf_well_formed_and_named():
     assert root.tag == "robot" and root.get("name") == "pathfinder"
     joints = [j for j in root if j.tag == "joint"]
     assert len(joints) == 4
+
+
+def test_live_describe_via_connector_helper_is_parsed():
+    """Connector transport: fake the helper subprocess, expect a parsed spec.
+
+    No live API call: subprocess.run is replaced, and RF_META_API_HELPER is
+    pointed at this test file (any existing file) so describe_live selects
+    the connector path.
+    """
+    import os
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    chat_payload = {
+        "choices": [{"message": {"content": json.dumps(_MOCK_LIVE_SPEC)}}]}
+    helper_stdout = json.dumps({"status": 200, "payload": chat_payload})
+
+    class _Proc:
+        returncode = 0
+        stdout = helper_stdout
+        stderr = ""
+
+    old = os.environ.get("RF_META_API_HELPER")
+    os.environ["RF_META_API_HELPER"] = str(Path(__file__))
+    try:
+        with patch.object(describe_mod.subprocess, "run",
+                          return_value=_Proc()) as run:
+            spec = describe_mod.describe_live("a small rover")
+    finally:
+        if old is None:
+            del os.environ["RF_META_API_HELPER"]
+        else:
+            os.environ["RF_META_API_HELPER"] = old
+    argv = run.call_args[0][0]
+    assert argv[2:4] == ["chat", "--model"] and argv[4] == "muse-spark-1.3"
+    assert spec.name == "pathfinder-live"
+    assert not has_errors(validate(spec))
+
+
+def test_live_describe_connector_http_error_raises():
+    import os
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    class _Proc:
+        returncode = 0
+        stdout = json.dumps({"status": 401,
+                             "payload": {"error": "invalid_api_key"}})
+        stderr = ""
+
+    old = os.environ.get("RF_META_API_HELPER")
+    os.environ["RF_META_API_HELPER"] = str(Path(__file__))
+    try:
+        with patch.object(describe_mod.subprocess, "run",
+                          return_value=_Proc()):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                assert "401" in str(exc)
+    finally:
+        if old is None:
+            del os.environ["RF_META_API_HELPER"]
+        else:
+            os.environ["RF_META_API_HELPER"] = old
+
+
+_MOCK_LIVE_SPEC = {
+    "name": "pathfinder-live",
+    "description": "Four-wheel skid-steer rover (mocked live parse).",
+    "drivetrain": "skid_steer",
+    "length_m": 0.45, "width_m": 0.35, "height_m": 0.18,
+    "mass_kg": 4.2, "ground_clearance_m": 0.04,
+    "wheel": {"diameter_m": 0.12, "width_m": 0.04, "count": 4, "driven": True},
+    "motor": {"kind": "dc_gearmotor", "voltage_v": 12.0, "count": 4,
+              "stall_torque_nm": 1.0},
+    "battery": {"chemistry": "lipo", "voltage_v": 14.8, "capacity_mah": 5200},
+    "sensors": [{"kind": "rgb_camera", "position": "front", "range_m": None}],
+    "component_mass_kg": {},
+}
