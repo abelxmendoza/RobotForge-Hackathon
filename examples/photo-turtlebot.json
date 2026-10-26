@@ -1,0 +1,50 @@
+{
+  "name": "TurtleBot 3 Waffle Pi",
+  "description": "Photo draft (all dimensions ESTIMATED): TurtleBot 3 Waffle Pi from family chart, dimensions estimated from published approx 306x281x141 mm size.",
+  "drivetrain": "differential",
+  "length_m": 0.306,
+  "width_m": 0.281,
+  "height_m": 0.141,
+  "mass_kg": 1.8,
+  "ground_clearance_m": 0.02,
+  "wheel": {
+    "diameter_m": 0.066,
+    "width_m": 0.026,
+    "count": 2,
+    "driven": true
+  },
+  "motor": {
+    "kind": "dynamixel_XL430",
+    "voltage_v": 11.1,
+    "count": 2,
+    "stall_torque_nm": 1.0
+  },
+  "battery": {
+    "chemistry": "LiPo",
+    "voltage_v": 11.1,
+    "capacity_mah": 1800
+  },
+  "sensors": [
+    {
+      "kind": "lidar_2d",
+      "position": "top center",
+      "range_m": 3.5
+    },
+    {
+      "kind": "rgb_camera",
+      "position": "front",
+      "range_m": null
+    },
+    {
+      "kind": "imu",
+      "position": "internal",
+      "range_m": null
+    },
+    {
+      "kind": "encoder",
+      "position": "wheels",
+      "range_m": null
+    }
+  ],
+  "component_mass_kg": {}
+}
