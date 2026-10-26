@@ -118,10 +118,9 @@
     <h2>Status — Oct 26, 2026</h2>
     <ul class="status-list">
       <li><span class="tag">Live</span>Natural-language describe runs on <strong>muse-spark-1.3</strong> via the Meta Model API. The first live spec passed all engineering checks with zero errors and zero warnings.</li>
-      <li><span class="tag">Running</span>The gate executes real runs in Gazebo Sim (Harmonic) and issues real verdicts from odometry.</li>
-      <li><span class="tag">Fail</span>The current gate verdict is <strong>FAIL</strong> — the twin overshoots its targets. The root cause is measured, not guessed: command-transport latency in the test harness. A fix is in progress.</li>
+      <li><span class="tag">Passing</span>The motion gate now passes both reference robots across repeated runs — drive error 0.3&ndash;1.5% and turn error 2.2&ndash;4.8&deg;, against fixed thresholds of 5% and 5&deg;.</li>
     </ul>
-    <p class="framing">A verification tool that flatters would be worthless — so the failures stay on the page.</p>
+    <p class="framing">A verification tool that flatters would be worthless &mdash; earlier today this page reported the FAIL while the twin was overshooting, with the cause measured.</p>
   </section>
 
   <footer>
