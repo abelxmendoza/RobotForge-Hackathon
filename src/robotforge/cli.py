@@ -8,6 +8,8 @@ from pathlib import Path
 
 from .describe import describe_live, describe_mock
 from .gate import evaluate_drive, evaluate_run, evaluate_turn
+from .lookup import (LookupError, format_pull, format_report, lookup_robot,
+                     pull_candidate, report_to_dict)
 from .photo import draft_spec_from_photo, locate_parts
 from .schema import RobotSpec, SpecError
 from .twin import TwinError, run_motion_check
@@ -107,6 +109,18 @@ def main(argv: list[str] | None = None) -> int:
                    help="offline canned parse (no API key needed)")
     d.add_argument("--out", help="write spec JSON here (default: stdout)")
 
+    lk = sub.add_parser("lookup", help="robot name -> public GitHub repos "
+                                       "and model assets (licenses shown)")
+    lk.add_argument("identity",
+                    help='free-text robot name, e.g. "TurtleBot 3 Waffle Pi"')
+    lk.add_argument("--pull", action="store_true",
+                    help="download the best twin candidate + its repo "
+                         "LICENSE into --out-dir, with a manifest")
+    lk.add_argument("--json", action="store_true",
+                    help="machine-readable report instead of text")
+    lk.add_argument("--out-dir", default="build/lookup",
+                    help="pull destination root (default: build/lookup)")
+
     v = sub.add_parser("validate", help="engineering checks on a spec file")
     v.add_argument("spec")
 
@@ -138,6 +152,23 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(text)
             return _print_findings(spec)
+        if args.cmd == "lookup":
+            try:
+                report = lookup_robot(args.identity)
+                if args.json:
+                    print(json.dumps(report_to_dict(report), indent=2))
+                else:
+                    print(format_report(report))
+                if args.pull:
+                    if report.best is None:
+                        print("nothing to pull: no twin candidate found")
+                        return 0
+                    result = pull_candidate(report, Path(args.out_dir))
+                    print(format_pull(result))
+                return 0
+            except LookupError as exc:
+                print(f"lookup error: {exc}", file=sys.stderr)
+                return 2
         spec = RobotSpec.from_json(Path(args.spec).read_text())
         if args.cmd == "validate":
             return _print_findings(spec)
