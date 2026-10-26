@@ -44,11 +44,14 @@ robotforge urdf examples/pathfinder.json --out build/pathfinder.urdf
 robotforge describe "a four-wheel rover, 30 cm long, with a front ultrasonic sensor" --mock
 ```
 
-Live describe mode needs a Meta Model API key:
+Live describe mode runs through the registered Meta Model API connector
+helper in this workspace (no key in the repo or environment; see
+`docs/DESIGN.md`, "Describe transport"). Outside that workspace it falls
+back to a direct call:
 
 ```bash
-export META_API_KEY=...     # hackathon credits: $150 per participant
-export RF_MODEL=...         # model id from the Meta Model API catalogue
+export META_API_KEY=...     # fallback only, when no connector helper exists
+export RF_MODEL=...         # optional; default muse-spark-1.3
 robotforge describe "your robot description"
 ```
 

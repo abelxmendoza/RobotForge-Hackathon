@@ -56,3 +56,210 @@ def test_urdf_well_formed_and_named():
     assert root.tag == "robot" and root.get("name") == "pathfinder"
     joints = [j for j in root if j.tag == "joint"]
     assert len(joints) == 4
+
+
+def test_live_describe_via_connector_helper_is_parsed():
+    """Connector transport: fake the helper subprocess, expect a parsed spec.
+
+    No live API call: subprocess.run is replaced, and RF_META_API_HELPER is
+    pointed at this test file (any existing file) so describe_live selects
+    the connector path.
+    """
+    import os
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    chat_payload = {
+        "choices": [{"message": {"content": json.dumps(_MOCK_LIVE_SPEC)}}]}
+    helper_stdout = json.dumps({"status": 200, "payload": chat_payload})
+
+    class _Proc:
+        returncode = 0
+        stdout = helper_stdout
+        stderr = ""
+
+    old = os.environ.get("RF_META_API_HELPER")
+    os.environ["RF_META_API_HELPER"] = str(Path(__file__))
+    try:
+        with patch.object(describe_mod.subprocess, "run",
+                          return_value=_Proc()) as run:
+            spec = describe_mod.describe_live("a small rover")
+    finally:
+        if old is None:
+            del os.environ["RF_META_API_HELPER"]
+        else:
+            os.environ["RF_META_API_HELPER"] = old
+    argv = run.call_args[0][0]
+    assert argv[2:4] == ["chat", "--model"] and argv[4] == "muse-spark-1.3"
+    assert spec.name == "pathfinder-live"
+    assert not has_errors(validate(spec))
+
+
+def test_live_describe_connector_http_error_raises():
+    import os
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    class _Proc:
+        returncode = 0
+        stdout = json.dumps({"status": 401,
+                             "payload": {"error": "invalid_api_key"}})
+        stderr = ""
+
+    old = os.environ.get("RF_META_API_HELPER")
+    os.environ["RF_META_API_HELPER"] = str(Path(__file__))
+    try:
+        with patch.object(describe_mod.subprocess, "run",
+                          return_value=_Proc()):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                assert "401" in str(exc)
+    finally:
+        if old is None:
+            del os.environ["RF_META_API_HELPER"]
+        else:
+            os.environ["RF_META_API_HELPER"] = old
+
+
+def test_parse_odom_tolerates_omitted_zero_fields():
+    """Protobuf text omits zero-valued fields: at rest / planar motion the
+    echo has no position z and no quaternion x/y. The parser must default
+    absent components to 0.0 instead of failing to match."""
+    import math
+
+    from robotforge.twin import parse_last_odom
+
+    text = (
+        "pose {\n"
+        "  position {\n"
+        "    x: 1.5\n"
+        "    y: -0.25\n"
+        "  }\n"
+        "  orientation {\n"
+        "    z: 0.7071\n"
+        "    w: 0.7071\n"
+        "  }\n"
+        "}\n")
+    x, y, heading = parse_last_odom(text)
+    assert math.isclose(x, 1.5) and math.isclose(y, -0.25)
+    assert math.isclose(heading, 90.0, abs_tol=0.01)
+
+    rest = (
+        "pose {\n"
+        "  position {\n"
+        "    x: 0.5\n"
+        "    y: 0.5\n"
+        "  }\n"
+        "  orientation {\n"
+        "    w: 1\n"
+        "  }\n"
+        "}\n")
+    x, y, heading = parse_last_odom(rest)
+    assert math.isclose(x, 0.5) and math.isclose(y, 0.5)
+    assert math.isclose(heading, 0.0, abs_tol=0.01)
+
+
+def test_parse_odom_full_fields_still_parse():
+    import math
+
+    from robotforge.twin import parse_last_odom
+
+    text = (
+        "pose {\n"
+        "  position {\n"
+        "    x: 0.1\n"
+        "    y: 0.2\n"
+        "    z: 0.0\n"
+        "  }\n"
+        "  orientation {\n"
+        "    x: 0.0\n"
+        "    y: 0.0\n"
+        "    z: 0.0\n"
+        "    w: 1.0\n"
+        "  }\n"
+        "}\n")
+    x, y, heading = parse_last_odom(text)
+    assert math.isclose(x, 0.1) and math.isclose(y, 0.2)
+    assert math.isclose(heading, 0.0, abs_tol=0.01)
+
+
+def test_extract_odom_poses_keeps_partial_tail():
+    """Stream callers feed echo output in chunks: complete poses are parsed
+    in order and a trailing partial pose is returned as the rest, whole."""
+    from robotforge.twin import extract_odom_poses
+
+    one = ("pose {\n  position {\n    x: 0.1\n    y: 0.2\n  }\n"
+           "  orientation {\n    w: 1\n  }\n}\n")
+    two = ("pose {\n  position {\n    x: 0.3\n    y: 0.2\n  }\n"
+           "  orientation {\n    w: 1\n  }\n}\n")
+    poses, rest = extract_odom_poses(one + two + "pose {\n  position {\n    x: 0.")
+    assert len(poses) == 2
+    assert poses[0][0] == 0.1 and poses[1][0] == 0.3
+    # The tail keeps whatever followed the last complete pose block,
+    # including the pose wrapper's own closing brace.
+    assert rest == "\n}\npose {\n  position {\n    x: 0."
+    # Feeding the rest plus the remainder completes the third pose.
+    poses2, rest2 = extract_odom_poses(rest + "4\n    y: 0.2\n  }\n"
+                                       "  orientation {\n    w: 1\n  }\n}\n")
+    assert len(poses2) == 1 and poses2[0][0] == 0.4
+    assert rest2 == "\n}\n"
+
+
+def test_pose_stable():
+    from robotforge.twin import _pose_stable
+
+    assert _pose_stable((1.0, 2.0, 45.0), (1.0, 2.0, 45.0))
+    assert _pose_stable((1.0, 2.0, 45.0), (1.0005, 2.0, 45.05))
+    assert not _pose_stable((1.0, 2.0, 45.0), (1.01, 2.0, 45.0))
+    assert not _pose_stable((1.0, 2.0, 45.0), (1.0, 2.0, 46.0))
+    # Wraparound: 179.99 vs -179.99 is 0.02 deg, not 359.98.
+    assert _pose_stable((0.0, 0.0, 179.99), (0.0, 0.0, -179.99))
+
+
+def test_gate_sdf_uses_revolute_joints():
+    from robotforge.twin import generate_sdf
+
+    spec = RobotSpec.from_json(EXAMPLE.read_text())
+    sdf = generate_sdf(spec)
+    assert 'type="revolute"' in sdf
+    assert 'type="revolve"' not in sdf
+
+
+def test_distance_and_heading_helpers():
+    import math
+
+    from robotforge.twin import (distance_between, drive_reached,
+                                 heading_change_deg, turn_reached)
+
+    assert math.isclose(distance_between((0, 0, 0), (3, 4, 0)), 5.0)
+    assert math.isclose(distance_between((1, 1, 0), (1, 1, 0)), 0.0)
+    # Wraparound-safe heading deltas
+    assert math.isclose(heading_change_deg(170.0, -170.0), 20.0)
+    assert math.isclose(heading_change_deg(-170.0, 170.0), -20.0)
+    assert math.isclose(heading_change_deg(0.0, 90.0), 90.0)
+    assert math.isclose(heading_change_deg(10.0, 10.0), 0.0)
+    # Stop conditions
+    assert not drive_reached((0, 0, 0), (0.99, 0, 0), 1.0)
+    assert drive_reached((0, 0, 0), (1.0, 0, 0), 1.0)
+    assert drive_reached((2, 2, 0), (2, 3.5, 0), 1.0)
+    assert not turn_reached(170.0, -175.0, 90.0)   # only 15 deg so far
+    assert turn_reached(170.0, -100.0, 90.0)       # wrapped through 180
+
+
+_MOCK_LIVE_SPEC = {
+    "name": "pathfinder-live",
+    "description": "Four-wheel skid-steer rover (mocked live parse).",
+    "drivetrain": "skid_steer",
+    "length_m": 0.45, "width_m": 0.35, "height_m": 0.18,
+    "mass_kg": 4.2, "ground_clearance_m": 0.04,
+    "wheel": {"diameter_m": 0.12, "width_m": 0.04, "count": 4, "driven": True},
+    "motor": {"kind": "dc_gearmotor", "voltage_v": 12.0, "count": 4,
+              "stall_torque_nm": 1.0},
+    "battery": {"chemistry": "lipo", "voltage_v": 14.8, "capacity_mah": 5200},
+    "sensors": [{"kind": "rgb_camera", "position": "front", "range_m": None}],
+    "component_mass_kg": {},
+}

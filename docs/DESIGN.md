@@ -28,7 +28,7 @@ digital twin in simulation.
 
 | Stage | Module | Status |
 |---|---|---|
-| NL → spec | `describe.py` (Muse Spark via Meta Model API) | day 1: client + mock mode |
+| NL → spec | `describe.py` (Muse Spark via Meta Model API) | day 1: client + mock mode; live transport wired and verified 2026-10-26 |
 | Spec schema | `schema.py` | day 1: done, tested |
 | Engineering validation | `validate.py` | day 1: core checks, tested |
 | URDF generation | `urdf.py` | day 1: box-chassis differential rover |
@@ -36,6 +36,22 @@ digital twin in simulation.
 | Motion gate | `gate.py` | day 2–3 |
 | Web demo | `web/` | day 4–6 |
 | SAM 3.1 photo → parts (stretch) | — | only if core is green |
+
+### Describe transport (live mode)
+
+Live describe does not hold an API key. In this workspace it shells out to
+the registered Meta Model API connector helper (`meta_api.py`, connector
+`custom.meta-model-api`), which attaches the credential as a platform-managed
+surrogate on the outbound request to `api.meta.ai` — the same helper path
+verified against the live catalogue. The helper's chat command takes the
+system prompt as a file and returns the chat completion as JSON on stdout;
+`describe.py` parses that into a `RobotSpec`. The helper path can be
+overridden with `RF_META_API_HELPER`. Outside this workspace, if the helper
+is absent, describe falls back to a direct OpenAI-compatible call using
+`META_API_KEY`. The model defaults to `muse-spark-1.3` (override:
+`RF_MODEL`), Standard mode only. First live end-to-end pass: 2026-10-26,
+`examples/pathfinder-live.json` — spec generated from a plain-language
+request, passed validation with no findings, and generated a URDF.
 
 ## Motion gate thresholds — DECIDED (Abel, 2026-10-26)
 
