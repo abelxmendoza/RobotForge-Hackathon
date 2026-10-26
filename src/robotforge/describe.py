@@ -1,16 +1,30 @@
-"""Natural language -> RobotSpec, via Muse Spark on the Meta Model API.
+"""Natural language -> RobotSpec, via Muse Spark.
 
-Live transport: in this workspace, describe runs through the registered
-Meta Model API connector helper (``meta_api.py`` of the
-``custom.meta-model-api`` connector). The connector holds the API credential
-as a surrogate, so no raw key ever enters this process, the environment, or
-the repo. The helper speaks the same OpenAI-compatible chat endpoint and is
-the path verified end-to-end for this project. If the helper is not present
-(e.g. the repo is used outside this workspace), live mode falls back to a
-direct call using META_API_KEY. Either way the model defaults to
-``muse-spark-1.3`` (override with RF_MODEL), in Standard mode only:
-Contributor mode permits training on prompts/code and must not be used for
-this project.
+Live mode tries inference transports in order, using the next one only
+after the previous one fails (every failure is noted on stderr with its
+transport name, and the transport that produced the spec is printed on
+stderr too):
+
+1. ``meta-connector`` — the registered Meta Model API connector helper
+   (``meta_api.py`` of the ``custom.meta-model-api`` connector). The
+   connector holds the API credential as a surrogate, so no raw key ever
+   enters this process, the environment, or the repo. Model defaults to
+   ``muse-spark-1.3`` (override with RF_MODEL), Standard mode only:
+   Contributor mode permits training on prompts/code and must not be
+   used for this project.
+2. ``baseten`` — the registered Baseten connector helper
+   (``baseten_api.py`` of the ``custom.baseten`` connector), serving Muse
+   Spark Open (``meta-models/muse-spark-open``) under the hackathon
+   grant. Same surrogate-credential arrangement. Calls are slow (the
+   model reasons; 15-95 s observed), so its timeouts are budgeted
+   generously — it is insurance for the primary path, not a peer.
+3. ``direct`` — a direct OpenAI-compatible call using META_API_KEY, only
+   when that variable is set. Last resort for using the repo outside
+   this workspace, where neither connector helper exists.
+
+Set RF_DESCRIBE_TRANSPORT=meta|baseten|direct to force one transport.
+Helper paths can be overridden with RF_META_API_HELPER /
+RF_BASETEN_HELPER.
 
 --mock mode returns a canned parse of the demo robot so the rest of the
 pipeline can be developed and tested without any API access.
@@ -22,6 +36,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -29,8 +44,11 @@ from .schema import RobotSpec, SpecError
 
 API_BASE = os.environ.get("META_API_BASE", "https://api.meta.ai/v1")
 DEFAULT_MODEL = "muse-spark-1.3"
+BASETEN_MODEL = "meta-models/muse-spark-open"
 DEFAULT_HELPER = (Path.home() / "workspace" / "custom-connectors"
                   / "custom.meta-model-api" / "bin" / "meta_api.py")
+DEFAULT_BASETEN_HELPER = (Path.home() / "workspace" / "custom-connectors"
+                          / "custom.baseten" / "bin" / "baseten_api.py")
 
 SYSTEM_PROMPT = """You convert a plain-language robot description into a strict JSON
 robot specification. Output ONLY the JSON object, no prose, no markdown fences.
@@ -82,14 +100,15 @@ def _spec_from_chat_payload(payload: dict) -> RobotSpec:
     return RobotSpec.from_json(text)
 
 
-def _describe_via_connector(description: str, model: str,
-                            helper: Path) -> RobotSpec:
-    """One chat call through the connector helper (subprocess).
+def _run_helper_chat(description: str, model: str, helper: Path,
+                     label: str, extra_args: tuple = (),
+                     timeout: int = 180) -> RobotSpec:
+    """One chat call through a connector helper (subprocess).
 
-    The helper's CLI takes the system prompt as a file and prints
-    {"status": ..., "payload": ...} as JSON on stdout. Its process holds
-    only a credential surrogate; the real key is swapped in by the platform
-    on the outbound request to api.meta.ai.
+    Both connector helpers share this CLI: the system prompt goes in as a
+    file and ``{"status": ..., "payload": ...}`` comes back as JSON on
+    stdout. The helper process holds only a credential surrogate; the
+    real key is swapped in by the platform on the outbound request.
     """
     with tempfile.NamedTemporaryFile("w", suffix=".txt",
                                      delete=False) as tmp:
@@ -99,30 +118,49 @@ def _describe_via_connector(description: str, model: str,
         proc = subprocess.run(
             [sys.executable, str(helper), "chat",
              "--model", model, "--user", description,
-             "--system-file", system_file, "--temperature", "0.2"],
-            capture_output=True, text=True, timeout=180)
+             "--system-file", system_file, "--temperature", "0.2",
+             *extra_args],
+            capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
-        raise SpecError("connector helper timed out after 180 s")
+        raise SpecError(f"{label} helper timed out after {timeout} s")
     finally:
         Path(system_file).unlink(missing_ok=True)
     if proc.returncode != 0:
         tail = proc.stderr.strip().splitlines()[-3:]
-        raise SpecError("connector helper failed: " + " | ".join(tail))
+        raise SpecError(f"{label} helper failed: " + " | ".join(tail))
     try:
         result = json.loads(proc.stdout)
     except json.JSONDecodeError:
-        raise SpecError("connector helper returned non-JSON output: "
+        raise SpecError(f"{label} helper returned non-JSON output: "
                         + proc.stdout[:200])
     status = result.get("status")
     payload = result.get("payload") or {}
     if status != 200:
-        raise SpecError(f"Meta Model API returned HTTP {status}: "
+        raise SpecError(f"{label} API returned HTTP {status}: "
                         + json.dumps(payload)[:500])
     return _spec_from_chat_payload(payload)
 
 
+def _describe_via_connector(description: str, model: str,
+                            helper: Path) -> RobotSpec:
+    """Primary transport: Muse Spark via the Meta Model API connector."""
+    return _run_helper_chat(description, model, helper, "Meta connector")
+
+
+def _describe_via_baseten(description: str, model: str,
+                          helper: Path) -> RobotSpec:
+    """Fallback transport: Muse Spark Open via the Baseten connector.
+
+    Baseten calls reason before answering and took 15-95 s in testing, so
+    the helper's own request timeout is raised to 240 s and the
+    subprocess timeout sits above it.
+    """
+    return _run_helper_chat(description, model, helper, "Baseten",
+                            extra_args=("--timeout", "240"), timeout=300)
+
+
 def _describe_direct(description: str, model: str) -> RobotSpec:
-    """Fallback: direct OpenAI-compatible call with META_API_KEY."""
+    """Last resort: direct OpenAI-compatible call with META_API_KEY."""
     key = os.environ.get("META_API_KEY")
     if not key:
         raise SpecError("META_API_KEY is not set (direct live describe mode)")
@@ -136,19 +174,81 @@ def _describe_direct(description: str, model: str) -> RobotSpec:
         f"{API_BASE}/chat/completions", data=body,
         headers={"Authorization": f"Bearer {key}",
                  "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        payload = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            payload = json.loads(resp.read())
+    except urllib.error.URLError as exc:
+        raise SpecError(f"direct Meta Model API call failed: {exc}") \
+            from exc
     return _spec_from_chat_payload(payload)
 
 
 def describe_live(description: str, model: str | None = None) -> RobotSpec:
     model = model or os.environ.get("RF_MODEL") or DEFAULT_MODEL
-    helper = Path(os.environ.get("RF_META_API_HELPER",
-                                 str(DEFAULT_HELPER))).expanduser()
-    if helper.is_file():
-        return _describe_via_connector(description, model, helper)
+    baseten_model = os.environ.get("RF_BASETEN_MODEL") or BASETEN_MODEL
+    meta_helper = Path(os.environ.get(
+        "RF_META_API_HELPER", str(DEFAULT_HELPER))).expanduser()
+    baseten_helper = Path(os.environ.get(
+        "RF_BASETEN_HELPER", str(DEFAULT_BASETEN_HELPER))).expanduser()
+
+    # (key, display label, attempt) in the order they are tried.
+    transports = []
+    if meta_helper.is_file():
+        transports.append((
+            "meta", f"meta-connector ({model})",
+            lambda: _describe_via_connector(description, model,
+                                            meta_helper)))
+    if baseten_helper.is_file():
+        transports.append((
+            "baseten", f"baseten ({baseten_model})",
+            lambda: _describe_via_baseten(description, baseten_model,
+                                          baseten_helper)))
     if os.environ.get("META_API_KEY"):
-        return _describe_direct(description, model)
+        transports.append((
+            "direct", f"direct ({model})",
+            lambda: _describe_direct(description, model)))
+
+    forced = os.environ.get("RF_DESCRIBE_TRANSPORT", "").strip().lower()
+    if forced:
+        aliases = {"meta": "meta", "meta-connector": "meta",
+                   "baseten": "baseten", "direct": "direct"}
+        key = aliases.get(forced)
+        if key is None:
+            raise SpecError(
+                f"unknown RF_DESCRIBE_TRANSPORT {forced!r} "
+                "(expected meta|baseten|direct)")
+        chosen = [t for t in transports if t[0] == key]
+        if not chosen:
+            raise SpecError(
+                f"RF_DESCRIBE_TRANSPORT={forced} but that transport is "
+                "not available (helper missing or META_API_KEY unset)")
+        transports = chosen
+
+    if not transports:
+        raise SpecError(
+            "no live transport available: connector helpers not found at "
+            f"{meta_helper} (set RF_META_API_HELPER) or {baseten_helper} "
+            "(set RF_BASETEN_HELPER), and META_API_KEY is not set")
+
+    errors = []
+    for attempt_no, (key, label, attempt) in enumerate(transports):
+        try:
+            spec = attempt()
+        except SpecError as exc:
+            errors.append((label, exc))
+            print(f"describe transport {label} failed: {exc}",
+                  file=sys.stderr)
+            continue
+        if forced:
+            suffix = ", forced"
+        elif attempt_no > 0:
+            suffix = ", fallback"
+        elif key == "direct":
+            suffix = ", last resort"
+        else:
+            suffix = ""
+        print(f"describe transport: {label}{suffix}", file=sys.stderr)
+        return spec
     raise SpecError(
-        "no live transport available: connector helper not found at "
-        f"{helper} (set RF_META_API_HELPER) and META_API_KEY is not set")
+        "all live describe transports failed: "
+        + "; ".join(f"{label}: {exc}" for label, exc in errors))

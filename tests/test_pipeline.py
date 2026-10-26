@@ -263,3 +263,159 @@ _MOCK_LIVE_SPEC = {
     "sensors": [{"kind": "rgb_camera", "position": "front", "range_m": None}],
     "component_mass_kg": {},
 }
+
+
+# ---------------------------------------------------------------------------
+# Baseten fallback transport chain (all mocked — no live calls)
+# ---------------------------------------------------------------------------
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def _describe_env(**updates):
+    import os
+    saved = {k: os.environ.get(k) for k in updates}
+    for k, v in updates.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def _ok_proc(spec_dict):
+    payload = {"choices": [{"message": {"content": json.dumps(spec_dict)}}]}
+    return type("P", (), {"returncode": 0,
+                          "stdout": json.dumps({"status": 200,
+                                                "payload": payload}),
+                          "stderr": ""})()
+
+
+def _chain_env():
+    """Both helpers 'exist' (pointed at real test files); no direct key."""
+    return {
+        "RF_META_API_HELPER": str(Path(__file__)),
+        "RF_BASETEN_HELPER": str(Path(__file__).with_name(
+            "test_gate_twin.py")),
+        "RF_DESCRIBE_TRANSPORT": None,
+        "META_API_KEY": None,
+        "RF_MODEL": None,
+        "RF_BASETEN_MODEL": None,
+    }
+
+
+def test_describe_falls_back_to_baseten_when_meta_fails():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _chain_env()
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[1] == env["RF_META_API_HELPER"]:
+            return type("P", (), {
+                "returncode": 0,
+                "stdout": json.dumps({"status": 401,
+                                      "payload": {"error": "invalid_api_key"}}),
+                "stderr": ""})()
+        if cmd[1] == env["RF_BASETEN_HELPER"]:
+            return _ok_proc(_MOCK_LIVE_SPEC)
+        raise AssertionError(f"unexpected helper invoked: {cmd[1]}")
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.subprocess, "run",
+                          side_effect=fake_run):
+            spec = describe_mod.describe_live("a small rover")
+    assert spec.name == "pathfinder-live"
+    assert not has_errors(validate(spec))
+    assert len(calls) == 2  # meta tried first, baseten second
+    baseten_argv = calls[1]
+    assert baseten_argv[2:4] == ["chat", "--model"]
+    assert baseten_argv[4] == "meta-models/muse-spark-open"
+    # Baseten is slow: its helper request timeout must be budgeted.
+    assert "--timeout" in baseten_argv and "240" in baseten_argv
+
+
+def test_describe_meta_success_never_calls_baseten():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _chain_env()
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return _ok_proc(_MOCK_LIVE_SPEC)
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.subprocess, "run",
+                          side_effect=fake_run):
+            spec = describe_mod.describe_live("a small rover")
+    assert spec.name == "pathfinder-live"
+    assert len(calls) == 1
+    assert calls[0][1] == env["RF_META_API_HELPER"]
+
+
+def test_describe_forced_baseten_via_env():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _chain_env()
+    env["RF_DESCRIBE_TRANSPORT"] = "baseten"
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[1] == env["RF_META_API_HELPER"]:
+            raise AssertionError("meta helper must not run when forced")
+        return _ok_proc(_MOCK_LIVE_SPEC)
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.subprocess, "run",
+                          side_effect=fake_run):
+            spec = describe_mod.describe_live("a small rover")
+    assert spec.name == "pathfinder-live"
+    assert len(calls) == 1
+    assert calls[0][1] == env["RF_BASETEN_HELPER"]
+    assert calls[0][4] == "meta-models/muse-spark-open"
+
+
+def test_describe_all_transports_fail_names_both_errors():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _chain_env()
+
+    def fake_run(cmd, **kwargs):
+        if cmd[1] == env["RF_META_API_HELPER"]:
+            return type("P", (), {
+                "returncode": 0,
+                "stdout": json.dumps({"status": 401,
+                                      "payload": {"error": "invalid_api_key"}}),
+                "stderr": ""})()
+        return type("P", (), {"returncode": 1, "stdout": "",
+                              "stderr": "boom-baseten"})()
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.subprocess, "run",
+                          side_effect=fake_run):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                msg = str(exc)
+    assert "meta-connector" in msg and "401" in msg
+    assert "baseten" in msg and "boom-baseten" in msg
