@@ -14,7 +14,10 @@ to run raises TwinError with the step that failed.
 from __future__ import annotations
 
 import math
+import os
 import re
+import select
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -135,6 +138,34 @@ def _odom_field(block: str, name: str, default: float = 0.0) -> float:
     return float(m.group(1)) if m else default
 
 
+def _pose_from_blocks(pos: str, ori: str) -> tuple[float, float, float]:
+    x = _odom_field(pos, "x")
+    y = _odom_field(pos, "y")
+    qx = _odom_field(ori, "x")
+    qy = _odom_field(ori, "y")
+    qz = _odom_field(ori, "z")
+    qw = _odom_field(ori, "w", 1.0)
+    return x, y, _yaw_from_quat(qx, qy, qz, qw)
+
+
+def extract_odom_poses(text: str):
+    """Return (poses, rest): every complete pose in gz echo text, in order,
+    plus the unconsumed tail (a trailing partial pose, which stream callers
+    keep and re-present once the rest of it arrives)."""
+    poses = []
+    end = 0
+    for m in _ODOM_POSE.finditer(text):
+        poses.append(_pose_from_blocks(m.group("pos"), m.group("ori")))
+        end = m.end()
+    return poses, text[end:]
+
+
+def iter_odom_poses(text: str):
+    """Yield (x, y, heading_deg) for each complete pose in gz echo text."""
+    poses, _ = extract_odom_poses(text)
+    yield from poses
+
+
 def parse_last_odom(text: str) -> tuple[float, float, float]:
     """Return (x, y, heading_deg) from the last odometry pose in gz echo text.
 
@@ -143,17 +174,10 @@ def parse_last_odom(text: str) -> tuple[float, float, float]:
     0.0 (and an absent quaternion w means the identity value 1.0 is wrong
     only when w is exactly 0, which planar motion never produces here).
     """
-    matches = _ODOM_POSE.findall(text)
-    if not matches:
+    poses = list(iter_odom_poses(text))
+    if not poses:
         raise TwinError("no odometry poses captured from the twin run")
-    pos, ori = matches[-1]
-    x = _odom_field(pos, "x")
-    y = _odom_field(pos, "y")
-    qx = _odom_field(ori, "x")
-    qy = _odom_field(ori, "y")
-    qz = _odom_field(ori, "z")
-    qw = _odom_field(ori, "w", 1.0)
-    return x, y, _yaw_from_quat(qx, qy, qz, qw)
+    return poses[-1]
 
 
 def distance_between(start: tuple[float, float, float],
@@ -178,19 +202,111 @@ def turn_reached(start_heading: float, heading: float,
     return abs(heading_change_deg(start_heading, heading)) >= target_deg
 
 
+class _OdomStream:
+    """Live odometry from a long-lived `gz topic -e` echo, read as a pipe
+    stream (os.read on the raw fd) instead of polling a growing log file, so
+    the feedback loop sees poses as they are published. The raw stream is
+    also tee'd to the workdir's odom.txt for inspection."""
+
+    def __init__(self, log_path: Path):
+        self._log = log_path.open("wb")
+        self._proc = subprocess.Popen(
+            ["gz", "topic", "-e", "-t", "/odom"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            start_new_session=True)
+        self._tail = ""
+        self.latest: tuple[float, float, float] | None = None
+
+    def poll(self) -> tuple[float, float, float] | None:
+        """Drain whatever the echo has published; return the latest pose."""
+        fd = self._proc.stdout.fileno()
+        while True:
+            ready, _, _ = select.select([fd], [], [], 0)
+            if not ready:
+                break
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            self._log.write(chunk)
+            self._log.flush()
+            self._tail += chunk.decode(errors="replace")
+        if self._tail:
+            poses, self._tail = extract_odom_poses(self._tail)
+            if poses:
+                self.latest = poses[-1]
+        return self.latest
+
+    def close(self) -> None:
+        _kill_group(self._proc)
+        self._log.close()
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except (ProcessLookupError, PermissionError):
+        pass
+    try:
+        proc.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+
+class _CmdVelStream:
+    """One Twist command re-published continuously on /cmd_vel until changed.
+
+    A one-shot `gz topic -p` is a single point of failure on this stack:
+    observed live, a lone publish is sometimes dropped before discovery
+    completes (robot never moves) and the call itself takes ~0.85 s. Real
+    cmd_vel sources stream, so the current command is re-issued back to
+    back; a dropped copy self-heals on the next cycle. Stopping is the
+    same mechanism with a zero Twist, held for the whole settle window.
+    """
+
+    def __init__(self):
+        self._proc: subprocess.Popen | None = None
+
+    def set(self, linear: float, angular: float) -> None:
+        self.stop()
+        msg = f"linear: {{x: {linear}}}, angular: {{z: {angular}}}"
+        loop = ("while :; do gz topic -t /cmd_vel -m gz.msgs.Twist "
+                f"-p '{msg}' >/dev/null 2>&1; done")
+        self._proc = subprocess.Popen(
+            ["bash", "-c", loop], stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True)
+
+    def stop(self) -> None:
+        if self._proc is not None:
+            _kill_group(self._proc)
+            self._proc = None
+
+
+def _pose_stable(a: tuple[float, float, float],
+                 b: tuple[float, float, float]) -> bool:
+    """True when two poses are the same within odometry noise (robot
+    settled): < 1 mm of translation and < 0.1 deg of heading change."""
+    return (math.hypot(b[0] - a[0], b[1] - a[1]) < 0.001
+            and abs(heading_change_deg(a[2], b[2])) < 0.1)
+
+
 def run_motion_check(spec: RobotSpec, workdir: Path, *,
                      drive_m: float = 1.0, speed_mps: float = 0.25,
                      turn_deg: float = 90.0, turn_rate_dps: float = 45.0) -> dict:
     """Run drive + turn in headless Gazebo; return measured results.
 
-    Closed-loop stop: each phase commands a constant velocity and watches
-    the odometry stream, issuing the stop as soon as the measured distance
-    / heading change reaches the commanded target (no fixed-duration timing
-    and no anticipatory offset). The reported measurements are read from
-    odometry after the robot settles, exactly as the earlier open-loop runs
-    measured them — any residual overshoot is the honest result. Each phase
-    has a hard timeout at 3x its nominal duration: on timeout the robot is
-    stopped and TwinError raised instead of returning a number.
+    Closed-loop stop: each phase streams a constant velocity command and
+    watches the odometry stream, switching to a streamed stop as soon as
+    the measured distance / heading change reaches the commanded target
+    (no fixed-duration timing and no anticipatory offset). Measurements
+    are read from odometry once the pose has settled — stability detected
+    from the stream, minimum 1 s — the same post-settle measurement the
+    earlier open-loop runs took; any residual overshoot is the honest
+    result. Each phase has a hard timeout at 3x its nominal duration: on
+    timeout the stop is streamed, the robot is given a moment, and
+    TwinError is raised instead of returning a number.
 
     Raises TwinError on any step that fails — the caller must surface that,
     never a fabricated measurement.
@@ -203,83 +319,85 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
 
     gz = subprocess.Popen(["gz", "sim", "-s", "-r", str(world)],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    echo = None
+    odom: _OdomStream | None = None
+    cmd = _CmdVelStream()
     try:
         time.sleep(4.0)  # world load
         if gz.poll() is not None:
             raise TwinError("gz sim exited during startup")
-        odom_log = workdir / "odom.txt"
-        echo = subprocess.Popen(["gz", "topic", "-e", "-t", "/odom"],
-                                stdout=odom_log.open("w"),
-                                stderr=subprocess.DEVNULL)
-
-        def latest_pose() -> tuple[float, float, float] | None:
-            try:
-                return parse_last_odom(odom_log.read_text())
-            except (TwinError, OSError):
-                return None
+        odom = _OdomStream(workdir / "odom.txt")
 
         def await_pose(timeout_s: float) -> tuple[float, float, float]:
             deadline = time.monotonic() + timeout_s
             while time.monotonic() < deadline:
-                pose = latest_pose()
+                pose = odom.poll()
                 if pose is not None:
                     return pose
-                time.sleep(0.05)
+                time.sleep(0.02)
             raise TwinError("no odometry poses captured from the twin run")
 
-        def pub(linear: float, angular: float) -> None:
-            subprocess.run(
-                ["gz", "topic", "-t", "/cmd_vel", "-m", "gz.msgs.Twist",
-                 "-p", f"linear: {{x: {linear}}}, angular: {{z: {angular}}}"],
-                check=True, timeout=10,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        def run_phase(start, reached, timeout_s: float, phase: str) -> None:
-            """Poll odometry until reached(pose); raise TwinError on timeout.
-
-            The caller issues the stop command after this returns or raises.
-            """
+        def run_phase(reached, timeout_s: float, phase: str) -> None:
+            """Poll streamed odometry until reached(pose); TwinError on
+            timeout. The caller owns the stop command."""
             deadline = time.monotonic() + timeout_s
             while time.monotonic() < deadline:
-                pose = latest_pose()
-                if pose is not None and reached(start, pose):
+                pose = odom.poll()
+                if pose is not None and reached(pose):
                     return
-                time.sleep(0.05)
+                time.sleep(0.02)
             raise TwinError(
                 f"{phase} phase: target not reached within {timeout_s:.1f} s")
 
+        def settle(min_s: float = 1.0, cap_s: float = 5.0) -> tuple:
+            """Stream of poses until the robot is measurably at rest
+            (pose stable for 0.3 s), at least min_s, at most cap_s."""
+            start = time.monotonic()
+            last_change = start
+            prev = odom.poll()
+            while True:
+                now = time.monotonic()
+                pose = odom.poll()
+                if pose is not None and prev is not None \
+                        and not _pose_stable(prev, pose):
+                    last_change = now
+                if pose is not None:
+                    prev = pose
+                if now - start >= min_s and now - last_change >= 0.3:
+                    break
+                if now - start >= cap_s:
+                    raise TwinError("robot did not settle after stop")
+                time.sleep(0.02)
+            if prev is None:
+                raise TwinError("no odometry poses captured from the twin run")
+            return prev
+
         start_pose = await_pose(10.0)
 
-        # Drive phase: stop when measured distance reaches the target.
-        pub(speed_mps, 0.0)
+        # Drive phase: stream the velocity; stop at the target distance.
+        cmd.set(speed_mps, 0.0)
         try:
-            run_phase(start_pose,
-                      lambda s, p: drive_reached(s, p, drive_m),
+            run_phase(lambda p: drive_reached(start_pose, p, drive_m),
                       3.0 * drive_m / speed_mps, "drive")
         finally:
-            pub(0.0, 0.0)
-        time.sleep(1.0)  # settle; drive measurement taken here
-        mid = odom_log.read_text() if odom_log.exists() else ""
-        mx, my, mid_heading = parse_last_odom(mid)
-        measured_drive = math.hypot(mx - start_pose[0], my - start_pose[1])
+            cmd.set(0.0, 0.0)
+        mid_pose = settle()
+        measured_drive = distance_between(start_pose, mid_pose)
 
-        # Turn phase: stop when measured heading change reaches the target.
-        pub(0.0, math.radians(turn_rate_dps))
+        # Turn phase: stream the rate; stop at the target heading change.
+        cmd.set(0.0, math.radians(turn_rate_dps))
         try:
-            run_phase(mid_heading,
-                      lambda s, p: turn_reached(s, p[2], turn_deg),
+            run_phase(lambda p: turn_reached(mid_pose[2], p[2], turn_deg),
                       3.0 * turn_deg / turn_rate_dps, "turn")
         finally:
-            pub(0.0, 0.0)
-        time.sleep(1.0)
-        final = odom_log.read_text()
-        _, _, heading = parse_last_odom(final)
+            cmd.set(0.0, 0.0)
+        final_pose = settle()
         return {"drive": {"commanded_m": drive_m, "measured_m": measured_drive},
-                "turn": {"commanded_deg": turn_deg, "measured_deg": heading}}
+                "turn": {"commanded_deg": turn_deg,
+                         "measured_deg": final_pose[2]}}
     finally:
-        if echo is not None:
-            echo.terminate()
+        cmd.stop()
+        if odom is not None:
+            odom.close()
         gz.terminate()
         try:
             gz.wait(timeout=5)

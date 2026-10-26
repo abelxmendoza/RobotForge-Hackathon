@@ -187,6 +187,39 @@ def test_parse_odom_full_fields_still_parse():
     assert math.isclose(heading, 0.0, abs_tol=0.01)
 
 
+def test_extract_odom_poses_keeps_partial_tail():
+    """Stream callers feed echo output in chunks: complete poses are parsed
+    in order and a trailing partial pose is returned as the rest, whole."""
+    from robotforge.twin import extract_odom_poses
+
+    one = ("pose {\n  position {\n    x: 0.1\n    y: 0.2\n  }\n"
+           "  orientation {\n    w: 1\n  }\n}\n")
+    two = ("pose {\n  position {\n    x: 0.3\n    y: 0.2\n  }\n"
+           "  orientation {\n    w: 1\n  }\n}\n")
+    poses, rest = extract_odom_poses(one + two + "pose {\n  position {\n    x: 0.")
+    assert len(poses) == 2
+    assert poses[0][0] == 0.1 and poses[1][0] == 0.3
+    # The tail keeps whatever followed the last complete pose block,
+    # including the pose wrapper's own closing brace.
+    assert rest == "\n}\npose {\n  position {\n    x: 0."
+    # Feeding the rest plus the remainder completes the third pose.
+    poses2, rest2 = extract_odom_poses(rest + "4\n    y: 0.2\n  }\n"
+                                       "  orientation {\n    w: 1\n  }\n}\n")
+    assert len(poses2) == 1 and poses2[0][0] == 0.4
+    assert rest2 == "\n}\n"
+
+
+def test_pose_stable():
+    from robotforge.twin import _pose_stable
+
+    assert _pose_stable((1.0, 2.0, 45.0), (1.0, 2.0, 45.0))
+    assert _pose_stable((1.0, 2.0, 45.0), (1.0005, 2.0, 45.05))
+    assert not _pose_stable((1.0, 2.0, 45.0), (1.01, 2.0, 45.0))
+    assert not _pose_stable((1.0, 2.0, 45.0), (1.0, 2.0, 46.0))
+    # Wraparound: 179.99 vs -179.99 is 0.02 deg, not 359.98.
+    assert _pose_stable((0.0, 0.0, 179.99), (0.0, 0.0, -179.99))
+
+
 def test_gate_sdf_uses_revolute_joints():
     from robotforge.twin import generate_sdf
 
