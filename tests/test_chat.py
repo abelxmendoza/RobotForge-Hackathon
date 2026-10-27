@@ -168,6 +168,8 @@ const parts = load('catalog/parts.json');
 const engine = FG.createEngine({
   robots: robots.robots, parts: parts.parts,
   templates: parts.templates.length,
+  templateList: parts.templates,
+  kinds: load('catalog/kinds.json').kinds,
   reports: load('catalog/gate-reports.json'),
   intents: load('assets/js/chat-intents.json'),
   root: ''
@@ -255,6 +257,8 @@ const parts = load('catalog/parts.json');
 const engine = FG.createEngine({
   robots: robots.robots, parts: parts.parts,
   templates: parts.templates.length,
+  templateList: parts.templates,
+  kinds: load('catalog/kinds.json').kinds,
   reports: load('catalog/gate-reports.json'),
   intents: load('assets/js/chat-intents.json'),
   root: ''

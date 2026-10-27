@@ -56,13 +56,16 @@
       fetchJSON(BASE + 'catalog/robots.json').catch(function () { return null; }),
       fetchJSON(BASE + 'catalog/parts.json').catch(function () { return null; }),
       fetchJSON(BASE + 'catalog/gate-reports.json').catch(function () { return null; }),
-      fetchJSON(BASE + 'assets/js/chat-intents.json').catch(function () { return null; })
+      fetchJSON(BASE + 'assets/js/chat-intents.json').catch(function () { return null; }),
+      fetchJSON(BASE + 'catalog/kinds.json').catch(function () { return null; })
     ]).then(function (got) {
-      var robots = got[0], parts = got[1], reports = got[2], intents = got[3];
+      var robots = got[0], parts = got[1], reports = got[2], intents = got[3], kindsDoc = got[4];
       engine = FG.createEngine({
         robots: robots && robots.robots ? robots.robots : [],
         parts: parts && parts.parts ? parts.parts : [],
         templates: parts && parts.templates ? parts.templates.length : 0,
+        templateList: parts && parts.templates ? parts.templates : [],
+        kinds: kindsDoc && kindsDoc.kinds ? kindsDoc.kinds : [],
         reports: reports,
         intents: intents,
         root: ROOT
