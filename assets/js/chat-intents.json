@@ -1,0 +1,373 @@
+{
+ "about": "Forge Guide intent table. Static answers are site copy; anything about a specific robot, part or gate report is built by chat-engine.js from catalog/robots.json, catalog/parts.json and catalog/gate-reports.json at runtime — never written here, so this file cannot drift from the recorded data.",
+ "suggestions": [
+  "Which robots passed the gate?",
+  "What are the gate thresholds?",
+  "Tell me about Andino",
+  "Why did Andino fail?",
+  "What is a ball caster?",
+  "How does RobotForge work?"
+ ],
+ "topics": [
+  {
+   "answer": "I'm the Forge Guide, a small guide built into this site. I am not a live AI and I don't call any model — every answer I give is assembled from RobotForge's recorded data in this repository: the Robodex (catalog/robots.json), the parts catalogue (catalog/parts.json) and the recorded gate reports (catalog/gate-reports.json).\n\nIf the data doesn't say it, I'll say so rather than guess.",
+   "id": "identity",
+   "keywords": [
+    "are you an ai",
+    "are you a live ai",
+    "live ai",
+    "are you real",
+    "are you a robot",
+    "who are you",
+    "what are you",
+    "chatgpt",
+    "language model",
+    "real person",
+    "a human"
+   ],
+   "samples": [
+    "Are you a live AI?",
+    "Who are you?"
+   ]
+  },
+  {
+   "answer": "Hello. I answer questions about RobotForge from its recorded data — the robots in the Robodex, their gate verdicts and measured numbers, the parts catalogue, and how the forge works.\n\nTry one of the suggested questions, or ask about a robot by name.",
+   "id": "greeting",
+   "keywords": [
+    "hello",
+    "hi there",
+    "hey",
+    "good morning",
+    "good afternoon",
+    "good evening"
+   ],
+   "samples": [
+    "Hello",
+    "Hi there"
+   ]
+  },
+  {
+   "answer": "The gate's thresholds are locked — printed on every report and never quietly loosened.\n\nDistance error: pass ≤ 5%, marginal 5–10%, fail over 10%.\nHeading error: pass ≤ 5°, marginal 5–10°, fail over 10°.\n\nA run's verdict is set by its worst graded check.",
+   "id": "gate_thresholds",
+   "keywords": [
+    "threshold",
+    "thresholds",
+    "pass mark",
+    "passing grade",
+    "grading scale",
+    "error allowed",
+    "how much error",
+    "pass fail bands"
+   ],
+   "link": {
+    "label": "See the recorded gate reports",
+    "route": "app/evidence/"
+   },
+   "samples": [
+    "What are the gate thresholds?",
+    "How much error is allowed before a robot fails?"
+   ]
+  },
+  {
+   "answer": "A gate run commands the robot's simulated twin to drive 1 metre and turn 90 degrees in Gazebo Sim.\n\nThe drive and turn are graded against the simulator's ground truth — where the robot actually went — and the robot's own odometry is graded against that same truth. A robot whose sensors are wrong about its own motion can't pass. When a check misses, the report names a suspect: the spec field to look at first.",
+   "id": "gate_how",
+   "keywords": [
+    "how does the gate work",
+    "how is the gate graded",
+    "how is a run graded",
+    "how are robots graded",
+    "what does the gate test",
+    "how does grading work",
+    "motion gate",
+    "what is the gate"
+   ],
+   "link": {
+    "label": "See how the recorded runs were graded",
+    "route": "app/evidence/"
+   },
+   "samples": [
+    "How does the gate work?",
+    "What is the gate?"
+   ]
+  },
+  {
+   "answer": "Marginal is the middle verdict: the measured error landed between the pass and fail bands — over 5% (or 5°) but not over 10% (or 10°).\n\nIt means 'close, but not inside the locked pass threshold'. A run's overall verdict is set by its worst check, so one marginal check makes the run marginal.",
+   "id": "marginal",
+   "keywords": [
+    "marginal",
+    "what does marginal mean",
+    "marginal verdict",
+    "yellow verdict"
+   ],
+   "samples": [
+    "What does marginal mean?",
+    "What is a marginal verdict?"
+   ]
+  },
+  {
+   "handler": "reports_list",
+   "id": "gate_reports",
+   "keywords": [
+    "gate reports",
+    "show me the reports",
+    "the reports",
+    "evidence",
+    "proof",
+    "recorded reports",
+    "full reports",
+    "see the reports"
+   ],
+   "samples": [
+    "Show me the gate reports",
+    "Where is the evidence?"
+   ]
+  },
+  {
+   "handler": "passed_list",
+   "id": "passed_list",
+   "keywords": [
+    "which robots passed",
+    "who passed",
+    "passed the gate",
+    "robots that passed",
+    "which passed",
+    "passing robots",
+    "pass the gate"
+   ],
+   "samples": [
+    "Which robots passed the gate?",
+    "Who passed the gate?"
+   ]
+  },
+  {
+   "handler": "failed_list",
+   "id": "failed_list",
+   "keywords": [
+    "which robots failed",
+    "who failed",
+    "failed the gate",
+    "robots that failed",
+    "which failed",
+    "fail the gate",
+    "not gated",
+    "not been gated",
+    "hasn't been gated",
+    "no verdict"
+   ],
+   "samples": [
+    "Which robots failed the gate?",
+    "Which robots are not gated yet?"
+   ]
+  },
+  {
+   "handler": "robodex_list",
+   "id": "robodex_list",
+   "keywords": [
+    "list the robots",
+    "what robots are",
+    "which robots are in",
+    "robots in the robodex",
+    "what's in the robodex",
+    "what is in the robodex",
+    "show me the robots",
+    "all the robots",
+    "how many robots",
+    "the robodex"
+   ],
+   "samples": [
+    "List the robots",
+    "What's in the Robodex?"
+   ]
+  },
+  {
+   "answer": "RobotForge takes a robot from an idea to a measured verdict in five steps:\n\n1. Input — describe the robot in plain words, show a photo, or paste a parts list.\n2. Spec — Muse Spark drafts a structured spec: motors, wheels, battery, sensors, dimensions.\n3. Checks — engineering validation catches numbers that don't add up, before anything is simulated.\n4. Twin & gate — the spec becomes a digital twin that runs headless in Gazebo Sim, and the motion gate grades it against ground truth at locked thresholds.\n5. Outputs — a URDF, a take-apart 3D-printable parts kit, and the gate's measured verdict.\n\nThis static site replays recorded runs — nothing here calls a model or a simulator live.",
+   "id": "process",
+   "keywords": [
+    "how does robotforge work",
+    "how it works",
+    "the workflow",
+    "five steps",
+    "5 steps",
+    "the process",
+    "what does robotforge do",
+    "how does the forge work"
+   ],
+   "link": {
+    "label": "Step through a recorded run in the Forge",
+    "route": "app/forge/"
+   },
+   "samples": [
+    "How does RobotForge work?",
+    "What does RobotForge do?"
+   ]
+  },
+  {
+   "answer": "In the Forge, pick the Words tab and write one paragraph about your robot: what it is, how it moves, roughly how big it is, what powers it and what sensors it carries.\n\nMuse Spark turns the paragraph into a structured spec; the checks then grade the numbers, the twin is built, and the gate measures it. The Forge page replays a real recorded run of exactly this, step by step.",
+   "id": "describe_how",
+   "keywords": [
+    "how do i describe",
+    "describe a robot",
+    "how to describe",
+    "make a robot from words",
+    "words into a robot",
+    "write a description",
+    "describe my robot"
+   ],
+   "link": {
+    "label": "Open the Forge",
+    "route": "app/forge/"
+   },
+   "samples": [
+    "How do I describe a robot?",
+    "How to describe a robot in words?"
+   ]
+  },
+  {
+   "answer": "Yes — a photo works as input. `robotforge describe --photo` has Muse Spark identify the robot and draft a spec from what is visible, and SAM cross-checks the visible part counts.\n\nHonesty rule: a photograph carries no scale, so every dimension in a photo draft is ESTIMATED and labelled as such. The TurtleBot3 Waffle Pi in the Robodex arrived exactly this way — its spec is a photo draft and it has not been gated.",
+   "id": "photo",
+   "keywords": [
+    "photo",
+    "photograph",
+    "picture of a robot",
+    "from a photo",
+    "photo of my robot",
+    "image of a robot"
+   ],
+   "link": {
+    "label": "See the photo-drafted robot",
+    "route": "app/robots/turtlebot3-waffle-pi/"
+   },
+   "samples": [
+    "Can I use a photo of a robot?",
+    "How does photo intake work?"
+   ]
+  },
+  {
+   "answer": "A digital twin is the robot rebuilt in simulation from its spec: same dimensions, wheel layout and drive geometry, running headless in Gazebo Sim.\n\nRobotForge grades the twin, not the physical robot — the gate measures whether the spec's model does what the spec claims. That distinction is printed wherever a verdict appears.",
+   "id": "twin",
+   "keywords": [
+    "digital twin",
+    "what is a twin",
+    "the twin",
+    "simulation twin",
+    "simulated twin",
+    "a twin"
+   ],
+   "samples": [
+    "What is a digital twin?",
+    "What is the twin?"
+   ]
+  },
+  {
+   "answer": "Every spec can become a take-apart kit (`robotforge cad`): one OpenSCAD file per part — chassis plate, wheels, motor mounts, brackets — plus an assembly and a parts index, sized from the spec's numbers and written for beginners to edit and 3D-print.\n\nEach robot page in the app has a take-apart viewer that lays its kit out from the spec; click any part to see what it is.",
+   "id": "take_apart",
+   "keywords": [
+    "take apart",
+    "take-apart",
+    "take it apart",
+    "parts kit",
+    "cad",
+    "openscad",
+    "3d print",
+    "3d-print",
+    "printable parts",
+    "kit of parts"
+   ],
+   "link": {
+    "label": "Browse the robots and their kits",
+    "route": "app/robots/"
+   },
+   "samples": [
+    "What is the take-apart kit?",
+    "Can I 3D print the parts?"
+   ]
+  },
+  {
+   "answer": "Yes — paste a shopping or wish list into the Forge's Parts list tab (or run `robotforge import-list` in the repo): RobotForge identifies the parts against its catalogue, assembles a draft robot, suggests wiring, and lists what is missing.\n\nThe Forge replays a recorded import of a quadcopter parts list.",
+   "id": "import_list",
+   "keywords": [
+    "parts list",
+    "shopping list",
+    "paste a list",
+    "import a list",
+    "wish list",
+    "paste my list"
+   ],
+   "link": {
+    "label": "See the recorded parts-list run",
+    "route": "app/forge/"
+   },
+   "samples": [
+    "Can I paste a parts list?",
+    "What happens with a shopping list?"
+   ]
+  },
+  {
+   "answer": "`robotforge lookup` takes a robot the forge identified — from words or a photo — finds its official open-source model (for example a URDF in the maker's repository), and pulls it with its licence and a manifest, so real robots enter the Robodex with provenance attached.\n\nThe TurtleBot3 models in the Robodex arrived this way.",
+   "id": "lookup_cmd",
+   "keywords": [
+    "look up a robot",
+    "lookup",
+    "find a robot online",
+    "pull a urdf",
+    "real robot model",
+    "official model"
+   ],
+   "samples": [
+    "How does lookup work?",
+    "Can it pull a real robot's URDF?"
+   ]
+  },
+  {
+   "handler": "parts_overview",
+   "id": "parts_overview",
+   "keywords": [
+    "parts catalog",
+    "parts catalogue",
+    "how many parts",
+    "what parts are in the catalog",
+    "what parts are in the catalogue",
+    "catalog of parts",
+    "the catalogue",
+    "the catalog"
+   ],
+   "samples": [
+    "How many parts are in the catalogue?",
+    "What parts are in the catalog?"
+   ]
+  },
+  {
+   "answer": "The catalogue doesn't carry shop links or prices yet — each part's buy field is deliberately empty in this version. That's a planned later step, not something I can paper over.\n\nWhat the catalogue does record for every part is its source and licence. Ask me about a part by name and I'll tell you what it is, what it's used for, and where the entry came from.",
+   "id": "buy",
+   "keywords": [
+    "buy",
+    "purchase",
+    "shop",
+    "price",
+    "cost",
+    "where can i get",
+    "how much does"
+   ],
+   "samples": [
+    "Where can I buy the parts?",
+    "How much does a part cost?"
+   ]
+  },
+  {
+   "answer": "I answer from RobotForge's recorded data. Ask me:\n\n• about a robot by name or Robodex number — 'Tell me about the Burger', 'Why did Andino fail?'\n• which robots passed or failed the gate\n• how the gate works and what its thresholds are\n• about any part in the catalogue by name — 'What is a TB6612FNG?'\n• how RobotForge works, or how to describe a robot\n\nIf the recorded data doesn't cover it, I'll say so plainly.",
+   "id": "help",
+   "keywords": [
+    "help",
+    "what can you answer",
+    "what can i ask",
+    "what do you know",
+    "your abilities"
+   ],
+   "samples": [
+    "Help",
+    "What can I ask you?"
+   ]
+  }
+ ],
+ "version": 1
+}

@@ -1,0 +1,549 @@
+'use strict';
+/* Forge Guide answer engine — pure and DOM-free.
+ *
+ * Every answer is assembled from RobotForge's recorded data at runtime:
+ * catalog/robots.json, catalog/parts.json and catalog/gate-reports.json,
+ * plus the intent table in chat-intents.json. Robot and part facts are
+ * never hardcoded here; if the data doesn't say it, the answer says so.
+ *
+ * Live-model hook: CONFIG.endpoint is empty in v1, so this local engine
+ * answers. If a deployment later sets an endpoint, chat.js posts the
+ * question there first and only falls back to this engine on failure —
+ * the UI and this module's contract ({html, chips}) stay the same.
+ */
+(function (global) {
+  var CONFIG = { endpoint: '' };
+
+  var VLABEL = { PASS: 'Pass', MARGINAL: 'Marginal', FAIL: 'Fail', NOT_GATED: 'Not gated' };
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function normalize(s) {
+    return String(s == null ? '' : s).toLowerCase()
+      .replace(/[^a-z0-9#]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function tokens(s) {
+    var n = normalize(s);
+    return n ? n.split(' ') : [];
+  }
+
+  /* True when phrase's tokens appear consecutively in qtoks. */
+  function phraseIn(qtoks, phrase) {
+    var pt = tokens(phrase);
+    if (!pt.length || pt.length > qtoks.length) return false;
+    for (var i = 0; i + pt.length <= qtoks.length; i++) {
+      var ok = true;
+      for (var j = 0; j < pt.length; j++) {
+        if (qtoks[i + j] !== pt[j]) { ok = false; break; }
+      }
+      if (ok) return true;
+    }
+    return false;
+  }
+
+  function slugify(name) {
+    return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function fmt(v) {
+    return v == null ? null : String(parseFloat(Number(v).toFixed(3)));
+  }
+
+  function dexId(robot) {
+    var n = String(robot.number);
+    return '#' + ('00' + n).slice(-3);
+  }
+
+  function robotPage(root, robot) {
+    return root + 'app/robots/' + slugify(robot.name) + '/';
+  }
+
+  /* ---------------- robot matching ---------------- */
+
+  function robotKeys(robot) {
+    var toks = tokens(robot.name);
+    var keys = [{ text: robot.name, score: 10 }];
+    if (toks.length > 1) {
+      var last = toks[toks.length - 1];
+      if (last.length >= 4) keys.push({ text: last, score: 8 });
+      if (toks.length > 2) {
+        keys.push({ text: toks.slice(-2).join(' '), score: 8 });
+        /* distinctive middle token: "waffle" in TurtleBot3 Waffle Pi */
+        toks.slice(1, -1).forEach(function (t) {
+          if (t.length >= 5) keys.push({ text: t, score: 8 });
+        });
+      }
+    }
+    var num = String(robot.number);
+    keys.push({ text: '#' + ('00' + num).slice(-3), score: 6 });
+    keys.push({ text: ('00' + num).slice(-3), score: 6 });
+    return keys;
+  }
+
+  function findRobots(qt, robots) {
+    var hits = [];
+    robots.forEach(function (r) {
+      var best = 0;
+      robotKeys(r).forEach(function (k) {
+        if (phraseIn(qt, k.text)) best = Math.max(best, k.score);
+      });
+      if (best) hits.push({ robot: r, score: best });
+    });
+    return hits.sort(function (a, b) { return b.score - a.score; });
+  }
+
+  /* Brand token shared by 2+ robots (e.g. "turtlebot3", or "turtlebot"
+     with the model number dropped) with no qualifier — the honest move
+     is to list the candidates. */
+  function brandAmbiguity(qt, robots) {
+    var first = {};
+    robots.forEach(function (r) {
+      var t = tokens(r.name)[0];
+      if (!t) return;
+      [t, t.replace(/\d+$/, '')].forEach(function (brand) {
+        if (brand.length >= 4) (first[brand] = first[brand] || []).push(r);
+      });
+    });
+    for (var brand in first) {
+      var group = first[brand].filter(function (r, i, a) {
+        return a.indexOf(r) === i;
+      });
+      if (group.length > 1 && qt.indexOf(brand) !== -1) return group;
+    }
+    return null;
+  }
+
+  /* ---------------- robot answers ---------------- */
+
+  function runLine(run) {
+    var bits = ['drive error ' + fmt(run.drive_error_pct) + '%'];
+    if (run.heading_error_deg != null) bits.push('turn error ' + fmt(run.heading_error_deg) + '°');
+    if (run.odometry_distance_error_pct != null) {
+      bits.push('odometry distance error ' + fmt(run.odometry_distance_error_pct) + '%');
+    }
+    if (run.odometry_heading_error_deg != null) {
+      bits.push('odometry heading error ' + fmt(run.odometry_heading_error_deg) + '°');
+    }
+    return bits.join(' · ');
+  }
+
+  function gateBlock(robot) {
+    var gs = robot.gate_status || {};
+    var status = gs.status || 'NOT_GATED';
+    var runs = gs.runs || [];
+    var out = '';
+    if (status === 'NOT_GATED' || !runs.length) {
+      out += '<p><strong>Gate: not gated yet</strong> — no recorded runs, so no verdict.</p>';
+    } else {
+      out += '<p><strong>Gate: ' + esc(VLABEL[status]) + '</strong> — ' +
+        runs.length + ' recorded run' + (runs.length === 1 ? '' : 's') +
+        ' at the locked thresholds (pass ≤ 5% / 5°):</p><ul>' +
+        runs.map(function (run, i) {
+          return '<li>Run ' + (i + 1) + ': ' + esc(runLine(run)) + '</li>';
+        }).join('') + '</ul>';
+    }
+    if (gs.note) out += '<p>' + esc(gs.note) + '</p>';
+    return out;
+  }
+
+  function specsBlock(robot) {
+    var ks = robot.key_specs || {};
+    var keys = Object.keys(ks);
+    if (!keys.length) return '<p>No key specs recorded for this robot.</p>';
+    return '<p><strong>Key specs</strong></p><ul>' + keys.map(function (k) {
+      return '<li>' + esc(k.replace(/_/g, ' ')) + ': ' + esc(ks[k]) + '</li>';
+    }).join('') + '</ul>';
+  }
+
+  function provBlock(robot) {
+    var p = robot.provenance || {};
+    var out = '<p><strong>Provenance</strong></p><ul>';
+    if (p.source_name) {
+      out += '<li>Source: ' + esc(p.source_name) +
+        (p.source_url ? ' (<a href="' + esc(p.source_url) + '">link</a>)' : '') + '</li>';
+    }
+    if (p.license) out += '<li>License: ' + esc(p.license) + '</li>';
+    if (robot.spec_file) out += '<li>Spec file: <code>' + esc(robot.spec_file) + '</code></li>';
+    if (p.note) out += '<li>' + esc(p.note) + '</li>';
+    return out + '</ul>';
+  }
+
+  function robotAnswer(robot, qt, root) {
+    var gs = robot.gate_status || {};
+    var status = gs.status || 'NOT_GATED';
+    var wantsGate = ['gate', 'verdict', 'passed', 'pass', 'failed', 'fail',
+      'measured', 'run', 'runs', 'score', 'why'].some(function (w) {
+        return qt.indexOf(w) !== -1;
+      });
+    var wantsSpecs = ['spec', 'specs', 'size', 'dimension', 'dimensions',
+      'mass', 'weight', 'heavy', 'wheel', 'wheels', 'battery', 'motor',
+      'motors', 'sensor', 'sensors', 'big'].some(function (w) {
+        return qt.indexOf(w) !== -1;
+      });
+    var wantsProv = ['license', 'licence', 'source', 'provenance', 'made',
+      'maker', 'manufacturer', 'designed', 'built'].some(function (w) {
+        return qt.indexOf(w) !== -1;
+      });
+    var out = '<p><strong>' + esc(dexId(robot)) + ' ' + esc(robot.name) + '</strong> · ' +
+      esc(robot.class) + '</p><p>' + esc(robot.description) + '</p>';
+    if (wantsGate || (!wantsSpecs && !wantsProv)) {
+      out += gateBlock(robot);
+    } else {
+      out += '<p><strong>Gate: ' + esc(VLABEL[status]) + '</strong>' +
+        (gs.runs && gs.runs.length
+          ? ' — ' + gs.runs.length + ' recorded run' + (gs.runs.length === 1 ? '' : 's') + '.'
+          : ' — no recorded runs.') + '</p>';
+    }
+    if (wantsSpecs) out += specsBlock(robot);
+    if (wantsProv) out += provBlock(robot);
+    out += '<p><a href="' + esc(robotPage(root, robot)) + '">Open ' +
+      esc(robot.name) + '&rsquo;s page &rarr;</a>';
+    if (wantsGate) {
+      out += ' · <a href="' + esc(root + 'app/evidence/') + '">Gate evidence</a>';
+    }
+    return out + '</p>';
+  }
+
+  function compareAnswer(hits, root) {
+    var out = '<p>Here is what the recorded data says about each:</p>';
+    hits.forEach(function (h) {
+      var r = h.robot;
+      var gs = r.gate_status || {};
+      var runs = gs.runs || [];
+      var latest = runs.length ? runs[runs.length - 1] : null;
+      out += '<p><strong>' + esc(dexId(r)) + ' ' + esc(r.name) + '</strong> — gate: <strong>' +
+        esc(VLABEL[gs.status || 'NOT_GATED']) + '</strong>' +
+        (latest ? '; latest run: ' + esc(runLine(latest)) : '; no recorded runs') +
+        '. <a href="' + esc(robotPage(root, r)) + '">Its page &rarr;</a></p>';
+    });
+    return out;
+  }
+
+  function brandAnswer(group, root) {
+    var out = '<p>More than one robot matches that name:</p><ul>' + group.map(function (r) {
+      var gs = r.gate_status || {};
+      return '<li><a href="' + esc(robotPage(root, r)) + '">' + esc(dexId(r)) + ' ' +
+        esc(r.name) + '</a> — ' + esc(r.class) + '; gate: ' +
+        esc(VLABEL[gs.status || 'NOT_GATED']) + '</li>';
+    }).join('') + '</ul><p>Ask about one by its full name or number.</p>';
+    return out;
+  }
+
+  /* ---------------- part matching + answers ---------------- */
+
+  var STOP = { mm: 1, cm: 1, kg: 1, per: 1, metre: 1, meter: 1, inch: 1,
+               size: 1, class: 1, with: 1, the: 1, for: 1, and: 1 };
+
+  function headName(name) {
+    return String(name).split('(')[0].split(',')[0].trim();
+  }
+
+  function scorePart(part, q, qt) {
+    var nameN = normalize(part.name);
+    var headN = normalize(headName(part.name));
+    if (phraseIn(qt, nameN)) return 10;
+    if (headN && headN !== nameN && phraseIn(qt, headN)) return 9;
+    if (phraseIn(qt, String(part.id).replace(/_/g, ' '))) return 8;
+    var segs = String(part.id).split('_');
+    for (var i = 0; i < segs.length; i++) {
+      if (segs[i].length >= 4 && qt.indexOf(segs[i]) !== -1) return 7;
+    }
+    var headToks = tokens(headN);
+    if (headToks.length >= 2) {
+      /* a run of >= 2 question tokens that starts the part's head name
+         ("lidar mount" -> "Lidar mount post (3D-printed)") */
+      for (var s = 0; s + 1 < qt.length; s++) {
+        if (qt[s] === headToks[0] && qt[s + 1] === headToks[1]) return 7;
+      }
+      var sig = headToks.filter(function (t) { return t.length >= 3 && !STOP[t]; });
+      var matched = sig.filter(function (t) { return qt.indexOf(t) !== -1; });
+      if (matched.length >= 2 && matched.length / sig.length >= 0.75) return 5;
+    } else if (headToks.length === 1 && headToks[0].length >= 4 &&
+               qt.indexOf(headToks[0]) !== -1) {
+      return 6;
+    }
+    return 0;
+  }
+
+  function findParts(q, qt, parts) {
+    var hits = [];
+    parts.forEach(function (p) {
+      var s = scorePart(p, q, qt);
+      if (s) hits.push({ part: p, score: s });
+    });
+    return hits.sort(function (a, b) { return b.score - a.score; });
+  }
+
+  function partAnswer(part) {
+    var out = '<p><strong>' + esc(part.name) + '</strong> · ' +
+      esc(String(part.part_class || '').replace(/_/g, ' ')) + '</p>';
+    if (part.blurb) out += '<p>' + esc(part.blurb) + '</p>';
+    if (part.used_for) out += '<p><strong>Used for:</strong> ' + esc(part.used_for) + '</p>';
+    if (part.robot_types && part.robot_types.length) {
+      out += '<p><strong>Found on:</strong> ' + esc(part.robot_types.join(', ')) + '</p>';
+    }
+    var specs = part.specs || {};
+    var keys = Object.keys(specs).slice(0, 5);
+    if (keys.length) {
+      out += '<p><strong>Recorded specs:</strong> ' + keys.map(function (k) {
+        var v = specs[k];
+        return esc(k.replace(/_/g, ' ')) + ': ' +
+          esc(Array.isArray(v) ? v.join(' / ') : v);
+      }).join(' · ') + '</p>';
+    }
+    if (part.notes) out += '<p>' + esc(part.notes) + '</p>';
+    out += '<p><span class="fc-dim">Source: ' + esc(part.source || 'not recorded') +
+      ' · License: ' + esc(part.license || 'not recorded') + '</span></p>';
+    return out;
+  }
+
+  function partAmbiguous(hits) {
+    return '<p>That matches more than one catalogue part:</p><ul>' +
+      hits.slice(0, 5).map(function (h) {
+        return '<li>' + esc(h.part.name) + ' (' +
+          esc(String(h.part.part_class || '').replace(/_/g, ' ')) + ')</li>';
+      }).join('') + '</ul><p>Ask again with the fuller name.</p>';
+  }
+
+  /* ---------------- data-driven topic handlers ---------------- */
+
+  var HANDLERS = {
+    robodex_list: function (ctx) {
+      if (!ctx.data.robots.length) return ctx.noData('app/robots/', 'the Robodex page');
+      var out = '<p>The Robodex — ' + ctx.data.robots.length +
+        ' robots, numbered in the order the forge learned them:</p><ul>';
+      ctx.data.robots.forEach(function (r) {
+        var gs = r.gate_status || {};
+        out += '<li><a href="' + esc(robotPage(ctx.root, r)) + '">' +
+          esc(dexId(r)) + ' ' + esc(r.name) + '</a> — ' + esc(r.class) +
+          '; gate: ' + esc(VLABEL[gs.status || 'NOT_GATED']) + '</li>';
+      });
+      return out + '</ul>';
+    },
+
+    passed_list: function (ctx) {
+      if (!ctx.data.robots.length) return ctx.noData('app/robots/', 'the Robodex page');
+      var passed = ctx.data.robots.filter(function (r) {
+        return (r.gate_status || {}).status === 'PASS';
+      });
+      if (!passed.length) return '<p>No robot in the Robodex has a recorded PASS yet.</p>';
+      var out = '<p>' + passed.length + ' of ' + ctx.data.robots.length +
+        ' robots hold a recorded gate PASS:</p><ul>';
+      passed.forEach(function (r) {
+        var runs = (r.gate_status || {}).runs || [];
+        var latest = runs[runs.length - 1];
+        out += '<li><a href="' + esc(robotPage(ctx.root, r)) + '">' +
+          esc(dexId(r)) + ' ' + esc(r.name) + '</a> — ' + runs.length +
+          ' recorded run' + (runs.length === 1 ? '' : 's') +
+          (latest ? '; latest: ' + esc(runLine(latest)) : '') + '</li>';
+      });
+      return out + '</ul><p><a href="' + esc(ctx.root + 'app/evidence/') +
+        '">See the gate evidence &rarr;</a></p>';
+    },
+
+    failed_list: function (ctx) {
+      if (!ctx.data.robots.length) return ctx.noData('app/robots/', 'the Robodex page');
+      var failed = ctx.data.robots.filter(function (r) {
+        return (r.gate_status || {}).status === 'FAIL';
+      });
+      var ungated = ctx.data.robots.filter(function (r) {
+        return (r.gate_status || {}).status === 'NOT_GATED';
+      });
+      var out = '';
+      if (failed.length) {
+        out += '<p>Recorded gate FAIL:</p><ul>' + failed.map(function (r) {
+          var runs = (r.gate_status || {}).runs || [];
+          var latest = runs[runs.length - 1];
+          return '<li><a href="' + esc(robotPage(ctx.root, r)) + '">' +
+            esc(dexId(r)) + ' ' + esc(r.name) + '</a>' +
+            (latest ? ' — latest run: ' + esc(runLine(latest)) : '') +
+            '. Ask me &lsquo;why did it fail?&rsquo; for the recorded diagnosis.</li>';
+        }).join('') + '</ul>';
+      } else {
+        out += '<p>No robot in the Robodex has a recorded FAIL.</p>';
+      }
+      if (ungated.length) {
+        out += '<p>Not gated yet (no runs, so no verdict): ' + ungated.map(function (r) {
+          return '<a href="' + esc(robotPage(ctx.root, r)) + '">' +
+            esc(dexId(r)) + ' ' + esc(r.name) + '</a>';
+        }).join(', ') + '.</p>';
+      }
+      return out;
+    },
+
+    parts_overview: function (ctx) {
+      if (!ctx.data.parts.length) return ctx.noData('app/robots/#parts', 'the parts catalogue');
+      var byClass = {};
+      ctx.data.parts.forEach(function (p) {
+        byClass[p.part_class] = (byClass[p.part_class] || 0) + 1;
+      });
+      var classes = Object.keys(byClass).sort();
+      var out = '<p>The parts catalogue holds <strong>' + ctx.data.parts.length +
+        ' real parts</strong> in ' + classes.length + ' classes, plus ' +
+        ctx.data.templates + ' robot-class templates (reference BOMs):</p><ul>' +
+        classes.map(function (c) {
+          return '<li>' + esc(c.replace(/_/g, ' ')) + ': ' + byClass[c] + '</li>';
+        }).join('') + '</ul>' +
+        '<p>Ask me about any part by name — for example &lsquo;What is a TB6612FNG?&rsquo;</p>';
+      return out;
+    },
+
+    reports_list: function (ctx) {
+      var runs = (ctx.data.reports && ctx.data.reports.runs) || [];
+      if (!runs.length) return ctx.noData('app/evidence/', 'the Evidence page');
+      var out = '<p>' + runs.length + ' recorded gate reports:</p><ul>';
+      runs.forEach(function (rep) {
+        var doc = rep.doc || {};
+        var checks = doc.checks || [];
+        var worst = checks.slice().sort(function (a, b) {
+          return Number(b.error) - Number(a.error);
+        })[0];
+        out += '<li><strong>' + esc(rep.title || rep.id) + '</strong> — verdict <strong>' +
+          esc(doc.verdict || 'not recorded') + '</strong>' +
+          (worst ? '; largest error: ' + esc(worst.name.replace(/_/g, ' ')) + ' ' +
+            fmt(worst.error) + esc(worst.unit === 'deg' ? '°' : worst.unit) : '') + '</li>';
+      });
+      return out + '</ul><p><a href="' + esc(ctx.root + 'app/evidence/') +
+        '">Open the Evidence page &rarr;</a></p>';
+    }
+  };
+
+  /* ---------------- topics ---------------- */
+
+  function scoreTopic(topic, qt) {
+    var score = 0, longest = 0;
+    (topic.keywords || []).forEach(function (kw) {
+      if (phraseIn(qt, kw)) {
+        var w = Math.max(2, tokens(kw).length);
+        score += w;
+        longest = Math.max(longest, tokens(kw).length);
+      }
+    });
+    return { score: score, longest: longest };
+  }
+
+  function textAnswer(text, link, root) {
+    var out = text.split(/\n\n+/).map(function (para) {
+      return '<p>' + esc(para).replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+    if (link) {
+      out += '<p><a href="' + esc(root + link.route) + '">' +
+        esc(link.label) + ' &rarr;</a></p>';
+    }
+    return out;
+  }
+
+  /* ---------------- the engine ---------------- */
+
+  function createEngine(data) {
+    var ctx = {
+      data: {
+        robots: (data.robots || []).slice().sort(function (a, b) {
+          return a.number - b.number;
+        }),
+        parts: data.parts || [],
+        templates: data.templates || 0,
+        reports: data.reports || null
+      },
+      root: data.root || '',
+      noData: function (route, label) {
+        return '<p>I couldn&rsquo;t load the recorded catalogue just now, so I can&rsquo;t ' +
+          'answer that from data. The full record is on <a href="' +
+          esc(this.root + route) + '">' + esc(label) + '</a>.</p>';
+      }
+    };
+    var topics = (data.intents && data.intents.topics) || [];
+    var suggestions = (data.intents && data.intents.suggestions) || [];
+
+    function answer(question) {
+      var q = String(question || '');
+      var qt = tokens(q);
+      if (!qt.length) {
+        return { html: '<p>Ask me about a robot, a part, or the gate.</p>',
+                 chips: suggestions };
+      }
+
+      /* 1. robots: strong entity match wins */
+      var rHits = findRobots(qt, ctx.data.robots).filter(function (h) {
+        return h.score >= 6;
+      });
+      if (rHits.length === 1) {
+        return { html: robotAnswer(rHits[0].robot, qt, ctx.root) };
+      }
+      if (rHits.length > 1) {
+        return { html: compareAnswer(rHits, ctx.root) };
+      }
+      var brand = brandAmbiguity(qt, ctx.data.robots);
+      if (brand) return { html: brandAnswer(brand, ctx.root) };
+
+      /* 2. parts with a confident match beat generic topics */
+      var pHits = findParts(q, qt, ctx.data.parts);
+      var topPart = pHits.length ? pHits[0] : null;
+      if (topPart && topPart.score >= 8) {
+        var tied = pHits.filter(function (h) { return h.score === topPart.score; });
+        return { html: tied.length > 1 ? partAmbiguous(tied) : partAnswer(topPart.part) };
+      }
+
+      /* 3. intent topics */
+      var best = null, bestScore = 0, bestLong = 0;
+      topics.forEach(function (t) {
+        var s = scoreTopic(t, qt);
+        if (s.score > bestScore || (s.score === bestScore && s.score > 0 &&
+            s.longest > bestLong)) {
+          best = t; bestScore = s.score; bestLong = s.longest;
+        }
+      });
+      if (best && bestScore >= 2) {
+        if (best.handler && HANDLERS[best.handler]) {
+          return { html: HANDLERS[best.handler](ctx) };
+        }
+        if (best.answer) return { html: textAnswer(best.answer, best.link, ctx.root) };
+      }
+
+      /* 4. weaker part match */
+      if (topPart && topPart.score >= 5) {
+        var tied2 = pHits.filter(function (h) { return h.score === topPart.score; });
+        return { html: tied2.length > 1 ? partAmbiguous(tied2) : partAnswer(topPart.part) };
+      }
+
+      /* 5. honest fallback, with the nearest topics as suggestions */
+      var near = topics.map(function (t) {
+        return { t: t, s: scoreTopic(t, qt).score };
+      }).filter(function (x) { return x.s > 0; })
+        .sort(function (a, b) { return b.s - a.s; }).slice(0, 2);
+      var chips = near.length
+        ? near.map(function (x) { return (x.t.samples || [])[0]; }).filter(Boolean)
+        : suggestions;
+      return {
+        html: '<p>I don&rsquo;t have that in RobotForge&rsquo;s recorded data, and ' +
+          'I&rsquo;d rather say so than guess.</p>' +
+          '<p>I can answer about the Robodex robots and their gate verdicts, the ' +
+          'parts catalogue, how the gate works and its thresholds, and how ' +
+          'RobotForge works. Try one of these:</p>',
+        chips: chips.length ? chips : suggestions
+      };
+    }
+
+    return { answer: answer, suggestions: suggestions, CONFIG: CONFIG };
+  }
+
+  var ForgeGuide = {
+    CONFIG: CONFIG,
+    normalize: normalize,
+    tokens: tokens,
+    phraseIn: phraseIn,
+    slugify: slugify,
+    createEngine: createEngine,
+    HANDLERS: HANDLERS
+  };
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ForgeGuide;
+  }
+  global.ForgeGuide = ForgeGuide;
+})(typeof window !== 'undefined' ? window : this);
