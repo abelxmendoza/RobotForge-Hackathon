@@ -1,0 +1,53 @@
+/* RobotForge motion pack — reveal, verdict stamps, hovers, floats.
+   Loaded after app.css/site.css on every page. Honors reduced motion. */
+
+/* --- scroll reveal (JS adds .rv, observer adds .in) --- */
+.rv{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+.rv.in{opacity:1;transform:none}
+.rv-d1{transition-delay:.06s}.rv-d2{transition-delay:.12s}.rv-d3{transition-delay:.18s}
+
+/* --- verdict stamps --- */
+@keyframes rf-stamp{0%{opacity:0;transform:rotate(-10deg) scale(1.8)}
+  60%{opacity:1;transform:rotate(1.5deg) scale(.94)}100%{opacity:1;transform:rotate(-1.5deg) scale(1)}}
+.verdict{display:inline-block;animation:rf-stamp .55s cubic-bezier(.2,1.6,.4,1) both .15s}
+@keyframes rf-pulse-pass{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}
+  50%{box-shadow:0 0 0 5px rgba(52,211,153,.16)}}
+.verdict.pass{animation:rf-stamp .55s cubic-bezier(.2,1.6,.4,1) both .15s,rf-pulse-pass 2.8s ease-in-out .8s infinite}
+
+/* --- cards: lift + artwork zoom --- */
+.robot-card{transition:transform .25s ease,box-shadow .25s ease}
+.robot-card:hover{transform:translateY(-5px);box-shadow:0 16px 34px rgba(0,0,0,.35)}
+.robot-card .ph{overflow:hidden}
+.robot-card .ph img{transition:transform .5s ease}
+.robot-card:hover .ph img{transform:scale(1.06)}
+
+/* --- placeholders shimmer --- */
+@keyframes rf-shimmer{from{background-position:-400px 0}to{background-position:400px 0}}
+.ph.ai:empty{background:linear-gradient(100deg,var(--surface-2) 40%,rgba(245,158,11,.10) 50%,var(--surface-2) 60%);
+  background-size:800px 100%;animation:rf-shimmer 2.4s linear infinite}
+
+/* --- hero float (landing) --- */
+@keyframes rf-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero-art img{animation:rf-float 6s ease-in-out infinite}
+.rf-float{animation:rf-float 6s ease-in-out infinite;transform-origin:center}
+
+/* --- evidence: trajectory + report cards --- */
+canvas.traj{animation:rf-fadein 1s ease both .2s}
+@keyframes rf-fadein{from{opacity:0}to{opacity:1}}
+
+/* --- illustration strip (robots index) --- */
+.dex-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:18px 0 6px}
+.dex-strip figure{margin:0;background:radial-gradient(300px 130px at 50% 0%,#232833,#14161a);
+  border:1px solid var(--line,#2c313a);border-radius:12px;padding:10px 8px 6px;text-align:center}
+.dex-strip svg{width:100%;height:auto;display:block}
+.dex-strip figcaption{font-size:12px;color:var(--dim,#9aa3ad);margin-top:4px}
+
+/* --- generic link/button life --- */
+.btn,.button{transition:transform .15s ease,box-shadow .15s ease}
+.btn:hover,.button:hover{transform:translateY(-1px)}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;
+    transition-duration:.001s !important}
+  .rv{opacity:1;transform:none}
+}
