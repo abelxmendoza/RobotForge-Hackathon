@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
+from .cad import (is_estimated, kit_slug, render_stls, write_kit)
 from .describe import describe_live, describe_mock
 from .gate import (evaluate_drive, evaluate_odometry_distance,
                    evaluate_odometry_heading, evaluate_run, evaluate_turn)
@@ -129,6 +131,15 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("spec")
     u.add_argument("--out", required=True)
 
+    cd = sub.add_parser("cad", help="generate a take-apart OpenSCAD parts "
+                                    "kit from a valid spec")
+    cd.add_argument("spec")
+    cd.add_argument("--out-dir", default=None,
+                    help="kit folder (default: build/cad/<robot-name>)")
+    cd.add_argument("--stl", action="store_true",
+                    help="also render per-part + assembly STLs if an "
+                         "openscad binary is on PATH (skipped otherwise)")
+
     g = sub.add_parser("run-gate", help="spawn the twin in headless Gazebo and "
                                        "run the motion acceptance gate")
     g.add_argument("spec")
@@ -186,6 +197,38 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.out).parent.mkdir(parents=True, exist_ok=True)
             Path(args.out).write_text(generate_urdf(spec))
             print(f"URDF written to {args.out}")
+            return 0
+        if args.cmd == "cad":
+            rc = _print_findings(spec)
+            if rc:
+                print("refusing to generate CAD from an invalid spec",
+                      file=sys.stderr)
+                return rc
+            out_dir = Path(args.out_dir) if args.out_dir else \
+                Path("build/cad") / kit_slug(spec.name)
+            infos = write_kit(spec, out_dir)
+            if is_estimated(spec):
+                print("*** ESTIMATED kit — drafted from a photo; every "
+                      "dimension is an estimate, not a measurement ***")
+            print(f"CAD kit for {spec.name} written to {out_dir}:")
+            for info in infos:
+                print(f"  {info.filename} — {info.name} x{info.qty} "
+                      f"({info.dims})")
+            print(f"  assembly.scad — all parts positioned "
+                  f"({len(infos)} part files)")
+            print("  parts_index.md — parts list, print notes, assembly help")
+            if args.stl:
+                try:
+                    rendered = render_stls(out_dir)
+                except (subprocess.CalledProcessError, OSError) as exc:
+                    print(f"STL render failed: {exc}", file=sys.stderr)
+                    return 2
+                if rendered is None:
+                    print("STL rendering skipped: no openscad binary on "
+                          "PATH (the .scad kit is the deliverable)")
+                else:
+                    for stl in rendered:
+                        print(f"  rendered {stl} ({stl.stat().st_size} bytes)")
             return 0
         if args.cmd == "run-gate":
             rc = _print_findings(spec)
