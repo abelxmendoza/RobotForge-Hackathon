@@ -40,11 +40,22 @@ def _overvolt(spec):
             and c.volts > nodes[c.dst].rated_max_v]
 
 
+# Wiring is drawn ONLY where a source documents the harness. Two
+# Robodex robots have no publicly documented internal wiring, so
+# their specs honestly carry none — the unwired set is exactly
+# these, and it is asserted so an accidental omission (or an
+# invented harness) both fail loudly.
+UNWIRED = {"Unitree Go2", "Unitree G1"}
+
+
 def test_every_robodex_robot_spec_carries_valid_wiring():
     assert SPECS, "no Robodex specs loaded"
+    unwired = {name for name, spec in SPECS.items() if spec.wiring is None}
+    assert unwired == UNWIRED, unwired
     for name, spec in SPECS.items():
         w = spec.wiring
-        assert w is not None, f"{name}: spec carries no wiring"
+        if w is None:
+            continue
         ids = [n.id for n in w.nodes]
         assert "battery" in ids, f"{name}: no battery node"
         for n in w.nodes:
@@ -58,6 +69,8 @@ def test_every_robodex_robot_spec_carries_valid_wiring():
 def test_wiring_values_come_from_the_spec():
     for name, spec in SPECS.items():
         w = spec.wiring
+        if w is None:
+            continue
         nodes = {n.id: n for n in w.nodes}
         # the battery node advertises the spec's own battery voltage
         assert str(spec.battery.voltage_v) in nodes["battery"].req_label, \
@@ -76,6 +89,8 @@ def test_wiring_values_come_from_the_spec():
 
 def test_real_fleet_has_no_overvoltage():
     for name, spec in SPECS.items():
+        if spec.wiring is None:
+            continue
         bad = _overvolt(spec)
         assert not bad, f"{name}: recorded wiring over-volts {[c.dst for c in bad]}"
 
@@ -83,8 +98,12 @@ def test_real_fleet_has_no_overvoltage():
 def test_schema_roundtrip_and_optional_wiring():
     for spec in SPECS.values():
         again = RobotSpec.from_dict(spec.to_dict())
-        assert again.wiring is not None
-        assert again.wiring.to_dict() == spec.wiring.to_dict()
+        if spec.wiring is None:
+            assert again.wiring is None
+            assert "wiring" not in again.to_dict()
+        else:
+            assert again.wiring is not None
+            assert again.wiring.to_dict() == spec.wiring.to_dict()
     plain = RobotSpec.from_json(
         (REPO / "examples/indoor-delivery-rover.json").read_text())
     assert plain.wiring is None

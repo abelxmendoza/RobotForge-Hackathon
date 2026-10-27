@@ -12,11 +12,19 @@
 
 const PALETTE = {
   plate: 0x8a5a17, wheel: 0x22262e, mount: 0x3d4656, caster: 0x5b6472,
-  lidar: 0x22262e, camera: 0x3d4656, ultrasonic: 0x3d4656
+  lidar: 0x22262e, camera: 0x3d4656, ultrasonic: 0x3d4656,
+  frame: 0x3d4656, arm: 0x51606f, rotor: 0x22262e, battery: 0x51606f,
+  fc: 0x22262e, body: 0x51606f, leg: 0x3d4656, head: 0x22262e,
+  pelvis: 0x3d4656, torso: 0x51606f, base: 0x8a5a17, link: 0x51606f,
+  gripper: 0x22262e
 };
 const EDGE = {
   plate: 0xf59e0b, wheel: 0xe8eaee, mount: 0x9aa3ae, caster: 0x9aa3ae,
-  lidar: 0xe8eaee, camera: 0x9aa3ae, ultrasonic: 0x9aa3ae
+  lidar: 0xe8eaee, camera: 0x9aa3ae, ultrasonic: 0x9aa3ae,
+  frame: 0xf59e0b, arm: 0x9aa3ae, rotor: 0xe8eaee, battery: 0x9aa3ae,
+  fc: 0x34d399, body: 0xf59e0b, leg: 0x9aa3ae, head: 0xe8eaee,
+  pelvis: 0x9aa3ae, torso: 0xf59e0b, base: 0xf59e0b, link: 0x9aa3ae,
+  gripper: 0xe8eaee
 };
 
 let S = null; // session state, built on first successful activate()
@@ -39,7 +47,7 @@ function build(opts, THREE, OrbitControls) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(42, 2, 0.01, 30);
   camera.up.set(0, 0, 1);
-  const span = Math.max(spec.length_m, spec.width_m, 0.2);
+  const span = Math.max(spec.length_m, spec.width_m, spec.height_m * 0.75, 0.2);
   camera.position.set(span * 1.25, -span * 1.45, span * 1.0);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -82,6 +90,7 @@ function build(opts, THREE, OrbitControls) {
       else geo = new THREE.SphereGeometry(m.size[0], 24, 18);
       const mesh = new THREE.Mesh(geo, materials[u.part]);
       if (m.kind === 'cyl' && m.axis === 'z') mesh.rotation.x = Math.PI / 2;
+      if (m.rot) mesh.rotation.set(m.rot[0], m.rot[1], m.rot[2]);
       mesh.position.set(m.center[0], m.center[1], m.center[2]);
       mesh.castShadow = true;
       mesh.receiveShadow = true;

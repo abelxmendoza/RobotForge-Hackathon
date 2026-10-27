@@ -33,6 +33,9 @@
  * strictness (wiring blocks, unknown keys) and everything
  * downstream (URDF, twin, gate) live in the CLI. */
 const FV_DRIVETRAINS = ['differential', 'skid_steer', 'ackermann',
+  'mecanum', 'tracked', 'multirotor', 'quadruped', 'humanoid',
+  'robotic_arm'];
+const FV_GROUND = ['differential', 'skid_steer', 'ackermann',
   'mecanum', 'tracked'];
 const FV_SENSOR_KINDS = ['ultrasonic', 'lidar_2d', 'depth_camera',
   'rgb_camera', 'imu', 'gps', 'bumper', 'encoder'];
@@ -52,9 +55,21 @@ function forgeValidateSpec(spec) {
     schema('schema.type', 'the spec is not a JSON object');
     return { lines, schemaErrors: true, errors: true };
   }
+  /* Required fields follow the spec's class, as in schema.py:
+   * wheels + ground clearance belong to the ground drivetrains;
+   * the other classes declare rotors / legs / arms instead. */
   const reqTop = ['name', 'drivetrain', 'length_m', 'width_m',
-    'height_m', 'mass_kg', 'ground_clearance_m', 'wheel', 'motor',
-    'battery'];
+    'height_m', 'mass_kg', 'motor', 'battery'];
+  if (FV_GROUND.includes(spec.drivetrain)) {
+    reqTop.push('ground_clearance_m', 'wheel');
+  }
+  if (spec.drivetrain === 'multirotor') reqTop.push('rotors');
+  if (spec.drivetrain === 'quadruped' || spec.drivetrain === 'humanoid') {
+    reqTop.push('legs');
+  }
+  if (spec.drivetrain === 'humanoid' || spec.drivetrain === 'robotic_arm') {
+    reqTop.push('arms');
+  }
   for (const k of reqTop) {
     if (!(k in spec)) schema('schema.required', 'missing field: ' + k);
   }
@@ -62,6 +77,9 @@ function forgeValidateSpec(spec) {
     wheel: ['diameter_m', 'width_m', 'count'],
     motor: ['kind', 'voltage_v', 'count'],
     battery: ['chemistry', 'voltage_v', 'capacity_mah'],
+    rotors: ['count', 'prop_diameter_m'],
+    legs: ['count'],
+    arms: ['count'],
   };
   for (const obj of Object.keys(reqNested)) {
     if (typeof spec[obj] !== 'object' || spec[obj] === null) {
@@ -80,18 +98,37 @@ function forgeValidateSpec(spec) {
   if (typeof spec.name !== 'string') {
     schema('schema.type', 'name is not a string');
   }
-  for (const k of ['length_m', 'width_m', 'height_m', 'mass_kg',
-                   'ground_clearance_m']) {
+  for (const k of ['length_m', 'width_m', 'height_m', 'mass_kg']) {
     if (!fvIsNum(spec[k])) schema('schema.type', k + ' is not a number');
   }
-  if (!fvIsNum(spec.wheel.diameter_m)) {
-    schema('schema.type', 'wheel.diameter_m is not a number');
+  if (spec.ground_clearance_m !== undefined &&
+      !fvIsNum(spec.ground_clearance_m)) {
+    schema('schema.type', 'ground_clearance_m is not a number');
   }
-  if (!fvIsNum(spec.wheel.width_m)) {
-    schema('schema.type', 'wheel.width_m is not a number');
+  if (spec.wheel !== undefined && spec.wheel !== null) {
+    if (!fvIsNum(spec.wheel.diameter_m)) {
+      schema('schema.type', 'wheel.diameter_m is not a number');
+    }
+    if (!fvIsNum(spec.wheel.width_m)) {
+      schema('schema.type', 'wheel.width_m is not a number');
+    }
+    if (!fvIsInt(spec.wheel.count)) {
+      schema('schema.type', 'wheel.count is not an integer');
+    }
   }
-  if (!fvIsInt(spec.wheel.count)) {
-    schema('schema.type', 'wheel.count is not an integer');
+  if (spec.rotors !== undefined && spec.rotors !== null) {
+    if (!fvIsInt(spec.rotors.count)) {
+      schema('schema.type', 'rotors.count is not an integer');
+    }
+    if (!fvIsNum(spec.rotors.prop_diameter_m)) {
+      schema('schema.type', 'rotors.prop_diameter_m is not a number');
+    }
+  }
+  for (const key of ['legs', 'arms']) {
+    const limb = spec[key];
+    if (limb !== undefined && limb !== null && !fvIsInt(limb.count)) {
+      schema('schema.type', key + '.count is not an integer');
+    }
   }
   if (typeof spec.motor.kind !== 'string') {
     schema('schema.type', 'motor.kind is not a string');
@@ -132,31 +169,34 @@ function forgeValidateSpec(spec) {
   /* coherence checks — validate.py, check for check */
   const f = (sev, check, msg) =>
     lines.push('[' + sev + '] ' + check + ': ' + msg);
-  const radius = spec.wheel.diameter_m / 2.0;
-  if (spec.ground_clearance_m > radius) {
-    f('ERROR', 'geometry.clearance_vs_wheel',
-      'ground clearance ' + fvFmt3(spec.ground_clearance_m) +
-      ' m exceeds wheel radius ' + fvFmt3(radius) +
-      ' m — impossible without a lifted chassis design');
-  }
-  if (spec.wheel.diameter_m > spec.height_m) {
-    f('WARN', 'geometry.wheel_vs_height',
-      'wheel diameter ' + fvFmt3(spec.wheel.diameter_m) +
-      ' m is larger than body height ' + fvFmt3(spec.height_m) + ' m');
-  }
-  if (spec.wheel.width_m * spec.wheel.count > spec.length_m * 2 &&
-      (spec.drivetrain === 'differential' || spec.drivetrain === 'skid_steer')) {
-    f('WARN', 'geometry.wheel_footprint',
-      'total wheel width looks large relative to body length');
-  }
-  if (spec.drivetrain === 'differential' && spec.wheel.count !== 2) {
-    f('WARN', 'drivetrain.wheel_count',
-      'differential drive normally has 2 driven wheels, spec declares ' +
-      spec.wheel.count + ' wheels');
-  }
-  if (spec.drivetrain === 'ackermann' && spec.wheel.count !== 4) {
-    f('WARN', 'drivetrain.wheel_count',
-      'ackermann steering normally uses 4 wheels');
+  if (spec.wheel) {
+    const radius = spec.wheel.diameter_m / 2.0;
+    if (spec.ground_clearance_m != null &&
+        spec.ground_clearance_m > radius) {
+      f('ERROR', 'geometry.clearance_vs_wheel',
+        'ground clearance ' + fvFmt3(spec.ground_clearance_m) +
+        ' m exceeds wheel radius ' + fvFmt3(radius) +
+        ' m — impossible without a lifted chassis design');
+    }
+    if (spec.wheel.diameter_m > spec.height_m) {
+      f('WARN', 'geometry.wheel_vs_height',
+        'wheel diameter ' + fvFmt3(spec.wheel.diameter_m) +
+        ' m is larger than body height ' + fvFmt3(spec.height_m) + ' m');
+    }
+    if (spec.wheel.width_m * spec.wheel.count > spec.length_m * 2 &&
+        (spec.drivetrain === 'differential' || spec.drivetrain === 'skid_steer')) {
+      f('WARN', 'geometry.wheel_footprint',
+        'total wheel width looks large relative to body length');
+    }
+    if (spec.drivetrain === 'differential' && spec.wheel.count !== 2) {
+      f('WARN', 'drivetrain.wheel_count',
+        'differential drive normally has 2 driven wheels, spec declares ' +
+        spec.wheel.count + ' wheels');
+    }
+    if (spec.drivetrain === 'ackermann' && spec.wheel.count !== 4) {
+      f('WARN', 'drivetrain.wheel_count',
+        'ackermann steering normally uses 4 wheels');
+    }
   }
   if (spec.motor.count < 1) {
     f('ERROR', 'drivetrain.motor_count', 'no motors declared');
@@ -166,6 +206,52 @@ function forgeValidateSpec(spec) {
     f('WARN', 'drivetrain.motor_count',
       'a single motor cannot drive a differential/skid-steer drivetrain ' +
       'without a shared axle gearbox');
+  }
+  /* class coherence — validate.py's non-ground checks, mirrored */
+  if (spec.drivetrain === 'multirotor') {
+    if (!spec.rotors) {
+      f('ERROR', 'class.rotors_missing',
+        'multirotor spec declares no rotors block');
+    } else {
+      if (spec.rotors.count !== spec.motor.count) {
+        f('WARN', 'drivetrain.rotor_motor_match',
+          'a multirotor normally has one motor per rotor, spec declares ' +
+          spec.rotors.count + ' rotors and ' + spec.motor.count + ' motors');
+      }
+      const spacing = Math.min(spec.length_m, spec.width_m);
+      if (spec.rotors.prop_diameter_m > spacing) {
+        f('WARN', 'geometry.prop_overlap',
+          'propeller diameter ' + fvFmt3(spec.rotors.prop_diameter_m) +
+          ' m exceeds the ' + fvFmt3(spacing) +
+          ' m between neighbouring motors — the props would overlap');
+      }
+    }
+  }
+  if (spec.drivetrain === 'quadruped' || spec.drivetrain === 'humanoid') {
+    if (!spec.legs) {
+      f('ERROR', 'class.legs_missing',
+        spec.drivetrain + ' spec declares no legs block');
+    } else {
+      const want = spec.drivetrain === 'quadruped' ? 4 : 2;
+      if (spec.legs.count !== want) {
+        f('WARN', 'drivetrain.leg_count',
+          'a ' + spec.drivetrain + ' normally has ' + want +
+          ' legs, spec declares ' + spec.legs.count);
+      }
+    }
+  }
+  if (spec.drivetrain === 'humanoid' || spec.drivetrain === 'robotic_arm') {
+    if (!spec.arms) {
+      f('ERROR', 'class.arms_missing',
+        spec.drivetrain + ' spec declares no arms block');
+    } else {
+      const want = spec.drivetrain === 'humanoid' ? 2 : 1;
+      if (spec.arms.count !== want) {
+        f('WARN', 'drivetrain.arm_count',
+          'a ' + spec.drivetrain + ' normally has ' + want +
+          ' arm(s), spec declares ' + spec.arms.count);
+      }
+    }
   }
   if (spec.motor.voltage_v > spec.battery.voltage_v * 1.05) {
     f('ERROR', 'electrical.voltage_match',

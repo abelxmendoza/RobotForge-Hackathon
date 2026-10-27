@@ -169,6 +169,213 @@
       },
       "spec_file": "examples/pathfinder.json",
       "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "Aerial quadcopter",
+      "description": "The PX4 ecosystem's reference quadcopter kit: a 500 mm X-frame, four 2216 920KV motors, a power-distribution board and a Pixhawk flight controller. RobotForge flies this exact airframe as the PX4 Gazebo model (x500), so its geometry here is read straight out of the model's own files.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots through a drive-and-turn maneuver in Gazebo and grades motion against ground truth; a flight gate does not exist yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: ZLEA, via Wikimedia Commons (CC BY-SA 4.0) \u2014 the Holybro X500 V2 kit",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Holybro_X500_V2_%28FA39L49ENT%29_%289-10-2025%29.jpg/1280px-Holybro_X500_V2_%28FA39L49ENT%29_%289-10-2025%29.jpg",
+      "key_specs": {
+        "Frame": "X500 quadcopter frame, 500 mm wheelbase class (Holybro)",
+        "Motors": "4\u00d7 2216 920KV brushless, BLHeli S 20A ESCs (Holybro kit)",
+        "Motor-to-motor": "0.348 \u00d7 0.348 m (0.492 m diagonal) \u2014 rotor positions in the PX4 Gazebo model",
+        "Propellers": "0.279 m in the Gazebo model (the physical kit ships 1045 props)",
+        "Mass": "2.064 kg \u2014 sum of the Gazebo model's link masses (base_link 2.0 kg + 4 rotors)",
+        "Battery": "4S LiPo 14.8 V, 5000 mAh (Holybro recommends 3000\u20135000 mAh)",
+        "Flight controller": "Pixhawk, powered via PM02 power module",
+        "Power": "Power-distribution board documented: XT60 in, XT30 out"
+      },
+      "mobility_class": "Aerial",
+      "name": "PX4 X500",
+      "number": 5,
+      "provenance": {
+        "license": "BSD-3-Clause (PX4/PX4-gazebo-models)",
+        "note": "Geometry, height and link masses from the PX4 Gazebo model x500_base/model.sdf (rotor poses \u00b10.174 m, base_link pose z 0.24 m, link masses 2.0 kg + 4\u00d7 0.0160769 kg). Kit hardware (motors, ESCs, PDB wiring pattern, battery recommendation) from Holybro's official X500 V2 product page. The Gazebo model's propeller (0.279 m) differs from the physical kit's 1045 props; the model's value is what the spec carries, and the difference is stated in the key specs.",
+        "source_name": "PX4/PX4-gazebo-models (x500_base SDF) + Holybro X500 V2 product page",
+        "source_url": "https://github.com/PX4/PX4-gazebo-models/blob/main/models/x500_base/model.sdf"
+      },
+      "spec_file": "examples/px4-x500.json",
+      "subtype": "Quadcopter"
+    },
+    {
+      "class": "Aerial quadcopter",
+      "description": "A quadcopter the size of your palm \u2014 29 grams \u2014 where one circuit board is the frame, the flight controller and the power system at once. Bitcraze built it as a development platform you can fly indoors, and published everything about it.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots through a drive-and-turn maneuver in Gazebo and grades motion against ground truth; a flight gate does not exist yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: Bitcraze \u2014 the Crazyflie 2.1+ on the official product site (the current revision of the 2.1 platform)",
+      "image_url": "https://www.bitcraze.io/images/crazyflie2-1-plus/CF21_plus_585px.jpg",
+      "key_specs": {
+        "Takeoff weight": "29 g (datasheet)",
+        "Size": "92 \u00d7 92 \u00d7 29 mm \u2014 the datasheet measures this motor-to-motor, including the motor mount feet",
+        "Motors": "4\u00d7 7 mm coreless DC motors",
+        "Propellers": "47 mm (datasheet propeller 47-17)",
+        "Battery": "250 mAh LiPo (1S, 3.7 V)",
+        "Sensors": "BMI088 IMU, BMP388 barometer (datasheet)"
+      },
+      "mobility_class": "Aerial",
+      "name": "Crazyflie 2.1",
+      "number": 6,
+      "provenance": {
+        "license": "Open-source hardware (design files and schematics published by Bitcraze)",
+        "note": "Every value is from the official Crazyflie 2.1 datasheet (Rev 3): takeoff weight 29 g, size 92 \u00d7 92 \u00d7 29 mm measured motor-to-motor including motor mount feet, 250 mAh LiPo, 7 mm coreless motors, 47-17 propellers, BMI088 + BMP388. The photo shows the 2.1+, the current revision of the 2.1 platform, and is credited as such.",
+        "source_name": "Bitcraze \u2014 Crazyflie 2.1 datasheet, Rev 3 (official PDF)",
+        "source_url": "https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf"
+      },
+      "spec_file": "examples/crazyflie-2-1.json",
+      "subtype": "Quadcopter"
+    },
+    {
+      "class": "Legged quadruped",
+      "description": "Unitree's robot dog: four two-segment legs, twelve joint motors, a 4D LiDAR scanning unit in its head and a wide-angle camera. The Robodex's first legged entry \u2014 it walks, so the wheeled motion gate has nothing to grade it with yet.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: HotNews Romania \u2013 Adi Iacob, Ovidiu Popica, via Wikimedia Commons (CC BY 3.0)",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Unitree_Go2_of_Salvamont_side_view.jpg",
+      "key_specs": {
+        "Dimensions (standing)": "0.70 \u00d7 0.31 \u00d7 0.40 m (Unitree parameter table)",
+        "Mass": "16.087 kg \u2014 sum of the URDF link masses; Unitree publishes ~15 kg with battery",
+        "Motors": "12 joint motors (Unitree parameter table)",
+        "Battery": "8000 mAh smart battery; 28.8 V nominal (the table's 28\u201333.6 V band is an 8S pack; 33.6 V charger)",
+        "Sensors": "4D LiDAR L1, HD wide-angle camera (Unitree parameter table)",
+        "Wiring": "Not documented publicly \u2014 no wiring block is shown for this robot"
+      },
+      "mobility_class": "Legged",
+      "name": "Unitree Go2",
+      "number": 7,
+      "provenance": {
+        "license": "BSD-3-Clause (unitreerobotics/unitree_ros)",
+        "note": "Mass is the sum of the 33 link masses in the official go2_description URDF (body 6.923 kg + four legs at 2.291 kg each = 16.087 kg). That is more than Unitree's published ~15 kg with battery; the URDF models each joint's rotor as its own link, and the table's figure is a rounded marketing weight \u2014 both numbers are stated in the key specs and neither is hidden. Dimensions, motor count, battery and sensors from Unitree's published Go2 parameter table. The internal wiring harness is not publicly documented, so this spec carries no wiring block.",
+        "source_name": "unitree_ros \u2014 go2_description URDF + Unitree Go2 published parameters",
+        "source_url": "https://github.com/unitreerobotics/unitree_ros/blob/master/robots/go2_description/urdf/go2_description.urdf"
+      },
+      "spec_file": "examples/unitree-go2.json",
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Legged quadruped",
+      "description": "A robot dog you build yourself: MangDang's open-source quadruped packs 12 servos and a Raspberry Pi into 560 g, and the whole design \u2014 CAD, code, docs \u2014 is published. The Robodex's smallest dog by far.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Line illustration by RobotForge, drawn for this entry \u2014 not a photo (no linkable official photo of the v1 hardware exists)",
+      "image_url": "assets/img/illustrations/mini-pupper.svg",
+      "key_specs": {
+        "Dimensions": "209 \u00d7 109 \u00d7 165 mm (MangDang published specification)",
+        "Weight": "560 g (MangDang published specification)",
+        "Servos": "12 custom servos, 3 per leg (12 DOF)",
+        "Battery": "800 mAh, 2S \u2014 7.4 V nominal; MangDang's docs warn that over 8.4 V (over 2S) will fry the servos",
+        "Computer": "Raspberry Pi",
+        "Structure mass note": "The published URDF's link masses sum to just 0.304 kg \u2014 structure only; the servos, Pi and battery that make up the rest of the 560 g are not in the model"
+      },
+      "mobility_class": "Legged",
+      "name": "Mini Pupper",
+      "number": 8,
+      "provenance": {
+        "license": "Apache-2.0 (MangDang/mini_pupper_ros)",
+        "note": "Dimensions, weight, battery capacity and servo count from MangDang's published specifications (launch specification, as also reported by CNX Software and the Raspberry Pi magazine). The 2S / 7.4 V battery figure is from MangDang's own documentation ('battery spec\u2026 voltage should be less than 7.4 V'; over 8.4 V 'you'll almost certainly fry all your servos'). The description package's link masses (0.304 kg, structure only) are recorded in the key specs, not passed off as the robot's weight. No official v1 photo is linkable \u2014 the repository's photo shows the v2 \u2014 so this entry carries a labeled RobotForge line illustration instead.",
+        "source_name": "MangDang \u2014 Mini Pupper published specifications, documentation, and mini_pupper_ros",
+        "source_url": "https://github.com/mangdangroboticsclub/mini_pupper_ros"
+      },
+      "spec_file": "examples/mini-pupper.json",
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Legged humanoid",
+      "description": "A 1.32 m humanoid with 29 powered joints, a depth camera and a 3D LiDAR in its head \u2014 the Robodex's first biped, and the biggest robot in it. Unitree publishes its dimensions and equipment; the mass breakdown here is grouped out of the official model files.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: Sayanesy, via Wikimedia Commons (CC0)",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Unitree_G1.jpg/1280px-Unitree_G1.jpg",
+      "key_specs": {
+        "Height (standing)": "1320 mm; 450 mm wide, 200 mm deep (Unitree parameter table)",
+        "Weight": "~35 kg with battery (Unitree parameter table)",
+        "Joints": "29 actuated joints \u2014 counted from the revolute joints in the official g1_29dof URDF",
+        "Battery": "13-string lithium, 9000 mAh \u2014 46.8 V nominal (54 V charger per the table)",
+        "Sensors": "Depth camera, 3D LiDAR (Unitree parameter table; both appear as links in the URDF)",
+        "Wiring": "Not documented publicly \u2014 no wiring block is shown for this robot"
+      },
+      "mobility_class": "Legged",
+      "name": "Unitree G1",
+      "number": 9,
+      "provenance": {
+        "license": "BSD-3-Clause (unitreerobotics/unitree_ros)",
+        "note": "Dimensions, weight, battery and sensors from Unitree's published G1 parameter table (the table lists total DOF options up to 43 with optional arms; the base 29-DOF configuration is what the official g1_29dof URDF models). The URDF's 36 link masses sum to 35.115 kg, grouped in the spec as trunk 12.669 / legs 14.372 / arms 7.038 / head 1.036 kg \u2014 within half a percent of the published ~35 kg. Battery voltage 46.8 V is the 13-string nominal (the table's '13-string lithium battery' and 54 V charger imply it). The internal wiring harness is not publicly documented, so this spec carries no wiring block.",
+        "source_name": "unitree_ros \u2014 g1_29dof URDF + Unitree G1 published parameters",
+        "source_url": "https://github.com/unitreerobotics/unitree_ros/blob/master/robots/g1_description/g1_29dof.urdf"
+      },
+      "spec_file": "examples/unitree-g1.json",
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Legged humanoid",
+      "description": "ROBOTIS's open humanoid research platform \u2014 the robot that plays in RoboCup demos: twenty Dynamixel servos on one daisy-chained bus, an OpenCR board running them, and a small PC for a brain. Half a metre tall, fully documented in the ROBOTIS e-Manual.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: ROBOTIS \u2014 the OP3 on the official e-Manual",
+      "image_url": "https://emanual.robotis.com/assets/images/platform/op3/OP3.png",
+      "key_specs": {
+        "Height": "~510 mm (e-Manual, including the head camera)",
+        "Weight": "~3.5 kg without the skin cover (e-Manual)",
+        "Actuators": "20\u00d7 XM430-W350-R Dynamixel servos \u2014 legs 6 each, arms 3 each, head 2",
+        "Stall torque": "3.8 N\u00b7m at 11.1 V (XM430-W350 e-Manual page; documented input 10.0\u201314.8 V)",
+        "Battery": "LiPo 3-cell, 11.1 V, 3300 mAh (current e-Manual; earlier ROBOTIS pages list 1800 mAh)",
+        "Computing": "Intel NUC (i3) + OpenCR sub-controller; Logitech C920 camera",
+        "Footprint": "ESTIMATED \u2014 ROBOTIS does not publish a standing footprint; the spec's 0.20 \u00d7 0.13 m is an estimate and is labeled as one"
+      },
+      "mobility_class": "Legged",
+      "name": "ROBOTIS OP3",
+      "number": 10,
+      "provenance": {
+        "license": "Apache-2.0 (ROBOTIS-GIT/ROBOTIS-OP3)",
+        "note": "Height, weight, DOF, actuator model and battery from the ROBOTIS e-Manual OP3 introduction (the current e-Manual lists a 3300 mAh battery; older ROBOTIS material says 1800 mAh \u2014 the current figure is used and the change is noted). Stall torque and voltage range from the e-Manual's XM430-W350 page. The DOF split (legs 6 each, arms 3 each, head 2) is the e-Manual's 20-DOF layout as also published in RoboCup materials. ROBOTIS publishes no standing footprint: the spec's length and width are ESTIMATED from the robot's proportions and are labeled ESTIMATED everywhere they appear.",
+        "source_name": "ROBOTIS e-Manual \u2014 OP3 introduction + XM430-W350 specification",
+        "source_url": "https://emanual.robotis.com/docs/en/platform/op3/introduction/"
+      },
+      "spec_file": "examples/robotis-op3.json",
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Stationary robotic arm",
+      "description": "A tabletop robot arm from ROBOTIS: five Dynamixel servos \u2014 four arm joints and a gripper \u2014 on a TTL multidrop bus, with 380 mm of reach and a 500 g payload. It never moves from its base plate, and it has no battery at all: a 12 V supply plugs into the wall.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots and grades drive/turn error; there is no manipulation gate yet, so this entry carries no verdict \u2014 its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: ROBOTIS \u2014 the OpenManipulator-X on the official e-Manual",
+      "image_url": "https://emanual.robotis.com/assets/images/platform/openmanipulator_x/OpenManipulator.png",
+      "key_specs": {
+        "Reach": "380 mm (e-Manual specification)",
+        "DOF": "5 (4 arm joints + gripper)",
+        "Actuators": "5\u00d7 XM430-W350-T Dynamixel servos, TTL multidrop bus",
+        "Payload": "500 g (e-Manual specification)",
+        "Weight": "0.70 kg \u2014 the e-Manual figure excludes the base plate; the URDF's link masses sum to 0.594 kg",
+        "Power": "12 V DC supply \u2014 no onboard battery",
+        "Gripper stroke": "20\u201375 mm (e-Manual specification)"
+      },
+      "mobility_class": "Stationary",
+      "name": "OpenManipulator-X",
+      "number": 11,
+      "provenance": {
+        "license": "Apache-2.0 (ROBOTIS-GIT/open_manipulator)",
+        "note": "Actuators, input voltage, DOF, payload, weight, reach and gripper stroke all from the ROBOTIS e-Manual's OpenManipulator-X specification page. The e-Manual states the 0.70 kg weight excludes the base plate; the official URDF's seven link masses sum to 0.594 kg, recorded in the spec's component masses. The spec's width is the gripper's maximum stroke (75 mm) and its height the radial reach \u2014 an arm has no body box; both are labeled with what they mean. Power is a 12 V DC supply, modeled in the spec's battery slot with chemistry 'dc_supply' and zero capacity, because the arm carries no battery.",
+        "source_name": "ROBOTIS e-Manual \u2014 OpenManipulator-X specification + ROBOTIS-GIT/open_manipulator URDF",
+        "source_url": "https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/"
+      },
+      "spec_file": "examples/openmanipulator-x.json",
+      "subtype": "Robotic arm"
     }
   ],
   "title": "Robodex"

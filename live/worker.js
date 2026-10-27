@@ -85,15 +85,26 @@ motor voltage must not exceed the battery voltage.`/*PROMPT_END*/;
  * when a spec is used with the CLI. */
 const SPEC_SCHEMA = /*SPEC_SCHEMA_BEGIN*/{
   "required_top": ["name", "drivetrain", "length_m", "width_m",
-    "height_m", "mass_kg", "ground_clearance_m", "wheel", "motor",
-    "battery"],
+    "height_m", "mass_kg", "motor", "battery"],
+  "ground_required_top": ["ground_clearance_m", "wheel"],
+  "ground_drivetrains": ["differential", "skid_steer", "ackermann",
+    "mecanum", "tracked"],
+  "class_required_top": {
+    "multirotor": ["rotors"],
+    "quadruped": ["legs"],
+    "humanoid": ["legs", "arms"],
+    "robotic_arm": ["arms"]
+  },
   "required_nested": {
     "wheel": ["diameter_m", "width_m", "count"],
     "motor": ["kind", "voltage_v", "count"],
-    "battery": ["chemistry", "voltage_v", "capacity_mah"]
+    "battery": ["chemistry", "voltage_v", "capacity_mah"],
+    "rotors": ["count", "prop_diameter_m"],
+    "legs": ["count"],
+    "arms": ["count"]
   },
   "drivetrains": ["differential", "skid_steer", "ackermann", "mecanum",
-    "tracked"],
+    "tracked", "multirotor", "quadruped", "humanoid", "robotic_arm"],
   "sensor_kinds": ["ultrasonic", "lidar_2d", "depth_camera", "rgb_camera",
     "imu", "gps", "bumper", "encoder"]
 }/*SPEC_SCHEMA_END*/;
@@ -412,7 +423,22 @@ function validateSpec(spec) {
   for (const k of SPEC_SCHEMA.required_top) {
     if (!(k in spec)) return 'missing field: ' + k;
   }
+  /* Class requirements, as in schema.py: the ground drivetrains
+   * need wheels + ground clearance; the other classes declare their
+   * own blocks (rotors / legs / arms) instead. */
+  const extraTop =
+    (SPEC_SCHEMA.ground_drivetrains.includes(spec.drivetrain)
+      ? SPEC_SCHEMA.ground_required_top
+      : SPEC_SCHEMA.class_required_top[spec.drivetrain]) || [];
+  for (const k of extraTop) {
+    if (!(k in spec)) return 'missing field: ' + k;
+  }
+  const requiredObjs = new Set(['motor', 'battery', ...extraTop]);
   for (const [obj, keys] of Object.entries(SPEC_SCHEMA.required_nested)) {
+    if (!(obj in spec)) {
+      if (requiredObjs.has(obj)) return obj + ' is not an object';
+      continue;
+    }
     if (typeof spec[obj] !== 'object' || spec[obj] === null) {
       return obj + ' is not an object';
     }
@@ -420,11 +446,15 @@ function validateSpec(spec) {
       if (!(k in spec[obj])) return 'missing field: ' + obj + '.' + k;
     }
   }
-  for (const k of ['length_m', 'width_m', 'height_m', 'mass_kg',
-                   'ground_clearance_m']) {
+  for (const k of ['length_m', 'width_m', 'height_m', 'mass_kg']) {
     if (typeof spec[k] !== 'number' || !Number.isFinite(spec[k])) {
       return k + ' is not a number';
     }
+  }
+  if ('ground_clearance_m' in spec &&
+      (typeof spec.ground_clearance_m !== 'number' ||
+       !Number.isFinite(spec.ground_clearance_m))) {
+    return 'ground_clearance_m is not a number';
   }
   if (!SPEC_SCHEMA.drivetrains.includes(spec.drivetrain)) {
     return 'unknown drivetrain: ' + String(spec.drivetrain);
@@ -462,6 +492,9 @@ function validateSpecPartial(spec) {
     wheel: ['diameter_m', 'width_m', 'count'],
     motor: ['voltage_v', 'count', 'stall_torque_nm'],
     battery: ['voltage_v', 'capacity_mah'],
+    rotors: ['count', 'prop_diameter_m'],
+    legs: ['count', 'segments'],
+    arms: ['count', 'segments'],
   };
   for (const [obj, keys] of Object.entries(nestedNums)) {
     if (!(obj in spec)) continue;

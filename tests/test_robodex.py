@@ -40,8 +40,8 @@ def test_entries_have_required_fields():
 
 def test_the_four_founders_in_order():
     names = [r.name for r in dex.robots]
-    assert names == ["Andino", "TurtleBot3 Burger", "TurtleBot3 Waffle Pi",
-                     "Pathfinder"]
+    assert names[:4] == ["Andino", "TurtleBot3 Burger", "TurtleBot3 Waffle Pi",
+                         "Pathfinder"]
     # Pathfinder is flagged as our own original design, not a found robot.
     assert "Original design" in dex.robots[3].provenance["source_name"]
 

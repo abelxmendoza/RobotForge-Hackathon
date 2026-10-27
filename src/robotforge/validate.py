@@ -24,37 +24,81 @@ class Finding:
 def validate(spec: RobotSpec) -> list[Finding]:
     f: list[Finding] = []
 
-    # Geometry: a wheel cannot lift the chassis higher than its radius, and the
-    # declared ground clearance must be reachable by the wheel radius.
-    radius = spec.wheel.diameter_m / 2.0
-    if spec.ground_clearance_m > radius:
-        f.append(Finding(ERROR, "geometry.clearance_vs_wheel",
-                         f"ground clearance {spec.ground_clearance_m:.3f} m exceeds "
-                         f"wheel radius {radius:.3f} m — impossible without a "
-                         f"lifted chassis design"))
-    if spec.wheel.diameter_m > spec.height_m:
-        f.append(Finding(WARN, "geometry.wheel_vs_height",
-                         f"wheel diameter {spec.wheel.diameter_m:.3f} m is larger "
-                         f"than body height {spec.height_m:.3f} m"))
-    if spec.wheel.width_m * spec.wheel.count > spec.length_m * 2 and \
-            spec.drivetrain in ("differential", "skid_steer"):
-        f.append(Finding(WARN, "geometry.wheel_footprint",
-                         "total wheel width looks large relative to body length"))
+    # Ground geometry — only for robots that have wheels. A wheel
+    # cannot lift the chassis higher than its radius, and the declared
+    # ground clearance must be reachable by the wheel radius.
+    if spec.wheel is not None:
+        radius = spec.wheel.diameter_m / 2.0
+        if spec.ground_clearance_m is not None and \
+                spec.ground_clearance_m > radius:
+            f.append(Finding(ERROR, "geometry.clearance_vs_wheel",
+                             f"ground clearance {spec.ground_clearance_m:.3f} m exceeds "
+                             f"wheel radius {radius:.3f} m — impossible without a "
+                             f"lifted chassis design"))
+        if spec.wheel.diameter_m > spec.height_m:
+            f.append(Finding(WARN, "geometry.wheel_vs_height",
+                             f"wheel diameter {spec.wheel.diameter_m:.3f} m is larger "
+                             f"than body height {spec.height_m:.3f} m"))
+        if spec.wheel.width_m * spec.wheel.count > spec.length_m * 2 and \
+                spec.drivetrain in ("differential", "skid_steer"):
+            f.append(Finding(WARN, "geometry.wheel_footprint",
+                             "total wheel width looks large relative to body length"))
 
-    # Drivetrain coherence.
-    if spec.drivetrain == "differential" and spec.wheel.count != 2:
-        f.append(Finding(WARN, "drivetrain.wheel_count",
-                         f"differential drive normally has 2 driven wheels, "
-                         f"spec declares {spec.wheel.count} wheels"))
-    if spec.drivetrain == "ackermann" and spec.wheel.count != 4:
-        f.append(Finding(WARN, "drivetrain.wheel_count",
-                         "ackermann steering normally uses 4 wheels"))
+        # Drivetrain coherence (wheeled).
+        if spec.drivetrain == "differential" and spec.wheel.count != 2:
+            f.append(Finding(WARN, "drivetrain.wheel_count",
+                             f"differential drive normally has 2 driven wheels, "
+                             f"spec declares {spec.wheel.count} wheels"))
+        if spec.drivetrain == "ackermann" and spec.wheel.count != 4:
+            f.append(Finding(WARN, "drivetrain.wheel_count",
+                             "ackermann steering normally uses 4 wheels"))
     if spec.motor.count < 1:
         f.append(Finding(ERROR, "drivetrain.motor_count", "no motors declared"))
     if spec.drivetrain in ("differential", "skid_steer") and spec.motor.count == 1:
         f.append(Finding(WARN, "drivetrain.motor_count",
                          "a single motor cannot drive a differential/skid-steer "
                          "drivetrain without a shared axle gearbox"))
+
+    # Class coherence for the non-ground classes. Each class declares
+    # its own fields (rotors / legs / arms); a missing block is an
+    # error, a surprising count is a warning.
+    if spec.drivetrain == "multirotor":
+        if spec.rotors is None:
+            f.append(Finding(ERROR, "class.rotors_missing",
+                             "multirotor spec declares no rotors block"))
+        else:
+            if spec.rotors.count != spec.motor.count:
+                f.append(Finding(WARN, "drivetrain.rotor_motor_match",
+                                 f"a multirotor normally has one motor per "
+                                 f"rotor, spec declares {spec.rotors.count} "
+                                 f"rotors and {spec.motor.count} motors"))
+            spacing = min(spec.length_m, spec.width_m)
+            if spec.rotors.prop_diameter_m > spacing:
+                f.append(Finding(WARN, "geometry.prop_overlap",
+                                 f"propeller diameter "
+                                 f"{spec.rotors.prop_diameter_m:.3f} m exceeds "
+                                 f"the {spacing:.3f} m between neighbouring "
+                                 f"motors — the props would overlap"))
+    if spec.drivetrain in ("quadruped", "humanoid"):
+        if spec.legs is None:
+            f.append(Finding(ERROR, "class.legs_missing",
+                             f"{spec.drivetrain} spec declares no legs block"))
+        else:
+            want = 4 if spec.drivetrain == "quadruped" else 2
+            if spec.legs.count != want:
+                f.append(Finding(WARN, "drivetrain.leg_count",
+                                 f"a {spec.drivetrain} normally has {want} "
+                                 f"legs, spec declares {spec.legs.count}"))
+    if spec.drivetrain in ("humanoid", "robotic_arm"):
+        if spec.arms is None:
+            f.append(Finding(ERROR, "class.arms_missing",
+                             f"{spec.drivetrain} spec declares no arms block"))
+        else:
+            want = 2 if spec.drivetrain == "humanoid" else 1
+            if spec.arms.count != want:
+                f.append(Finding(WARN, "drivetrain.arm_count",
+                                 f"a {spec.drivetrain} normally has {want} "
+                                 f"arm(s), spec declares {spec.arms.count}"))
 
     # Electrical: motor supply must not exceed battery voltage by a wide margin.
     if spec.motor.voltage_v > spec.battery.voltage_v * 1.05:

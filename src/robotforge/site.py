@@ -299,9 +299,13 @@ def redirect_page(target: str, title: str) -> str:
 
 def _robot_image(r: RobotEntry, root: str) -> tuple[str, str, bool]:
     """(src, caption, is_ai). Real robots lead with their official photo;
-    generated art appears only where no photo exists, captioned as AI."""
+    generated art appears only where no photo exists, captioned as AI.
+    A relative ``assets/...`` image_url is a repo-local illustration
+    (labeled as one in its credit) and gets the page's root prefix."""
     if r.image_url:
-        return r.image_url, r.image_credit, False
+        src = root + r.image_url if r.image_url.startswith("assets/") \
+            else r.image_url
+        return src, r.image_credit, False
     if r.name == "Pathfinder":
         return (root + "assets/img/pathfinder.jpg",
                 "AI concept illustration (muse-image-1.0). Pathfinder is a "
@@ -555,10 +559,35 @@ def render_robot_page(r: RobotEntry) -> str:
     take_apart = ""
     commands = ""
     if r.spec_file:
+        ground = r.mobility_class.startswith("Ground")
+        if ground:
+            ta_sub = ("Every spec becomes a kit of simple, 3D-printable parts "
+                      "(<code>robotforge cad</code>). This viewer lays the kit out "
+                      "the way the kit's own assembly file does, straight from the "
+                      "spec's numbers — flat views, or in 3D with the toggle. "
+                      "Click any part.")
+            cmd_lines = (f"robotforge validate {e(r.spec_file)}\n"
+                         f"robotforge urdf {e(r.spec_file)} --out build/{slug}.urdf\n"
+                         f"robotforge cad {e(r.spec_file)}\n"
+                         f"robotforge run-gate {e(r.spec_file)}")
+            cmd_sub = "Run these from a clone of the repository."
+        else:
+            ta_sub = ("This viewer derives a schematic take-apart straight from "
+                      "the spec's numbers — the same one-derivation rule as the "
+                      "ground kits — flat views, or in 3D with the toggle. It is "
+                      "a schematic of the real robot's layout, not a printable "
+                      "kit: <code>robotforge cad</code> kits cover ground robots "
+                      "only today. Click any part.")
+            cmd_lines = (f"robotforge validate {e(r.spec_file)}\n"
+                         f"robotforge catalog robot {r.number}")
+            cmd_sub = ("Run these from a clone of the repository. The twin, CAD "
+                       "kit and motion gate (<code>urdf</code> / <code>cad</code> / "
+                       "<code>run-gate</code>) cover ground robots today, so "
+                       "they are not listed here.")
         take_apart = f"""
 <section class="section" id="take-apart">
   <h2>Take it apart</h2>
-  <p class="sub">Every spec becomes a kit of simple, 3D-printable parts (<code>robotforge cad</code>). This viewer lays the kit out the way the kit's own assembly file does, straight from the spec's numbers — flat views, or in 3D with the toggle. Click any part.</p>
+  <p class="sub">{ta_sub}</p>
   <div id="ta" data-spec="{root}{e(r.spec_file)}">
     <div class="state-box">Loading <code>{e(r.spec_file)}</code>&hellip;</div>
   </div>
@@ -566,15 +595,19 @@ def render_robot_page(r: RobotEntry) -> str:
         commands = f"""
 <section class="section" id="commands">
   <h2>Reproduce it</h2>
-  <p class="sub">Run these from a clone of the repository.</p>
+  <p class="sub">{cmd_sub}</p>
   <div class="codeblock card" style="padding:0;border:0;background:none">
-<pre><code>robotforge validate {e(r.spec_file)}
-robotforge urdf {e(r.spec_file)} --out build/{slug}.urdf
-robotforge cad {e(r.spec_file)}
-robotforge run-gate {e(r.spec_file)}</code></pre>
+<pre><code>{cmd_lines}</code></pre>
     <button class="btn btn-sm copy" type="button" data-copy>Copy</button>
   </div>
 </section>"""
+    gate_sub = ("Measured against simulator ground truth at the locked "
+                "thresholds: pass ≤ 5% / 5°, fail over 10% / 10°. The gate "
+                "tests the spec's simulated twin, not a physical robot.")
+    if not gs.runs and not r.mobility_class.startswith("Ground"):
+        gate_sub = ("The motion gate covers ground robots today. This class "
+                    "has no gate yet, so there is no verdict to show — the "
+                    "note below says why, in the entry's own words.")
     jump = ['<a class="chip" href="#spec">Spec</a>', '<a class="chip" href="#gate">Gate runs</a>']
     if r.spec_file:
         jump += ['<a class="chip" href="#take-apart">Take it apart</a>',
@@ -602,7 +635,7 @@ robotforge run-gate {e(r.spec_file)}</code></pre>
 
 <section class="section" id="gate">
   <h2>Gate runs</h2>
-  <p class="sub">Measured against simulator ground truth at the locked thresholds: pass ≤ 5% / 5°, fail over 10% / 10°. The gate tests the spec's simulated twin, not a physical robot.</p>
+  <p class="sub">{gate_sub}</p>
   <div class="card">{gate}{note}</div>
 </section>
 {take_apart}

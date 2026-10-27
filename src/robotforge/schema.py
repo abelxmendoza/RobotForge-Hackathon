@@ -15,7 +15,14 @@ class SpecError(ValueError):
     """Raised when a spec document cannot be parsed into a RobotSpec."""
 
 
-DRIVETRAINS = ("differential", "skid_steer", "ackermann", "mecanum", "tracked")
+DRIVETRAINS = ("differential", "skid_steer", "ackermann", "mecanum", "tracked",
+               "multirotor", "quadruped", "humanoid", "robotic_arm")
+# Drivetrains that roll on wheels: the wheel geometry checks in
+# validate.py and the twin/gate/CAD pipeline apply to these only.
+# The other classes carry class fields instead (rotors, legs, arms)
+# and are validated by the class checks + the universal checks.
+GROUND_DRIVETRAINS = ("differential", "skid_steer", "ackermann", "mecanum",
+                      "tracked")
 SENSOR_KINDS = ("ultrasonic", "lidar_2d", "depth_camera", "rgb_camera", "imu", "gps",
                 "bumper", "encoder")
 
@@ -48,6 +55,23 @@ class Sensor:
     kind: str                 # one of SENSOR_KINDS
     position: str             # free text: "front", "rear", "top", ...
     range_m: float | None = None
+
+
+@dataclass
+class Rotors:
+    """Aerial propulsion: how many rotors, and the propeller size.
+    Present on multirotor specs; absent (None) on everything else."""
+    count: int
+    prop_diameter_m: float
+
+
+@dataclass
+class LimbSet:
+    """A set of limbs (legs, or a humanoid's arms): how many, and how
+    many segments each one is drawn/built with. Present on legged
+    specs; absent (None) on everything else."""
+    count: int
+    segments: int = 2
 
 
 WIRING_KINDS = ("power", "data")
@@ -158,10 +182,20 @@ class RobotSpec:
     width_m: float
     height_m: float
     mass_kg: float            # declared total mass (checked against budget if given)
-    ground_clearance_m: float
-    wheel: Wheel
     motor: Motor
     battery: Battery
+    # Ground-class fields: required by the ground drivetrains in
+    # spirit, optional in the document — a multirotor has no wheels
+    # and a humanoid declares no ground clearance. validate.py runs
+    # the wheel/clearance checks only when these are present.
+    ground_clearance_m: float | None = None
+    wheel: Wheel | None = None
+    # Class fields (optional, validated when present): rotors for
+    # multirotors, legs for legged robots, arms for humanoids and
+    # manipulators (a manipulator is one arm: legs stay None).
+    rotors: Rotors | None = None
+    legs: LimbSet | None = None
+    arms: LimbSet | None = None
     sensors: list[Sensor] = field(default_factory=list)
     component_mass_kg: dict[str, float] = field(default_factory=dict)
     wiring: Wiring | None = None
@@ -180,6 +214,30 @@ class RobotSpec:
                                     f"got {s['kind']!r}")
                 sensors.append(Sensor(kind=s["kind"], position=s["position"],
                                       range_m=s.get("range_m")))
+            wheel = None
+            if data.get("wheel") is not None:
+                wheel = Wheel(**{k: data["wheel"][k] for k in
+                                 ("diameter_m", "width_m", "count")},
+                              driven=bool(data["wheel"].get("driven", True)))
+            clearance = data.get("ground_clearance_m")
+            rotors = None
+            if data.get("rotors") is not None:
+                rotors = Rotors(count=int(data["rotors"]["count"]),
+                                prop_diameter_m=float(
+                                    data["rotors"]["prop_diameter_m"]))
+                if rotors.count < 1 or rotors.prop_diameter_m <= 0:
+                    raise SpecError("rotors need count >= 1 and a positive "
+                                    "prop_diameter_m")
+            def _limbs(key):
+                raw = data.get(key)
+                if raw is None:
+                    return None
+                limb = LimbSet(count=int(raw["count"]),
+                               segments=int(raw.get("segments", 2)))
+                if limb.count < 1 or limb.segments < 1:
+                    raise SpecError(f"{key} need count >= 1 and "
+                                    "segments >= 1")
+                return limb
             return cls(
                 name=str(data["name"]),
                 description=str(data.get("description", "")),
@@ -188,10 +246,6 @@ class RobotSpec:
                 width_m=float(data["width_m"]),
                 height_m=float(data["height_m"]),
                 mass_kg=float(data["mass_kg"]),
-                ground_clearance_m=float(data["ground_clearance_m"]),
-                wheel=Wheel(**{k: data["wheel"][k] for k in
-                               ("diameter_m", "width_m", "count")},
-                            driven=bool(data["wheel"].get("driven", True))),
                 motor=Motor(kind=str(data["motor"]["kind"]),
                             voltage_v=float(data["motor"]["voltage_v"]),
                             count=int(data["motor"]["count"]),
@@ -199,6 +253,12 @@ class RobotSpec:
                 battery=Battery(chemistry=str(data["battery"]["chemistry"]),
                                 voltage_v=float(data["battery"]["voltage_v"]),
                                 capacity_mah=int(data["battery"]["capacity_mah"])),
+                ground_clearance_m=(None if clearance is None
+                                    else float(clearance)),
+                wheel=wheel,
+                rotors=rotors,
+                legs=_limbs("legs"),
+                arms=_limbs("arms"),
                 sensors=sensors,
                 component_mass_kg={str(k): float(v) for k, v in
                                    data.get("component_mass_kg", {}).items()},
@@ -218,7 +278,7 @@ class RobotSpec:
             raise SpecError(f"spec is not valid JSON: {exc}") from exc
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "name": self.name,
             "description": self.description,
             "drivetrain": self.drivetrain,
@@ -226,11 +286,6 @@ class RobotSpec:
             "width_m": self.width_m,
             "height_m": self.height_m,
             "mass_kg": self.mass_kg,
-            "ground_clearance_m": self.ground_clearance_m,
-            "wheel": {"diameter_m": self.wheel.diameter_m,
-                      "width_m": self.wheel.width_m,
-                      "count": self.wheel.count,
-                      "driven": self.wheel.driven},
             "motor": {"kind": self.motor.kind,
                       "voltage_v": self.motor.voltage_v,
                       "count": self.motor.count,
@@ -241,6 +296,23 @@ class RobotSpec:
             "sensors": [{"kind": s.kind, "position": s.position,
                          "range_m": s.range_m} for s in self.sensors],
             "component_mass_kg": self.component_mass_kg,
-            **({"wiring": self.wiring.to_dict()}
-               if self.wiring is not None else {}),
         }
+        if self.ground_clearance_m is not None:
+            d["ground_clearance_m"] = self.ground_clearance_m
+        if self.wheel is not None:
+            d["wheel"] = {"diameter_m": self.wheel.diameter_m,
+                          "width_m": self.wheel.width_m,
+                          "count": self.wheel.count,
+                          "driven": self.wheel.driven}
+        if self.rotors is not None:
+            d["rotors"] = {"count": self.rotors.count,
+                           "prop_diameter_m": self.rotors.prop_diameter_m}
+        if self.legs is not None:
+            d["legs"] = {"count": self.legs.count,
+                         "segments": self.legs.segments}
+        if self.arms is not None:
+            d["arms"] = {"count": self.arms.count,
+                         "segments": self.arms.segments}
+        if self.wiring is not None:
+            d["wiring"] = self.wiring.to_dict()
+        return d

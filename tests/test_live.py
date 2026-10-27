@@ -110,11 +110,18 @@ def test_worker_spec_schema_matches_python():
                                    "/*SPEC_SCHEMA_END*/"))
     assert embedded["required_top"] == [
         "name", "drivetrain", "length_m", "width_m", "height_m",
-        "mass_kg", "ground_clearance_m", "wheel", "motor", "battery"]
+        "mass_kg", "motor", "battery"]
+    assert embedded["ground_required_top"] == ["ground_clearance_m", "wheel"]
+    assert embedded["ground_drivetrains"] == list(schema.GROUND_DRIVETRAINS)
+    assert embedded["class_required_top"] == {
+        "multirotor": ["rotors"], "quadruped": ["legs"],
+        "humanoid": ["legs", "arms"], "robotic_arm": ["arms"]}
     assert embedded["required_nested"] == {
         "wheel": ["diameter_m", "width_m", "count"],
         "motor": ["kind", "voltage_v", "count"],
-        "battery": ["chemistry", "voltage_v", "capacity_mah"]}
+        "battery": ["chemistry", "voltage_v", "capacity_mah"],
+        "rotors": ["count", "prop_diameter_m"],
+        "legs": ["count"], "arms": ["count"]}
     assert embedded["drivetrains"] == list(schema.DRIVETRAINS)
     assert embedded["sensor_kinds"] == list(schema.SENSOR_KINDS)
 

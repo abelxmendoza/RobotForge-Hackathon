@@ -38,6 +38,13 @@ EXPECTED = {
     "TurtleBot3 Burger": ("Ground — wheeled", "Differential rover"),
     "TurtleBot3 Waffle Pi": ("Ground — wheeled", "Differential rover"),
     "Pathfinder": ("Ground — wheeled", "Skid-steer rover"),
+    "PX4 X500": ("Aerial", "Quadcopter"),
+    "Crazyflie 2.1": ("Aerial", "Quadcopter"),
+    "Unitree Go2": ("Legged", "Quadruped"),
+    "Mini Pupper": ("Legged", "Quadruped"),
+    "Unitree G1": ("Legged", "Humanoid"),
+    "ROBOTIS OP3": ("Legged", "Humanoid"),
+    "OpenManipulator-X": ("Stationary", "Robotic arm"),
 }
 
 
@@ -73,7 +80,7 @@ def test_every_robot_is_classified_from_the_tree():
         assert r.class_path == f"{r.mobility_class} · {r.subtype}"
 
 
-def test_the_four_founders_carry_their_honest_classes():
+def test_every_robot_carries_its_honest_class():
     got = {r.name: (r.mobility_class, r.subtype) for r in dex.robots}
     assert got == EXPECTED, got
 
@@ -97,16 +104,18 @@ def test_robodex_page_shows_class_paths_and_class_filters():
     for r in dex.robots:
         assert r.class_path in page, r.name
         assert f'data-mobility="{r.mobility_class}"' in page, r.name
-    # the one populated class is an enabled chip with its count
-    assert 'data-cfilter="Ground — wheeled"' in page
-    assert "Ground — wheeled (4)" in page
-    # every empty branch shows disabled, labelled "none yet"
-    for cls, _ in MOBILITY_TAXONOMY:
-        if cls == "Ground — wheeled":
-            continue
+    # every populated class is an enabled chip with its count
+    for cls, n in (("Ground — wheeled", 4), ("Aerial", 2),
+                   ("Legged", 4), ("Stationary", 1)):
+        assert f'data-cfilter="{cls}"' in page, cls
+        assert f"{cls} ({n})" in page, cls
+        assert f"{cls} — none yet" not in page, cls
+    # the still-empty branches show disabled, labelled "none yet" —
+    # no entries are invented for them
+    for cls in ("Ground — tracked", "Marine"):
         assert f'data-cfilter="{cls}"' in page, cls
         assert f"{cls} — none yet" in page, cls
-    assert page.count("disabled") >= 5
+    assert page.count("disabled") >= 2
 
 
 def test_robot_pages_show_the_class_path():

@@ -131,7 +131,184 @@ function taIsEstimated(spec) {
   return d.startsWith('Photo draft') || d.includes('ESTIMATED');
 }
 
+/* Which take-apart family a spec belongs to. Derived from the
+   spec's own class fields, the same way schema.py branches: rotors
+   make an aerial, legs+arms a humanoid, legs alone a quadruped, the
+   robotic_arm drivetrain a stationary arm, anything else the ground
+   kit the viewer has always drawn. */
+function taClass(spec) {
+  if (spec.rotors) return 'aerial';
+  if (spec.drivetrain === 'robotic_arm') return 'arm';
+  if (spec.legs && spec.arms) return 'humanoid';
+  if (spec.legs) return 'quadruped';
+  return 'ground';
+}
+
 function taBuildParts(spec) {
+  const cls = taClass(spec);
+  if (cls === 'aerial') return taBuildAerialParts(spec);
+  if (cls === 'quadruped') return taBuildQuadParts(spec);
+  if (cls === 'humanoid') return taBuildHumanoidParts(spec);
+  if (cls === 'arm') return taBuildArmParts(spec);
+  return taBuildGroundParts(spec);
+}
+
+/* Motor positions of an X-frame multirotor: the four corners of the
+   spec's length x width (its declared motor-to-motor spans). */
+function taMotorXY(spec) {
+  const hx = spec.length_m / 2, hy = spec.width_m / 2;
+  return [[hx, hy], [hx, -hy], [-hx, hy], [-hx, -hy]]
+    .slice(0, spec.rotors ? spec.rotors.count : 4);
+}
+
+function taBatteryText(spec) {
+  const b = spec.battery;
+  return b.chemistry + ', ' + b.voltage_v + ' V, ' +
+    b.capacity_mah + ' mAh — from the spec';
+}
+
+/* Schematic parts carry file: null — they are the real robot's
+   layout derived from its spec, not files in a printable kit, and
+   the detail panel says so instead of naming a file that is not
+   there. Their prose interpolates the spec's own numbers only. */
+function taBuildAerialParts(spec) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const n = spec.rotors.count, pd = spec.rotors.prop_diameter_m;
+  const parts = [];
+  parts.push({ id: 'frame', name: 'Airframe', file: null, qty: 1,
+    does: 'The central frame the arms, motors and electronics bolt to.',
+    dims: 'motors span ' + mm(L) + ' x ' + mm(W) + ' mm motor-to-motor (' +
+      mm(Math.hypot(L, W)) + ' mm diagonal) — the spec\u2019s length and width are the motor spans',
+    tweak: 'Motor-to-motor size is the drone\u2019s real footprint class: it sets how big a propeller fits before the props overlap.',
+    print: 'Schematic part — the viewer draws the real robot\u2019s layout from its spec; there is no printable kit for this class yet.' });
+  parts.push({ id: 'arm', name: 'Arm', file: null, qty: n,
+    does: 'One boom per motor, reaching from the frame to a corner.',
+    dims: 'one per rotor (' + n + '); each reaches half the diagonal, ' +
+      mm(Math.hypot(L, W) / 2) + ' mm',
+    tweak: 'Stiffer arms wobble less: vibration is the flight controller\u2019s worst enemy.',
+    print: 'Schematic part — see the frame note.' });
+  parts.push({ id: 'rotor', name: 'Motor + propeller', file: null, qty: n,
+    does: 'A brushless motor with its propeller — the whole drivetrain of a drone. Neighbouring rotors spin opposite ways so their twist cancels.',
+    dims: 'propeller ' + mm(pd) + ' mm diameter (from the spec); ' +
+      spec.motor.count + ' motors at ' + spec.motor.voltage_v + ' V',
+    tweak: 'Bigger props move more air more slowly (quieter, more efficient); smaller props spin faster and answer quicker.',
+    print: 'Schematic part — see the frame note. Props are consumables on real drones; they chip and bend.' });
+  parts.push({ id: 'battery', name: 'Battery', file: null, qty: 1,
+    does: 'The flight pack, strapped at the centre so its weight sits at the centre of mass.',
+    dims: taBatteryText(spec),
+    tweak: 'Battery weight is the drone\u2019s biggest trade: more capacity flies longer, until the extra mass eats the gain.',
+    print: 'Schematic part — a real pack, bought not printed.' });
+  parts.push({ id: 'fc', name: 'Flight-controller stack', file: null, qty: 1,
+    does: 'The board (or stack of boards) that reads the IMU and GPS and mixes the four motor speeds many times a second.',
+    dims: 'carries the spec\u2019s sensors: ' +
+      (spec.sensors.map(s => s.kind).join(', ') || 'none listed'),
+    tweak: 'Soft-mounting the flight controller (foam or rubber) is the classic fix for a drone that twitches.',
+    print: 'Schematic part — real electronics, mounted at the frame centre.' });
+  const cams = spec.sensors.filter(s => s.kind === 'rgb_camera' || s.kind === 'depth_camera');
+  if (cams.length) {
+    const [cx, cy] = taPosXY(cams[0].position, spec);
+    parts.push({ id: 'camera', name: 'Camera', file: null, qty: cams.length,
+      does: 'A camera (' + cams[0].kind + ') at the ' + cams[0].position + ' of the craft.',
+      dims: 'position word from the spec: ' + cams[0].position,
+      tweak: 'A camera at the nose is the pilot\u2019s eye on FPV drones; on camera drones it usually hangs on a gimbal underneath.',
+      print: 'Schematic part — real electronics.', x: cx, y: cy });
+  }
+  return { parts, pos: taMotorXY(spec) };
+}
+
+function taBuildQuadParts(spec) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const parts = [];
+  parts.push({ id: 'body', name: 'Body', file: null, qty: 1,
+    does: 'The torso: carries the computer, the battery and the leg motors, and sets how high the robot stands.',
+    dims: mm(L) + ' x ' + mm(W) + ' mm, standing height ' + mm(H) + ' mm — from the spec',
+    tweak: 'Standing height comes from the legs, not the body: longer legs step over more, but sway more.',
+    print: 'Schematic part — the viewer draws the real robot\u2019s layout from its spec; there is no printable kit for this class yet.' });
+  parts.push({ id: 'leg', name: 'Leg', file: null, qty: spec.legs.count,
+    does: 'A two-segment leg (upper and lower) with a motor at the hip and one at the knee — two powered bends per leg is what lets a dog trot, turn and catch itself.',
+    dims: spec.legs.count + ' legs, ' + spec.legs.segments + ' segments each; ' +
+      spec.motor.count + ' joint motors across the robot (from the spec)',
+    tweak: 'Feet matter more than they look: a soft foot grips, a hard round foot skates on smooth floors.',
+    print: 'Schematic part — see the body note.' });
+  const sense = spec.sensors.filter(s => s.kind === 'lidar_2d' || s.kind === 'rgb_camera' || s.kind === 'depth_camera');
+  if (sense.length) {
+    parts.push({ id: 'head', name: 'Head / sensor unit', file: null, qty: 1,
+      does: 'The sensor head at the front: ' + sense.map(s => s.kind).join(' + ') + ', so the robot sees where it is walking.',
+      dims: 'sensors from the spec: ' + sense.map(s => s.kind + ' (' + s.position + ')').join(', '),
+      tweak: 'A sensor is only as good as its view: anything that blocks the head\u2019s line of sight blinds the robot on that side.',
+      print: 'Schematic part — real electronics.' });
+  }
+  parts.push({ id: 'battery', name: 'Battery', file: null, qty: 1,
+    does: 'The pack inside the body — on a legged robot it is a large share of the total mass.',
+    dims: taBatteryText(spec),
+    tweak: 'Legged robots spend energy standing still (the motors hold the body up), so runtime drops fast with a heavier pack.',
+    print: 'Schematic part — a real pack, inside the body.' });
+  return { parts, pos: [] };
+}
+
+function taBuildHumanoidParts(spec) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const parts = [];
+  parts.push({ id: 'pelvis', name: 'Pelvis', file: null, qty: 1,
+    does: 'The hip block the legs hang from and the torso stands on — the robot\u2019s centre of mass lives near here.',
+    dims: 'standing height ' + mm(H) + ' mm overall; body ' + mm(W) + ' mm wide, ' + mm(L) + ' mm deep — from the spec',
+    tweak: 'Balance is a centre-of-mass game: keep the mass low and centred and the robot forgives bad steps.',
+    print: 'Schematic part — the viewer draws the real robot\u2019s layout from its spec; there is no printable kit for this class yet.' });
+  parts.push({ id: 'torso', name: 'Torso', file: null, qty: 1,
+    does: 'The chest: carries the arms, the head, the main computer and usually the battery.',
+    dims: 'upper body above the pelvis, roughly the middle third of the ' + mm(H) + ' mm height',
+    tweak: 'A humanoid falls as one rigid story problem — the torso is where the IMU sits, so its motion is what the balance controller feels.',
+    print: 'Schematic part — see the pelvis note.' });
+  parts.push({ id: 'head', name: 'Head', file: null, qty: 1,
+    does: 'The sensor head: ' + (spec.sensors.length ? spec.sensors.map(s => s.kind).join(' + ') : 'no sensors in the spec') + '.',
+    dims: 'sensors from the spec: ' + (spec.sensors.map(s => s.kind + ' (' + s.position + ')').join(', ') || 'none listed'),
+    tweak: 'Heads are light on purpose: mass at the top is the hardest to balance.',
+    print: 'Schematic part — real electronics.' });
+  parts.push({ id: 'arm', name: 'Arm', file: null, qty: spec.arms.count,
+    does: 'A two-segment arm (upper arm and forearm) with a powered shoulder and elbow.',
+    dims: spec.arms.count + ' arms, ' + spec.arms.segments + ' segments each (from the spec)',
+    tweak: 'On a humanoid the arms are balance tools first and manipulators second — swinging them shifts the centre of mass.',
+    print: 'Schematic part — see the pelvis note.' });
+  parts.push({ id: 'leg', name: 'Leg', file: null, qty: spec.legs.count,
+    does: 'A two-segment leg (thigh and shin) ending in a flat foot — the foot\u2019s size is the robot\u2019s balance margin.',
+    dims: spec.legs.count + ' legs; ' + spec.motor.count + ' actuated joints across the whole robot (from the spec)',
+    tweak: 'Ankle motors decide whether the robot can stand on a slope or only on flat floors.',
+    print: 'Schematic part — see the pelvis note.' });
+  parts.push({ id: 'battery', name: 'Battery', file: null, qty: 1,
+    does: 'The pack, carried in the torso.',
+    dims: taBatteryText(spec),
+    tweak: 'Humanoids are energy-hungry: every joint motor draws power just to stand.',
+    print: 'Schematic part — a real pack, inside the torso.' });
+  return { parts, pos: [] };
+}
+
+function taBuildArmParts(spec) {
+  const L = spec.length_m;
+  const parts = [];
+  parts.push({ id: 'base', name: 'Base', file: null, qty: 1,
+    does: 'The fixed base that bolts to the table and carries the first (waist) servo — the only part of this robot that never moves.',
+    dims: 'reach ' + mm(L) + ' mm from the base axis (from the spec)',
+    tweak: 'Bolt it down: an arm that can lift 500 g at full reach can tip its own base plate.',
+    print: 'Schematic part — the viewer draws the real robot\u2019s layout from its spec; there is no printable kit for this class yet.' });
+  parts.push({ id: 'link', name: 'Arm segment', file: null, qty: spec.arms.segments,
+    does: 'One rigid segment between two servo joints. The chain of segments is what reach means: their lengths add up to how far the gripper gets.',
+    dims: spec.arms.segments + ' segments; total reach ' + mm(L) + ' mm (from the spec)',
+    tweak: 'Longer segments reach further but flex more and load the shoulder servo harder — reach and payload trade against each other.',
+    print: 'Schematic part — see the base note.' });
+  parts.push({ id: 'gripper', name: 'Gripper', file: null, qty: 1,
+    does: 'The two-finger end effector, driven by the last servo — the part that actually touches the work.',
+    dims: 'the spec\u2019s width (' + mm(spec.width_m) + ' mm) is the gripper\u2019s maximum opening',
+    tweak: 'Soft fingertips grip more with less force; smooth metal fingers need a squeeze that can crush light parts.',
+    print: 'Schematic part — see the base note.' });
+  parts.push({ id: 'battery', name: 'Power supply', file: null, qty: 1,
+    does: 'This robot has no battery: it runs from a plug-in DC supply, which the spec models in the battery slot.',
+    dims: spec.battery.voltage_v + ' V DC supply (spec chemistry: ' + spec.battery.chemistry + ', capacity 0 mAh — there is no pack)',
+    tweak: 'A tethered arm never runs flat mid-task, but the cable is part of the workspace — route it so the arm cannot snag it.',
+    print: 'Schematic part — a real bench supply, drawn beside the base.' });
+  return { parts, pos: [] };
+}
+
+function taBuildGroundParts(spec) {
   const L = spec.length_m, W = spec.width_m, H = spec.height_m;
   const C = spec.ground_clearance_m, r = spec.wheel.diameter_m / 2;
   const deckTop = C + PLATE_T;
@@ -214,6 +391,11 @@ function taBuildParts(spec) {
    block and runs it in Node against the real specs, and
    assets/js/robot3d.js turns the units into meshes. */
 function taGeom3d(spec, parts, pos) {
+  const cls = taClass(spec);
+  if (cls === 'aerial') return taGeomAerial(spec, parts);
+  if (cls === 'quadruped') return taGeomQuad(spec, parts);
+  if (cls === 'humanoid') return taGeomHumanoid(spec, parts);
+  if (cls === 'arm') return taGeomArm(spec, parts);
   const L = spec.length_m, W = spec.width_m, H = spec.height_m;
   const C = spec.ground_clearance_m, r = spec.wheel.diameter_m / 2;
   const deckTop = C + PLATE_T;
@@ -267,6 +449,185 @@ function taGeom3d(spec, parts, pos) {
       { kind: 'box', size: [PLATE_T, 0.052, ULTRA_H],
         center: [up.face * (L / 2 + PLATE_T / 2), 0,
                  deckTop + ULTRA_H / 2] }] });
+  }
+  return units;
+}
+
+/* Class geometries: the same one-derivation rule as the ground kit —
+   one unit per drawn instance of each part taBuildParts produced,
+   positions and sizes from the spec's numbers only (fractions of the
+   declared dimensions where the spec carries no finer breakdown,
+   which is what "schematic" means here). z = 0 is the ground (or,
+   for the arm, the table); an aerial hovers at its frame height. */
+function taGeomAerial(spec, parts) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const pd = spec.rotors.prop_diameter_m;
+  const fz = H * 0.55;               // frame plane height
+  const units = [];
+  const byId = id => parts.find(p => p.id === id);
+  if (byId('frame')) {
+    units.push({ part: 'frame', explode: [0, 0, 0.25], meshes: [
+      { kind: 'box', size: [L * 0.42, W * 0.42, 0.018],
+        center: [0, 0, fz] }] });
+  }
+  taMotorXY(spec).forEach(([mx, my]) => {
+    const ang = Math.atan2(my, mx);
+    const reach = Math.hypot(mx, my) * 0.94;
+    if (byId('arm')) {
+      units.push({ part: 'arm',
+        explode: [Math.sign(mx) * 0.35, Math.sign(my) * 0.35, 0.25],
+        meshes: [
+          { kind: 'box', size: [reach, 0.016, 0.012],
+            center: [mx / 2, my / 2, fz], rot: [0, 0, ang] }] });
+    }
+    if (byId('rotor')) {
+      units.push({ part: 'rotor',
+        explode: [Math.sign(mx) * 0.6, Math.sign(my) * 0.6, 0.7],
+        meshes: [
+          { kind: 'cyl', axis: 'z', size: [0.011, 0.016],
+            center: [mx, my, fz + 0.004] },
+          { kind: 'cyl', axis: 'z', size: [pd / 2, 0.002],
+            center: [mx, my, fz + 0.016] }] });
+    }
+  });
+  if (byId('battery')) {
+    units.push({ part: 'battery', explode: [0, 0, -0.55], meshes: [
+      { kind: 'box', size: [L * 0.38, W * 0.3, 0.026],
+        center: [0, 0, fz - 0.026] }] });
+  }
+  if (byId('fc')) {
+    units.push({ part: 'fc', explode: [0, 0, 1], meshes: [
+      { kind: 'box', size: [0.042, 0.042, 0.02], center: [0, 0, fz + 0.02] }] });
+  }
+  const cp = byId('camera');
+  if (cp) {
+    units.push({ part: 'camera', explode: [0.8, 0, 0], meshes: [
+      { kind: 'box', size: [0.012, 0.03, 0.02],
+        center: [L * 0.21, 0, fz - 0.01] }] });
+  }
+  return units;
+}
+
+function taGeomQuad(spec, parts) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const units = [];
+  const byId = id => parts.find(p => p.id === id);
+  if (byId('body')) {
+    units.push({ part: 'body', explode: [0, 0, 0.45], meshes: [
+      { kind: 'box', size: [L * 0.92, W * 0.9, H * 0.36],
+        center: [0, 0, H * 0.8] }] });
+  }
+  if (byId('leg')) {
+    const hx = L * 0.36, hy = W * 0.44;
+    [[hx, hy], [hx, -hy], [-hx, hy], [-hx, -hy]]
+        .slice(0, spec.legs.count).forEach(([x0, y0]) => {
+      const bend = Math.sign(x0) * L * 0.045;   // knees bow outward
+      units.push({ part: 'leg',
+        explode: [Math.sign(x0) * 0.35, Math.sign(y0) * 0.65, -0.1],
+        meshes: [
+          { kind: 'box', size: [0.032, 0.026, H * 0.34],
+            center: [x0 + bend / 2, y0, H * 0.45] },
+          { kind: 'box', size: [0.024, 0.02, H * 0.34],
+            center: [x0 + bend, y0, H * 0.17] }] });
+    });
+  }
+  if (byId('head')) {
+    units.push({ part: 'head', explode: [0.85, 0, 0.25], meshes: [
+      { kind: 'box', size: [L * 0.17, W * 0.52, H * 0.2],
+        center: [L * 0.52, 0, H * 0.84] }] });
+  }
+  if (byId('battery')) {
+    units.push({ part: 'battery', explode: [0, 0, 1], meshes: [
+      { kind: 'box', size: [L * 0.42, W * 0.5, H * 0.15],
+        center: [-L * 0.08, 0, H * 0.8] }] });
+  }
+  return units;
+}
+
+function taGeomHumanoid(spec, parts) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const units = [];
+  const byId = id => parts.find(p => p.id === id);
+  if (byId('leg')) {
+    [W * 0.22, -W * 0.22].slice(0, spec.legs.count).forEach(y0 => {
+      units.push({ part: 'leg',
+        explode: [0, Math.sign(y0) * 0.55, -0.05],
+        meshes: [
+          { kind: 'box', size: [H * 0.05, H * 0.042, H * 0.25],
+            center: [0, y0, H * 0.375] },
+          { kind: 'box', size: [H * 0.042, H * 0.036, H * 0.25],
+            center: [H * 0.008, y0, H * 0.125] },
+          { kind: 'box', size: [H * 0.115, H * 0.05, H * 0.028],
+            center: [H * 0.032, y0, H * 0.014] }] });
+    });
+  }
+  if (byId('pelvis')) {
+    units.push({ part: 'pelvis', explode: [0, 0, 0.1], meshes: [
+      { kind: 'box', size: [H * 0.095, W * 0.82, H * 0.09],
+        center: [0, 0, H * 0.545] }] });
+  }
+  if (byId('torso')) {
+    units.push({ part: 'torso', explode: [0, 0, 0.55], meshes: [
+      { kind: 'box', size: [L * 0.62, W * 0.94, H * 0.3],
+        center: [0, 0, H * 0.74] }] });
+  }
+  if (byId('arm')) {
+    [W / 2 + H * 0.03, -(W / 2 + H * 0.03)].slice(0, spec.arms.count)
+        .forEach(y0 => {
+      units.push({ part: 'arm',
+        explode: [0, Math.sign(y0) * 0.8, 0.25],
+        meshes: [
+          { kind: 'box', size: [H * 0.038, H * 0.032, H * 0.19],
+            center: [0, y0, H * 0.775] },
+          { kind: 'box', size: [H * 0.032, H * 0.027, H * 0.17],
+            center: [H * 0.012, y0, H * 0.595] }] });
+    });
+  }
+  if (byId('head')) {
+    units.push({ part: 'head', explode: [0, 0, 1], meshes: [
+      { kind: 'box', size: [H * 0.095, H * 0.1, H * 0.115],
+        center: [0, 0, H * 0.945] }] });
+  }
+  if (byId('battery')) {
+    units.push({ part: 'battery', explode: [-0.8, 0, 0.4], meshes: [
+      { kind: 'box', size: [H * 0.045, W * 0.52, H * 0.17],
+        center: [-L * 0.3, 0, H * 0.74] }] });
+  }
+  return units;
+}
+
+function taGeomArm(spec, parts) {
+  const R = spec.length_m, H = spec.height_m;
+  const units = [];
+  const byId = id => parts.find(p => p.id === id);
+  if (byId('base')) {
+    units.push({ part: 'base', explode: [0, 0, 0], meshes: [
+      { kind: 'cyl', axis: 'z', size: [Math.min(0.06, R * 0.16), 0.03],
+        center: [0, 0, 0.015] }] });
+  }
+  if (byId('link')) {
+    const segs = [
+      { size: [0.046, 0.04, H * 0.42], center: [0, 0, H * 0.24] },
+      { size: [R * 0.52, 0.034, 0.03], center: [R * 0.26, 0, H * 0.47] },
+      { size: [R * 0.34, 0.028, 0.025], center: [R * 0.62, 0, H * 0.4] },
+    ].slice(0, spec.arms.segments);
+    segs.forEach((m, i) => {
+      units.push({ part: 'link',
+        explode: [0.25 * (i + 1), 0, 0.3 * (i + 1)],
+        meshes: [{ kind: 'box', size: m.size, center: m.center }] });
+    });
+  }
+  if (byId('gripper')) {
+    units.push({ part: 'gripper', explode: [0.9, 0, 0.1], meshes: [
+      { kind: 'box', size: [0.045, 0.012, 0.035],
+        center: [R * 0.83, spec.width_m / 4, H * 0.36] },
+      { kind: 'box', size: [0.045, 0.012, 0.035],
+        center: [R * 0.83, -spec.width_m / 4, H * 0.36] }] });
+  }
+  if (byId('battery')) {
+    units.push({ part: 'battery', explode: [-0.5, -0.6, 0], meshes: [
+      { kind: 'box', size: [0.095, 0.055, 0.032],
+        center: [-R * 0.34, -R * 0.34, 0.016] }] });
   }
   return units;
 }
@@ -568,13 +929,434 @@ function taRenderTop(spec, parts, pos) {
   s += '<text x="' + (Wpx - 8) + '" y="' + (vbH - 6) + '" fill="#9aa3ae" font-size="11" text-anchor="end">front is to the right</text>';
   return svgEl(s, '0 0 ' + Wpx + ' ' + vbH, 700);
 }
+/* --- Class views (aerial / quadruped / humanoid / arm) ---
+   The same schematic language as the ground views — same palette,
+   same explode slider, same click-a-part groups, dimension lines
+   from the spec's numbers only — drawn for robots that do not roll.
+   Positions are fractions of the declared dimensions, exactly the
+   derivation taGeom3d uses, so the flat views and the 3D scene show
+   the same layout. */
+function taClassFrame(xMin, xMax, zMax, Hpx) {
+  const Wpx = 700, pad = 14;
+  const S = Math.min((Wpx - 2 * pad) / (xMax - xMin), (Hpx - 2 * pad) / zMax);
+  const ox = pad - xMin * S, gy = Hpx - pad;
+  return { Wpx, Hpx, S, X: x => ox + x * S, Z: z => gy - z * S };
+}
+function taGroundLine(Z, Wpx, label) {
+  return '<line x1="4" y1="' + Z(0) + '" x2="' + (Wpx - 4) + '" y2="' + Z(0) +
+    '" stroke="#454c59" stroke-width="2"/>' +
+    '<text x="8" y="' + (Z(0) + 16) + '" fill="#9aa3ae" font-size="11">' +
+    label + '</text>';
+}
+function taElecOverlay(spec) {
+  return (taElec && spec.wiring)
+    ? elecOverlaySVG(spec.wiring, elecRails(spec.wiring)) : '';
+}
+
+function taRenderAerialSide(spec, parts) {
+  const L = spec.length_m, H = spec.height_m, pd = spec.rotors.prop_diameter_m;
+  const e = taExplode / 1000, fz = H * 0.55;
+  const { Wpx, S, X, Z } = taClassFrame(-L / 2 - pd / 2 - e - 0.03,
+    L / 2 + pd / 2 + e + 0.03, H + e + 0.05, 300);
+  const byId = id => parts.find(p => p.id === id);
+  let s = taGroundLine(Z, Wpx, 'ground (z = 0)');
+  [-L / 2, L / 2].forEach(mx => {
+    s += '<line x1="' + X(mx) + '" y1="' + Z(fz) + '" x2="' + X(mx) +
+      '" y2="' + Z(0) + '" stroke="#454c59" stroke-width="1" stroke-dasharray="3 4"/>';
+  });
+  if (byId('battery')) {
+    const bw = L * 0.38 * S, bh = 0.026 * S;
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + (X(0) - bw / 2) +
+      '" y="' + Z(fz - 0.013 - e * 0.55) + '" width="' + bw + '" height="' + bh +
+      '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('frame')) {
+    const fw = L * 0.42 * S;
+    s += '<g' + shapeAttrs('frame') + '><rect x="' + (X(0) - fw / 2) +
+      '" y="' + Z(fz + 0.009 + e * 0.25) + '" width="' + fw + '" height="' +
+      (0.018 * S) + '" rx="3" fill="#8a5a17" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  [-1, 1].forEach(sd => {
+    const mx = sd * L / 2, ex = sd * e;
+    if (byId('arm')) {
+      s += '<g' + shapeAttrs('arm') + '><line x1="' + X(sd * L * 0.2) +
+        '" y1="' + Z(fz + e * 0.25) + '" x2="' + X(mx + ex * 0.35) +
+        '" y2="' + Z(fz + e * 0.25) + '" stroke="#9aa3ae" stroke-width="5"/></g>';
+    }
+    if (byId('rotor')) {
+      const rx = mx + ex * 0.6, rz = fz + e * 0.7;
+      s += '<g' + shapeAttrs('rotor') + '><rect x="' + (X(rx) - 0.011 * S / 2) +
+        '" y="' + Z(rz + 0.012) + '" width="' + (0.011 * S) + '" height="' +
+        (0.016 * S) + '" fill="#22262e" stroke="#e8eaee" stroke-width="1.2"/>' +
+        '<line x1="' + X(rx - pd / 2) + '" y1="' + Z(rz + 0.016) + '" x2="' +
+        X(rx + pd / 2) + '" y2="' + Z(rz + 0.016) + '" stroke="#e8eaee" stroke-width="2.4"/></g>';
+    }
+  });
+  if (byId('fc')) {
+    const fw = 0.042 * S;
+    s += '<g' + shapeAttrs('fc') + '><rect x="' + (X(0) - fw / 2) +
+      '" y="' + Z(fz + 0.03 + e) + '" width="' + fw + '" height="' + (0.02 * S) +
+      '" rx="2" fill="#22262e" stroke="#34d399" stroke-width="1.4"/></g>';
+  }
+  if (byId('camera')) {
+    s += '<g' + shapeAttrs('camera') + '><rect x="' + X(L * 0.21 + e * 0.8) +
+      '" y="' + Z(fz - 0.02) + '" width="' + (0.012 * S) + '" height="' +
+      (0.02 * S) + '" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimH(X(-L / 2), X(L / 2), Z(0) + 30,
+    mm(L) + ' mm motor-to-motor');
+  s += dimV(X(L / 2 + pd / 2) + 14, Z(H), Z(0), mm(H) + ' mm', 'start');
+  s += '<text class="dim-note" x="' + X(-L / 2) + '" y="' + (Z(fz + 0.016) - 8) +
+    '" text-anchor="middle">\u00d8 ' + mm(pd) + ' mm prop</text>';
+  return svgEl(s, '0 0 ' + Wpx + ' 338', 700);
+}
+function taRenderAerialTop(spec, parts) {
+  const L = spec.length_m, W = spec.width_m, pd = spec.rotors.prop_diameter_m;
+  const e = taExplode / 1000;
+  const ext = Math.max(L, W) / 2 + pd / 2 + e + 0.03;
+  const Wpx = 700, Hpx = 320, pad = 14;
+  const S = Math.min((Wpx - 2 * pad) / (2 * ext), (Hpx - 2 * pad) / (2 * ext));
+  const ox = Wpx / 2, oy = Hpx / 2;
+  const X = x => ox + x * S, Y = y => oy - y * S;
+  const byId = id => parts.find(p => p.id === id);
+  let s = '';
+  taMotorXY(spec).forEach(([mx, my]) => {
+    const ex = Math.sign(mx) * e * 0.6, ey = Math.sign(my) * e * 0.6;
+    if (byId('arm')) {
+      s += '<g' + shapeAttrs('arm') + '><line x1="' + X(0) + '" y1="' + Y(0) +
+        '" x2="' + X(mx + ex) + '" y2="' + Y(my + ey) +
+        '" stroke="#9aa3ae" stroke-width="6"/></g>';
+    }
+    if (byId('rotor')) {
+      s += '<g' + shapeAttrs('rotor') + '><circle cx="' + X(mx + ex) +
+        '" cy="' + Y(my + ey) + '" r="' + (pd / 2 * S) +
+        '" fill="rgba(232,234,238,0.05)" stroke="#e8eaee" stroke-width="1.6"/>' +
+        '<circle cx="' + X(mx + ex) + '" cy="' + Y(my + ey) + '" r="' +
+        (0.011 * S) + '" fill="#22262e" stroke="#e8eaee" stroke-width="1.2"/></g>';
+    }
+  });
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-L * 0.19) +
+      '" y="' + Y(W * 0.15 - e * 0.55) + '" width="' + (L * 0.38 * S) +
+      '" height="' + (W * 0.3 * S) + '" rx="4" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('frame')) {
+    s += '<g' + shapeAttrs('frame') + '><rect x="' + X(-L * 0.21) +
+      '" y="' + Y(W * 0.21 + e * 0.25) + '" width="' + (L * 0.42 * S) +
+      '" height="' + (W * 0.42 * S) + '" rx="6" fill="rgba(138,90,23,0.55)" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('fc')) {
+    const fw = 0.042 * S;
+    s += '<g' + shapeAttrs('fc') + '><rect x="' + (X(0) - fw / 2) +
+      '" y="' + (Y(0 + e) - fw / 2) + '" width="' + fw + '" height="' + fw +
+      '" rx="2" fill="#22262e" stroke="#34d399" stroke-width="1.4"/></g>';
+  }
+  if (byId('camera')) {
+    s += '<g' + shapeAttrs('camera') + '><rect x="' + X(L * 0.21 + e * 0.8) +
+      '" y="' + (Y(0) - 0.015 * S) + '" width="' + (0.012 * S) + '" height="' +
+      (0.03 * S) + '" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += '<line x1="' + X(-L / 2) + '" y1="' + Y(-W / 2) + '" x2="' + X(L / 2) +
+    '" y2="' + Y(W / 2) + '" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 4"/>';
+  s += '<text class="dim-note" x="' + X(0) + '" y="' + (Y(0) - 8) +
+    '" text-anchor="middle">diagonal ' + mm(Math.hypot(L, W)) + ' mm</text>';
+  s += dimH(X(-L / 2), X(L / 2), Y(-ext) + 20, mm(L) + ' mm motor-to-motor');
+  s += dimVR(X(-ext) - 6, Y(W / 2), Y(-W / 2), mm(W) + ' mm');
+  s += '<text x="' + (Wpx - 8) + '" y="' + (Hpx - 6) + '" fill="#9aa3ae" font-size="11" text-anchor="end">front is to the right</text>';
+  return svgEl(s, '0 0 ' + Wpx + ' ' + Hpx, 700);
+}
+
+function taRenderQuadSide(spec, parts) {
+  const L = spec.length_m, H = spec.height_m;
+  const e = taExplode / 1000;
+  const { Wpx, S, X, Z } = taClassFrame(-L / 2 - e - 0.05, L * 0.68 + e + 0.03,
+    H + e + 0.04, 320);
+  const byId = id => parts.find(p => p.id === id);
+  const legSide = (hx, far) => {
+    const bend = Math.sign(hx) * L * 0.045;
+    const ex = Math.sign(hx) * e * 0.35, ez = -e * 0.1;
+    const col = far ? '#454c59' : '#9aa3ae';
+    const off = far ? -0.012 : 0;
+    return '<g' + (far ? '' : shapeAttrs('leg')) + '><line x1="' +
+      X(hx + off + ex) + '" y1="' + Z(H * 0.62 + ez) + '" x2="' +
+      X(hx + bend / 2 + off + ex) + '" y2="' + Z(H * 0.28 + ez) +
+      '" stroke="' + col + '" stroke-width="7" stroke-linecap="round"/>' +
+      '<line x1="' + X(hx + bend / 2 + off + ex) + '" y1="' + Z(H * 0.28 + ez) +
+      '" x2="' + X(hx + bend + off + ex) + '" y2="' + Z(0.005 + ez) +
+      '" stroke="' + col + '" stroke-width="5.5" stroke-linecap="round"/></g>';
+  };
+  let s = taGroundLine(Z, Wpx, 'ground (z = 0)');
+  if (byId('leg')) { s += legSide(-L * 0.36, true); s += legSide(L * 0.36, true); }
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-L * 0.29) +
+      '" y="' + Z(H * 0.875 + e) + '" width="' + (L * 0.42 * S) + '" height="' +
+      (H * 0.15 * S) + '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2" stroke-dasharray="4 3"/></g>';
+  }
+  if (byId('body')) {
+    s += '<g' + shapeAttrs('body') + '><rect x="' + X(-L * 0.46) +
+      '" y="' + Z(H * 0.98 + e * 0.45) + '" width="' + (L * 0.92 * S) +
+      '" height="' + (H * 0.36 * S) + '" rx="8" fill="#51606f" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('leg')) { s += legSide(-L * 0.36, false); s += legSide(L * 0.36, false); }
+  if (byId('head')) {
+    s += '<g' + shapeAttrs('head') + '><rect x="' + X(L * 0.435 + e * 0.85) +
+      '" y="' + Z(H * 0.94 + e * 0.25) + '" width="' + (L * 0.17 * S) +
+      '" height="' + (H * 0.2 * S) + '" rx="5" fill="#22262e" stroke="#e8eaee" stroke-width="1.4"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimH(X(-L / 2), X(L / 2), Z(0) + 30, mm(L) + ' mm');
+  s += dimV(X(L * 0.68) + 12, Z(H), Z(0), mm(H) + ' mm standing', 'start');
+  return svgEl(s, '0 0 ' + Wpx + ' 358', 700);
+}
+function taRenderQuadTop(spec, parts) {
+  const L = spec.length_m, W = spec.width_m;
+  const e = taExplode / 1000;
+  const Wpx = 700, Hpx = 300, pad = 14;
+  const xMin = -L / 2 - e - 0.04, xMax = L * 0.68 + e + 0.03;
+  const yExt = W / 2 + 0.035 + e + 0.03;
+  const S = Math.min((Wpx - 2 * pad) / (xMax - xMin), (Hpx - 2 * pad) / (2 * yExt));
+  const ox = pad - xMin * S, oy = Hpx / 2;
+  const X = x => ox + x * S, Y = y => oy - y * S;
+  const byId = id => parts.find(p => p.id === id);
+  let s = '';
+  if (byId('leg')) {
+    [[L * 0.36, W * 0.44], [L * 0.36, -W * 0.44], [-L * 0.36, W * 0.44],
+     [-L * 0.36, -W * 0.44]].slice(0, spec.legs.count).forEach(([hx, hy]) => {
+      s += '<g' + shapeAttrs('leg') + '><rect x="' +
+        X(hx + Math.sign(hx) * e * 0.35 - 0.016) + '" y="' +
+        Y(hy + Math.sign(hy) * (0.013 + e * 0.65)) + '" width="' + (0.032 * S) +
+        '" height="' + (0.026 * S) + '" rx="3" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.1"/></g>';
+    });
+  }
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-L * 0.29) +
+      '" y="' + Y(W * 0.25 + e) + '" width="' + (L * 0.42 * S) + '" height="' +
+      (W * 0.5 * S) + '" rx="4" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2" stroke-dasharray="4 3"/></g>';
+  }
+  if (byId('body')) {
+    s += '<g' + shapeAttrs('body') + '><rect x="' + X(-L * 0.46) +
+      '" y="' + Y(W * 0.45 + e * 0.45) + '" width="' + (L * 0.92 * S) +
+      '" height="' + (W * 0.9 * S) + '" rx="8" fill="rgba(81,96,111,0.75)" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('head')) {
+    s += '<g' + shapeAttrs('head') + '><rect x="' + X(L * 0.435 + e * 0.85) +
+      '" y="' + Y(W * 0.26 + e * 0.25) + '" width="' + (L * 0.17 * S) +
+      '" height="' + (W * 0.52 * S) + '" rx="5" fill="#22262e" stroke="#e8eaee" stroke-width="1.4"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimH(X(-L / 2), X(L / 2), Y(-yExt) + 20, mm(L) + ' mm');
+  s += dimVR(X(-L / 2) - 16, Y(W / 2), Y(-W / 2), mm(W) + ' mm');
+  s += '<text x="' + (Wpx - 8) + '" y="' + (Hpx - 6) + '" fill="#9aa3ae" font-size="11" text-anchor="end">front is to the right</text>';
+  return svgEl(s, '0 0 ' + Wpx + ' ' + Hpx, 700);
+}
+
+function taRenderHumanoidSide(spec, parts) {
+  const L = spec.length_m, H = spec.height_m;
+  const e = taExplode / 1000;
+  const xw = L * 0.31 + H * 0.06;
+  const { Wpx, S, X, Z } = taClassFrame(-xw - e - 0.03, xw + e + 0.05,
+    H + e + 0.04, 360);
+  const byId = id => parts.find(p => p.id === id);
+  let s = taGroundLine(Z, Wpx, 'ground (z = 0)');
+  if (byId('leg')) {
+    const lw = H * 0.042 * S;
+    s += '<g' + shapeAttrs('leg') + '><rect x="' + (X(0) - lw / 2) +
+      '" y="' + Z(H * 0.5 - e * 0.05) + '" width="' + lw + '" height="' +
+      (H * 0.25 * S) + '" rx="4" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.2"/>' +
+      '<rect x="' + (X(H * 0.008) - lw / 2) + '" y="' + Z(H * 0.25 - e * 0.05) +
+      '" width="' + lw + '" height="' + (H * 0.25 * S) + '" rx="4" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.2"/>' +
+      '<rect x="' + X(H * 0.032 - H * 0.0575) + '" y="' + Z(H * 0.028 - e * 0.05) +
+      '" width="' + (H * 0.115 * S) + '" height="' + (H * 0.028 * S) +
+      '" rx="3" fill="#22262e" stroke="#e8eaee" stroke-width="1.2"/></g>';
+  }
+  if (byId('pelvis')) {
+    s += '<g' + shapeAttrs('pelvis') + '><rect x="' + X(-H * 0.0475) +
+      '" y="' + Z(H * 0.59 + e * 0.1) + '" width="' + (H * 0.095 * S) +
+      '" height="' + (H * 0.09 * S) + '" rx="4" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-L * 0.3 - H * 0.045 - e * 0.8) +
+      '" y="' + Z(H * 0.825 + e * 0.4) + '" width="' + (H * 0.045 * S) +
+      '" height="' + (H * 0.17 * S) + '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('torso')) {
+    s += '<g' + shapeAttrs('torso') + '><rect x="' + X(-L * 0.31) +
+      '" y="' + Z(H * 0.89 + e * 0.55) + '" width="' + (L * 0.62 * S) +
+      '" height="' + (H * 0.3 * S) + '" rx="6" fill="#51606f" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('arm')) {
+    const aw = H * 0.032 * S, ax = L * 0.31 + H * 0.01;
+    s += '<g' + shapeAttrs('arm') + '><rect x="' + X(ax + e * 0.1) +
+      '" y="' + Z(H * 0.87 + e * 0.25) + '" width="' + aw + '" height="' +
+      (H * 0.19 * S) + '" rx="4" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/>' +
+      '<rect x="' + X(ax + H * 0.012 + e * 0.1) + '" y="' + Z(H * 0.68 + e * 0.25) +
+      '" width="' + aw + '" height="' + (H * 0.17 * S) + '" rx="4" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('head')) {
+    s += '<g' + shapeAttrs('head') + '><rect x="' + X(-H * 0.0475) +
+      '" y="' + Z(H * 1.0 + e) + '" width="' + (H * 0.095 * S) + '" height="' +
+      (H * 0.115 * S) + '" rx="5" fill="#22262e" stroke="#e8eaee" stroke-width="1.4"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimV(X(xw) + 16, Z(H), Z(0), mm(H) + ' mm tall', 'start');
+  s += dimH(X(-L / 2), X(L / 2), Z(0) + 30, mm(L) + ' mm deep');
+  return svgEl(s, '0 0 ' + Wpx + ' 398', 700);
+}
+function taRenderHumanoidTop(spec, parts) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const e = taExplode / 1000;
+  const Wpx = 700, Hpx = 300, pad = 14;
+  const xExt = L / 2 + e + 0.04, yExt = W / 2 + H * 0.05 + e + 0.03;
+  const S = Math.min((Wpx - 2 * pad) / (2 * xExt), (Hpx - 2 * pad) / (2 * yExt));
+  const ox = Wpx / 2, oy = Hpx / 2;
+  const X = x => ox + x * S, Y = y => oy - y * S;
+  const byId = id => parts.find(p => p.id === id);
+  let s = '';
+  if (byId('arm')) {
+    [W / 2 + H * 0.03, -(W / 2 + H * 0.03)].slice(0, spec.arms.count).forEach(y0 => {
+      s += '<g' + shapeAttrs('arm') + '><rect x="' + X(-H * 0.019) +
+        '" y="' + Y(y0 + Math.sign(y0) * e * 0.8 + H * 0.016) + '" width="' +
+        (H * 0.038 * S) + '" height="' + (H * 0.032 * S) + '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.1"/></g>';
+    });
+  }
+  if (byId('leg')) {
+    [W * 0.22, -W * 0.22].slice(0, spec.legs.count).forEach(y0 => {
+      s += '<g' + shapeAttrs('leg') + '><rect x="' + X(-H * 0.025) +
+        '" y="' + Y(y0 + Math.sign(y0) * e * 0.55 + H * 0.021) + '" width="' +
+        (H * 0.05 * S) + '" height="' + (H * 0.042 * S) + '" rx="3" fill="#3d4656" stroke="#9aa3ae" stroke-width="1.1"/></g>';
+    });
+  }
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-L * 0.3 - H * 0.045 - e * 0.8) +
+      '" y="' + Y(W * 0.26 + e * 0.4) + '" width="' + (H * 0.045 * S) +
+      '" height="' + (W * 0.52 * S) + '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('torso')) {
+    s += '<g' + shapeAttrs('torso') + '><rect x="' + X(-L * 0.31) +
+      '" y="' + Y(W * 0.47 + e * 0.55) + '" width="' + (L * 0.62 * S) +
+      '" height="' + (W * 0.94 * S) + '" rx="6" fill="rgba(81,96,111,0.8)" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('pelvis')) {
+    s += '<g' + shapeAttrs('pelvis') + '><rect x="' + X(-H * 0.0475) +
+      '" y="' + Y(W * 0.41 + e * 0.1) + '" width="' + (H * 0.095 * S) +
+      '" height="' + (W * 0.82 * S) + '" rx="4" fill="none" stroke="#9aa3ae" stroke-width="1" stroke-dasharray="4 3"/></g>';
+  }
+  if (byId('head')) {
+    s += '<g' + shapeAttrs('head') + '><circle cx="' + X(0) + '" cy="' +
+      Y(e) + '" r="' + (H * 0.05 * S) + '" fill="#22262e" stroke="#e8eaee" stroke-width="1.4"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimH(X(-L / 2), X(L / 2), Y(-yExt) + 20, mm(L) + ' mm deep');
+  s += dimVR(X(-xExt) - 6, Y(W / 2), Y(-W / 2), mm(W) + ' mm wide');
+  s += '<text x="' + (Wpx - 8) + '" y="' + (Hpx - 6) + '" fill="#9aa3ae" font-size="11" text-anchor="end">front is to the right</text>';
+  return svgEl(s, '0 0 ' + Wpx + ' ' + Hpx, 700);
+}
+
+function taRenderArmSide(spec, parts) {
+  const R = spec.length_m, H = spec.height_m;
+  const e = taExplode / 1000;
+  const { Wpx, S, X, Z } = taClassFrame(-R * 0.5 - e - 0.03, R + e + 0.04,
+    H + e + 0.04, 320);
+  const byId = id => parts.find(p => p.id === id);
+  let s = taGroundLine(Z, Wpx, 'table (z = 0)');
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-R * 0.34 - 0.0475 - e * 0.5) +
+      '" y="' + Z(0.032 - e * 0.6) + '" width="' + (0.095 * S) + '" height="' +
+      (0.032 * S) + '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('base')) {
+    s += '<g' + shapeAttrs('base') + '><rect x="' + X(-0.05) +
+      '" y="' + Z(0.03) + '" width="' + (0.1 * S) + '" height="' + (0.03 * S) +
+      '" rx="3" fill="#8a5a17" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('link')) {
+    const pts = [[0, 0.03, 0], [0, H * 0.45, 1], [R * 0.52, H * 0.47, 2],
+                 [R * 0.79, H * 0.4, 3]];
+    for (let i = 0; i < Math.min(spec.arms.segments, 3); i++) {
+      const [x1, z1] = pts[i], [x2, z2] = pts[i + 1];
+      const ex = e * 0.25 * (i + 1), ez = e * 0.3 * (i + 1);
+      s += '<g' + shapeAttrs('link') + '><line x1="' + X(x1 + ex) +
+        '" y1="' + Z(z1 + ez) + '" x2="' + X(x2 + ex) + '" y2="' + Z(z2 + ez) +
+        '" stroke="#9aa3ae" stroke-width="8" stroke-linecap="round"/></g>';
+    }
+  }
+  if (byId('gripper')) {
+    const gx = R * 0.83 + e * 0.9, gz = H * 0.4;
+    s += '<g' + shapeAttrs('gripper') + '><line x1="' + X(gx) + '" y1="' +
+      Z(gz + spec.width_m / 2 + e * 0.1) + '" x2="' + X(gx + 0.045) +
+      '" y2="' + Z(gz + spec.width_m / 2 + e * 0.1) + '" stroke="#e8eaee" stroke-width="4"/>' +
+      '<line x1="' + X(gx) + '" y1="' + Z(gz - spec.width_m / 2 + e * 0.1) +
+      '" x2="' + X(gx + 0.045) + '" y2="' + Z(gz - spec.width_m / 2 + e * 0.1) +
+      '" stroke="#e8eaee" stroke-width="4"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimH(X(0), X(R), Z(0) + 30, 'reach ' + mm(R) + ' mm');
+  s += dimV(X(R) + 14, Z(H), Z(0), mm(H) + ' mm', 'start');
+  return svgEl(s, '0 0 ' + Wpx + ' 358', 700);
+}
+function taRenderArmTop(spec, parts) {
+  const R = spec.length_m;
+  const e = taExplode / 1000;
+  const Wpx = 700, Hpx = 280, pad = 14;
+  const xMin = -R * 0.5 - e - 0.03, xMax = R + e + 0.04;
+  const yExt = R * 0.42 + e + 0.03;
+  const S = Math.min((Wpx - 2 * pad) / (xMax - xMin), (Hpx - 2 * pad) / (2 * yExt));
+  const ox = pad - xMin * S, oy = Hpx / 2;
+  const X = x => ox + x * S, Y = y => oy - y * S;
+  const byId = id => parts.find(p => p.id === id);
+  let s = '';
+  if (byId('battery')) {
+    s += '<g' + shapeAttrs('battery') + '><rect x="' + X(-R * 0.34 - 0.0475 - e * 0.5) +
+      '" y="' + Y(-R * 0.34 + 0.0275 - e * 0.6) + '" width="' + (0.095 * S) +
+      '" height="' + (0.055 * S) + '" rx="3" fill="#51606f" stroke="#9aa3ae" stroke-width="1.2"/></g>';
+  }
+  if (byId('link')) {
+    s += '<g' + shapeAttrs('link') + '><line x1="' + X(0) + '" y1="' + Y(0) +
+      '" x2="' + X(R * 0.79 + e * 0.75) + '" y2="' + Y(0) +
+      '" stroke="#9aa3ae" stroke-width="8" stroke-linecap="round"/></g>';
+  }
+  if (byId('base')) {
+    s += '<g' + shapeAttrs('base') + '><circle cx="' + X(0) + '" cy="' + Y(0) +
+      '" r="' + (Math.min(0.06, R * 0.16) * S) + '" fill="#8a5a17" stroke="#f59e0b" stroke-width="1.4"/></g>';
+  }
+  if (byId('gripper')) {
+    const gx = R * 0.83 + e * 0.9;
+    s += '<g' + shapeAttrs('gripper') + '><line x1="' + X(gx) + '" y1="' +
+      Y(spec.width_m / 2) + '" x2="' + X(gx + 0.045) + '" y2="' +
+      Y(spec.width_m / 2) + '" stroke="#e8eaee" stroke-width="4"/>' +
+      '<line x1="' + X(gx) + '" y1="' + Y(-spec.width_m / 2) + '" x2="' +
+      X(gx + 0.045) + '" y2="' + Y(-spec.width_m / 2) + '" stroke="#e8eaee" stroke-width="4"/></g>';
+  }
+  s += taElecOverlay(spec);
+  s += dimH(X(0), X(R), Y(-yExt) + 20, 'reach ' + mm(R) + ' mm');
+  s += '<text x="' + (Wpx - 8) + '" y="' + (Hpx - 6) + '" fill="#9aa3ae" font-size="11" text-anchor="end">the arm reaches to the right</text>';
+  return svgEl(s, '0 0 ' + Wpx + ' ' + Hpx, 700);
+}
+
 function taRender() {
   const spec = taSpec;
   if (!spec) return;
   const { parts, pos } = taBuildParts(spec);
   taParts = parts;
-  $('#ta-side').innerHTML = taRenderSide(spec, parts, pos);
-  $('#ta-top').innerHTML = taRenderTop(spec, parts, pos);
+  const cls = taClass(spec);
+  if (cls === 'aerial') {
+    $('#ta-side').innerHTML = taRenderAerialSide(spec, parts);
+    $('#ta-top').innerHTML = taRenderAerialTop(spec, parts);
+  } else if (cls === 'quadruped') {
+    $('#ta-side').innerHTML = taRenderQuadSide(spec, parts);
+    $('#ta-top').innerHTML = taRenderQuadTop(spec, parts);
+  } else if (cls === 'humanoid') {
+    $('#ta-side').innerHTML = taRenderHumanoidSide(spec, parts);
+    $('#ta-top').innerHTML = taRenderHumanoidTop(spec, parts);
+  } else if (cls === 'arm') {
+    $('#ta-side').innerHTML = taRenderArmSide(spec, parts);
+    $('#ta-top').innerHTML = taRenderArmTop(spec, parts);
+  } else {
+    $('#ta-side').innerHTML = taRenderSide(spec, parts, pos);
+    $('#ta-top').innerHTML = taRenderTop(spec, parts, pos);
+  }
   $$('#ta .part-shape').forEach(g =>
     ['click', 'keydown'].forEach(t => g.addEventListener(t, ev => {
       if (t === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return;
@@ -620,18 +1402,23 @@ function taSelect(id, keep) {
     ? '<img class="spot" src="' + ROOT + 'assets/img/parts/' + p.id + '.jpg" alt="AI illustration of the ' + esc(p.name) + '" loading="lazy">' +
       '<p class="faint" style="font-size:12px;margin-top:6px">AI illustration (muse-image-1.0). The printable part itself comes from <code>robotforge cad</code>.</p>'
     : '';
+  const qtyLine = p.file
+    ? 'Qty ' + p.qty + ' \u00b7 ' + esc(p.file)
+    : 'Qty ' + p.qty + ' \u00b7 schematic part \u2014 the real robot\u2019s layout, not a kit file';
+  const foot = p.file
+    ? '<p class="faint" style="margin-top:14px;font-size:var(--fs-xs)">This part is one file in the take-apart kit. Open <code>' + esc(p.file) +
+      '</code> in OpenSCAD (or FreeCAD) to edit just this part \u2014 the assembly picks up your change.</p>'
+    : '<p class="faint" style="margin-top:14px;font-size:var(--fs-xs)">A schematic part derived from the spec \u2014 this class has no printable kit yet, so there is no file to open. The dimensions above are the spec\u2019s own numbers.</p>';
   $('#ta-detail').innerHTML =
-    '<span class="qty">Qty ' + p.qty + ' \u00b7 ' + esc(p.file) + '</span>' +
+    '<span class="qty">' + qtyLine + '</span>' +
     '<h3>' + esc(p.name) + '</h3>' + spot +
     '<dl>' +
     '<dt>What it is</dt><dd>' + esc(p.does) + '</dd>' +
     '<dt>Key dimensions</dt><dd class="m">' + esc(p.dims) + '</dd>' +
     '<dt>Beginner tweak</dt><dd>' + esc(p.tweak) + '</dd>' +
-    '<dt>Print note</dt><dd>' + esc(p.print) + '</dd>' +
+    '<dt>' + (p.file ? 'Print note' : 'Note') + '</dt><dd>' + esc(p.print) + '</dd>' +
     taElecSection(p.id) +
-    '</dl>' +
-    '<p class="faint" style="margin-top:14px;font-size:var(--fs-xs)">This part is one file in the take-apart kit. Open <code>' + esc(p.file) +
-    '</code> in OpenSCAD (or FreeCAD) to edit just this part \u2014 the assembly picks up your change.</p>';
+    '</dl>' + foot;
 }
 /* --- Electrical interaction: panel facts, selection, power --- */
 function taElecFacts(w, node) {
@@ -796,7 +1583,7 @@ const TA_PANEL = `
       <p class="muted" style="font-size:var(--fs-sm);margin-top:8px">Click any part in either view to see what it is, its key dimensions from the spec, one beginner tweak, and a print suggestion.</p>
     </aside>
   </div>
-  <p class="faint" style="font-size:var(--fs-xs);margin-top:12px">A layout viewer built from the spec's numbers, not a CAD render. <code>robotforge cad</code> writes the printable files, one OpenSCAD file per part.</p>`;
+  <p class="faint" id="ta-foot" style="font-size:var(--fs-xs);margin-top:12px">A layout viewer built from the spec's numbers, not a CAD render. <code>robotforge cad</code> writes the printable files, one OpenSCAD file per part.</p>`;
 
 (async function initTakeApart() {
   const host = $('#ta');
@@ -811,6 +1598,18 @@ const TA_PANEL = `
     return;
   }
   host.innerHTML = TA_PANEL;
+  if (taClass(taSpec) !== 'ground') {
+    /* The panel's stock captions describe the wheeled kit; for the
+       schematic classes, say what these views actually are. */
+    const caps = $$('#ta .ta-view .cap');
+    if (caps[0]) caps[0].textContent = 'Side view. Front is to the right; z = 0 is the ground (the table, for a fixed arm).';
+    if (caps[1]) caps[1].textContent = 'Top view. The explode slider separates the same parts, the same way, as the 3D view.';
+    const foot = $('#ta-foot');
+    if (foot) foot.textContent = 'A schematic layout viewer built from the spec\u2019s numbers, not a CAD render. Printable kits (robotforge cad) cover ground robots today; this class is drawn from its published spec instead.';
+    const detail = $('#ta-detail');
+    if (detail) detail.innerHTML = '<h3>Pick a part</h3>' +
+      '<p class="muted" style="font-size:var(--fs-sm);margin-top:8px">Click any part in either view to see what it is and its key dimensions from the spec.</p>';
+  }
   const slider = $('#ta-explode');
   slider.addEventListener('input', () => {
     taExplode = Number(slider.value);
