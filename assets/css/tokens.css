@@ -156,6 +156,7 @@ h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
 .callout.good{border-left-color:var(--pass);background:var(--pass-soft)}
 
 /* ---------- key/value spec table ---------- */
+img{max-width:100%}
 .kv{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
 .kv th,.kv td{text-align:left;padding:10px 0;border-bottom:1px solid var(--border);vertical-align:top}
 .kv th{color:var(--text-muted);font-weight:500;width:38%;padding-right:var(--s4)}
@@ -225,3 +226,9 @@ h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
 .verdict-text.pass{color:var(--pass)}
 .verdict-text.marginal{color:var(--marginal)}
 .verdict-text.fail{color:var(--fail)}
+
+/* Phones: wide data tables scroll inside their own box instead of
+   squeezing or pushing the page sideways. */
+@media (max-width:720px){
+  .kv,.data{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
