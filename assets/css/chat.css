@@ -94,6 +94,7 @@
 @media (max-width:560px){
   .forge-chat{right:12px;bottom:12px}
   .fc-panel{width:calc(100vw - 24px);height:min(600px,calc(100dvh - 104px))}
+  .fc-form input{font-size:16px}
 }
 
 /* ---------- docked rail (app pages) ----------

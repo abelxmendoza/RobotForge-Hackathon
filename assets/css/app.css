@@ -347,6 +347,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
   .cols,.two,.checks{grid-template-columns:1fr}
 }
 @media (max-width:560px){
+  .forge-composer textarea{font-size:16px}
   .step-card{padding:var(--s4)}
   .step-card h2{font-size:var(--fs-lg)}
   .items li{grid-template-columns:90px 34px 1fr;}

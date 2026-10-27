@@ -94,7 +94,10 @@ footer.site-footer p{max-width:60ch}
 }
 @media (max-width:720px){
   .wrap{padding:0 16px}
-  .site-nav{display:none}
+  .site-header .wrap{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px;row-gap:4px}
+  .site-nav{order:3;flex-basis:100%;margin-left:0;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .site-nav::-webkit-scrollbar{display:none}
+  .site-nav a{white-space:nowrap;padding:6px 10px}
   .site-header .btn-primary{margin-left:auto}
   .hero{padding:var(--s8) 0 var(--s7)}
   .band{padding:var(--s8) 0}
