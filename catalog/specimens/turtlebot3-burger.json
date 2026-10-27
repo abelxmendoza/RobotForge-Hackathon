@@ -1,0 +1,251 @@
+{
+  "specimen": {
+    "robot": "TurtleBot3 Burger",
+    "dex_id": "#002",
+    "source": {
+      "repo": "https://github.com/ROBOTIS-GIT/turtlebot3",
+      "commit": "fc817ce3073af1d6032397c64504134882af5e9a",
+      "urdf": "turtlebot3_burger.urdf",
+      "package": "turtlebot3_description",
+      "license": "Apache-2.0",
+      "retrieved": "2026-10-26"
+    },
+    "annotation_note": "Display names, roles and catalogue relations are RobotForge annotations layered on the official link tree; poses, masses, meshes and tiers come from the source URDF alone.",
+    "honesty": [
+      "The official Burger model fuses the whole chassis stack into one mesh \u2014 it is shown as one part because that is what ROBOTIS publishes.",
+      "The rear caster has no visual mesh in the official model; it is drawn as its official collision box.",
+      "The IMU link is an empty frame in the model; a marker stands at its real position.",
+      "Meshes load from the pinned source commit, license recorded; nothing is re-hosted here."
+    ],
+    "parts": [
+      {
+        "id": "base_link",
+        "name": "Chassis \u2014 the whole Burger stack",
+        "role": "Every plate, board and battery of the Burger, fused into a single mesh in the official model. ROBOTIS does not publish the stack plate by plate here.",
+        "tier": "REAL_MESH",
+        "position": [
+          -0.032,
+          0.0,
+          0.01
+        ],
+        "quaternion": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "explode": [
+          0.0,
+          0.0,
+          0.015
+        ],
+        "mass_kg": 0.82573504,
+        "material": "light_black",
+        "color_rgba": [
+          0.4,
+          0.4,
+          0.4,
+          1.0
+        ],
+        "related_catalog_parts": [
+          {
+            "part": "chassis_plate",
+            "note": "the catalogue's generated plate is one layer of this stack, not the whole base"
+          }
+        ],
+        "mesh_file": "turtlebot3_description/meshes/bases/burger_base.stl",
+        "mesh_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/bases/burger_base.stl",
+        "scale": 0.001,
+        "collision_box_m": [
+          0.14,
+          0.14,
+          0.143
+        ]
+      },
+      {
+        "id": "wheel_left_link",
+        "name": "Driven wheel + tire (left)",
+        "role": "The left drive wheel: a 66 mm tire on its hub, straight from the official model.",
+        "tier": "REAL_MESH",
+        "position": [
+          0.0,
+          0.08,
+          0.033
+        ],
+        "quaternion": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "explode": [
+          0.0,
+          0.09,
+          0.0
+        ],
+        "mass_kg": 0.02849894,
+        "material": "dark",
+        "color_rgba": [
+          0.3,
+          0.3,
+          0.3,
+          1.0
+        ],
+        "related_catalog_parts": [
+          {
+            "part": "wheel_100mm",
+            "note": "the catalogue wheel is 100 mm \u2014 a different, larger wheel (Pathfinder size)"
+          }
+        ],
+        "mesh_file": "turtlebot3_description/meshes/wheels/left_tire.stl",
+        "mesh_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/wheels/left_tire.stl",
+        "scale": 0.001
+      },
+      {
+        "id": "wheel_right_link",
+        "name": "Driven wheel + tire (right)",
+        "role": "The right drive wheel: a 66 mm tire on its hub, straight from the official model.",
+        "tier": "REAL_MESH",
+        "position": [
+          0.0,
+          -0.08,
+          0.033
+        ],
+        "quaternion": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "explode": [
+          0.0,
+          -0.09,
+          0.0
+        ],
+        "mass_kg": 0.02849894,
+        "material": "dark",
+        "color_rgba": [
+          0.3,
+          0.3,
+          0.3,
+          1.0
+        ],
+        "related_catalog_parts": [
+          {
+            "part": "wheel_100mm",
+            "note": "the catalogue wheel is 100 mm \u2014 a different, larger wheel (Pathfinder size)"
+          }
+        ],
+        "mesh_file": "turtlebot3_description/meshes/wheels/right_tire.stl",
+        "mesh_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/wheels/right_tire.stl",
+        "scale": 0.001
+      },
+      {
+        "id": "caster_back_link",
+        "name": "Rear caster",
+        "role": "The passive rear support. The official model gives it a collision box but no visual mesh, so the viewer draws the box, labeled.",
+        "tier": "COLLISION_BOX",
+        "position": [
+          -0.081,
+          0.0,
+          0.005
+        ],
+        "quaternion": [
+          -0.706825,
+          0.0,
+          0.0,
+          0.707388
+        ],
+        "explode": [
+          -0.09,
+          0.0,
+          0.0
+        ],
+        "mass_kg": 0.005,
+        "material": null,
+        "color_rgba": null,
+        "related_catalog_parts": [
+          {
+            "part": "caster_ball",
+            "note": "the catalogue's ball caster is the same job in a different shape"
+          }
+        ],
+        "collision_box_m": [
+          0.03,
+          0.009,
+          0.02
+        ]
+      },
+      {
+        "id": "imu_link",
+        "name": "IMU (frame only)",
+        "role": "The model carries only the IMU's frame \u2014 the sensor itself sits on the OpenCR board inside the base.",
+        "tier": "FRAME_ONLY",
+        "position": [
+          -0.032,
+          0.0,
+          0.078
+        ],
+        "quaternion": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "explode": [
+          -0.0784,
+          0.0,
+          0.0441
+        ],
+        "mass_kg": null,
+        "material": null,
+        "color_rgba": null,
+        "related_catalog_parts": [
+          {
+            "part": "imu_bno055",
+            "note": "a standalone IMU breakout; the Burger's IMU is on its controller board instead"
+          }
+        ]
+      },
+      {
+        "id": "base_scan",
+        "name": "LDS-01 lidar",
+        "role": "The spinning 360\u00b0 laser scanner on top (HLDS HLS-LFCD-LDS-01) \u2014 the Burger's eyes.",
+        "tier": "REAL_MESH",
+        "position": [
+          -0.032,
+          0.0,
+          0.182
+        ],
+        "quaternion": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "explode": [
+          -0.0228,
+          0.0,
+          0.0871
+        ],
+        "mass_kg": 0.114,
+        "material": "dark",
+        "color_rgba": [
+          0.3,
+          0.3,
+          0.3,
+          1.0
+        ],
+        "related_catalog_parts": [
+          {
+            "part": "rplidar_a1",
+            "note": "the catalogue's lidar is a Slamtec unit \u2014 same job, different sensor"
+          }
+        ],
+        "mesh_file": "turtlebot3_description/meshes/sensors/lds.stl",
+        "mesh_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/sensors/lds.stl",
+        "scale": 0.001
+      }
+    ]
+  }
+}

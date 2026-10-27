@@ -65,8 +65,10 @@ open in OpenSCAD or FreeCAD, edit, and print. Geometry: TurtleBot3 Burger dims �
   <input type="range" id="explode" min="0" max="100" value="0">
   <button id="spinBtn">⟳ Auto-rotate</button>
   <button id="cadBtn">⌗ CAD mode</button>
+  <button id="realBtn">⬢ Real model — ROBOTIS</button>
   <button id="dlBtn" class="primary">⭳ Download .scad</button>
 </div>
+<div id="realNote" class="box" style="display:none;margin-top:14px"></div>
 <div id="fallback2d"><p class="dim">The 3D viewer couldn't start (WebGL or CDN unavailable) — the kit, flat:</p><div id="stack2d"></div></div>
 
 <div class="cols">
@@ -92,6 +94,7 @@ open in OpenSCAD or FreeCAD, edit, and print. Geometry: TurtleBot3 Burger dims �
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
 const canvas = document.getElementById('view3d');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
@@ -204,6 +207,142 @@ function applyExplode(e){
     if (k === 'caster') gr.children.forEach(c => { c.position.x = c.userData.side * (0.062 + e*0.03); });
   }
 }
+
+// ---------------- real model (specimen) ----------------
+// The Burger decomposed from ROBOTIS's own published model:
+// official STL meshes at their URDF poses, loaded from the pinned
+// source commit (catalog/specimens/turtlebot3-burger.json). The
+// generated kit above is our parametric approximation; this is the
+// real thing, at the resolution the official model publishes.
+let realModeOn = false;
+window.__rfRealMode = false;
+const specimenGroup = new THREE.Group();
+specimenGroup.visible = false;
+scene.add(specimenGroup);
+const specimenParts = new Map();
+let specimenDoc = null, specimenLoaded = false, specimenLoading = false;
+const realBtn = document.getElementById('realBtn');
+const realNote = document.getElementById('realNote');
+
+function escHtml(s){
+  return String(s == null ? '' : s).replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function specimenMaterial(p){
+  let color = 0x51606f;
+  if (p.color_rgba) color = new THREE.Color(p.color_rgba[0], p.color_rgba[1], p.color_rgba[2]);
+  if (p.tier === 'COLLISION_BOX') color = 0xf59e0b;
+  if (p.tier === 'FRAME_ONLY') color = 0xd4af37;
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.25,
+    transparent: p.tier === 'COLLISION_BOX', opacity: p.tier === 'COLLISION_BOX' ? 0.55 : 1 });
+}
+function specimenDetail(p){
+  const tierLabel = { REAL_MESH: 'Real mesh — official model',
+    COLLISION_BOX: 'Collision box — no visual mesh published',
+    FRAME_ONLY: 'Frame only — no geometry published' }[p.tier];
+  const rows = [['Tier', tierLabel]];
+  if (p.mass_kg) rows.push(['Mass (from the URDF)', p.mass_kg.toFixed(3) + ' kg']);
+  if (p.mesh_file) rows.push(['Mesh file', p.mesh_file]);
+  if (p.collision_box_m) rows.push(['Collision box (m)', p.collision_box_m.join(' × ')]);
+  rows.push(['Source', 'ROBOTIS-GIT/turtlebot3 · Apache-2.0']);
+  const rel = (p.related_catalog_parts || []).map(r =>
+    `<tr><td>Related catalogue part</td><td>${escHtml(r.part)} — ${escHtml(r.note)}</td></tr>`).join('');
+  pdetail.innerHTML = `<h3>${escHtml(p.name)}</h3><p>${escHtml(p.role)}</p><table>` +
+    rows.map(r => `<tr><td>${r[0]}</td><td>${escHtml(r[1])}</td></tr>`).join('') + rel +
+    '</table><p style="margin-top:10px"><button onclick="window.__rfSpecimenList()">← All specimen parts</button></p>';
+}
+function specimenList(doc){
+  const items = doc.parts.map(p =>
+    `<div class="layer" onclick="window.__rfSelectPart('${p.id}')">${escHtml(p.name)} <span class="dim">· ${p.tier.replace(/_/g, ' ')}</span></div>`).join('');
+  pdetail.innerHTML = '<h3>The real Burger, part by part</h3>' +
+    '<p>Decomposed from ROBOTIS’s official URDF, at the poses the model itself specifies. Click a part here or in 3D.</p>' + items;
+}
+window.__rfSpecimenList = () => { if (specimenDoc) specimenList(specimenDoc); };
+window.__rfSelectPart = id => {
+  const rec = specimenParts.get(id);
+  if (!rec) return;
+  for (const [pid, r] of specimenParts){
+    r.obj.traverse(m => {
+      if (m.isMesh && m.material.emissive)
+        m.material.emissive.setHex(pid === id ? 0x664400 : 0x000000);
+    });
+  }
+  specimenDetail(rec.data);
+};
+function applySpecimenExplode(e){
+  for (const rec of specimenParts.values()){
+    rec.obj.position.set(rec.home.x + rec.dir.x * e,
+      rec.home.y + rec.dir.y * e, rec.home.z + rec.dir.z * e);
+  }
+}
+window.__rfSpecimenTick = applySpecimenExplode;
+
+async function loadSpecimen(){
+  if (specimenLoaded || specimenLoading) return;
+  specimenLoading = true;
+  try {
+    const res = await fetch('catalog/specimens/turtlebot3-burger.json');
+    if (!res.ok) throw new Error('specimen -> ' + res.status);
+    const doc = (await res.json()).specimen;
+    specimenDoc = doc;
+    const loader = new STLLoader();
+    for (const p of doc.parts){
+      let obj;
+      if (p.tier === 'REAL_MESH'){
+        const geo = await loader.loadAsync(p.mesh_url);
+        obj = new THREE.Mesh(geo, specimenMaterial(p));
+        obj.scale.setScalar(p.scale);
+      } else if (p.tier === 'COLLISION_BOX'){
+        obj = new THREE.Mesh(new THREE.BoxGeometry(...p.collision_box_m), specimenMaterial(p));
+      } else {
+        obj = new THREE.Mesh(new THREE.OctahedronGeometry(0.009), specimenMaterial(p));
+      }
+      obj.position.set(...p.position);
+      obj.quaternion.set(...p.quaternion);
+      obj.castShadow = true;
+      obj.userData.partId = p.id;
+      specimenGroup.add(obj);
+      specimenParts.set(p.id, { obj,
+        home: new THREE.Vector3(...p.position),
+        dir: new THREE.Vector3(...p.explode), data: p });
+    }
+    specimenLoaded = true;
+    realNote.innerHTML = '<b>Real model.</b> Official ROBOTIS meshes (Apache-2.0), pinned at commit <code>' +
+      doc.source.commit.slice(0, 7) + '</code> — loaded from source, not re-hosted. ' +
+      doc.honesty.map(escHtml).join(' ');
+    specimenList(doc);
+  } catch (err) {
+    pdetail.innerHTML = '<h3>Real model unavailable</h3><p>The specimen data or the official meshes could not be loaded (a network connection is needed). The generated kit is still here — toggle Real model off to go back.</p>';
+  } finally {
+    specimenLoading = false;
+  }
+}
+
+realBtn.addEventListener('click', async () => {
+  realModeOn = !realModeOn;
+  window.__rfRealMode = realModeOn;
+  realBtn.classList.toggle('on', realModeOn);
+  robot.visible = !realModeOn;
+  specimenGroup.visible = realModeOn;
+  realNote.style.display = realModeOn ? 'block' : 'none';
+  document.getElementById('cadBtn').disabled = realModeOn;
+  document.getElementById('dlBtn').disabled = realModeOn;
+  document.getElementById('hud').innerHTML = realModeOn
+    ? '<b>Drag</b> orbit · <b>Scroll</b> zoom · <b>Click</b> a real part to inspect it'
+    : '<b>Drag</b> orbit · <b>Scroll</b> zoom · <b>Click</b> a part to inspect';
+  if (realModeOn){ await loadSpecimen(); if (specimenDoc) specimenList(specimenDoc); }
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (!realModeOn || !downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  const r = canvas.getBoundingClientRect();
+  ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const hits = ray.intersectObjects(specimenGroup.children, true);
+  if (hits.length && hits[0].object.userData.partId)
+    window.__rfSelectPart(hits[0].object.userData.partId);
+});
+
 // ---------------- selection ----------------
 const PD = window.PD;
 const pdetail = document.getElementById('pdetail');
@@ -213,6 +352,7 @@ const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
 let downAt = null;
 canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
 canvas.addEventListener('pointerup', e => {
+  if (window.__rfRealMode) return;
   if (!downAt || Math.hypot(e.clientX-downAt[0], e.clientY-downAt[1]) > 5) return;
   const r = canvas.getBoundingClientRect();
   ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
@@ -343,6 +483,7 @@ function tick(){
   explodeCur += (explodeTarget - explodeCur) * 0.12;
   if (Math.abs(explodeTarget - explodeCur) < 0.001) explodeCur = explodeTarget;
   applyExplode(explodeCur);
+  if (window.__rfSpecimenTick) window.__rfSpecimenTick(explodeCur);
   controls.update(); resize(); renderer.render(scene, camera);
 }
 applyExplode(0); updateScad(); tick();
