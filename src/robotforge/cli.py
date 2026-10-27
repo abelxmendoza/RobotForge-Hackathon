@@ -19,6 +19,7 @@ from .lookup import (LookupError, format_pull, format_report, lookup_robot,
                      pull_candidate, report_to_dict)
 from .photo import (draft_spec_from_document, draft_spec_from_photo,
                     locate_parts)
+from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
 from .schema import RobotSpec, SpecError
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
@@ -210,6 +211,21 @@ def main(argv: list[str] | None = None) -> int:
                    help="fault injection: scale ONLY the physical wheel "
                         "geometry (odometry keeps the spec radius), to "
                         "prove the gate catches a lying robot")
+    g.add_argument("--repair", action="store_true",
+                   help="fix-my-spec loop: on a FAIL, compute measured "
+                        "repairs from the gate's suspects, write a repair "
+                        "proposal + repaired spec into the workdir, and "
+                        "re-run the gate on the repaired spec (one pass)")
+
+    rp = sub.add_parser("repair", help="compute a repaired spec from a "
+                                       "failing gate report")
+    rp.add_argument("spec")
+    rp.add_argument("--report", required=True,
+                    help="path to a gate-report.json from a failing run")
+    rp.add_argument("--out", help="write the repaired spec JSON here "
+                                  "(default: beside the report)")
+    rp.add_argument("--no-narrate", action="store_true",
+                    help="skip the Muse Spark narration of the proposal")
 
     li = sub.add_parser("import-list", help="paste a shopping/wish list -> "
                         "assembled robot draft, wiring, missing parts")
@@ -342,6 +358,20 @@ def main(argv: list[str] | None = None) -> int:
                     for stl in rendered:
                         print(f"  rendered {stl} ({stl.stat().st_size} bytes)")
             return 0
+        if args.cmd == "repair":
+            report_doc = json.loads(Path(args.report).read_text())
+            proposal = propose_repairs(spec, report_doc)
+            if not args.no_narrate:
+                narrate(proposal)
+            repaired = apply_repairs(spec, proposal)
+            out = Path(args.out) if args.out else \
+                Path(args.report).parent / "repaired-spec.json"
+            out.write_text(json.dumps(repaired.to_dict(), indent=2) + "\n")
+            md = render_proposal_md(proposal)
+            (Path(args.report).parent / "repair-proposal.md").write_text(md)
+            print(md, end="")
+            print(f"repaired spec written to {out}")
+            return 0 if proposal.actionable else 1
         if args.cmd == "run-gate":
             rc = _print_findings(spec)
             if rc:
@@ -380,6 +410,46 @@ def main(argv: list[str] | None = None) -> int:
                           **report.to_dict()}
             report_path.write_text(json.dumps(report_doc, indent=2) + "\n")
             print(f"report written to {report_path}")
+            if args.repair and report.verdict == "FAIL":
+                proposal = narrate(propose_repairs(spec, report_doc))
+                md = render_proposal_md(proposal)
+                (Path(args.workdir) / "repair-proposal.md").write_text(md)
+                print(md, end="")
+                if not proposal.actionable:
+                    print("repair: no measured repair available — "
+                          "stopping with the FAIL on record")
+                    return 1
+                repaired = apply_repairs(spec, proposal)
+                rep_spec_path = Path(args.workdir) / "repaired-spec.json"
+                rep_spec_path.write_text(
+                    json.dumps(repaired.to_dict(), indent=2) + "\n")
+                print(f"repair: re-running the gate on {rep_spec_path}")
+                res2 = run_motion_check(repaired,
+                                        Path(args.workdir) / "repaired",
+                                        drive_m=args.drive_m,
+                                        turn_deg=args.turn_deg)
+                report2 = evaluate_run([
+                    evaluate_drive(res2["drive"]["commanded_m"],
+                                   res2["drive"]["truth_m"]),
+                    evaluate_turn(res2["turn"]["commanded_deg"],
+                                  res2["turn"]["truth_deg"]),
+                    evaluate_odometry_distance(res2["drive"]["truth_m"],
+                                               res2["drive"]["measured_m"]),
+                    evaluate_odometry_heading(
+                        res2["turn"]["truth_deg"],
+                        abs(res2["turn"]["measured_deg"])),
+                ])
+                for c in report2.checks:
+                    print(f"[repaired {c.verdict}] {c.name}: reference "
+                          f"{c.commanded}, measured {c.measured:.3f}, "
+                          f"error {c.error} {c.unit}")
+                print(f"GATE AFTER REPAIR: {report2.verdict}")
+                doc2 = {"spec": repaired.name, "measurements": res2,
+                        "repair_of": str(report_path), **report2.to_dict()}
+                (Path(args.workdir) / "repaired"
+                 / "gate-report.json").write_text(
+                    json.dumps(doc2, indent=2) + "\n")
+                return 0 if report2.verdict != "FAIL" else 1
             return 0 if report.verdict != "FAIL" else 1
     except (SpecError, TwinError) as exc:
         print(f"spec error: {exc}", file=sys.stderr)
