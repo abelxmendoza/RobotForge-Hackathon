@@ -58,8 +58,8 @@ def parse_paste(text: str) -> list[dict]:
                 any(n in low for n in _NOISE_CONTAINS):
             prev_line = line
             continue
-        if len(line) < 12:
-            prev_line = line
+        if len(line) < 12 and _match_slot(low) == "unidentified":
+            prev_line = line  # short paste noise ("Delete", "4.5", ...)
             continue
         if line == prev_line:
             continue  # the doubled title line in Amazon pastes
@@ -118,19 +118,22 @@ _RULES = [
 ]
 
 
-def identify(item: dict) -> Identified:
-    title = item["title"]
-    low = title.lower()
-    slot = "unidentified"
+def _match_slot(low: str) -> str:
     # A battery states its capacity; a connector pack never does. Titles
     # like "...LiPo Battery ... with XT60 Connector" are batteries that
     # merely name their plug — decide those before the generic rules.
     if re.search(r"\d+\s?mah", low) and "batter" in low:
-        slot = "battery"
-    for name, pat in _RULES if slot == "unidentified" else []:
+        return "battery"
+    for name, pat in _RULES:
         if re.search(pat, low):
-            slot = name
-            break
+            return name
+    return "unidentified"
+
+
+def identify(item: dict) -> Identified:
+    title = item["title"]
+    low = title.lower()
+    slot = _match_slot(low)
     specs: dict = {}
     qty = 1
     if slot == "motor":
@@ -142,7 +145,9 @@ def identify(item: dict) -> Identified:
         if stator:
             specs["stator"] = stator
     elif slot == "esc":
-        qty = _qty(title, r"(\d+)\s?pcs")
+        # a 4-in-1 board supplies four ESC channels per unit
+        qty = _qty(title, r"(\d+)\s?pcs") * \
+            _qty(title, r"\b(\d)\s?-?\s?in\s?-?\s?1\b")
         amps = _first(title, r"(\d+)\s?a\b", int)
         if amps:
             specs["amps"] = amps
@@ -172,6 +177,12 @@ def identify(item: dict) -> Identified:
         wb = _first(title, r"(\d{3})\s?mm", int)
         if wb:
             specs["wheelbase_mm"] = wb
+    elif slot == "pdb":
+        # only a BEC the title names counts as a regulated rail
+        if "bec" in low:
+            for volts in ("5", "12"):
+                if re.search(rf"\b{volts}(\.\d)?\s?v\b", low):
+                    specs[f"bec_{volts}v"] = True
     elif slot == "connectors":
         qty = _qty(title, r"(\d+)\s?pairs") * 2
     elif slot == "radio_tx" and "receiver" in low:
@@ -299,6 +310,10 @@ def suggest_wiring(assembly: dict, items: list[Identified]) -> dict:
     proposed between slots that are filled or in the kit."""
     filled = {s for s, e in assembly["slots"].items()
               if e["status"] in ("filled", "in_kit_unverified", "partial")}
+    pdb_specs: dict = {}
+    for it in items:
+        if it.slot == "pdb":
+            pdb_specs.update(it.specs)
     conns = []
 
     def add(a, b, via, note):
@@ -321,9 +336,14 @@ def suggest_wiring(assembly: dict, items: list[Identified]) -> dict:
             "the module sits in line with the main lead so the FC can "
             "sense pack voltage and current")
     elif "pdb" in filled and "flight_controller" in filled:
-        add("PDB 5V BEC", "flight controller", "5V rail",
-            "the PDB's regulated 5V feeds the FC; OPTO ESCs provide no "
-            "BEC, so this rail is the FC's power source")
+        if pdb_specs.get("bec_5v"):
+            add("PDB 5V BEC", "flight controller", "5V rail",
+                "the PDB's regulated 5V feeds the FC; OPTO ESCs provide no "
+                "BEC, so this rail is the FC's power source")
+        else:
+            add("UNVERIFIED 5V supply", "flight controller", "5V rail",
+                "the listed PDB names no 5V BEC; confirm it has one or add "
+                "a power module / 5V BEC before powering the FC")
     if "receiver" in filled and "flight_controller" in filled:
         add("receiver", "flight controller", "PPM / i-BUS input",
             "bind the transmitter before the first powered test, and do "
@@ -334,9 +354,14 @@ def suggest_wiring(assembly: dict, items: list[Identified]) -> dict:
             "diagonal motor pairs share a spin direction in an X quad; "
             "match each output to the corner the configurator expects")
     if "gimbal" in filled and "pdb" in filled:
-        add("PDB 12V BEC", "gimbal", "12V rail",
-            "the PDB's 12V BEC is the natural feed for the gimbal; keep "
-            "its leads clear of the FC's compass/GPS area")
+        if pdb_specs.get("bec_12v"):
+            add("PDB 12V BEC", "gimbal", "12V rail",
+                "the PDB's 12V BEC is the natural feed for the gimbal; keep "
+                "its leads clear of the FC's compass/GPS area")
+        else:
+            add("UNVERIFIED 12V supply", "gimbal", "12V rail",
+                "the listed PDB names no 12V BEC; check the gimbal's input "
+                "range and add a matching BEC if needed")
     if "charger" in filled and "battery" in filled:
         add("balance charger", "flight battery", "XT60 lead + balance lead",
             "balance mode, charged off the aircraft; both list packs "

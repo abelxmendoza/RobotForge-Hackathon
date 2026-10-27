@@ -111,3 +111,29 @@ def test_connector_pack_is_not_a_battery():
                             "Shrink Tube for RC Lipo Battery Car Boat "
                             "(5 Male+5 Female)", "price": 6.99})
     assert it.slot == "connectors" and it.qty == 10
+
+
+def test_short_plain_titles_are_kept():
+    rep = import_list("Pixhawk\nGPS module\n30A ESC\nDelete\n")
+    assert [i["slot"] for i in rep["items"]] == [
+        "flight_controller", "gps", "esc"]
+
+
+def test_four_in_one_esc_fills_the_esc_slot():
+    it = identify({"title": "4-in-1 ESC 45 A (BLHeli_S class)",
+                   "price": None})
+    assert it.slot == "esc" and it.qty == 4
+    rep = import_list("4-in-1 ESC 45 A (BLHeli_S class)\n")
+    assert rep["assembly"]["slots"]["esc"]["status"] == "filled"
+
+
+def test_pdb_rail_only_suggested_when_bec_is_named():
+    plain = import_list("Power distribution board without BEC\n"
+                        "Pixhawk flight controller\n")
+    conns = plain["wiring"]["connections"]
+    assert not any(c["from"].startswith("PDB 5V") for c in conns)
+    assert any(c["from"] == "UNVERIFIED 5V supply" for c in conns)
+    bec = import_list("Power Distribution Board PDB XT60 BEC 5V & 12V\n"
+                      "Pixhawk flight controller\nCamera gimbal 2-axis\n")
+    froms = {c["from"] for c in bec["wiring"]["connections"]}
+    assert {"PDB 5V BEC", "PDB 12V BEC"} <= froms
