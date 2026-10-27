@@ -5,6 +5,7 @@ import argparse
 import json
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 from .cad import (is_estimated, kit_slug, render_stls, write_kit)
@@ -21,6 +22,7 @@ from .photo import (draft_spec_from_document, draft_spec_from_photo,
                     locate_parts)
 from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
 from .specimen import build_specimen
+from .stability import StabilityError, check_spec, format_stability_report
 from .schema import RobotSpec, SpecError
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
@@ -182,6 +184,17 @@ def main(argv: list[str] | None = None) -> int:
 
     v = sub.add_parser("validate", help="engineering checks on a spec file")
     v.add_argument("spec")
+
+    sb = sub.add_parser("stability", help="static stability check for a "
+                                          "legged robot spec (support-"
+                                          "polygon computation from the "
+                                          "spec — not a gate run)")
+    sb.add_argument("spec")
+    sb.add_argument("--json", action="store_true",
+                    help="print the check report as JSON")
+    sb.add_argument("--out", help="also write the JSON report here")
+    sb.add_argument("--date", help="date to stamp into the report "
+                                   "(YYYY-MM-DD; default: today)")
 
     u = sub.add_parser("urdf", help="generate URDF from a valid spec")
     u.add_argument("spec")
@@ -346,6 +359,24 @@ def main(argv: list[str] | None = None) -> int:
                 print(text)
             return 0
         spec = RobotSpec.from_json(Path(args.spec).read_text())
+        if args.cmd == "stability":
+            try:
+                rep = check_spec(spec)
+            except StabilityError as exc:
+                print(f"stability error: {exc}", file=sys.stderr)
+                return 2
+            rep.date = args.date or date.today().isoformat()
+            doc = rep.to_dict()
+            if args.out:
+                out = Path(args.out)
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(doc, indent=2) + "\n")
+                print(f"report written to {out}")
+            if args.json:
+                print(json.dumps(doc, indent=2))
+            else:
+                print(format_stability_report(rep))
+            return 0
         if args.cmd == "validate":
             return _print_findings(spec)
         if args.cmd == "urdf":

@@ -1,0 +1,98 @@
+{
+  "check": "static_stability",
+  "robot": "unitree-go2",
+  "drivetrain": "quadruped",
+  "method": "Support-polygon statics from the spec's declared dimensions: convex hull of the foot contacts, weakest-direction distance from the centre-of-mass projection to a polygon edge, tip-over angle atan(margin / CoM height). No simulation, no motion \u2014 a computation, not a gate run.",
+  "inputs": {
+    "length_m": 0.7,
+    "width_m": 0.31,
+    "height_m": 0.4,
+    "mass_kg": 16.087,
+    "mass_note": "Recorded for the record only: mass cancels out of tip-over geometry and does not affect the grade.",
+    "support_model": "Four point feet in static stance, placed from the body length/width with the take-apart viewer's fractions (x = \u00b10.405 \u00d7 length, y = \u00b10.44 \u00d7 width).",
+    "feet": [
+      [
+        0.2835,
+        0.1364
+      ],
+      [
+        0.2835,
+        -0.1364
+      ],
+      [
+        -0.2835,
+        0.1364
+      ],
+      [
+        -0.2835,
+        -0.1364
+      ]
+    ],
+    "support_polygon": [
+      [
+        -0.2835,
+        -0.1364
+      ],
+      [
+        0.2835,
+        -0.1364
+      ],
+      [
+        0.2835,
+        0.1364
+      ],
+      [
+        -0.2835,
+        0.1364
+      ]
+    ],
+    "com_projection": [
+      0.0,
+      0.0
+    ],
+    "com_height_m": 0.22000000000000003
+  },
+  "assumptions": [
+    "Feet are points at the viewer's stance placement; the spec publishes no foot-placement dimensions.",
+    "All four feet are on the ground (static stance, no gait).",
+    "Centre of mass sits horizontally at the centre of the body footprint.",
+    "CoM height is ASSUMED at 55% of standing height \u2014 the spec declares no CoM height.",
+    "Flat, level ground; rigid body; no payload."
+  ],
+  "thresholds": {
+    "stable_at_deg": 20.0,
+    "marginal_at_deg": 10.0,
+    "unit": "static tip-over angle, degrees"
+  },
+  "results": {
+    "grade": "STABLE",
+    "tip_angle_deg": 31.799,
+    "weakest_margin_mm": 136.4,
+    "weakest_margin_pct": 88.0,
+    "weakest_direction": "to the right",
+    "projection_inside": true,
+    "edges": [
+      {
+        "direction": "to the right",
+        "margin_mm": 136.4,
+        "tip_angle_deg": 31.799
+      },
+      {
+        "direction": "forward",
+        "margin_mm": 283.5,
+        "tip_angle_deg": 52.188
+      },
+      {
+        "direction": "to the left",
+        "margin_mm": 136.4,
+        "tip_angle_deg": 31.799
+      },
+      {
+        "direction": "backward",
+        "margin_mm": 283.5,
+        "tip_angle_deg": 52.188
+      }
+    ]
+  },
+  "date": "2026-10-26"
+}

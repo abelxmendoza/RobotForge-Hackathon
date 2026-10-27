@@ -60,9 +60,9 @@
     <h1>Unitree G1</h1>
     <div class="cls">Legged · Humanoid</div>
     <div class="cls faint">Legged humanoid</div>
-    <span class="verdict norun lg">Not gated</span>
+    <span class="verdict norun lg">Not gated</span><span class="static-badge unstable lg">Static check: UNSTABLE — tip margin 3°</span>
     <p class="desc">A 1.32 m humanoid with 29 powered joints, a depth camera and a 3D LiDAR in its head — the Robodex&#x27;s first biped, and the biggest robot in it. Unitree publishes its dimensions and equipment; the mass breakdown here is grouped out of the official model files.</p>
-    <nav class="jump" aria-label="On this page"><a class="chip" href="#spec">Spec</a><a class="chip" href="#gate">Gate runs</a><a class="chip" href="#take-apart">Take it apart</a><a class="chip" href="#commands">Reproduce</a></nav>
+    <nav class="jump" aria-label="On this page"><a class="chip" href="#spec">Spec</a><a class="chip" href="#gate">Gate runs</a><a class="chip" href="#stability">Static stability</a><a class="chip" href="#take-apart">Take it apart</a><a class="chip" href="#commands">Reproduce</a></nav>
   </div>
 </div>
 
@@ -80,6 +80,27 @@
   <div class="card"><p class="state-box">No recorded gate runs yet. This robot has no verdict until one is measured.</p><div class="callout" style="margin-top:12px"><span>Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict — its spec is validated, and that is all that is claimed.</span></div></div>
 </section>
 
+<section class="section" id="stability">
+  <h2>Static stability check</h2>
+  <p class="sub">A computation from this robot's spec — support-polygon statics, not a simulation run and not a gate verdict. It grades how far the robot can tip before its centre of mass passes over its feet. The gate status above is unchanged by it: this robot is still not gated.</p>
+  <div class="card">
+    <span class="static-badge unstable lg">Static check: UNSTABLE — tip margin 3°</span>
+    <table class="kv" style="margin-top:12px"><tr><th>Grade</th><td>UNSTABLE</td></tr><tr><th>Static tip-over angle (weakest direction)</th><td>2.7° — backward</td></tr><tr><th>Weakest tip margin</th><td>34 mm from the centre-of-mass projection to the support-polygon edge</td></tr><tr><th>Margin as share of the body&#x27;s half-extent</th><td>34%</td></tr><tr><th>Centre-of-mass height</th><td>0.726 m — ASSUMED at 55% of standing height (printed in the report's assumptions, never buried)</td></tr><tr><th>Thresholds (v1, printed on the report)</th><td>tip angle ≥ 20° STABLE · 10–20° MARGINAL · &lt; 10° UNSTABLE</td></tr></table>
+    <p class="prov" style="margin-top:12px"><span><strong>Report:</strong> <a href="https://github.com/abelxmendoza/RobotForge-Hackathon/blob/main/catalog/stability-reports/unitree-g1.json"><code>catalog/stability-reports/unitree-g1.json</code></a> · checked 2026-10-26 · reproduce with <code>robotforge stability examples/unitree-g1.json</code></span></p>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="card-head"><h3 style="font-size:var(--fs-md)">How it was computed</h3></div>
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">Support-polygon statics from the spec&#x27;s declared dimensions: convex hull of the foot contacts, weakest-direction distance from the centre-of-mass projection to a polygon edge, tip-over angle atan(margin / CoM height). No simulation, no motion — a computation, not a gate run.</p>
+    <p class="muted" style="font-size:var(--fs-sm)"><strong>Support model:</strong> Two feet in double support, each a rectangle 0.152 × 0.066 m (length 0.115 × standing height, width 0.05 × height), centred 0.032 × height ahead of the ankle line at ±0.22 × body width — the take-apart viewer&#x27;s proportions; the spec publishes no foot dimensions.</p>
+    <div class="table-scroll" style="margin-top:12px"><table class="data">
+      <thead><tr><th>Direction</th><th>Margin</th><th>Tip angle</th></tr></thead>
+      <tbody><tr><td>to the right</td><td class="num">132 mm</td><td class="num">10.3°</td></tr><tr><td>forward</td><td class="num">118 mm</td><td class="num">9.2°</td></tr><tr><td>to the left</td><td class="num">132 mm</td><td class="num">10.3°</td></tr><tr><td>backward</td><td class="num">34 mm</td><td class="num">2.7°</td></tr></tbody>
+    </table></div>
+    <p style="font-size:var(--fs-sm);margin-top:12px"><strong>Assumptions</strong> (all of them, as printed in the report):</p>
+    <ul class="prov" style="padding-left:18px"><li>Foot size is derived from standing height with the viewer&#x27;s proportions; it is not a published dimension.</li><li>Double support: both feet flat on the ground. A humanoid in single support, or mid-step, is a dynamics problem this check does not model.</li><li>Centre of mass sits horizontally at the centre of the body footprint.</li><li>CoM height is ASSUMED at 55% of standing height — the spec declares no CoM height.</li><li>Flat, level ground; rigid body; no payload.</li></ul>
+  </div>
+</section>
+
 <section class="section" id="take-apart">
   <h2>Take it apart</h2>
   <p class="sub">This viewer derives a schematic take-apart straight from the spec's numbers — the same one-derivation rule as the ground kits — flat views, or in 3D with the toggle. It is a schematic of the real robot's layout, not a printable kit: <code>robotforge cad</code> kits cover ground robots only today. Click any part.</p>
@@ -93,6 +114,7 @@
   <p class="sub">Run these from a clone of the repository. The twin, CAD kit and motion gate (<code>urdf</code> / <code>cad</code> / <code>run-gate</code>) cover ground robots today, so they are not listed here.</p>
   <div class="codeblock card" style="padding:0;border:0;background:none">
 <pre><code>robotforge validate examples/unitree-g1.json
+robotforge stability examples/unitree-g1.json
 robotforge catalog robot 9</code></pre>
     <button class="btn btn-sm copy" type="button" data-copy>Copy</button>
   </div>

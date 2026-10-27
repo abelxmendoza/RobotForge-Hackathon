@@ -85,6 +85,13 @@ LICENSE_ALLOWLIST = ("MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause",
 
 GATE_STATUSES = ("PASS", "MARGINAL", "FAIL", "NOT_GATED")
 
+# Non-gate evidence. A *check* is a computation recorded beside the gate
+# status — never inside it: it cannot back a gate badge, change a gate
+# status, or stand in for a run. Today there is one kind: the static
+# stability check for legged robots (src/robotforge/stability.py).
+CHECK_TYPES = ("static_stability",)
+STABILITY_GRADES = ("STABLE", "MARGINAL", "UNSTABLE")
+
 # The Robodex classification tree: mobility class -> its subtypes, in
 # display order. This is the ONE home of the taxonomy — the loader
 # validates every robot's (mobility_class, subtype) pair against it,
@@ -338,6 +345,55 @@ class GateStatus:
 
 
 @dataclass(frozen=True)
+class RobotCheck:
+    """A recorded non-gate check (see CHECK_TYPES). Deliberately NOT a
+    GateRun: it carries a computation's grade, not a simulation run's
+    measurements, and the loader keeps the two in separate fields so a
+    check can never be mistaken for — or dressed up as — a gate run."""
+    type: str
+    date: str
+    report: str  # repo-relative path to the check's JSON report
+    grade: str
+    tip_angle_deg: float
+    weakest_margin_mm: float
+    weakest_direction: str
+
+    @classmethod
+    def from_dict(cls, d: dict, *, robot_name: str,
+                  mobility_class: str) -> "RobotCheck":
+        ctype = str(d.get("type", ""))
+        if ctype not in CHECK_TYPES:
+            raise CatalogError(f"{robot_name}: unknown check type "
+                               f"{ctype!r} — known types: {CHECK_TYPES}")
+        if mobility_class != "Legged":
+            raise CatalogError(
+                f"{robot_name}: a {ctype} check belongs to a legged "
+                f"robot, not {mobility_class!r} — checks are recorded "
+                "only where the check actually applies")
+        grade = str(d.get("grade", ""))
+        if grade not in STABILITY_GRADES:
+            raise CatalogError(f"{robot_name}: check grade {grade!r} "
+                               f"not in {STABILITY_GRADES}")
+        if not str(d.get("report", "")):
+            raise CatalogError(f"{robot_name}: a check without its "
+                               "report path is a claim without evidence")
+        if not str(d.get("date", "")):
+            raise CatalogError(f"{robot_name}: a check needs its date")
+        return cls(type=ctype, date=str(d["date"]),
+                   report=str(d["report"]), grade=grade,
+                   tip_angle_deg=float(d["tip_angle_deg"]),
+                   weakest_margin_mm=float(d["weakest_margin_mm"]),
+                   weakest_direction=str(d.get("weakest_direction", "")))
+
+    def to_dict(self) -> dict:
+        return {"type": self.type, "date": self.date,
+                "report": self.report, "grade": self.grade,
+                "tip_angle_deg": self.tip_angle_deg,
+                "weakest_margin_mm": self.weakest_margin_mm,
+                "weakest_direction": self.weakest_direction}
+
+
+@dataclass(frozen=True)
 class RobotEntry:
     number: int
     name: str
@@ -351,6 +407,14 @@ class RobotEntry:
     subtype: str = ""
     image_url: str | None = None
     image_credit: str = ""
+    checks: tuple = ()  # of RobotCheck — non-gate evidence, kept apart
+
+    def static_check(self) -> RobotCheck | None:
+        """The recorded static stability check, if this entry has one."""
+        for c in self.checks:
+            if c.type == "static_stability":
+                return c
+        return None
 
     @property
     def dex_id(self) -> str:
@@ -374,6 +438,10 @@ class RobotEntry:
             raise CatalogError(
                 f"{d.get('name')}: subtype {subtype!r} is not a "
                 f"{mobility_class} subtype in MOBILITY_TAXONOMY")
+        checks = tuple(
+            RobotCheck.from_dict(c, robot_name=str(d.get("name")),
+                                 mobility_class=mobility_class)
+            for c in d.get("checks", ()))
         return cls(number=int(d["number"]), name=str(d["name"]),
                    robot_class=str(d["class"]),
                    description=str(d["description"]),
@@ -384,7 +452,8 @@ class RobotEntry:
                    mobility_class=mobility_class,
                    subtype=subtype,
                    image_url=d.get("image_url"),
-                   image_credit=str(d.get("image_credit", "")))
+                   image_credit=str(d.get("image_credit", "")),
+                   checks=checks)
 
     def to_dict(self) -> dict:
         d = {"number": self.number, "name": self.name,
@@ -410,6 +479,8 @@ class RobotEntry:
         if self.image_url:
             d["image_url"] = self.image_url
             d["image_credit"] = self.image_credit
+        if self.checks:
+            d["checks"] = [c.to_dict() for c in self.checks]
         return d
 
 
@@ -460,6 +531,13 @@ def gate_badge(status: str) -> str:
     """Short text badge. A badge exists only as good as its runs."""
     return {"PASS": "GATE: PASS", "MARGINAL": "GATE: MARGINAL",
             "FAIL": "GATE: FAIL", "NOT_GATED": "not gated yet"}[status]
+
+
+def static_check_badge(check: RobotCheck) -> str:
+    """Text badge for a static stability check — worded so it can never
+    be read as a gate verdict."""
+    return (f"STATIC CHECK: {check.grade} "
+            f"(tip margin {check.tip_angle_deg:.0f}°)")
 
 
 def _run_line(r: GateRun) -> str:
@@ -518,6 +596,13 @@ def format_robot(r: RobotEntry) -> str:
         out.append(f"  - {_run_line(run)}")
     if gs.note:
         out.append(f"  note: {gs.note}")
+    for c in r.checks:
+        out += ["", f"check: static stability — {c.grade} "
+                f"(tip angle {c.tip_angle_deg:.1f}°, weakest margin "
+                f"{c.weakest_margin_mm:.0f} mm {c.weakest_direction})",
+                "  a computation from the spec, not a gate run; the "
+                "gate status above is unchanged by it",
+                f"  report: {c.report} ({c.date})"]
     return "\n".join(out)
 
 

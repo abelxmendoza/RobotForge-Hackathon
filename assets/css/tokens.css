@@ -92,6 +92,21 @@ h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
 .verdict.fail{color:var(--fail);background:var(--fail-soft)}
 .verdict.norun{color:var(--norun);background:transparent;border-style:dashed}
 .verdict.lg{font-size:14px;padding:9px 14px}
+/* a static stability check badge — a computation, never a gate verdict:
+   dashed steel-blue in every grade, dot colour carries the grade, so the
+   badge cannot be mistaken for the solid verdict pills at a glance */
+.static-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font:700 12px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 10px;border-radius:999px;white-space:nowrap;
+  color:#7cc4ee;border:1px dashed #4db2e8;background:rgba(77,178,232,.07);
+}
+.static-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:#4db2e8}
+.static-badge.marginal::before{background:#c792ea}
+.static-badge.unstable::before{background:#9aa7b4}
+.static-badge.lg{font-size:14px;padding:9px 14px}
+.robot-card .static-badge{justify-self:start;margin-top:6px}
+.robot-hero .static-badge{margin-top:var(--s4);margin-left:8px}
 .recorded{
   display:inline-flex;align-items:center;gap:6px;
   font:700 11px/1 var(--font);letter-spacing:.12em;text-transform:uppercase;

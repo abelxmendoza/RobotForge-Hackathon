@@ -70,6 +70,7 @@ robotforge describe "your robot description"
 
 - `src/robotforge/schema.py` — the robot specification (dataclasses, strict parsing)
 - `src/robotforge/validate.py` — engineering checks + findings
+- `src/robotforge/stability.py` — static stability check for legged robots (support-polygon computation from the spec; `robotforge stability <spec>`) — a check, never a gate verdict
 - `src/robotforge/describe.py` — Muse Spark client (OpenAI-compatible endpoint)
 - `src/robotforge/urdf.py` — URDF generation from a spec
 - `src/robotforge/cli.py` — `robotforge` command line

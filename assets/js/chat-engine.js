@@ -75,7 +75,9 @@
     var keys = [{ text: robot.name, score: 10 }];
     if (toks.length > 1) {
       var last = toks[toks.length - 1];
-      if (last.length >= 4) keys.push({ text: last, score: 8 });
+      /* >= 3 so model designators like "go2" and "op3" resolve; both
+         are distinctive, unlike a bare "g1" (2 chars, stays unmatched) */
+      if (last.length >= 3) keys.push({ text: last, score: 8 });
       if (toks.length > 2) {
         keys.push({ text: toks.slice(-2).join(' '), score: 8 });
         /* distinctive middle token: "waffle" in TurtleBot3 Waffle Pi */
@@ -156,6 +158,27 @@
     return out;
   }
 
+  function staticCheckOf(robot) {
+    var checks = robot.checks || [];
+    for (var i = 0; i < checks.length; i++) {
+      if (checks[i].type === 'static_stability') return checks[i];
+    }
+    return null;
+  }
+
+  function stabilityBlock(robot) {
+    var c = staticCheckOf(robot);
+    if (!c) return '';
+    var gs = robot.gate_status || {};
+    return '<p><strong>Static stability check: ' + esc(c.grade) + '</strong>' +
+      ' — a computation from the spec (support-polygon statics), not a ' +
+      'gate run. Weakest tip margin ' +
+      fmt(Math.round(c.tip_angle_deg * 10) / 10) + '° (' +
+      fmt(c.weakest_margin_mm) + ' mm, ' + esc(c.weakest_direction) +
+      '), checked ' + esc(c.date) + '. The gate status is unchanged by ' +
+      'it: still ' + esc(VLABEL[gs.status || 'NOT_GATED']) + '.</p>';
+  }
+
   function specsBlock(robot) {
     var ks = robot.key_specs || {};
     var keys = Object.keys(ks);
@@ -194,6 +217,10 @@
       'maker', 'manufacturer', 'designed', 'built'].some(function (w) {
         return qt.indexOf(w) !== -1;
       });
+    var wantsStability = ['stable', 'stability', 'tip', 'balance',
+      'fall over', 'upright'].some(function (w) {
+        return qt.indexOf(w) !== -1;
+      });
     var out = '<p><strong>' + esc(dexId(robot)) + ' ' + esc(robot.name) + '</strong> · ' +
       esc(robot.class) + '</p><p>' + esc(robot.description) + '</p>';
     if (wantsGate || (!wantsSpecs && !wantsProv)) {
@@ -203,6 +230,14 @@
         (gs.runs && gs.runs.length
           ? ' — ' + gs.runs.length + ' recorded run' + (gs.runs.length === 1 ? '' : 's') + '.'
           : ' — no recorded runs.') + '</p>';
+    }
+    if (staticCheckOf(robot)) {
+      if (wantsStability || (!wantsSpecs && !wantsProv)) {
+        out += stabilityBlock(robot);
+      }
+    } else if (wantsStability) {
+      out += '<p>No static stability check is recorded for this robot' +
+        ' — that check covers legged robots only.</p>';
     }
     if (wantsSpecs) out += specsBlock(robot);
     if (wantsProv) out += provBlock(robot);

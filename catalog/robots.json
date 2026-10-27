@@ -257,7 +257,18 @@
         "source_url": "https://github.com/unitreerobotics/unitree_ros/blob/master/robots/go2_description/urdf/go2_description.urdf"
       },
       "spec_file": "examples/unitree-go2.json",
-      "subtype": "Quadruped"
+      "subtype": "Quadruped",
+      "checks": [
+        {
+          "type": "static_stability",
+          "date": "2026-10-26",
+          "report": "catalog/stability-reports/unitree-go2.json",
+          "grade": "STABLE",
+          "tip_angle_deg": 31.799,
+          "weakest_margin_mm": 136.4,
+          "weakest_direction": "to the right"
+        }
+      ]
     },
     {
       "class": "Legged quadruped",
@@ -286,7 +297,18 @@
         "source_url": "https://github.com/mangdangroboticsclub/mini_pupper_ros"
       },
       "spec_file": "examples/mini-pupper.json",
-      "subtype": "Quadruped"
+      "subtype": "Quadruped",
+      "checks": [
+        {
+          "type": "static_stability",
+          "date": "2026-10-26",
+          "report": "catalog/stability-reports/mini-pupper.json",
+          "grade": "STABLE",
+          "tip_angle_deg": 27.856,
+          "weakest_margin_mm": 48.0,
+          "weakest_direction": "to the right"
+        }
+      ]
     },
     {
       "class": "Legged humanoid",
@@ -315,7 +337,18 @@
         "source_url": "https://github.com/unitreerobotics/unitree_ros/blob/master/robots/g1_description/g1_29dof.urdf"
       },
       "spec_file": "examples/unitree-g1.json",
-      "subtype": "Humanoid"
+      "subtype": "Humanoid",
+      "checks": [
+        {
+          "type": "static_stability",
+          "date": "2026-10-26",
+          "report": "catalog/stability-reports/unitree-g1.json",
+          "grade": "UNSTABLE",
+          "tip_angle_deg": 2.655,
+          "weakest_margin_mm": 33.7,
+          "weakest_direction": "backward"
+        }
+      ]
     },
     {
       "class": "Legged humanoid",
@@ -345,7 +378,18 @@
         "source_url": "https://emanual.robotis.com/docs/en/platform/op3/introduction/"
       },
       "spec_file": "examples/robotis-op3.json",
-      "subtype": "Humanoid"
+      "subtype": "Humanoid",
+      "checks": [
+        {
+          "type": "static_stability",
+          "date": "2026-10-26",
+          "report": "catalog/stability-reports/robotis-op3.json",
+          "grade": "UNSTABLE",
+          "tip_angle_deg": 2.655,
+          "weakest_margin_mm": 13.0,
+          "weakest_direction": "backward"
+        }
+      ]
     },
     {
       "class": "Stationary robotic arm",

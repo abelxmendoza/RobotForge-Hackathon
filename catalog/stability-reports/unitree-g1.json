@@ -1,0 +1,90 @@
+{
+  "check": "static_stability",
+  "robot": "unitree-g1",
+  "drivetrain": "humanoid",
+  "method": "Support-polygon statics from the spec's declared dimensions: convex hull of the foot contacts, weakest-direction distance from the centre-of-mass projection to a polygon edge, tip-over angle atan(margin / CoM height). No simulation, no motion \u2014 a computation, not a gate run.",
+  "inputs": {
+    "length_m": 0.2,
+    "width_m": 0.45,
+    "height_m": 1.32,
+    "mass_kg": 35.0,
+    "mass_note": "Recorded for the record only: mass cancels out of tip-over geometry and does not affect the grade.",
+    "support_model": "Two feet in double support, each a rectangle 0.152 \u00d7 0.066 m (length 0.115 \u00d7 standing height, width 0.05 \u00d7 height), centred 0.032 \u00d7 height ahead of the ankle line at \u00b10.22 \u00d7 body width \u2014 the take-apart viewer's proportions; the spec publishes no foot dimensions.",
+    "feet": [
+      [
+        0.04224,
+        0.099
+      ],
+      [
+        0.04224,
+        -0.099
+      ]
+    ],
+    "support_polygon": [
+      [
+        -0.03366000000000001,
+        -0.132
+      ],
+      [
+        0.11814000000000001,
+        -0.132
+      ],
+      [
+        0.11814000000000001,
+        0.132
+      ],
+      [
+        -0.03366000000000001,
+        0.132
+      ]
+    ],
+    "com_projection": [
+      0.0,
+      0.0
+    ],
+    "com_height_m": 0.7260000000000001
+  },
+  "assumptions": [
+    "Foot size is derived from standing height with the viewer's proportions; it is not a published dimension.",
+    "Double support: both feet flat on the ground. A humanoid in single support, or mid-step, is a dynamics problem this check does not model.",
+    "Centre of mass sits horizontally at the centre of the body footprint.",
+    "CoM height is ASSUMED at 55% of standing height \u2014 the spec declares no CoM height.",
+    "Flat, level ground; rigid body; no payload."
+  ],
+  "thresholds": {
+    "stable_at_deg": 20.0,
+    "marginal_at_deg": 10.0,
+    "unit": "static tip-over angle, degrees"
+  },
+  "results": {
+    "grade": "UNSTABLE",
+    "tip_angle_deg": 2.655,
+    "weakest_margin_mm": 33.7,
+    "weakest_margin_pct": 33.7,
+    "weakest_direction": "backward",
+    "projection_inside": true,
+    "edges": [
+      {
+        "direction": "to the right",
+        "margin_mm": 132.0,
+        "tip_angle_deg": 10.305
+      },
+      {
+        "direction": "forward",
+        "margin_mm": 118.1,
+        "tip_angle_deg": 9.243
+      },
+      {
+        "direction": "to the left",
+        "margin_mm": 132.0,
+        "tip_angle_deg": 10.305
+      },
+      {
+        "direction": "backward",
+        "margin_mm": 33.7,
+        "tip_angle_deg": 2.655
+      }
+    ]
+  },
+  "date": "2026-10-26"
+}

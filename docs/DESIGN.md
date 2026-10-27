@@ -61,6 +61,34 @@ Heading error ≤5° = PASS, >10° = FAIL, between = MARGINAL. (The pre-window d
 turning scrubs laterally, so 3° would grade the physics model rather than the robot.)
 Implemented in `gate.py` as `DEFAULT_THRESHOLDS`.
 
+## Static stability checks for legged robots (2026-10-26)
+
+The motion gate grades ground robots by driving them; legged robots
+have no gate. What a spec alone can honestly support for them is a
+*static* check (`src/robotforge/stability.py`, `robotforge stability
+<spec>`): the support polygon of the feet, the weakest-direction
+distance from the centre-of-mass projection to a polygon edge, and the
+static tip-over angle atan(margin / CoM height). Foot placement is
+derived from body length/width with the take-apart viewer's fractions;
+CoM height is ASSUMED at 55% of standing height — the assumption is
+printed in every report, never buried.
+
+Grades (v1 thresholds, chosen with the check, printed on every report;
+Abel may retune): tip angle ≥ 20° STABLE · 10–20° MARGINAL · < 10°
+UNSTABLE · projection outside the polygon is UNSTABLE at any angle.
+
+Evidence separation is structural, not cosmetic: checks live in a
+`checks` record in `catalog/robots.json`, apart from `gate_status`;
+the loader refuses a check typed as a gate run, a stability grade
+wearing a gate status, or a check recorded for a non-legged robot.
+Site badges are dashed steel-blue, distinct from the verdict pills.
+First records (2026-10-26): Go2 STABLE (31.8°), Mini Pupper STABLE
+(27.9°), G1 UNSTABLE (2.7°), OP3 UNSTABLE (2.7°) — the humanoids'
+backward (heel) margin binds, which is the honest geometry of the
+model: bipeds stand by active balance, not stance. All four remain
+NOT_GATED; the check changes no gate status. Drones get nothing —
+flight stability is a different analysis.
+
 ## Second reference robot — DECIDED (Abel, 2026-10-26)
 
 **Andino** (open-source differential-drive robot, ROS 2 native, published

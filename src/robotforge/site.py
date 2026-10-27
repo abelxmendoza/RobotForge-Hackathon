@@ -21,10 +21,12 @@ Pages serves it under /RobotForge-Hackathon/).
 from __future__ import annotations
 
 import html
+import json
 import re
 from pathlib import Path
 
-from .catalog import (MOBILITY_TAXONOMY, Catalog, GateRun, Robodex,
+from .catalog import (MOBILITY_TAXONOMY, ROBOTS_DATA, Catalog, GateRun,
+                      Robodex, RobotCheck,
                       RobotEntry)
 
 REPO_URL = "https://github.com/abelxmendoza/RobotForge-Hackathon"
@@ -179,6 +181,29 @@ def verdict_badge(status: str, extra: str = "") -> str:
     return f'<span class="verdict {cls}">{VERDICT_LABEL[status]}</span>'
 
 
+STABILITY_CLASS = {"STABLE": "stable", "MARGINAL": "marginal",
+                   "UNSTABLE": "unstable"}
+
+
+def static_badge(check: RobotCheck, extra: str = "") -> str:
+    """Badge for a static stability check — a computation from the spec,
+    styled (dashed steel-blue) so it can never be read as a gate
+    verdict, and worded to say what it is."""
+    cls = "static-badge " + STABILITY_CLASS[check.grade] \
+        + (f" {extra}" if extra else "")
+    return (f'<span class="{cls}">Static check: {check.grade} — '
+            f'tip margin {check.tip_angle_deg:.0f}°</span>')
+
+
+def _load_check_report(check: RobotCheck) -> dict | None:
+    """The full JSON report behind a catalog check record."""
+    path = ROBOTS_DATA.parent.parent / check.report
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
 def _grade(value: float | None) -> str:
     if value is None:
         return ""
@@ -320,12 +345,14 @@ def robot_card(r: RobotEntry, root: str, href: str) -> str:
     ph = (f'<div class="ph{" ai" if ai else ""}"><img src="{e(src)}" '
           f'alt="{e(alt)}" loading="lazy"></div>' if src
           else '<div class="ph ai"></div>')
+    check = r.static_check()
     return (f'<a class="robot-card" href="{e(href)}" '
             f'data-status="{r.gate_status.status}" '
             f'data-mobility="{e(r.mobility_class)}">{ph}'
             f'<div class="body"><span class="dex">{e(r.dex_id)}</span>'
             f'<h3>{e(r.name)}</h3><span class="cls">{e(r.class_path)}</span>'
-            f'{verdict_badge(r.gate_status.status)}</div></a>')
+            f'{verdict_badge(r.gate_status.status)}'
+            f'{static_badge(check) if check else ""}</div></a>')
 
 
 # --------------------------------------------------------------------------
@@ -522,6 +549,70 @@ def _runs_table(runs: tuple[GateRun, ...]) -> str:
                if sources else ""))
 
 
+def _stability_section(r: RobotEntry) -> str:
+    """The static stability check section of a legged robot's page.
+
+    Kept visually and verbally separate from the gate section: this is
+    a computation from the spec (support-polygon statics), not a
+    simulation run, and it changes nothing about the gate status.
+    """
+    check = r.static_check()
+    if check is None:
+        return ""
+    rep = _load_check_report(check)
+    rows = [
+        ("Grade", f"{check.grade}"),
+        ("Static tip-over angle (weakest direction)",
+         f"{check.tip_angle_deg:.1f}° — {e(check.weakest_direction)}"),
+        ("Weakest tip margin",
+         f"{check.weakest_margin_mm:.0f} mm from the centre-of-mass "
+         "projection to the support-polygon edge"),
+    ]
+    detail = ""
+    if rep:
+        res = rep["results"]
+        rows.append(("Margin as share of the body's half-extent",
+                     f"{res['weakest_margin_pct']:.0f}%"))
+        rows.append(("Centre-of-mass height",
+                     f"{rep['inputs']['com_height_m']:.3f} m — ASSUMED at "
+                     "55% of standing height (printed in the report's "
+                     "assumptions, never buried)"))
+        rows.append(("Thresholds (v1, printed on the report)",
+                     "tip angle ≥ 20° STABLE · 10–20° MARGINAL · "
+                     "&lt; 10° UNSTABLE"))
+        edges = "".join(
+            f"<tr><td>{e(ed['direction'])}</td>"
+            f'<td class="num">{ed["margin_mm"]:.0f} mm</td>'
+            f'<td class="num">{ed["tip_angle_deg"]:.1f}°</td></tr>'
+            for ed in res["edges"])
+        assumptions = "".join(f"<li>{e(a)}</li>"
+                              for a in rep["assumptions"])
+        detail = f"""
+  <div class="card" style="margin-top:12px">
+    <div class="card-head"><h3 style="font-size:var(--fs-md)">How it was computed</h3></div>
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">{e(rep["method"])}</p>
+    <p class="muted" style="font-size:var(--fs-sm)"><strong>Support model:</strong> {e(rep["inputs"]["support_model"])}</p>
+    <div class="table-scroll" style="margin-top:12px"><table class="data">
+      <thead><tr><th>Direction</th><th>Margin</th><th>Tip angle</th></tr></thead>
+      <tbody>{edges}</tbody>
+    </table></div>
+    <p style="font-size:var(--fs-sm);margin-top:12px"><strong>Assumptions</strong> (all of them, as printed in the report):</p>
+    <ul class="prov" style="padding-left:18px">{assumptions}</ul>
+  </div>"""
+    table = "".join(f"<tr><th>{e(k)}</th><td>{v}</td></tr>"
+                    for k, v in rows)
+    return f"""
+<section class="section" id="stability">
+  <h2>Static stability check</h2>
+  <p class="sub">A computation from this robot's spec — support-polygon statics, not a simulation run and not a gate verdict. It grades how far the robot can tip before its centre of mass passes over its feet. The gate status above is unchanged by it: this robot is still not gated.</p>
+  <div class="card">
+    {static_badge(check, "lg")}
+    <table class="kv" style="margin-top:12px">{table}</table>
+    <p class="prov" style="margin-top:12px"><span><strong>Report:</strong> <a href="{REPO_URL}/blob/main/{e(check.report)}"><code>{e(check.report)}</code></a> · checked {e(check.date)} · reproduce with <code>robotforge stability {e(r.spec_file or "")}</code></span></p>
+  </div>{detail}
+</section>"""
+
+
 def render_robot_page(r: RobotEntry) -> str:
     root = "../../../"
     slug = slugify(r.name)
@@ -579,7 +670,9 @@ def render_robot_page(r: RobotEntry) -> str:
                       "kit: <code>robotforge cad</code> kits cover ground robots "
                       "only today. Click any part.")
             cmd_lines = (f"robotforge validate {e(r.spec_file)}\n"
-                         f"robotforge catalog robot {r.number}")
+                         + (f"robotforge stability {e(r.spec_file)}\n"
+                            if r.static_check() else "")
+                         + f"robotforge catalog robot {r.number}")
             cmd_sub = ("Run these from a clone of the repository. The twin, CAD "
                        "kit and motion gate (<code>urdf</code> / <code>cad</code> / "
                        "<code>run-gate</code>) cover ground robots today, so "
@@ -609,9 +702,12 @@ def render_robot_page(r: RobotEntry) -> str:
                     "has no gate yet, so there is no verdict to show — the "
                     "note below says why, in the entry's own words.")
     jump = ['<a class="chip" href="#spec">Spec</a>', '<a class="chip" href="#gate">Gate runs</a>']
+    if r.static_check():
+        jump.append('<a class="chip" href="#stability">Static stability</a>')
     if r.spec_file:
         jump += ['<a class="chip" href="#take-apart">Take it apart</a>',
                  '<a class="chip" href="#commands">Reproduce</a>']
+    check = r.static_check()
     body = f"""<div class="robot-hero">
   {figure}
   <div>
@@ -619,7 +715,7 @@ def render_robot_page(r: RobotEntry) -> str:
     <h1>{e(r.name)}</h1>
     <div class="cls">{e(r.class_path)}</div>
     <div class="cls faint">{e(r.robot_class)}</div>
-    {verdict_badge(gs.status, "lg")}
+    {verdict_badge(gs.status, "lg")}{static_badge(check, "lg") if check else ""}
     <p class="desc">{e(r.description)}</p>
     <nav class="jump" aria-label="On this page">{"".join(jump)}</nav>
   </div>
@@ -638,6 +734,7 @@ def render_robot_page(r: RobotEntry) -> str:
   <p class="sub">{gate_sub}</p>
   <div class="card">{gate}{note}</div>
 </section>
+{_stability_section(r)}
 {take_apart}
 {commands}"""
     return app_shell(active="robots", title=r.name, depth=3, body=body,
@@ -661,6 +758,20 @@ def render_evidence(dex: Robodex) -> str:
             f'<td class="num">{len(gs.runs)}</td>'
             + (_fmt(best.drive_error_pct, "%") + _fmt(best.heading_error_deg, "°")
                if best else '<td class="num faint">—</td><td class="num faint">—</td>')
+            + "</tr>")
+    stab_rows = []
+    for r in dex.robots:
+        c = r.static_check()
+        if c is None:
+            continue
+        stab_rows.append(
+            f'<tr><td><a href="../robots/{slugify(r.name)}/">{e(r.name)}</a></td>'
+            f"<td>{static_badge(c)}</td>"
+            f'<td class="num">{c.tip_angle_deg:.1f}°</td>'
+            f'<td class="num">{c.weakest_margin_mm:.0f} mm</td>'
+            f"<td>{e(c.weakest_direction)}</td>"
+            f"<td>{e(c.date)}</td>"
+            f'<td><a href="{REPO_URL}/blob/main/{e(c.report)}">report</a></td>'
             + "</tr>")
     body = f"""<div class="page-head">
   <div>
@@ -702,6 +813,15 @@ def render_evidence(dex: Robodex) -> str:
   <div class="card" style="padding:8px 8px 4px"><div class="table-scroll"><table class="data">
     <thead><tr><th>Robot</th><th>Verdict</th><th>Runs</th><th>Latest drive</th><th>Latest turn</th></tr></thead>
     <tbody>{"".join(rows)}</tbody>
+  </table></div></div>
+</section>
+
+<section class="section" id="stability-checks">
+  <h2>Static stability checks</h2>
+  <p class="sub">A different kind of evidence, kept separate from the gate reports above: for the legged robots, a computation from the spec — the support polygon its feet make, and how far the robot can tip before its centre of mass passes over the edge. Nothing here was simulated or driven, and a static check never changes a gate verdict: every robot below is still <strong>Not gated</strong>. Method, inputs and assumptions are printed in each report.</p>
+  <div class="card" style="padding:8px 8px 4px"><div class="table-scroll"><table class="data">
+    <thead><tr><th>Robot</th><th>Static check</th><th>Tip angle</th><th>Weakest margin</th><th>Direction</th><th>Checked</th><th>Report</th></tr></thead>
+    <tbody>{"".join(stab_rows)}</tbody>
   </table></div></div>
 </section>"""
     return app_shell(active="evidence", title="Evidence", depth=2, body=body,
