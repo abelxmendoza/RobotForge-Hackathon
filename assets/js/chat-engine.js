@@ -6,10 +6,14 @@
  * plus the intent table in chat-intents.json. Robot and part facts are
  * never hardcoded here; if the data doesn't say it, the answer says so.
  *
- * Live-model hook: CONFIG.endpoint is empty in v1, so this local engine
- * answers. If a deployment later sets an endpoint, chat.js posts the
- * question there first and only falls back to this engine on failure —
- * the UI and this module's contract ({html, chips}) stay the same.
+ * Live-model hook: this local engine ALWAYS answers first, from the
+ * recorded data, and its answers stay the default. Only when an
+ * answer is the honest fallback (flagged `fallback: true` below) may
+ * chat.js offer the question to a live model — and only when a
+ * deployment has configured the live endpoint (window.RF_LIVE, from
+ * assets/js/live-config.js; CONFIG.endpoint here stays '' and is a
+ * legacy override). Live replies are badged as model output in the
+ * UI; this module's contract ({html, chips}) is unchanged.
  */
 (function (global) {
   var CONFIG = { endpoint: '' };
@@ -526,7 +530,11 @@
           '<p>I can answer about the Robodex robots and their gate verdicts, the ' +
           'parts catalogue, how the gate works and its thresholds, and how ' +
           'RobotForge works. Try one of these:</p>',
-        chips: chips.length ? chips : suggestions
+        chips: chips.length ? chips : suggestions,
+        /* The one answer chat.js may route to a live model when a
+         * deployment configures one: the local engine honestly
+         * could not answer from recorded data. */
+        fallback: true
       };
     }
 

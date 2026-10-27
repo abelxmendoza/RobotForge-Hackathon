@@ -1,0 +1,24 @@
+# RobotForge live endpoint — Cloudflare Worker configuration.
+# Deploy walkthrough: live/README.md. The Worker code is worker.js in
+# this folder; the Baseten key is a secret (wrangler secret put), it is
+# never a value in this file.
+name = "robotforge-live"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# Guardrail defaults. These are plain vars, not secrets — raise or
+# lower them here and redeploy. The Worker reads them per request.
+[vars]
+LIVE_ENABLED = "1"          # kill switch: "0" turns every live call away
+DAILY_LIMIT = "200"         # global live calls per UTC day (KV counter)
+PER_IP_DAILY_LIMIT = "30"   # live calls per visitor IP per UTC day
+
+# Budget + rate-limit counters. Create the namespace first (README
+# step 3), then uncomment this block with the id Cloudflare gives you.
+# Until a KV namespace is bound, the Worker runs without counters and
+# /health reports "kv": false — bind KV before lighting up the site.
+#
+# [[kv_namespaces]]
+# binding = "RF_LIVE_KV"
+# id = "PASTE_THE_KV_NAMESPACE_ID_HERE"

@@ -105,3 +105,15 @@
   .forge-chat.docked .fc-close{display:none}
   .forge-chat.docked .fc-msgs{padding:16px 14px}
 }
+
+/* Live-model replies in the Guide: badged, never mistaken for the
+   recorded record. */
+.fc-live-badge{
+  display:inline-block;background:var(--accent);color:var(--accent-ink);
+  font:700 11px/1.5 var(--mono);letter-spacing:.03em;
+  padding:4px 9px;border-radius:999px;
+}
+.fc-live-note{
+  color:var(--text-muted);font-size:var(--fs-xs);
+  border-left:3px solid var(--accent);padding-left:10px;
+}

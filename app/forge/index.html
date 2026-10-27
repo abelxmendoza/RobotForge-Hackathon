@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Forge · RobotForge</title>
-<meta name="description" content="Step through a recorded RobotForge run: input, spec, checks, twin and gate, outputs.">
+<meta name="description" content="The Forge as one conversation: describe a robot, or attach a photo, a parts list or a spec file. Stages are badged LIVE, LOCAL or RECORDED — only what they earned.">
 <meta name="theme-color" content="#0f1115">
 <link rel="stylesheet" href="../../assets/css/tokens.css">
 <link rel="stylesheet" href="../../assets/css/app.css">
@@ -55,28 +55,46 @@
 <div class="page-head">
   <div>
     <div class="eyebrow">Forge</div>
-    <h1>Run a robot through the forge</h1>
-    <p class="lede">Pick an input and step through a real recorded run: what went in, the spec that came back, what the checks found, and what the gate measured.</p>
+    <h1>Talk to the forge</h1>
+    <p class="lede">One conversation: describe a robot in words, or attach a photo, a parts list, or a spec file. Every stage of every run wears the badge it earned &mdash; <strong>LIVE</strong> (a real model call through the live endpoint), <strong>LOCAL</strong> (real computation in your browser) or <strong>RECORDED</strong> (a replayed run, labeled with its date). Nothing wears a badge it didn&rsquo;t earn.</p>
   </div>
 </div>
-<div class="forge-top">
-  <div class="tabs" role="tablist" aria-label="Input type" id="forge-tabs"></div>
-  <span class="forge-meta" id="forge-meta"></span>
+<div class="forge-status" id="forge-status" role="status">Checking what this deployment can do&hellip;</div>
+<div class="forge-thread" id="forge-thread" aria-live="polite"></div>
+<div class="forge-samples">
+  <span class="faint">Recorded sample runs:</span>
+  <button class="btn btn-sm" type="button" data-sample="words">Words &mdash; indoor rover</button>
+  <button class="btn btn-sm" type="button" data-sample="photo">Photo &mdash; TurtleBot (SAMPLE)</button>
+  <button class="btn btn-sm" type="button" data-sample="list">Parts list &mdash; quadcopter</button>
 </div>
-<div class="forge">
-  <ol class="rail" id="forge-rail" aria-label="Steps"></ol>
-  <div>
-    <div class="progress" aria-hidden="true"><span id="forge-progress"></span></div>
-    <article class="step-card" id="forge-step" aria-live="polite">
-      <div class="state-box">Loading the recorded run&hellip;</div>
-    </article>
+<form class="forge-composer" id="forge-composer">
+  <div class="attach-row" id="attach-row" hidden>
+    <span class="attach-chip" id="attach-chip"></span>
+    <button class="btn btn-sm btn-ghost" type="button" id="attach-clear">Remove</button>
   </div>
-</div>
+  <label class="faint" for="forge-input" style="font-size:var(--fs-xs)">Message the forge</label>
+  <textarea id="forge-input" rows="3" placeholder="Describe a robot in plain words&hellip; or attach a photo, a parts list, or a spec file below."></textarea>
+  <div class="composer-row">
+    <div class="attach-btns">
+      <span class="faint" style="font-size:var(--fs-xs)">Attach:</span>
+      <button class="btn btn-sm" type="button" id="att-photo">Photo</button>
+      <button class="btn btn-sm" type="button" id="att-doc">Parts list</button>
+      <button class="btn btn-sm" type="button" id="att-spec">Spec JSON</button>
+    </div>
+    <button class="btn btn-primary" type="submit" id="forge-send">Send</button>
+  </div>
+  <p class="faint composer-note">Files stay in your browser unless you run a live step. In local and recorded mode nothing is uploaded, ever.</p>
+  <input type="file" id="file-photo" accept="image/*" hidden>
+  <input type="file" id="file-doc" accept=".txt,.md,.csv,text/plain" hidden>
+  <input type="file" id="file-spec" accept=".json,application/json" hidden>
+</form>
     </main>
   </div>
 </div>
 <script src="../../assets/js/common.js"></script>
 <script src="../../assets/js/anim.js"></script>
+<script src="../../assets/js/live-config.js"></script>
+<script src="../../assets/js/robot.js"></script>
 <script src="../../assets/js/forge.js"></script>
 <script src="../../assets/js/chat-engine.js"></script>
 <script src="../../assets/js/chat.js"></script>

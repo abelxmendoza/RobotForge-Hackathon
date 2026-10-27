@@ -1,12 +1,18 @@
 'use strict';
-/* Forge Guide widget — the chat UI. All answering is done by
- * chat-engine.js from the site's recorded data (catalog/*.json).
+/* Forge Guide widget — the chat UI. Answering is done by
+ * chat-engine.js from the site's recorded data (catalog/*.json), and
+ * the local recorded answer is ALWAYS the default: instant, and the
+ * only answer whenever no live endpoint is configured.
  *
- * Live-model hook: ForgeGuide.CONFIG.endpoint is empty in v1. If a
- * deployment ever sets it, questions are POSTed there first and the
- * local engine is only the fallback — the UI does not change. No API
- * keys ever live in this file or any page: a static site cannot keep
- * one secret.
+ * Live-model hook: when a deployment configures the live endpoint
+ * (window.RF_LIVE.endpoint, from assets/js/live-config.js — empty in
+ * the committed site) and /health answers, a question the local
+ * engine honestly cannot answer (its `fallback: true` result) is
+ * offered to the live model at POST /chat. The reply is rendered
+ * escaped and badged "LIVE MODEL — not from recorded RobotForge
+ * data". If the endpoint errors or is over budget, the Guide says
+ * so plainly and keeps the local answer. No API keys ever live in
+ * this file or any page: the endpoint holds them server-side.
  */
 (function () {
   var FG = window.ForgeGuide;
@@ -132,6 +138,76 @@
     return engine.answer(question);
   }
 
+  function escText(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ---------------- live model (deployment-configured) ------------ */
+
+  var LIVE_BADGE = 'LIVE MODEL — not from recorded RobotForge data; check numbers on the Evidence page';
+
+  function liveBase() {
+    var fromConfig = window.RF_LIVE && window.RF_LIVE.endpoint;
+    var base = fromConfig || FG.CONFIG.endpoint || '';
+    return String(base).replace(/\/+$/, '');
+  }
+
+  var healthPromise = null;
+  function checkLive() {
+    /* Cached /health probe: resolves to the health JSON when the
+     * endpoint is configured AND answering AND able to run chat;
+     * resolves to null otherwise (not configured, down, kill switch
+     * on, or over budget — the caller distinguishes via the JSON it
+     * keeps in liveHealth for the note wording). */
+    if (!liveBase()) return Promise.resolve(null);
+    if (!healthPromise) {
+      healthPromise = fetch(liveBase() + '/health', { cache: 'no-cache' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (h) {
+          window.__rfLiveHealth = h;
+          if (h && h.ok && h.mode === 'live' && h.routes && h.routes.chat) {
+            var sub = document.querySelector('.fc-sub');
+            if (sub) {
+              sub.textContent = 'Recorded data first — the Robodex, the ' +
+                'parts catalogue and the recorded gate reports. Questions ' +
+                'they can\u2019t answer go to a live model, badged LIVE MODEL.';
+            }
+          }
+          return h;
+        })
+        .catch(function () { window.__rfLiveHealth = null; return null; });
+    }
+    return healthPromise;
+  }
+
+  function liveUsable(h) {
+    return Boolean(h && h.ok && h.mode === 'live' && h.routes &&
+      h.routes.chat && !(h.budget && h.budget.exhausted));
+  }
+
+  function liveChat(q) {
+    return fetch(liveBase() + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: q })
+    }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (body) {
+        if (!r.ok) {
+          var e = new Error((body && body.error) || ('endpoint -> ' + r.status));
+          e.code = body && body.code;
+          e.status = r.status;
+          throw e;
+        }
+        if (!body || typeof body.answer !== 'string') {
+          throw new Error('endpoint returned no answer');
+        }
+        return body.answer;
+      });
+    });
+  }
+
   function ask(question) {
     var q = String(question || '').trim();
     if (!q) return;
@@ -145,20 +221,47 @@
       filterPartsHere(q);
     };
     load().then(function () {
-      if (FG.CONFIG.endpoint) {
-        fetch(FG.CONFIG.endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: q })
-        }).then(function (r) {
-          if (!r.ok) throw new Error('endpoint -> ' + r.status);
-          return r.json();
-        }).then(function (body) {
-          done({ html: body.html || ('<p>' + body.answer + '</p>'), chips: body.chips });
-        }).catch(function () { done(localAnswer(q)); });
-      } else {
-        done(localAnswer(q));
-      }
+      var ans = localAnswer(q);
+      /* Recorded answers stay the default and stay instant: only
+       * the engine's honest fallback may go live. */
+      if (!ans.fallback || !liveBase()) { done(ans); return; }
+      checkLive().then(function (h) {
+        if (!liveUsable(h)) {
+          /* Endpoint configured but not usable: say so only when
+           * the reason is budget/kill-switch (a plain note under
+           * the local answer); a silent endpoint keeps the plain
+           * local behavior. */
+          if (h && h.ok && (h.mode === 'off' || (h.budget && h.budget.exhausted))) {
+            ans = { html: ans.html +
+              '<p class="fc-live-note">The live model is ' +
+              (h.mode === 'off' ? 'switched off at the endpoint'
+                                : 'out of budget for today') +
+              ', so this answer is from the recorded data only.</p>',
+              chips: ans.chips };
+          }
+          done(ans);
+          return;
+        }
+        wait.innerHTML = '<p class="fc-dim">The recorded data ' +
+          'doesn&rsquo;t have that &mdash; asking the live model&hellip;</p>';
+        liveChat(q).then(function (answer) {
+          done({
+            html: '<p><span class="fc-live-badge">' + LIVE_BADGE +
+              '</span></p><p>' +
+              escText(answer).replace(/\n{2,}/g, '</p><p>')
+                .replace(/\n/g, '<br>') + '</p>',
+            chips: ans.chips
+          });
+        }).catch(function (e) {
+          var note = (e && e.code === 'budget_exhausted')
+            ? 'The live model&rsquo;s budget for today is used up, so ' +
+              'this answer is from the recorded data only.'
+            : 'The live endpoint isn&rsquo;t answering, so this answer ' +
+              'is from the recorded data only.';
+          done({ html: ans.html +
+            '<p class="fc-live-note">' + note + '</p>', chips: ans.chips });
+        });
+      });
     });
   }
 
@@ -176,6 +279,7 @@
     if (open) {
       load().then(function () {
         greet();
+        checkLive(); // updates the header disclosure when live is on
         if (!isDocked()) input.focus();
       });
     }

@@ -1,0 +1,11 @@
+# Local development only (wrangler dev). Copy this file to
+# .dev.vars (gitignored — never commit it) and put YOUR OWN key in the
+# copy. This example holds no real value and must stay that way.
+#
+# In production the same name is set as a Worker secret instead:
+#   wrangler secret put BASETEN_API_KEY
+# (see README.md — get the value from your Baseten dashboard yourself;
+# never paste it into chat, a commit, or an issue.)
+BASETEN_API_KEY=placeholder-redacted-no-real-value
+# Optional: only needed for the /photo route (live photo drafts).
+META_API_KEY=placeholder-redacted-no-real-value
