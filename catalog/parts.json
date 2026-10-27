@@ -320,6 +320,40 @@
       "buy": null
     },
     {
+      "id": "jetson_orin_nano",
+      "image": "assets/img/parts/jetson_orin_nano.jpg",
+      "license": "proprietary-part",
+      "name": "NVIDIA Jetson Orin Nano",
+      "part_class": "sbc",
+      "source": "NVIDIA Jetson Orin Nano Series Data Sheet (DS-11105-001)",
+      "specs": {
+        "ai_performance": "up to 67 TOPS (8 GB, Super mode)",
+        "interfaces": [
+          "usb",
+          "ethernet",
+          "csi",
+          "pcie",
+          "i2c",
+          "uart",
+          "can",
+          "gpio"
+        ],
+        "power_modes": "7 W / 15 W / 25 W",
+        "size": "69.6 × 45 mm module, 260-pin SO-DIMM",
+        "supply": "5 V module input"
+      },
+      "blurb": "A GPU computer module for robots that see: camera AI on a board the size of a laptop memory stick.",
+      "used_for": "The robot's AI brain: vision models, perception and decision-making, with a GPU a Pi does not have.",
+      "robot_types": [
+        "differential-drive rover",
+        "quadcopter",
+        "quadruped",
+        "humanoid"
+      ],
+      "notes": "Module only — it needs a carrier board, and its 5 V input must be sized for the 25 W top power mode; a sagging supply shows up as shutdowns under load. (Per the NVIDIA data sheet.)",
+      "buy": null
+    },
+    {
       "id": "microsd_128gb",
       "image": "assets/img/parts/microsd_128gb.jpg",
       "license": "proprietary-part",

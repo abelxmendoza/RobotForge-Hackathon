@@ -93,12 +93,11 @@
       },
       {
         "input": "cable.length_mm",
-        "count": 4,
+        "count": 3,
         "subjects": [
           "battery -> pdb",
           "pdb -> esc",
-          "esc -> motors",
-          "pdb -> fc"
+          "esc -> motors"
         ]
       },
       {
@@ -315,13 +314,12 @@
       "state": "NOT_CHECKED",
       "missing": [
         "cable.gauge_awg",
-        "cable.length_mm",
         "connection voltage (volts)",
         "current_a for fc"
       ],
       "inputs": {
         "gauge_awg": null,
-        "length_mm": null,
+        "length_mm": 150.0,
         "volts": null,
         "current_a": null
       },

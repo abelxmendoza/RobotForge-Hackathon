@@ -96,16 +96,33 @@ class WiringNode:
 
 
 @dataclass
+class Cable:
+    """The physical cable on a connection, where a source names it.
+
+    Every field is optional: a field is set ONLY when the robot's
+    documentation (or a catalog part the spec itself names) records
+    it — a documented harness, a maker's cable table, a power
+    module's included leads. None renders as "not specified"; a
+    wiring diagram with honest blanks beats an invented harness.
+    """
+    gauge_awg: float | None = None
+    connector: str | None = None
+    length_mm: float | None = None
+
+
+@dataclass
 class WiringConnection:
     """A wire between two nodes. ``volts`` is the fixed voltage the
     connection is specified to carry, or None when it carries none
     (data links, PWM drive, unspecified rails) — None connections are
-    never voltage-checked."""
+    never voltage-checked. ``cable`` carries the physical cable's
+    recorded facts where a source names them."""
     src: str
     dst: str
     kind: str                 # one of WIRING_KINDS
     volts: float | None = None
     label: str = ""
+    cable: Cable | None = None
 
 
 @dataclass
@@ -150,9 +167,12 @@ class Wiring:
                     volts = float(volts)
                     if volts < 0:
                         raise SpecError("wiring volts must be >= 0")
+                cable = None
+                if c.get("cable") is not None:
+                    cable = cls._parse_cable(c["cable"])
                 connections.append(WiringConnection(
                     src=str(c["from"]), dst=str(c["to"]), kind=c["kind"],
-                    volts=volts, label=str(c.get("label", ""))))
+                    volts=volts, label=str(c.get("label", "")), cable=cable))
             return cls(note=str(data.get("note", "")), nodes=nodes,
                        connections=connections)
         except SpecError:
@@ -160,16 +180,51 @@ class Wiring:
         except (KeyError, TypeError, ValueError) as exc:
             raise SpecError(f"invalid wiring: {exc}") from exc
 
+    @staticmethod
+    def _parse_cable(data) -> Cable:
+        if not isinstance(data, dict):
+            raise SpecError("wiring cable must be an object")
+        unknown = set(data) - {"gauge_awg", "connector", "length_mm"}
+        if unknown:
+            raise SpecError(f"wiring cable has unknown fields "
+                            f"{sorted(unknown)}")
+        gauge = data.get("gauge_awg")
+        if gauge is not None:
+            if isinstance(gauge, bool) or not isinstance(gauge, (int, float)):
+                raise SpecError("cable gauge_awg must be a number")
+            gauge = float(gauge)
+            if gauge < 0 or gauge > 40:
+                raise SpecError("cable gauge_awg must be within 0–40 AWG")
+        connector = data.get("connector")
+        if connector is not None:
+            if not isinstance(connector, str) or not connector.strip():
+                raise SpecError("cable connector must be a non-empty string")
+        length = data.get("length_mm")
+        if length is not None:
+            if isinstance(length, bool) or not isinstance(length, (int, float)):
+                raise SpecError("cable length_mm must be a number")
+            length = float(length)
+            if length <= 0:
+                raise SpecError("cable length_mm must be positive")
+        return Cable(gauge_awg=gauge, connector=connector,
+                     length_mm=length)
+
     def to_dict(self) -> dict:
+        def conn_dict(c: WiringConnection) -> dict:
+            d = {"from": c.src, "to": c.dst, "kind": c.kind,
+                 "volts": c.volts, "label": c.label}
+            if c.cable is not None:
+                d["cable"] = {"gauge_awg": c.cable.gauge_awg,
+                              "connector": c.cable.connector,
+                              "length_mm": c.cable.length_mm}
+            return d
         return {
             "note": self.note,
             "nodes": [{"id": n.id, "label": n.label,
                        "req_label": n.req_label,
                        "rated_max_v": n.rated_max_v, "kit": n.kit,
                        "deck": n.deck} for n in self.nodes],
-            "connections": [{"from": c.src, "to": c.dst, "kind": c.kind,
-                             "volts": c.volts, "label": c.label}
-                            for c in self.connections],
+            "connections": [conn_dict(c) for c in self.connections],
         }
 
 
