@@ -117,3 +117,11 @@ def test_app_pages_carry_the_docked_chat_rail_landing_keeps_the_widget():
     block = landing.split(CHAT_START := "<!-- chat:start -->")[1] \
         .split("<!-- chat:end -->")[0]
     assert 'class="forge-chat"' in block and "docked" not in block
+
+
+def test_chat_rail_comes_before_the_nav_sidebar():
+    # Abel's layout call: the conversation is the first thing in the
+    # app — the Forge Guide rail precedes the nav sidebar in the
+    # shell, so chat is the far-left column, nav second.
+    page = render_robots_index(dex, cat)
+    assert page.index('id="forge-chat"') < page.index('<aside class="sidebar">')
