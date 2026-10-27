@@ -16,6 +16,8 @@ const POST_D = 0.012;         // kit assumption (cad.py POST_D_MM)
 const CAM_W = 0.044, CAM_H = 0.034;   // kit assumptions (camera bracket)
 const ULTRA_H = 0.020, ULTRA_CAN_D = 0.016;  // kit assumptions (ultrasonic)
 
+/* parts with an illustration in assets/img/parts/<id>.jpg */
+const TA_SPOTS = ['plate', 'wheel', 'mount', 'caster', 'lidar', 'camera', 'ultrasonic'];
 let taSpec = null, taParts = [], taSelected = null, taExplode = 0;
 
 function taWheelPositions(spec) {
@@ -253,9 +255,13 @@ function taSelect(id, keep) {
   if (!p) return;
   $$('#ta .part-shape').forEach(g =>
     g.classList.toggle('sel', g.dataset.part === id));
+  const spot = TA_SPOTS.includes(p.id)
+    ? '<img class="spot" src="' + ROOT + 'assets/img/parts/' + p.id + '.jpg" alt="AI illustration of the ' + esc(p.name) + '" loading="lazy">' +
+      '<p class="faint" style="font-size:12px;margin-top:6px">AI illustration (muse-image-1.0). The printable part itself comes from <code>robotforge cad</code>.</p>'
+    : '';
   $('#ta-detail').innerHTML =
     '<span class="qty">Qty ' + p.qty + ' \u00b7 ' + esc(p.file) + '</span>' +
-    '<h3>' + esc(p.name) + '</h3>' +
+    '<h3>' + esc(p.name) + '</h3>' + spot +
     '<dl>' +
     '<dt>What it is</dt><dd>' + esc(p.does) + '</dd>' +
     '<dt>Key dimensions</dt><dd class="m">' + esc(p.dims) + '</dd>' +

@@ -15,11 +15,18 @@ SRC = ROOT / "tools" / "img-src"
 OUT = ROOT / "assets" / "img"
 
 # output name -> (source file, max width)
-IMAGES = {"hero": ("hero.png", 900), "pathfinder": ("pathfinder.png", 900)}
+IMAGES = {"hero": ("hero.png", 900), "pathfinder": ("pathfinder.png", 900),
+          "parts/plate": ("part_chassis_plate.png", 560),
+          "parts/wheel": ("part_wheel.png", 560),
+          "parts/mount": ("part_motor_mount.png", 560),
+          "parts/caster": ("part_caster.png", 560),
+          "parts/lidar": ("part_lidar_mount.png", 560),
+          "parts/camera": ("part_camera_bracket.png", 560),
+          "parts/ultrasonic": ("part_ultrasonic_bracket.png", 560)}
 
 
 def main():
-    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "parts").mkdir(parents=True, exist_ok=True)
     for key, (name, max_w) in IMAGES.items():
         p = SRC / name
         if not p.exists():

@@ -114,7 +114,6 @@ const RUNS = [
             m.alternatives.map(x => '<a href="' + esc(x.url) + '" rel="noopener">Search ' + esc(x.store) + '</a>').join(' · ') + '</span></li>').join('') + '</ul></div>' +
             '<div class="card"><div class="eyebrow">Wiring</div><ul class="wires" style="margin-top:12px">' + d.report.wiring.connections.map(c =>
             '<li><b>' + esc(c.from) + '</b><span class="via">→ ' + esc(c.via) + ' →</span><b>' + esc(c.to) + '</b><p>' + esc(c.note) + '</p></li>').join('') + '</ul></div>' +
-            '<p class="faint" style="font-size:var(--fs-xs)">The <code>import-list</code> command arrives with <a href="https://github.com/abelxmendoza/RobotForge-Hackathon/pull/1">PR #1 (list import)</a>; this run was recorded from that branch.</p>' +
             codeBlock('robotforge import-list my-list.txt --out report.json') }
       ];
     }

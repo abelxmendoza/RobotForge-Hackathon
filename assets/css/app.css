@@ -161,6 +161,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .ta-detail{position:sticky;top:80px}
 .ta-detail .qty{font:600 12px/1.3 var(--mono);color:var(--text-faint)}
 .ta-detail h3{font-size:var(--fs-lg);margin-top:6px}
+.ta-detail .spot{width:100%;border-radius:var(--r-sm);margin-top:var(--s3);border:1px solid var(--border)}
 .ta-detail dl{margin-top:var(--s3);display:grid;gap:10px;font-size:var(--fs-sm)}
 .ta-detail dt{color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .ta-detail dd{color:var(--text-muted)}
