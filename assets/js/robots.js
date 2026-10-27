@@ -41,3 +41,26 @@ if (search) search.addEventListener('input', () => {
   });
   $('#parts-empty').hidden = shown > 0;
 });
+
+/* Query Cards: the Forge Guide's part buttons land here. Focus one
+ * catalogue part by id — set the search to its name (which unhides
+ * its group), highlight the card, and scroll it into view. Also
+ * honours ?part=<id> so a chat on any other page can deep-link
+ * straight to a part. */
+function rfFocusPart(id) {
+  const card = document.querySelector('.part[data-part-id="' + id + '"]');
+  if (!card) return false;
+  if (search) {
+    const name = card.querySelector('h4');
+    search.value = name ? name.textContent : id;
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  $$('#parts-list .part.fc-highlight').forEach(p2 =>
+    p2.classList.remove('fc-highlight'));
+  card.classList.add('fc-highlight');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
+}
+window.rfFocusPart = rfFocusPart;
+const rfWant = new URLSearchParams(window.location.search).get('part');
+if (rfWant) rfFocusPart(rfWant);

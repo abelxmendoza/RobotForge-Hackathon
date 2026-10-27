@@ -134,6 +134,67 @@
     if (sec) sec.scrollIntoView({ behavior: 'smooth' });
   }
 
+  function noteBubble(text) {
+    var d = document.createElement('div');
+    d.className = 'fc-msg bot';
+    var para = document.createElement('p');
+    para.textContent = text;
+    d.appendChild(para);
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  /* Query Cards: answers carry structured hits. Render them as
+   * result buttons under the answer — a robot button opens its
+   * Robodex page; a part button pops the part up in the catalogue
+   * (highlighted in place on the Robots page, deep-linked from
+   * anywhere else). */
+  function focusPartHit(hit) {
+    if (window.rfFocusPart && window.rfFocusPart(hit.id)) {
+      noteBubble('I highlighted \u201c' + hit.label +
+        '\u201d in the parts catalogue on this page.');
+    } else {
+      window.location.href = ROOT + 'app/robots/?part=' +
+        encodeURIComponent(hit.id) + '#parts';
+    }
+  }
+
+  function renderHits(bubbleEl, hits) {
+    if (!hits || !hits.length) return;
+    var row = document.createElement('div');
+    row.className = 'fc-hits';
+    hits.slice(0, 6).forEach(function (h) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'fc-hit';
+      b.dataset.kind = h.kind || '';
+      b.textContent = h.label;
+      b.addEventListener('click', function () {
+        if (h.kind === 'part') focusPartHit(h);
+        else if (h.route) window.location.href = h.route;
+      });
+      row.appendChild(b);
+    });
+    bubbleEl.appendChild(row);
+  }
+
+  /* After an answer, act on a find/show question: highlight the
+   * first part hit in the catalogue when this page has one. Falls
+   * back to the original search-box behaviour when there are no
+   * structured hits to act on. */
+  function autoAction(q, ans) {
+    if (/^(find|search|show|filter)\b/i.test(q) && ans.hits) {
+      var parts = ans.hits.filter(function (h) { return h.kind === 'part'; });
+      if (parts.length && window.rfFocusPart && window.rfFocusPart(parts[0].id)) {
+        noteBubble('I highlighted the first match, \u201c' + parts[0].label +
+          '\u201d, in the catalogue on this page — tap any result ' +
+          'button to pop another one up.');
+        return;
+      }
+    }
+    filterPartsHere(q);
+  }
+
   function localAnswer(question) {
     return engine.answer(question);
   }
@@ -216,9 +277,10 @@
     var wait = bubble('bot', '<p class="fc-dim">Checking the recorded data&hellip;</p>');
     var done = function (ans) {
       wait.innerHTML = ans.html;
+      renderHits(wait, ans.hits);
       msgs.scrollTop = msgs.scrollHeight;
       setChips(ans.chips || (engine ? engine.suggestions : null));
-      filterPartsHere(q);
+      autoAction(q, ans);
     };
     load().then(function () {
       var ans = localAnswer(q);

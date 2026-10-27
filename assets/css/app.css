@@ -132,6 +132,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .parts-group h3 span{color:var(--text-faint);font-weight:500}
 .part-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
 .part{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.part.fc-highlight{outline:2px solid var(--accent);outline-offset:2px}
 .part h4{font-size:var(--fs-sm);font-weight:600}
 .part p{color:var(--text-muted);font-size:var(--fs-xs);margin-top:4px;line-height:1.5}
 .part .specs{font:12px/1.5 var(--mono);color:var(--text-faint);margin-top:6px}

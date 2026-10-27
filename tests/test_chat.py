@@ -243,3 +243,89 @@ def test_engine_answers_from_real_data_in_node():
     # every suggested chip must land on a real answer, not the fallback
     for q in suggestions:
         assert "rather say so than guess" not in answers[q], q
+
+
+NODE_SCRIPT_FULL = r"""
+const fs = require('fs');
+const FG = require(process.argv[2]);
+const root = process.argv[3];
+const load = p => JSON.parse(fs.readFileSync(root + '/' + p, 'utf8'));
+const robots = load('catalog/robots.json');
+const parts = load('catalog/parts.json');
+const engine = FG.createEngine({
+  robots: robots.robots, parts: parts.parts,
+  templates: parts.templates.length,
+  reports: load('catalog/gate-reports.json'),
+  intents: load('assets/js/chat-intents.json'),
+  root: ''
+});
+const out = {};
+for (const q of JSON.parse(fs.readFileSync(process.argv[4], 'utf8'))) {
+  const a = engine.answer(q);
+  out[q] = { html: a.html, hits: a.hits || [] };
+}
+console.log(JSON.stringify(out));
+"""
+
+
+def _ask_full_in_node(questions):
+    node = shutil.which("node")
+    if not node:
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        script = Path(tmp) / "ask_full.js"
+        script.write_text(NODE_SCRIPT_FULL)
+        qfile = Path(tmp) / "questions.json"
+        qfile.write_text(json.dumps(questions))
+        r = subprocess.run(
+            [node, str(script), str(REPO / "assets/js/chat-engine.js"),
+             str(REPO), str(qfile)], capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        return json.loads(r.stdout)
+
+
+def test_query_cards_hit_structure_and_filters():
+    """Query Cards v1: answers carry structured hits the UI can act
+    on, filter questions return exact catalogue sets, and a bare
+    type word ranks the part itself above its accessories."""
+    res = _ask_full_in_node([
+        "lidar",
+        "show me 4S batteries",
+        "4S XT60 batteries",
+        "Tell me about TurtleBot3 Burger",
+        "What is a Jetson Orin?",
+    ])
+    if res is None:
+        return  # no node on this machine; wiring tests still hold
+
+    lidar = res["lidar"]
+    assert lidar["hits"][0]["id"] == "rplidar_a1"  # the lidar itself
+    assert lidar["hits"][1]["id"] == "lidar_mount"  # its mount second
+    assert all(h["kind"] == "part" for h in lidar["hits"])
+
+    batts = res["show me 4S batteries"]
+    assert {h["id"] for h in batts["hits"]} == {"lipo_4s_5200", "lipo_4s_1500"}
+    assert "rather say so than guess" not in batts["html"]
+
+    xt60 = res["4S XT60 batteries"]
+    assert {h["id"] for h in xt60["hits"]} == {"lipo_4s_5200", "lipo_4s_1500"}
+
+    burger = res["Tell me about TurtleBot3 Burger"]
+    assert burger["hits"][0]["kind"] == "robot"
+    assert burger["hits"][0]["route"] == "app/robots/turtlebot3-burger/"
+
+    unknown = res["What is a Jetson Orin?"]
+    assert unknown["hits"] == []
+    assert "rather say so than guess" in unknown["html"]
+
+
+def test_query_cards_ui_wiring():
+    # part cards carry their catalogue id so the chat can focus them
+    pages = _generated_pages()
+    robots_page = pages["app/robots/index.html"]
+    assert 'data-part-id="rplidar_a1"' in robots_page
+    robots_js = (REPO / "assets/js/robots.js").read_text()
+    assert "rfFocusPart" in robots_js and "data-part-id" in robots_js
+    chat_js = (REPO / "assets/js/chat.js").read_text()
+    assert "renderHits" in chat_js and "fc-hits" in chat_js
+    assert "rfFocusPart" in chat_js  # part buttons use the page hook

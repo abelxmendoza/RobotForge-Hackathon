@@ -408,7 +408,7 @@ def _parts_catalog(cat: Catalog, root: str) -> str:
                        f'onerror="this.parentElement.remove()">'
                        f"<figcaption>AI illustration</figcaption></figure>")
             items.append(
-                f'<div class="part" data-q="{e(hay)}">{fig}<h4>{e(p.name)}</h4>'
+                f'<div class="part" data-part-id="{e(p.id)}" data-q="{e(hay)}">{fig}<h4>{e(p.name)}</h4>'
                 + (f"<p>{e(p.blurb)}</p>" if p.blurb else "")
                 + (f'<div class="specs">{e(specs)}</div>' if specs else "")
                 + "</div>")

@@ -67,6 +67,15 @@
 .fc-msg a{color:var(--accent)}
 .fc-dim{color:var(--text-faint);font-size:var(--fs-xs)}
 
+.fc-hits{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.fc-hit{
+  background:var(--surface-2);color:var(--text);border:1px solid var(--border);
+  border-radius:999px;font:600 var(--fs-xs)/1.2 var(--font);
+  padding:6px 10px;cursor:pointer;text-align:left;
+}
+.fc-hit:hover{border-color:var(--accent);color:var(--accent)}
+.fc-hit[data-kind="robot"]{border-style:dashed}
+
 .fc-chips{
   display:flex;flex-wrap:wrap;gap:6px;
   padding:10px 12px 2px;border-top:1px solid var(--border);
