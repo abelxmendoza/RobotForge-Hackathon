@@ -28,19 +28,17 @@ Layers:
   #001 Andino, #002 TurtleBot3 Burger, #003 TurtleBot3 Waffle Pi,
   #004 Pathfinder. A robot's gate status comes ONLY from recorded gate
   runs stored in its entry; a robot with no runs is NOT_GATED, never
-  badged green. ``render_robodex_html`` generates the browsable
-  ``robodex.html`` page from this data — regenerate it with
-  ``robotforge catalog --html robodex.html``; never hand-edit the page.
+  badged green. The app's Robots pages are generated from this data by
+  ``robotforge site`` (see site.py); never hand-edit them.
 
 Zero dependencies. Data lives in the repo-root ``catalog/`` directory
 (the examples/ folder holds robot *specs*; the catalog is its own
-dataset, and the generated page sits beside it at the repo root).
+dataset).
 Licences follow the project allowlist (MIT/Apache/BSD/CC-BY or a plain
 physical part); every catalogue part carries licence + source.
 """
 from __future__ import annotations
 
-import html
 import json
 import os
 import re
@@ -482,193 +480,6 @@ def format_part(p: CatalogPart) -> str:
             "buy: " + (p.buy if p.buy else
                        "not set — shop links are a deliberate later step")]
     return "\n".join(out)
-
-
-# --------------------------------------------------------------------------
-# robodex.html generation (data-driven; never hand-edit the output)
-# --------------------------------------------------------------------------
-
-_BADGE_CLASS = {"PASS": "badge-pass", "MARGINAL": "badge-marginal",
-                "FAIL": "badge-fail", "NOT_GATED": "badge-none"}
-
-# The one shared site nav. Every page of the site — this generated page,
-# the app shell (index.html) and the hand-written pages (parts.html,
-# try.html, reports.html) — carries this exact block, so any page is one
-# click from every other. App-view links point at index.html#<view>; the
-# app router honours the hash on load and on hashchange. Only the
-# current page's own link differs: it gains class="active" and
-# aria-current="page".
-_NAV_LINKS = [
-    ("index.html#home", "home", "Home"),
-    ("index.html#robodex", "robodex", "Robodex"),
-    ("index.html#takeapart", "takeapart", "Take-Apart"),
-    ("index.html#replay", "replay", "Describe Replay"),
-    ("index.html#evidence", "evidence", "Gate Evidence"),
-    ("robodex.html", "", "Robodex page"),
-    ("parts.html", "", "Parts Kit"),
-    ("try.html", "", "Try It"),
-    ("reports.html", "", "Gate Reports"),
-    ("https://github.com/abelxmendoza/RobotForge-Hackathon", "", "GitHub"),
-]
-
-
-def site_nav(active_href: str = "") -> str:
-    """Render the shared site nav; ``active_href`` marks the current page."""
-    items = []
-    for href, view, label in _NAV_LINKS:
-        attrs = f'href="{href}"'
-        if view:
-            attrs += f' data-view="{view}"'
-        if href == active_href:
-            attrs += ' class="active" aria-current="page"'
-        items.append(f"        <a {attrs}>{label}</a>")
-    links = "\n".join(items)
-    return f"""<nav class="rfnav" aria-label="RobotForge">
-      <a class="rfnav-brand" href="index.html#home">RobotForge</a>
-      <div class="rfnav-links">
-{links}
-      </div>
-    </nav>"""
-
-_PAGE_CSS = """
-  :root{
-    --bg:#14161a; --panel:#1b1e24; --line:#2a2e36; --text:#e8eaee;
-    --muted:#9aa1ad; --accent:#f59e0b;
-    --green:#35b26f; --red:#e5534b;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
-    "Helvetica Neue",Arial,sans-serif;line-height:1.6;font-size:17px}
-  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
-  a{color:var(--accent);text-decoration:none}
-  a:hover{text-decoration:underline}
-  .rfnav{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;
-    padding:26px 0 0}
-  .rfnav-brand{color:var(--accent);font-weight:700;letter-spacing:0.14em;
-    text-transform:uppercase;font-size:0.85rem;white-space:nowrap}
-  .rfnav-brand:hover{text-decoration:none}
-  .rfnav-links{display:flex;gap:6px;flex-wrap:wrap}
-  .rfnav-links a{color:var(--muted);font-size:0.95rem;font-weight:600;
-    padding:6px 12px;border:1px solid transparent;border-radius:999px}
-  .rfnav-links a:hover{color:var(--text);border-color:var(--line);
-    text-decoration:none}
-  .rfnav-links a.active{color:#14161a;background:var(--accent);
-    border-color:var(--accent)}
-  header{padding:34px 0 30px}
-  h1{font-size:2.6rem;line-height:1.1;letter-spacing:-0.02em}
-  .intro{color:var(--muted);max-width:62ch;margin-top:16px}
-  .card{background:var(--panel);border:1px solid var(--line);
-    border-radius:10px;padding:26px 28px;margin:26px 0}
-  .card-top{display:flex;justify-content:space-between;align-items:center;
-    gap:16px;flex-wrap:wrap}
-  .dex{color:var(--accent);font-weight:700;letter-spacing:0.1em}
-  .card h2{font-size:1.45rem;letter-spacing:-0.01em;margin-top:6px}
-  .class{color:var(--muted);font-size:0.95rem}
-  .desc{color:var(--muted);margin-top:12px}
-  .badge{display:inline-block;font-weight:700;font-size:0.8rem;
-    letter-spacing:0.08em;text-transform:uppercase;
-    border:1px solid var(--line);border-radius:999px;padding:4px 12px}
-  .badge-pass{color:var(--green);border-color:var(--green)}
-  .badge-marginal{color:var(--accent);border-color:var(--accent)}
-  .badge-fail{color:var(--red);border-color:var(--red)}
-  .badge-none{color:var(--muted)}
-  table{border-collapse:collapse;width:100%;margin-top:18px;font-size:0.95rem}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);
-    vertical-align:top}
-  th{color:var(--muted);font-weight:600;width:32%}
-  td{color:var(--text)}
-  .robot-photo{margin:18px 0 4px}
-  .robot-photo img{max-width:100%;max-height:340px;display:block;
-    border-radius:8px;background:#dfe3e8;padding:10px}
-  .robot-photo figcaption{color:var(--muted);font-size:0.85rem;margin-top:8px}
-  .prov,.gate{margin-top:16px;color:var(--muted);font-size:0.93rem}
-  .prov strong,.gate strong{color:var(--text)}
-  .gate ul{margin:6px 0 0 18px}
-  footer{border-top:1px solid var(--line);padding:40px 0 60px;
-    color:var(--muted);font-size:0.92rem;margin-top:40px}
-"""
-
-
-def _robot_card(r: RobotEntry) -> str:
-    e = html.escape
-    gs = r.gate_status
-    badge = (f'<span class="badge {_BADGE_CLASS[gs.status]}">'
-             f'{e(gate_badge(gs.status))}</span>')
-    specs = "".join(
-        f"<tr><th>{e(str(k))}</th><td>{e(str(v))}</td></tr>"
-        for k, v in r.key_specs.items())
-    prov = r.provenance
-    prov_bits = [e(str(prov.get("source_name", "")))]
-    if prov.get("license"):
-        prov_bits.append(f"license: {e(str(prov['license']))}")
-    prov_line = " · ".join(prov_bits)
-    if prov.get("source_url"):
-        prov_line += (f' · <a href="{e(str(prov["source_url"]))}">'
-                      f'source</a>')
-    if prov.get("note"):
-        prov_line += f"<br>{e(str(prov['note']))}"
-    if gs.runs:
-        items = "".join(f"<li>{e(_run_line(run))}</li>" for run in gs.runs)
-        gate_line = f"<strong>Recorded runs:</strong><ul>{items}</ul>"
-    else:
-        gate_line = "No recorded gate runs yet."
-    if gs.note:
-        gate_line += f"<br>{e(gs.note)}"
-    spec_line = (f"<br>Spec: <code>{e(r.spec_file)}</code>"
-                 if r.spec_file else "")
-    figure = ""
-    if r.image_url:
-        cap = (f"<figcaption>{e(r.image_credit)}</figcaption>"
-               if r.image_credit else "")
-        figure = (f'\n      <figure class="robot-photo">'
-                  f'<img src="{e(r.image_url)}" '
-                  f'alt="{e(r.name)} — official image" loading="lazy">'
-                  f'{cap}</figure>')
-    return f"""<article class="card" data-number="{r.number}" data-name="{e(r.name)}">
-      <div class="card-top"><span class="dex">{e(r.dex_id)}</span>{badge}</div>
-      <h2>{e(r.name)}</h2>
-      <div class="class">{e(r.robot_class)}</div>
-      <p class="desc">{e(r.description)}</p>{figure}
-      <table>{specs}</table>
-      <p class="prov"><strong>Provenance:</strong> {prov_line}{spec_line}</p>
-      <div class="gate">{gate_line}</div>
-    </article>"""
-
-
-def render_robodex_html(dex: Robodex) -> str:
-    """Render the browsable Robodex page from catalog data only."""
-    cards = "\n".join(_robot_card(r) for r in dex.robots)
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Robodex — the RobotForge robot index</title>
-<style>{_PAGE_CSS}</style>
-</head>
-<body>
-<div class="wrap">
-{site_nav("robodex.html")}
-  <header>
-    <h1>Robodex</h1>
-    <p class="intro">Every robot the forge knows, numbered in the order it
-    learned them. Gate badges come only from recorded gate runs — a robot
-    with no run says so, in grey, instead of borrowing a green it has not
-    earned.</p>
-  </header>
-{cards}
-  <footer>
-    <p>Generated by <code>robotforge catalog --html robodex.html</code>
-    from <code>catalog/robots.json</code> — regenerate after data changes;
-    do not hand-edit this page.</p>
-    <p style="margin-top:10px"><a href="index.html">&larr; Back to
-    RobotForge</a></p>
-  </footer>
-</div>
-</body>
-</html>
-"""
 
 
 def _demo() -> None:

@@ -1,0 +1,366 @@
+{
+  "items": [
+    {
+      "title": "HAWK'S WORK F450 Drone Frame, 450 mm Quadcopter Frame Kits with Stands DIY Drone Kits to Bulit (Soldered Version)",
+      "price": 28.99,
+      "slot": "frame",
+      "qty": 1,
+      "specs": {
+        "wheelbase_mm": 450
+      }
+    },
+    {
+      "title": "Readytosky 2212 920KV Brushless Motors CW CCW for F330 F450 F550 S500 S550 X525 DJI Phantom Quadcopter(4PCS)",
+      "price": 39.99,
+      "slot": "motor",
+      "qty": 4,
+      "specs": {
+        "kv": 920,
+        "stator": "2212"
+      }
+    },
+    {
+      "title": "Readytosky 30A ESC 2-6S OPTO Brushless Electronic Speed Controller | For F450 S500 ZD550 RC Helicopter Quadcopter(4PCS)",
+      "price": 39.99,
+      "slot": "esc",
+      "qty": 4,
+      "specs": {
+        "amps": 30,
+        "cells": "2-6S"
+      }
+    },
+    {
+      "title": "Readytosky 6Pairs 1045 Propellers CW CCW 10x4.5\" FPV Props | For F450 450mm S500 ZD550 RC Helicopter Quadcopter(4PCS)",
+      "price": 26.99,
+      "slot": "propeller",
+      "qty": 12,
+      "specs": {
+        "size_code": "1045"
+      }
+    },
+    {
+      "title": "Nihewo 4S Lipo Battery Pack 3300mAh 14.8V Lipo Battery 80C with XT60 Connector Soft Case Compatible with RC Models(2Packs)",
+      "price": null,
+      "slot": "battery",
+      "qty": 2,
+      "specs": {
+        "cells": 4,
+        "capacity_mah": 3300,
+        "c_rate": 80,
+        "connector": "XT60"
+      }
+    },
+    {
+      "title": "QWinOut Power Distribution Board PDB XT60 BEC 5V & 12V for RC Helicopter Quadcopter Muliticopter Drone",
+      "price": 11.96,
+      "slot": "pdb",
+      "qty": 1,
+      "specs": {
+        "bec_5v": true,
+        "bec_12v": true
+      }
+    },
+    {
+      "title": "FPVDrone Power Module 5.3V BEC with XT60 Plug | Compatible with APM2.5 APM2.6 APM2.8 APM Pixhawk Flight Controller",
+      "price": 13.89,
+      "slot": "power_module",
+      "qty": 1,
+      "specs": {}
+    },
+    {
+      "title": "FLYSKY FS-i6X 10CH 2.4GHz RC Transmitter Controller with iA6B Receiver Upgrade Cable for RC Boat Racing Drone",
+      "price": 54.89,
+      "slot": "radio_tx",
+      "qty": 1,
+      "specs": {}
+    },
+    {
+      "title": "B6 Battery Charger 80W Mini Lipo Balance Charger/Discharger with Power Supply for LiPo/Li-ion/Life(1-6s) NiMH/NiCd (1-15s)",
+      "price": 38.98,
+      "slot": "charger",
+      "qty": 1,
+      "specs": {}
+    },
+    {
+      "title": "HAWK'S WORK F450 DIY Drone Kit, Open Source DIY 450mm Quadcopter Set (A) | Pixhawk-based open source DIY kit, wide component compatibility",
+      "price": 399.99,
+      "slot": "kit_bundle",
+      "qty": 1,
+      "specs": {}
+    },
+    {
+      "title": "SeeSii TinySA Ultra+ ZS407 7.3GHz Spectrum Analyzer: 2026 Upgraded 4 Inch HW V0.5.4 100kHz-7.3GHz Handheld Tiny Frequency Analyzer",
+      "price": 260.9,
+      "slot": "bench",
+      "qty": 1,
+      "specs": {}
+    },
+    {
+      "title": "Basesailor USB to USB C Adapter,USBC Female to USB A Male Charger Adapter | Type C Converter for iPhone 18 17e Pro Max Duo",
+      "price": 8.99,
+      "slot": "unidentified",
+      "qty": 1,
+      "specs": {}
+    }
+  ],
+  "assembly": {
+    "slots": {
+      "frame": {
+        "label": "frame",
+        "need": 1,
+        "have": 1,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "HAWK'S WORK F450 Drone Frame, 450 mm Quadcopter Frame Kits with Stands DIY Drone Kits to Bulit (Soldered Version)"
+        ]
+      },
+      "motor": {
+        "label": "brushless motors",
+        "need": 4,
+        "have": 4,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "Readytosky 2212 920KV Brushless Motors CW CCW for F330 F450 F550 S500 S550 X525 DJI Phantom Quadcopter(4PCS)"
+        ]
+      },
+      "esc": {
+        "label": "ESCs (or one 4-in-1)",
+        "need": 4,
+        "have": 4,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "Readytosky 30A ESC 2-6S OPTO Brushless Electronic Speed Controller | For F450 S500 ZD550 RC Helicopter Quadcopter(4PCS)"
+        ]
+      },
+      "propeller": {
+        "label": "propellers",
+        "need": 4,
+        "have": 12,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "Readytosky 6Pairs 1045 Propellers CW CCW 10x4.5\" FPV Props | For F450 450mm S500 ZD550 RC Helicopter Quadcopter(4PCS)"
+        ]
+      },
+      "flight_controller": {
+        "label": "flight controller",
+        "need": 1,
+        "have": 0,
+        "status": "in_kit_unverified",
+        "required": true,
+        "items": []
+      },
+      "receiver": {
+        "label": "receiver",
+        "need": 1,
+        "have": 1,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "FLYSKY FS-i6X 10CH 2.4GHz RC Transmitter Controller with iA6B Receiver Upgrade Cable for RC Boat Racing Drone (bundled receiver)"
+        ]
+      },
+      "radio_tx": {
+        "label": "transmitter",
+        "need": 1,
+        "have": 1,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "FLYSKY FS-i6X 10CH 2.4GHz RC Transmitter Controller with iA6B Receiver Upgrade Cable for RC Boat Racing Drone"
+        ]
+      },
+      "battery": {
+        "label": "flight battery",
+        "need": 1,
+        "have": 2,
+        "status": "filled",
+        "required": true,
+        "items": [
+          "Nihewo 4S Lipo Battery Pack 3300mAh 14.8V Lipo Battery 80C with XT60 Connector Soft Case Compatible with RC Models(2Packs)"
+        ]
+      },
+      "pdb": {
+        "label": "power distribution board",
+        "need": 1,
+        "have": 1,
+        "status": "filled",
+        "required": false,
+        "items": [
+          "QWinOut Power Distribution Board PDB XT60 BEC 5V & 12V for RC Helicopter Quadcopter Muliticopter Drone"
+        ]
+      },
+      "power_module": {
+        "label": "power module (V/I sensing for the FC)",
+        "need": 1,
+        "have": 1,
+        "status": "filled",
+        "required": false,
+        "items": [
+          "FPVDrone Power Module 5.3V BEC with XT60 Plug | Compatible with APM2.5 APM2.6 APM2.8 APM Pixhawk Flight Controller"
+        ]
+      },
+      "gps": {
+        "label": "GPS (needed for position/loiter modes)",
+        "need": 1,
+        "have": 0,
+        "status": "in_kit_unverified",
+        "required": false,
+        "items": []
+      },
+      "charger": {
+        "label": "balance charger (support equipment)",
+        "need": 1,
+        "have": 1,
+        "status": "filled",
+        "required": false,
+        "items": [
+          "B6 Battery Charger 80W Mini Lipo Balance Charger/Discharger with Power Supply for LiPo/Li-ion/Life(1-6s) NiMH/NiCd (1-15s)"
+        ]
+      },
+      "fpv": {
+        "label": "FPV camera + VTX",
+        "need": 1,
+        "have": 0,
+        "status": "missing",
+        "required": false,
+        "items": [],
+        "alternatives": [
+          {
+            "store": "RaceDayQuads",
+            "url": "https://www.racedayquads.com/search?q=fpv+camera+vtx"
+          },
+          {
+            "store": "GetFPV",
+            "url": "https://www.getfpv.com/catalogsearch/result/?q=fpv+camera+vtx"
+          }
+        ]
+      },
+      "gimbal": {
+        "label": "camera gimbal (payload)",
+        "need": 1,
+        "have": 0,
+        "status": "missing",
+        "required": false,
+        "items": [],
+        "alternatives": [
+          {
+            "store": "GetFPV",
+            "url": "https://www.getfpv.com/catalogsearch/result/?q=gimbal"
+          },
+          {
+            "store": "Amazon",
+            "url": "https://www.amazon.com/s?k=gimbal"
+          }
+        ]
+      }
+    },
+    "missing": [
+      {
+        "slot": "fpv",
+        "label": "FPV camera + VTX",
+        "need": 1,
+        "have": 0,
+        "status": "missing",
+        "required": false,
+        "items": [],
+        "alternatives": [
+          {
+            "store": "RaceDayQuads",
+            "url": "https://www.racedayquads.com/search?q=fpv+camera+vtx"
+          },
+          {
+            "store": "GetFPV",
+            "url": "https://www.getfpv.com/catalogsearch/result/?q=fpv+camera+vtx"
+          }
+        ]
+      },
+      {
+        "slot": "gimbal",
+        "label": "camera gimbal (payload)",
+        "need": 1,
+        "have": 0,
+        "status": "missing",
+        "required": false,
+        "items": [],
+        "alternatives": [
+          {
+            "store": "GetFPV",
+            "url": "https://www.getfpv.com/catalogsearch/result/?q=gimbal"
+          },
+          {
+            "store": "Amazon",
+            "url": "https://www.amazon.com/s?k=gimbal"
+          }
+        ]
+      }
+    ],
+    "warnings": [
+      "kit bundle present: it likely duplicates the individually listed frame, motor, esc, propeller, pdb and its contents are unverified \u2014 buy one route or the other, not both"
+    ],
+    "bench": [
+      "SeeSii TinySA Ultra+ ZS407 7.3GHz Spectrum Analyzer: 2026 Upgraded 4 Inch HW V0.5.4 100kHz-7.3GHz Handheld Tiny Frequency Analyzer"
+    ],
+    "unidentified": [
+      "Basesailor USB to USB C Adapter,USBC Female to USB A Male Charger Adapter | Type C Converter for iPhone 18 17e Pro Max Duo"
+    ],
+    "kit": [
+      "HAWK'S WORK F450 DIY Drone Kit, Open Source DIY 450mm Quadcopter Set (A) | Pixhawk-based open source DIY kit, wide component compatibility"
+    ]
+  },
+  "wiring": {
+    "connections": [
+      {
+        "from": "flight battery",
+        "to": "PDB",
+        "via": "XT60",
+        "note": "main power in; battery mounts low and centered on the frame so its mass sits at the centre of gravity"
+      },
+      {
+        "from": "PDB",
+        "to": "ESCs x4",
+        "via": "solder pads / power leads",
+        "note": "ESCs mount on the arms close to their motors, keeping power runs short and the centre plate uncluttered"
+      },
+      {
+        "from": "each ESC",
+        "to": "its motor",
+        "via": "3 phase wires",
+        "note": "wire order sets spin direction together with the CW/CCW motor pairing; swap any two wires to reverse a motor"
+      },
+      {
+        "from": "flight battery",
+        "to": "power module -> FC power port",
+        "via": "XT60 pass-through",
+        "note": "the module sits in line with the main lead so the FC can sense pack voltage and current"
+      },
+      {
+        "from": "receiver",
+        "to": "flight controller",
+        "via": "PPM / i-BUS input",
+        "note": "bind the transmitter before the first powered test, and do every bench power-up with props off"
+      },
+      {
+        "from": "flight controller motor outputs 1-4",
+        "to": "ESC signal wires",
+        "via": "signal leads",
+        "note": "diagonal motor pairs share a spin direction in an X quad; match each output to the corner the configurator expects"
+      },
+      {
+        "from": "balance charger",
+        "to": "flight battery",
+        "via": "XT60 lead + balance lead",
+        "note": "balance mode, charged off the aircraft; both list packs sequentially on an 80W-class charger"
+      }
+    ],
+    "orientation": [
+      "X-quad layout: diagonal motor pairs spin the same direction; CW props go on CW motors, CCW on CCW \u2014 the motor and prop sets in the list are both sold as matched CW/CCW sets for this.",
+      "Flight controller arrow points at the frame's front; mount it on the centre plate, level, away from the PDB's high-current runs.",
+      "Battery sits low and centred, connector toward the rear for easy plug access without shifting the CG.",
+      "Receiver antennas exit at angles away from carbon and power leads; keep them off the arms' ESC wiring."
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "Indoor Delivery Rover (two numbers changed)",
+  "description": "Deliberately broken copy of indoor-delivery-rover.json: battery 24 V, ground clearance 6 cm. Used to show what the validator catches.",
+  "drivetrain": "differential",
+  "length_m": 0.4,
+  "width_m": 0.3,
+  "height_m": 0.25,
+  "mass_kg": 6.0,
+  "ground_clearance_m": 0.06,
+  "wheel": {
+    "diameter_m": 0.1,
+    "width_m": 0.025,
+    "count": 2,
+    "driven": true
+  },
+  "motor": {
+    "kind": "brushed_dc",
+    "voltage_v": 11.1,
+    "count": 2,
+    "stall_torque_nm": 1.5
+  },
+  "battery": {
+    "chemistry": "li-ion",
+    "voltage_v": 24.0,
+    "capacity_mah": 5000
+  },
+  "sensors": [
+    {
+      "kind": "lidar_2d",
+      "position": "top",
+      "range_m": 12
+    }
+  ],
+  "component_mass_kg": {}
+}

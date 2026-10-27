@@ -65,6 +65,29 @@ robotforge describe "your robot description"
 - `examples/` — sample specs (the demo robot is `pathfinder`, built for this event)
 - `docs/DESIGN.md` — design notes, gate thresholds, demo plan
 
+## Website
+
+The site has two separate parts that share one set of design tokens
+(`assets/css/tokens.css`):
+
+- **Landing page** — `index.html`: the promise, the workflow, the evidence,
+  and one way in ("Open the app").
+- **App** — `app/`: Forge (step through a recorded run from words, a photo
+  or a parts list), Robots (the Robodex, one page per robot with its
+  take-apart viewer, plus the parts catalogue) and Evidence (the gate's
+  recorded reports).
+
+The app pages, the landing page's robot row, and redirects from the old
+URLs (`reports.html`, `try.html`, `robodex.html`, `parts.html`) are
+generated from repository data. After changing `catalog/` or
+`src/robotforge/site.py`, run:
+
+```bash
+robotforge site
+```
+
+`tests/test_site.py` fails if the committed pages are stale.
+
 ## License
 
 Apache-2.0. See `LICENSE`.

@@ -3,15 +3,14 @@
 The Robodex rule under test: a gate badge exists only where recorded
 runs exist. PASS without measured numbers must be impossible to load,
 and the generated page must never show a PASS badge for an ungated
-robot.
+robot (the generated pages are tested in test_site.py).
 """
 import io
 import json
 from contextlib import redirect_stderr, redirect_stdout
 
 from robotforge.catalog import (GATE_STATUSES, CatalogError, GateStatus,
-                                Robodex, gate_badge, render_robodex_html,
-                                site_nav)
+                                Robodex, gate_badge)
 from robotforge.cli import main
 
 dex = Robodex.load()
@@ -114,53 +113,3 @@ def test_cli_unknown_lookups_are_clean_errors():
     assert rc == 2 and "catalog error" in err
     rc, _, err = _run_cli(["catalog", "part", "nonexistent-part"])
     assert rc == 2 and "catalog error" in err
-
-
-def _cards(page):
-    chunks = page.split('<article class="card"')
-    return chunks[1:]
-
-
-def test_generated_page_shows_every_robot_with_its_true_badge():
-    page = render_robodex_html(dex)
-    cards = _cards(page)
-    assert len(cards) == len(dex.robots)
-    for r in dex.robots:
-        assert r.name in page
-        card = next(c for c in cards if f'data-number="{r.number}"' in c)
-        assert gate_badge(r.gate_status.status) in card
-        if r.gate_status.status == "NOT_GATED":
-            assert "GATE: PASS" not in card
-            assert "GATE: FAIL" not in card
-            assert "GATE: MARGINAL" not in card
-
-
-def test_generated_page_carries_the_shared_nav():
-    page = render_robodex_html(dex)
-    assert '<nav class="rfnav" aria-label="RobotForge">' in page
-    assert '<a class="rfnav-brand" href="index.html#home">RobotForge</a>' in page
-    for href in ("index.html#home", "index.html#robodex",
-                 "index.html#takeapart", "index.html#replay",
-                 "index.html#evidence", "robodex.html", "parts.html",
-                 "try.html", "reports.html",
-                 "https://github.com/abelxmendoza/RobotForge-Hackathon"):
-        assert f'href="{href}"' in page, href
-    # The page marks its own link current, and no other.
-    assert ('<a href="robodex.html" class="active" aria-current="page">'
-            'Robodex page</a>') in page
-    assert page.count('aria-current="page"') == 1
-
-
-def test_site_nav_marks_only_the_requested_page():
-    nav = site_nav("parts.html")
-    assert '<a href="parts.html" class="active" aria-current="page">' in nav
-    assert nav.count('aria-current="page"') == 1
-    assert 'aria-current' not in site_nav("")
-
-
-def test_generated_page_shows_measured_numbers_for_pass_robots():
-    page = render_robodex_html(dex)
-    for r in dex.robots:
-        if r.gate_status.status == "PASS":
-            run = r.gate_status.runs[0]
-            assert f"{run.drive_error_pct:.3f}%" in page
