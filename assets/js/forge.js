@@ -114,6 +114,7 @@ const RUNS = [
             m.alternatives.map(x => '<a href="' + esc(x.url) + '" rel="noopener">Search ' + esc(x.store) + '</a>').join(' · ') + '</span></li>').join('') + '</ul></div>' +
             '<div class="card"><div class="eyebrow">Wiring</div><ul class="wires" style="margin-top:12px">' + d.report.wiring.connections.map(c =>
             '<li><b>' + esc(c.from) + '</b><span class="via">→ ' + esc(c.via) + ' →</span><b>' + esc(c.to) + '</b><p>' + esc(c.note) + '</p></li>').join('') + '</ul></div>' +
+            '<p class="faint" style="font-size:var(--fs-xs)">The <code>import-list</code> command arrives with <a href="https://github.com/abelxmendoza/RobotForge-Hackathon/pull/1">PR #1 (list import)</a>; this run was recorded from that branch.</p>' +
             codeBlock('robotforge import-list my-list.txt --out report.json') }
       ];
     }
@@ -187,14 +188,19 @@ function go(i) {
   if (card.getBoundingClientRect().top < 60) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
+let loadSeq = 0;
 async function selectRun(id, step) {
   state.run = RUNS.some(r => r.id === id) ? id : RUNS[0].id;
-  const run = currentRun();
+  const run = currentRun(), seq = ++loadSeq;
   renderTabs();
   $('#forge-meta').textContent = run.meta;
+  state.steps = null;
   try {
-    state.steps = run.steps(await loadRun(run));
+    const data = await loadRun(run);
+    if (seq !== loadSeq) return;  // a newer tab was picked while this loaded
+    state.steps = run.steps(data);
   } catch (err) {
+    if (seq !== loadSeq) return;
     state.steps = null;
     $('#forge-rail').innerHTML = '';
     $('#forge-step').innerHTML = '<div class="state-box">The recorded files for this run couldn’t be loaded from this site, so there is nothing real to show. Nothing is simulated in their place.</div>';

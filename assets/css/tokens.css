@@ -60,6 +60,7 @@ pre code{background:none;border:0;padding:0}
 h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
 .muted{color:var(--text-muted)}
 .faint{color:var(--text-faint)}
+[hidden]{display:none!important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---------- buttons ---------- */
