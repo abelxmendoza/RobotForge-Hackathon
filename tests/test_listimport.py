@@ -137,3 +137,10 @@ def test_pdb_rail_only_suggested_when_bec_is_named():
                       "Pixhawk flight controller\nCamera gimbal 2-axis\n")
     froms = {c["from"] for c in bec["wiring"]["connections"]}
     assert {"PDB 5V BEC", "PDB 12V BEC"} <= froms
+
+
+def test_propeller_piece_counts():
+    assert identify({"title": "4PCS 1045 Propellers CW CCW",
+                     "price": None}).qty == 4
+    assert identify({"title": "6Pairs 1045 Propellers CW CCW (4PCS)",
+                     "price": None}).qty == 12

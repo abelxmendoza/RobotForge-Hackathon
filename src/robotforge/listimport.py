@@ -156,7 +156,8 @@ def identify(item: dict) -> Identified:
             specs["cells"] = f"{s.group(1)}-{s.group(2)}S"
     elif slot == "propeller":
         pairs = _qty(title, r"(\d+)\s?pairs")
-        qty = pairs * 2 if pairs > 1 or "pairs" in low else qty
+        qty = pairs * 2 if pairs > 1 or "pairs" in low \
+            else _qty(title, r"(\d+)\s?pcs")
         size = re.search(r"\b(10\d{2}|50\d{2}|\d{2}45)\b", title)
         if size:
             specs["size_code"] = size.group(1)
