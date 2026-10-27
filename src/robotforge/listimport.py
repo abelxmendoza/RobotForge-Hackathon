@@ -363,9 +363,12 @@ def import_list(text: str) -> dict:
     items = [identify(i) for i in raw]
     assembly = assemble(items)
     wiring = suggest_wiring(assembly, items)
+    from .verify import build_verification
+    verification = build_verification(items)
     return {"items": [{"title": i.title, "price": i.price, "slot": i.slot,
                        "qty": i.qty, "specs": i.specs} for i in items],
-            "assembly": assembly, "wiring": wiring}
+            "assembly": assembly, "wiring": wiring,
+            "verification": verification}
 
 
 def render_text(report: dict) -> str:
@@ -394,6 +397,9 @@ def render_text(report: dict) -> str:
             out.append(f"  - {o}")
     for w in report["assembly"]["warnings"]:
         out.append(f"\nWARNING: {w}")
+    if report.get("verification"):
+        from .verify import render_lines
+        out += render_lines(report["verification"])
     if report["assembly"]["bench"]:
         out.append(f"\nBENCH (not robot parts): {len(report['assembly']['bench'])} items")
     if report["assembly"]["unidentified"]:
