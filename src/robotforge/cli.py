@@ -18,6 +18,7 @@ from .gate import (evaluate_drive, evaluate_odometry_distance,
 from .listimport import import_list, render_text
 from .lookup import (LookupError, format_pull, format_report, lookup_robot,
                      pull_candidate, report_to_dict)
+from .kinds import KindError, format_kind_list, resolve_kind
 from .photo import (draft_spec_from_document, draft_spec_from_photo,
                     locate_parts)
 from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
@@ -264,6 +265,25 @@ def main(argv: list[str] | None = None) -> int:
                     help="retrieval date, YYYY-MM-DD")
     sp.add_argument("--out", help="write the specimen JSON here")
 
+    nw = sub.add_parser("new", help="start a custom robot from a "
+                        "starter kind (see --list)")
+    nw.add_argument("kind", nargs="?",
+                    help="kind id, e.g. differential (omit with --list)")
+    nw.add_argument("--list", action="store_true",
+                    help="list the starter kinds and their gate packs")
+    nw.add_argument("--size", choices=["S", "M", "L"],
+                    help="size preset for the kind's big-three "
+                         "parameters (where the kind defines one)")
+    nw.add_argument("--set", action="append", default=[],
+                    metavar="KEY=VALUE",
+                    help="override a kind parameter, e.g. "
+                         "--set wheel_diameter_mm=100 (repeatable)")
+    nw.add_argument("--name", help="robot name for the starter spec")
+    nw.add_argument("--out", help="write the spec/profile JSON here "
+                    "(default: print it)")
+    nw.add_argument("--json", action="store_true",
+                    help="wrap the output with kind metadata")
+
     args = p.parse_args(argv)
     try:
         if args.cmd == "describe":
@@ -355,6 +375,55 @@ def main(argv: list[str] | None = None) -> int:
             if args.out:
                 Path(args.out).write_text(text + "\n")
                 print(f"specimen written to {args.out}")
+            else:
+                print(text)
+            return 0
+        if args.cmd == "new":
+            if args.list:
+                print(format_kind_list())
+                return 0
+            if not args.kind:
+                print("new needs a kind id (or --list)", file=sys.stderr)
+                return 2
+            overrides = {}
+            for pair in args.set:
+                if "=" not in pair:
+                    print(f"--set expects KEY=VALUE, got {pair!r}",
+                          file=sys.stderr)
+                    return 2
+                k, v = pair.split("=", 1)
+                overrides[k.strip()] = v.strip()
+            try:
+                result = resolve_kind(args.kind, overrides,
+                                      size=args.size, name=args.name)
+            except KindError as exc:
+                print(f"kind error: {exc}", file=sys.stderr)
+                return 2
+            if result["type"] == "spec":
+                payload = result["spec"]
+                summary = (f"{result['label']} starter spec "
+                           f"(gate pack: {result['gate_pack']}; "
+                           f"reference: {result['reference']})")
+            else:
+                payload = {k: result[k] for k in
+                           ("kind", "label", "gate_pack", "gate_note",
+                            "reference", "name", "params", "bom_hints")}
+                summary = (f"{result['label']} profile — CATALOGUE "
+                           f"ONLY, no gate pack: {result['gate_note']}")
+            if args.json:
+                payload = {"kind": result["kind"],
+                           "gate_pack": result["gate_pack"],
+                           "warnings": result.get("warnings", []),
+                           "extras": result.get("extras", {}),
+                           **({"spec": payload} if result["type"] == "spec"
+                              else {"profile": payload})}
+            text = json.dumps(payload, indent=2)
+            if args.out:
+                Path(args.out).write_text(text + "\n")
+                print(summary)
+                print(f"written to {args.out}")
+                for w in result.get("warnings", []):
+                    print(f"  warning: {w}")
             else:
                 print(text)
             return 0
