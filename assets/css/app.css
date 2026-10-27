@@ -202,6 +202,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .wire-hit{fill:none;stroke:transparent;stroke-width:13;pointer-events:stroke;cursor:pointer}
 .wire.on.power{stroke:var(--accent)}
 .wire.on.data{stroke:#4db2e8}
+.wire.data{stroke-dasharray:5 4}
 .wire.on{stroke-dasharray:7 5;animation:wireflow .8s linear infinite}
 .wire.bad{stroke:var(--fail)}
 .wire-g.sel .wire{stroke-width:3.4}
@@ -221,6 +222,86 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .node-chip:focus{outline:none}
 .node-chip:focus rect{stroke:var(--accent);stroke-width:2}
 .req-label{fill:#9aa3ae;font-size:10px;font-family:var(--mono)}
+
+/* ---------- wiring & cabling view ---------- */
+.wv{position:relative}
+.wv-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.wv-note{font-size:var(--fs-sm);color:var(--text-muted);max-width:75ch;margin-bottom:12px}
+.wv-stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:var(--s4);align-items:start}
+.wv-diagram{background:#0b0d10;border:1px solid var(--border);border-radius:var(--r);padding:var(--s3)}
+.wv-diagram .cap{color:var(--text-faint);font-size:12px;margin-top:6px}
+.wv-line{fill:none;stroke:#454c59;stroke-width:2;pointer-events:none}
+.wv-line.data{stroke-dasharray:6 5}
+.wv-line.on.power{stroke:var(--accent)}
+.wv-line.on.data{stroke:#4db2e8}
+.wv-cable.bad .wv-line{stroke:var(--fail)}
+.wv-cable{cursor:pointer}
+.wv-hit{fill:none;stroke:transparent;stroke-width:13;pointer-events:stroke}
+.wv-cable.sel .wv-line{stroke-width:3.4}
+.wv-cable:hover .wv-line{filter:brightness(1.35)}
+.wv-cable.dim,.wv-node.dim{opacity:.16}
+.wv-cable.dead,.wv-node.dead{opacity:.22}
+.wv-node.dead rect{stroke-dasharray:4 3}
+.wv-chip{opacity:0;pointer-events:none}
+.wv-chip rect{fill:#1e222a;stroke:#454c59}
+.wv-chip text{fill:#eceef2;font-size:10px;font-family:var(--mono)}
+.wv[data-mode="full"] .wv-chip{opacity:1}
+.wv-cable:hover .wv-chip,.wv-cable.sel .wv-chip{opacity:1}
+.wv-badtag{fill:var(--fail);font-size:10.5px;font-weight:700;pointer-events:none}
+.wv-node{cursor:pointer}
+.wv-node rect{fill:#1e222a;stroke:#454c59;stroke-width:1.2}
+.wv-node text.wv-nl{fill:#eceef2;font-size:11px}
+.wv-node text.wv-req{fill:#9aa3ae;font-size:9px;font-family:var(--mono)}
+.wv-node.on rect{stroke:var(--accent)}
+.wv-node.sel rect{stroke:var(--accent);stroke-width:2.4}
+.wv-node:focus{outline:none}
+.wv-node:focus rect{stroke:var(--accent);stroke-width:2}
+.wv-detail .elec-bad{color:var(--fail);font-weight:600}
+.wv-detail .elec-ok{color:var(--text)}
+.wv-detail .elec-unchecked{color:var(--text-muted)}
+.wv-table-title{margin-top:var(--s4);font-size:var(--fs-lg)}
+.wv-tablewrap{overflow-x:auto;margin-top:10px}
+.wv-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.wv-table th,.wv-table td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+.wv-table th{background:var(--surface-2);font-weight:600}
+.wv-table tbody tr{cursor:pointer}
+.wv-table tbody tr:hover{background:var(--surface-2)}
+.wv-table td.m{font-family:var(--mono);font-size:12.5px}
+.wv-badrow td{background:rgba(255,74,47,.08)}
+.wv-term{background:none;border:none;padding:0;font:inherit;color:var(--accent);text-decoration:underline dotted;cursor:pointer}
+.wv-pop{position:absolute;z-index:30;max-width:320px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:10px 12px;font-size:var(--fs-sm);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+@media (max-width:1080px){
+  .wv-stage{grid-template-columns:1fr}
+}
+
+/* ---------- printable harness sheet ----------
+   Only the wiring view being printed shows; line STYLE (solid =
+   power, dashed = data) carries the meaning in grayscale, colour
+   drops to dark greys, chips and the harness table stay. */
+@media print{
+  body *{visibility:hidden}
+  .wv.wv-printing,.wv.wv-printing *{visibility:visible}
+  .wv.wv-printing{position:absolute;left:0;top:0;width:100%;background:#fff;color:#000}
+  .wv-printing .wv-tools,.wv-printing .wv-pop,.wv-printing .wv-detail .btn{display:none}
+  .wv-printing .wv-diagram{background:#fff;border-color:#999}
+  .wv-printing .wv-diagram .cap,.wv-printing .wv-note{color:#000}
+  .wv-printing .wv-line{stroke:#333}
+  .wv-printing .wv-line.data{stroke-dasharray:6 5}
+  .wv-printing .wv-line.on.power{stroke:#000}
+  .wv-printing .wv-line.on.data{stroke:#333}
+  .wv-printing .wv-cable.bad .wv-line{stroke:#000;stroke-width:3.4}
+  .wv-printing .wv-chip{opacity:1}
+  .wv-printing .wv-chip rect{fill:#fff;stroke:#333}
+  .wv-printing .wv-chip text{fill:#000}
+  .wv-printing .wv-node rect{fill:#fff;stroke:#333}
+  .wv-printing .wv-node text.wv-nl{fill:#000}
+  .wv-printing .wv-node text.wv-req{fill:#444}
+  .wv-printing .wv-badtag{fill:#000}
+  .wv-printing .wv-detail{background:#fff;border-color:#999;color:#000}
+  .wv-printing .wv-table th{background:#eee}
+  .wv-printing .wv-table th,.wv-printing .wv-table td{border-color:#999}
+  .wv-printing .wv-term{color:#000;text-decoration:none}
+}
 
 /* ---------- evidence ---------- */
 .report-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s3)}

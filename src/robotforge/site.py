@@ -436,7 +436,7 @@ FORGE_BODY = """<div class="page-head">
 def render_forge() -> str:
     return app_shell(active="forge", title="Forge", depth=2, body=FORGE_BODY,
                      crumbs=[("App", "app/forge/"), ("Forge", "app/forge/")],
-                     scripts=("robot.js", "forge.js"),
+                     scripts=("robot.js", "wiring.js", "forge.js"),
                      module_scripts=("scan.js",),
                      importmap=THREE_IMPORTMAP,
                      description="The Forge as one conversation: describe a "
@@ -847,7 +847,7 @@ def render_robot_page(r: RobotEntry) -> str:
     return app_shell(active="robots", title=r.name, depth=3, body=body,
                      crumbs=[("App", "app/forge/"), ("Robots", "app/robots/"),
                              (r.name, f"app/robots/{slug}/")],
-                     scripts=("robot.js",) if r.spec_file else (),
+                     scripts=("robot.js", "wiring.js") if r.spec_file else (),
                      module_scripts=("robot3d.js",) if r.spec_file else (),
                      importmap=THREE_IMPORTMAP if r.spec_file else "",
                      description=f"{r.name} in the RobotForge Robodex: spec, "

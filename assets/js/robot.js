@@ -1517,6 +1517,7 @@ function taApplyElec() {
     const d = g.dataset.depth === 'inf' ? Infinity : Number(g.dataset.depth);
     g.classList.toggle('on', taPower && d <= taElecStage);
   });
+  if (window.RFWiring) window.RFWiring.applyPower(taPower, taElecStage);
 }
 function taSetPower(on) {
   taElecTimers.forEach(clearTimeout); taElecTimers = [];
@@ -1560,6 +1561,7 @@ const TA_PANEL = `
     <div class="tabs" role="tablist" aria-label="Take-apart view">
       <button class="tab" type="button" id="ta-view-2d" role="tab" aria-selected="true">2D views</button>
       <button class="tab" type="button" id="ta-view-3d" role="tab" aria-selected="false">3D</button>
+      <button class="tab" type="button" id="ta-view-wiring" role="tab" aria-selected="false" hidden>Wiring</button>
     </div>
     <span class="faint" style="font-size:12px">Same kit, same explode slider, same click-a-part panel.</span>
   </div>
@@ -1577,6 +1579,7 @@ const TA_PANEL = `
         <p class="cap">3D take-apart. Drag to orbit, scroll to zoom, click a part &mdash; the panel beside it is the same one the flat views use.</p>
         <p class="state-box" id="ta-3d-fallback" hidden>3D unavailable here &mdash; the 2D take-apart still works.</p>
       </div>
+      <div class="ta-view" id="ta-wiring" hidden></div>
     </div>
     <aside class="card ta-detail" id="ta-detail">
       <h3>Pick a part</h3>
@@ -1622,13 +1625,24 @@ const TA_PANEL = `
      loads. If it never registers — module or CDN failure — the 3D
      pane shows its fallback line and the 2D views are untouched. */
   const b2d = $('#ta-view-2d'), b3d = $('#ta-view-3d');
+  const bw = $('#ta-view-wiring');
   function taSetMode(mode) {
     const is3d = mode === '3d';
-    b2d.setAttribute('aria-selected', String(!is3d));
+    const isWiring = mode === 'wiring';
+    b2d.setAttribute('aria-selected', String(mode === '2d'));
     b3d.setAttribute('aria-selected', String(is3d));
-    $('#ta-2d').hidden = is3d;
+    if (bw) bw.setAttribute('aria-selected', String(isWiring));
+    $('#ta-2d').hidden = is3d || isWiring;
     $('#ta-3dwrap').hidden = !is3d;
     $('#ta-3d-note').hidden = !is3d;
+    $('#ta-wiring').hidden = !isWiring;
+    /* the Power button drives the wiring view directly; in the
+       flat views it stays gated on the Electrical toggle */
+    const powerBtn = $('#ta-power');
+    if (powerBtn && taSpec.wiring) {
+      powerBtn.disabled = isWiring ? false : !taElec;
+    }
+    if (isWiring && window.RFWiring) window.RFWiring.onSpecReady(taSpec);
     if (is3d) {
       const start = () => {
         if (window.RF3D) {
@@ -1648,13 +1662,16 @@ const TA_PANEL = `
   }
   b2d.addEventListener('click', () => taSetMode('2d'));
   b3d.addEventListener('click', () => taSetMode('3d'));
+  if (bw) bw.addEventListener('click', () => taSetMode('wiring'));
   if (taSpec.wiring) {
+    if (bw) bw.hidden = false;
+    if (window.RFWiring) window.RFWiring.onSpecReady(taSpec);
     $('#ta-elec-controls').hidden = false;
     const elecBtn = $('#ta-elec'), powerBtn = $('#ta-power');
     elecBtn.addEventListener('click', () => {
       taElec = !taElec;
       elecBtn.setAttribute('aria-pressed', String(taElec));
-      powerBtn.disabled = !taElec;
+      powerBtn.disabled = !taElec && $('#ta-wiring').hidden;
       $('#ta-elec-note').hidden = !taElec;
       $('#ta-wire-info').hidden = !taElec;
       if (taElec) {

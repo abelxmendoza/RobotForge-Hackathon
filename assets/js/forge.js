@@ -712,10 +712,28 @@ function forgeValidateSpec(spec) {
       '<dt>Beginner tweak</dt><dd>' + esc(p.tweak) + '</dd>' +
       '<dt>Print note</dt><dd>' + esc(p.print) + '</dd></dl>';
   }
+  /* Wiring stage: the same wiring & cabling view as the robot
+   * pages (wiring.js), mounted in the thread when the spec carries
+   * a documented wiring block. Without one, a plain note — no
+   * harness is invented for a spec that does not document one. */
+  function wiringStage(spec) {
+    if (!spec.wiring) {
+      note('<strong>Wiring:</strong> no wiring documented in this ' +
+        'spec, so there is no harness to draw \u2014 the wiring view ' +
+        'needs a documented <code>wiring</code> block, and none is ' +
+        'invented here.');
+      return;
+    }
+    if (!window.RFWiring) return;
+    const el = stage('local', 'drawn in your browser from the spec',
+      'Wiring & cabling', '<div class="fv-wiring"></div>');
+    window.RFWiring.mountInto(el.querySelector('.fv-wiring'), spec);
+  }
   function specPipeline(spec, filename) {
     const res = checksStage(spec);
     if (!res.schemaErrors) {
       viewerStage(spec);
+      wiringStage(spec);
     }
     gateNote();
     outputsStage(spec, filename);
