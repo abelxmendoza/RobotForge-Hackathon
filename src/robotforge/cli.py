@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from .describe import describe_live, describe_mock
-from .gate import evaluate_drive, evaluate_run, evaluate_turn
+from .gate import (evaluate_drive, evaluate_odometry_distance,
+                   evaluate_odometry_heading, evaluate_run, evaluate_turn)
 from .lookup import (LookupError, format_pull, format_report, lookup_robot,
                      pull_candidate, report_to_dict)
 from .photo import draft_spec_from_photo, locate_parts
@@ -134,6 +135,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--workdir", default="build/gate-run")
     g.add_argument("--drive-m", type=float, default=1.0)
     g.add_argument("--turn-deg", type=float, default=90.0)
+    g.add_argument("--inject-wheel-scale", type=float, default=1.0,
+                   help="fault injection: scale ONLY the physical wheel "
+                        "geometry (odometry keeps the spec radius), to "
+                        "prove the gate catches a lying robot")
 
     args = p.parse_args(argv)
     try:
@@ -189,17 +194,37 @@ def main(argv: list[str] | None = None) -> int:
                       file=sys.stderr)
                 return rc
             res = run_motion_check(spec, Path(args.workdir),
-                                   drive_m=args.drive_m, turn_deg=args.turn_deg)
+                                   drive_m=args.drive_m, turn_deg=args.turn_deg,
+                                   wheel_radius_scale=args.inject_wheel_scale)
+            if res["drive"]["truth_m"] <= 0 and res["turn"]["truth_deg"] <= 0:
+                raise TwinError(
+                    "ground-truth stream captured no motion — the run is "
+                    "invalid, refusing to judge odometry against nothing")
+            # Primary acceptance is against ground truth (what actually
+            # happened); odometry checks judge what the robot believed.
             report = evaluate_run([
                 evaluate_drive(res["drive"]["commanded_m"],
-                               res["drive"]["measured_m"]),
+                               res["drive"]["truth_m"]),
                 evaluate_turn(res["turn"]["commanded_deg"],
-                              res["turn"]["measured_deg"]),
+                              res["turn"]["truth_deg"]),
+                evaluate_odometry_distance(res["drive"]["truth_m"],
+                                           res["drive"]["measured_m"]),
+                evaluate_odometry_heading(
+                    res["turn"]["truth_deg"],
+                    abs(res["turn"]["measured_deg"])),
             ])
             for c in report.checks:
-                print(f"[{c.verdict}] {c.name}: commanded {c.commanded}, "
+                print(f"[{c.verdict}] {c.name}: reference {c.commanded}, "
                       f"measured {c.measured:.3f}, error {c.error} {c.unit}")
+            for s_ in report.suspects:
+                print(f"SUSPECT {s_['field']}: {s_['reason']}")
             print(f"GATE: {report.verdict}")
+            report_path = Path(args.workdir) / "gate-report.json"
+            report_doc = {"spec": spec.name,
+                          "measurements": res,
+                          **report.to_dict()}
+            report_path.write_text(json.dumps(report_doc, indent=2) + "\n")
+            print(f"report written to {report_path}")
             return 0 if report.verdict != "FAIL" else 1
     except (SpecError, TwinError) as exc:
         print(f"spec error: {exc}", file=sys.stderr)

@@ -1,0 +1,41 @@
+{
+  "name": "turtlebot3-burger",
+  "description": "Differential-drive reference robot in the TurtleBot3 Burger class: two driven wheels, caster support, 360 lidar. Public reference dimensions (ROBOTIS TurtleBot3, Apache-2.0).",
+  "drivetrain": "differential",
+  "length_m": 0.178,
+  "width_m": 0.138,
+  "height_m": 0.192,
+  "mass_kg": 0.93,
+  "ground_clearance_m": 0.02,
+  "wheel": {
+    "diameter_m": 0.066,
+    "width_m": 0.022,
+    "count": 2,
+    "driven": true
+  },
+  "motor": {
+    "kind": "dc_gearmotor",
+    "count": 2,
+    "voltage_v": 11.1,
+    "stall_torque_nm": 0.3
+  },
+  "battery": {
+    "chemistry": "lipo",
+    "voltage_v": 11.1,
+    "capacity_mah": 1800
+  },
+  "sensors": [
+    {
+      "kind": "lidar_2d",
+      "position": "top",
+      "range_m": 3.5
+    }
+  ],
+  "component_mass_kg": {
+    "wheels": 0.1,
+    "motors": 0.2,
+    "battery": 0.19,
+    "chassis": 0.3,
+    "electronics": 0.14
+  }
+}

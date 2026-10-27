@@ -3,13 +3,18 @@
 The spec's URDF is for interchange; for the twin we emit SDF directly (the
 format Gazebo simulates) with the DiffDrive system plugin bound to the
 spec's wheel geometry — four-wheel skid-steer is expressed as two driven
-pairs, which is how DiffDrive models skid steering.
+pairs, which is how DiffDrive models skid steering; a differential spec
+gets two driven wheels on a central axle plus passive caster balls.
 
 Runner contract: works on the verified stack (Ubuntu 24.04, Gazebo Harmonic,
 `gz sim` server-only). It publishes Twist commands on the model's cmd_vel
-topic, captures the DiffDrive odometry stream, and returns the measured
-distance / heading for the gate. It never fabricates a result: any failure
-to run raises TwinError with the step that failed.
+topic, captures the DiffDrive odometry stream AND the world's ground-truth
+pose stream (dynamic_pose/info, model entity only), and returns both for
+the gate — the gate judges the motion against ground truth and the
+odometry against ground truth, so a robot whose odometry lies cannot pass
+itself. Fault injection (`wheel_radius_scale`) scales only the physical
+wheel geometry; the plugin keeps the spec radius. It never fabricates a
+result: any failure to run raises TwinError with the step that failed.
 
 Command publish + odometry read go through a transport (see
 make_transport): the in-process gz-transport Python bindings when they are
@@ -38,8 +43,15 @@ class TwinError(RuntimeError):
 
 
 # ---------------------------------------------------------------- SDF model
-def generate_sdf(spec: RobotSpec) -> str:
+def generate_sdf(spec: RobotSpec, *,
+                 geometry_wheel_radius_m: float | None = None) -> str:
     r = spec.wheel.diameter_m / 2.0
+    # Physical wheel geometry radius. Defaults to the spec radius; the
+    # gate's fault injection overrides ONLY this, simulating a robot
+    # whose as-built wheels differ from its paperwork while its odometry
+    # still believes the paperwork (the classic wheel-radius config
+    # lie). The DiffDrive plugin below always uses the spec radius.
+    gr = r if geometry_wheel_radius_m is None else geometry_wheel_radius_m
     chassis_z = spec.ground_clearance_m + spec.height_m / 2.0
     wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0
     wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
@@ -62,18 +74,42 @@ def generate_sdf(spec: RobotSpec) -> str:
            '  </link>']
 
     joints = []
-    for label, x, y in (("front_left", wheel_x, wheel_y),
-                        ("front_right", wheel_x, -wheel_y),
-                        ("rear_left", -wheel_x, wheel_y),
-                        ("rear_right", -wheel_x, -wheel_y)):
+    if spec.drivetrain == "differential":
+        # Two driven wheels on a central axle + passive caster balls
+        # front and rear. Casters are low-friction spheres on fixed
+        # joints: they carry the body's ends without steering geometry.
+        wheel_positions = (("left", 0.0, wheel_y), ("right", 0.0, -wheel_y))
+        caster_r = min(gr, 0.03)
+        for label, cx in (("front", spec.length_m / 2.0 - caster_r),
+                          ("rear", -spec.length_m / 2.0 + caster_r)):
+            out += [
+                f'  <link name="caster_{label}"><pose>{cx:.4f} 0 {caster_r:.4f} 0 0 0</pose>',
+                f'    {box_inertia(0.02, caster_r*2, caster_r*2, caster_r*2)}',
+                '    <collision name="c"><geometry>'
+                f'<sphere><radius>{caster_r}</radius></sphere></geometry>'
+                '<surface><friction><ode><mu>0.05</mu><mu2>0.05</mu2></ode>'
+                '</friction></surface></collision>',
+                '    <visual name="v"><geometry>'
+                f'<sphere><radius>{caster_r}</radius></sphere></geometry></visual>',
+                '  </link>',
+                f'  <joint name="caster_{label}_joint" type="fixed">',
+                f'    <parent>base_link</parent><child>caster_{label}</child>',
+                '  </joint>',
+            ]
+    else:
+        wheel_positions = (("front_left", wheel_x, wheel_y),
+                           ("front_right", wheel_x, -wheel_y),
+                           ("rear_left", -wheel_x, wheel_y),
+                           ("rear_right", -wheel_x, -wheel_y))
+    for label, x, y in wheel_positions:
         out += [
-            f'  <link name="wheel_{label}"><pose>{x:.4f} {y:.4f} {r:.4f} 0 0 0</pose>',
-            f'    {box_inertia(wheel_mass, r*2, spec.wheel.width_m, r*2)}',
+            f'  <link name="wheel_{label}"><pose>{x:.4f} {y:.4f} {gr:.4f} 0 0 0</pose>',
+            f'    {box_inertia(wheel_mass, gr*2, spec.wheel.width_m, gr*2)}',
             f'    <collision name="c"><pose>0 0 0 1.5708 0 0</pose><geometry>'
-            f'<cylinder><radius>{r}</radius><length>{spec.wheel.width_m}</length>'
+            f'<cylinder><radius>{gr}</radius><length>{spec.wheel.width_m}</length>'
             f'</cylinder></geometry></collision>',
             f'    <visual name="v"><pose>0 0 0 1.5708 0 0</pose><geometry>'
-            f'<cylinder><radius>{r}</radius><length>{spec.wheel.width_m}</length>'
+            f'<cylinder><radius>{gr}</radius><length>{spec.wheel.width_m}</length>'
             f'</cylinder></geometry></visual>',
             '  </link>',
             f'  <joint name="wheel_{label}_joint" type="revolute">',
@@ -164,6 +200,27 @@ def extract_odom_poses(text: str):
     end = 0
     for m in _ODOM_POSE.finditer(text):
         poses.append(_pose_from_blocks(m.group("pos"), m.group("ori")))
+        end = m.end()
+    return poses, text[end:]
+
+
+_POSE_NAME = re.compile(r'name:\s*"([^"]+)"')
+
+
+def extract_named_poses(text: str, entity: str):
+    """Like extract_odom_poses, but only poses whose message names
+    `entity` exactly. Pose streams (PosePublisher) can interleave poses
+    for links and nested entities ("robot::wheel_left"); ground truth
+    for the gate is the model entity alone. The consumed prefix still
+    advances past every complete pose block, matching or not, so the
+    stream tail stays bounded by one partial message."""
+    poses = []
+    end = 0
+    for m in _ODOM_POSE.finditer(text):
+        head = text[max(0, m.start() - 2000):m.start()]
+        names = _POSE_NAME.findall(head)
+        if names and names[-1] == entity:
+            poses.append(_pose_from_blocks(m.group("pos"), m.group("ori")))
         end = m.end()
     return poses, text[end:]
 
@@ -317,10 +374,11 @@ def _import_bindings():
                               "python")
     try:
         from gz.msgs10.odometry_pb2 import Odometry
+        from gz.msgs10.pose_v_pb2 import Pose_V
         from gz.msgs10.twist_pb2 import Twist
     except Exception:
         return None
-    return Node, Twist, Odometry
+    return Node, Twist, Odometry, Pose_V
 
 
 class _BindingsTransport:
@@ -337,8 +395,8 @@ class _BindingsTransport:
 
     _RATE_HZ = 20.0
 
-    def __init__(self, log_path: Path, bindings):
-        Node, Twist, Odometry = bindings
+    def __init__(self, log_path: Path, bindings, model_name: str = ""):
+        Node, Twist, Odometry, Pose_V = bindings
         self._Twist = Twist
         self._node = Node()
         self._pub = self._node.advertise("/cmd_vel", Twist)
@@ -350,6 +408,10 @@ class _BindingsTransport:
         self._log = log_path.open("ab")
         self._closed = False
         self._node.subscribe(Odometry, "/odom", self._on_odom)
+        self._model_name = model_name
+        self.truth_latest: tuple[float, float, float] | None = None
+        self._node.subscribe(Pose_V, "/world/robotforge_world/dynamic_pose/info",
+                             self._on_pose_v)
         self._thread = threading.Thread(target=self._publish_loop,
                                          daemon=True)
         self._thread.start()
@@ -366,6 +428,14 @@ class _BindingsTransport:
             self._log.flush()
         except Exception:
             pass  # the log is for inspection; never let it kill odometry
+
+    def _on_pose_v(self, msg) -> None:
+        for pose in msg.pose:
+            if pose.name == self._model_name:
+                p, q = pose.position, pose.orientation
+                with self._lock:
+                    self.truth_latest = (p.x, p.y, _yaw_from_quat(
+                        q.x, q.y, q.z, q.w))
 
     def _publish_loop(self) -> None:
         period = 1.0 / self._RATE_HZ
@@ -386,6 +456,10 @@ class _BindingsTransport:
         with self._lock:
             return self.latest
 
+    def poll_truth(self) -> tuple[float, float, float] | None:
+        with self._lock:
+            return self.truth_latest
+
     def close(self) -> None:
         self.set(0.0, 0.0)
         time.sleep(0.15)  # let a few zero Twists out before teardown
@@ -398,8 +472,10 @@ class _CliTransport:
     """Adapter giving the streamed-CLI pair (_OdomStream + _CmdVelStream)
     the same set/poll/close interface as _BindingsTransport."""
 
-    def __init__(self, log_path: Path):
+    def __init__(self, log_path: Path, model_name: str = ""):
         self._odom = _OdomStream(log_path)
+        self._truth = _TruthStream(
+            log_path.with_name("truth.txt"), model_name)
         self._cmd = _CmdVelStream()
 
     def set(self, linear: float, angular: float) -> None:
@@ -408,21 +484,65 @@ class _CliTransport:
     def poll(self) -> tuple[float, float, float] | None:
         return self._odom.poll()
 
+    def poll_truth(self) -> tuple[float, float, float] | None:
+        return self._truth.poll()
+
     def close(self) -> None:
         self._cmd.stop()
         self._odom.close()
+        self._truth.close()
 
 
-def make_transport(log_path: Path):
+
+class _TruthStream:
+    """Ground-truth poses from the world's dynamic_pose/info echo (CLI
+    transport): the same long-lived `gz topic -e` pattern as _OdomStream,
+    parsed with extract_named_poses so only the model entity counts."""
+
+    def __init__(self, log_path: Path, model_name: str):
+        self._log = log_path.open("wb")
+        self._proc = subprocess.Popen(
+            ["gz", "topic", "-e", "-t",
+             "/world/robotforge_world/dynamic_pose/info"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            start_new_session=True)
+        self._tail = ""
+        self._model_name = model_name
+        self.latest: tuple[float, float, float] | None = None
+
+    def poll(self) -> tuple[float, float, float] | None:
+        fd = self._proc.stdout.fileno()
+        while True:
+            ready, _, _ = select.select([fd], [], [], 0)
+            if not ready:
+                break
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            self._log.write(chunk)
+            self._log.flush()
+            self._tail += chunk.decode(errors="replace")
+        if self._tail:
+            poses, self._tail = extract_named_poses(self._tail,
+                                                    self._model_name)
+            if poses:
+                self.latest = poses[-1]
+        return self.latest
+
+    def close(self) -> None:
+        _kill_group(self._proc)
+        self._log.close()
+
+def make_transport(log_path: Path, model_name: str = ""):
     """Return (transport, name): the gz-transport bindings when they are
     importable, otherwise the streamed-CLI fallback. The name is printed
     at the start of every run, so a result always states how the twin was
     actuated and measured."""
     bindings = _import_bindings()
     if bindings is not None:
-        return _BindingsTransport(log_path, bindings), \
+        return _BindingsTransport(log_path, bindings, model_name), \
             "gz-transport bindings (gz.transport13)"
-    return _CliTransport(log_path), "gz CLI (streamed)"
+    return _CliTransport(log_path, model_name), "gz CLI (streamed)"
 
 
 def _pose_stable(a: tuple[float, float, float],
@@ -435,7 +555,8 @@ def _pose_stable(a: tuple[float, float, float],
 
 def run_motion_check(spec: RobotSpec, workdir: Path, *,
                      drive_m: float = 1.0, speed_mps: float = 0.25,
-                     turn_deg: float = 90.0, turn_rate_dps: float = 45.0) -> dict:
+                     turn_deg: float = 90.0, turn_rate_dps: float = 45.0,
+                     wheel_radius_scale: float = 1.0) -> dict:
     """Run drive + turn in headless Gazebo; return measured results.
 
     Closed-loop stop: each phase streams a constant velocity command and
@@ -458,17 +579,21 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
     workdir.mkdir(parents=True, exist_ok=True)
     model = workdir / "model.sdf"
     world = workdir / "world.sdf"
-    model.write_text(generate_sdf(spec))
+    model.write_text(generate_sdf(
+        spec, geometry_wheel_radius_m=
+        spec.wheel.diameter_m / 2.0 * wheel_radius_scale))
     world.write_text(generate_world(spec, str(model.resolve())))
 
     gz = subprocess.Popen(["gz", "sim", "-s", "-r", str(world)],
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                          start_new_session=True)
     transport = None
     try:
         time.sleep(4.0)  # world load
         if gz.poll() is not None:
             raise TwinError("gz sim exited during startup")
-        transport, transport_name = make_transport(workdir / "odom.txt")
+        transport, transport_name = make_transport(workdir / "odom.txt",
+                                                   spec.name)
         print(f"transport: {transport_name}")
 
         def await_pose(timeout_s: float) -> tuple[float, float, float]:
@@ -515,7 +640,18 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
                 raise TwinError("no odometry poses captured from the twin run")
             return prev
 
+        def await_truth(timeout_s: float) -> tuple[float, float, float]:
+            deadline = time.monotonic() + timeout_s
+            while time.monotonic() < deadline:
+                pose = transport.poll_truth()
+                if pose is not None:
+                    return pose
+                time.sleep(0.02)
+            raise TwinError(
+                "no ground-truth poses captured from the twin run")
+
         start_pose = await_pose(10.0)
+        truth_start = await_truth(10.0)
 
         # Drive phase: stream the velocity; stop at the target distance.
         transport.set(speed_mps, 0.0)
@@ -526,6 +662,8 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
             transport.set(0.0, 0.0)
         mid_pose = settle()
         measured_drive = distance_between(start_pose, mid_pose)
+        truth_mid = await_truth(10.0)
+        truth_drive = distance_between(truth_start, truth_mid)
 
         # Turn phase: stream the rate; stop at the target heading change.
         transport.set(0.0, math.radians(turn_rate_dps))
@@ -535,14 +673,16 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
         finally:
             transport.set(0.0, 0.0)
         final_pose = settle()
-        return {"drive": {"commanded_m": drive_m, "measured_m": measured_drive},
+        truth_final = await_truth(10.0)
+        return {"drive": {"commanded_m": drive_m,
+                          "measured_m": measured_drive,
+                          "truth_m": truth_drive},
                 "turn": {"commanded_deg": turn_deg,
-                         "measured_deg": final_pose[2]}}
+                         "measured_deg": final_pose[2],
+                         "truth_deg": abs(heading_change_deg(
+                             truth_mid[2], truth_final[2]))},
+                "injected_wheel_radius_scale": wheel_radius_scale}
     finally:
         if transport is not None:
             transport.close()
-        gz.terminate()
-        try:
-            gz.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            gz.kill()
+        _kill_group(gz)

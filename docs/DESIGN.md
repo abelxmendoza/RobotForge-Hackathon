@@ -66,6 +66,16 @@ Implemented in `gate.py` as `DEFAULT_THRESHOLDS`.
 **Andino** (open-source differential-drive robot, ROS 2 native, published
 dimensions and Gazebo models) cross-checks the gate beyond the demo robot.
 
+**Clarification (2026-10-26, P1 audit):** the gate's live validation runs to
+date use **pathfinder** (demo robot) and the **TurtleBot3 Burger**
+(`examples/turtlebot3-burger.json`, published dimensions) as the known-good
+differential-drive reference — the Burger is the robot behind the landing
+page's "both reference robots pass" status. Andino remains the decided
+*next* reference; its spec is not yet in `examples/`. The three names are
+not interchangeable: Burger = gated reference today, Andino = decided
+addition, TurtleBot3 Waffle Pi (`examples/photo-turtlebot.json`) = photo
+intake example only.
+
 ## Demo discipline (from the Official Rules, Oct 25, 2026)
 
 - Demo video: **3 minutes**, highlighting only functionality built during the event.
