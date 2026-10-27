@@ -476,6 +476,30 @@ def resolve_kind(kind_id: str, overrides: dict | None = None,
             "extras": extras, "warnings": warnings}
 
 
+def kinds_document() -> dict:
+    """The kinds as data for other surfaces (the Forge Guide chat
+    loads catalog/kinds.json and plans builds from it). kinds.py
+    stays the single source of truth; a test keeps the committed
+    JSON in sync with this document."""
+    out = []
+    for kid, k in KINDS.items():
+        out.append({
+            "id": kid,
+            "label": k["label"],
+            "one_liner": k["one_liner"],
+            "gate_pack": k["gate_pack"],
+            "gate_note": k.get("gate_note", ""),
+            "reference": k["reference"],
+            "profile": k["base"] is None,
+            "locked": k["locked"],
+            "params": [{"key": p["key"], "label": p["label"],
+                        "unit": p["unit"], "default": p["default"]}
+                       for p in k["params"]],
+            "bom_hints": k.get("bom_hints", []),
+        })
+    return {"kinds": out}
+
+
 def format_kind_list() -> str:
     lines = ["starter kinds (gate badge shown — a kind never "
              "implies a gate that does not exist):"]

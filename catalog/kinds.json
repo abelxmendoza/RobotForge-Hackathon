@@ -1,0 +1,478 @@
+{
+  "kinds": [
+    {
+      "id": "differential",
+      "label": "Differential rover",
+      "one_liner": "Two driven wheels + caster support \u2014 the Burger pattern, generalized.",
+      "gate_pack": "live",
+      "gate_note": "",
+      "reference": "TurtleBot3 Burger (specimen #002, gated)",
+      "profile": false,
+      "locked": [
+        "2 driven wheels on one axle",
+        "caster support",
+        "DiffDrive twin"
+      ],
+      "params": [
+        {
+          "key": "wheel_diameter_mm",
+          "label": "Wheel diameter",
+          "unit": "mm",
+          "default": 66
+        },
+        {
+          "key": "wheel_width_mm",
+          "label": "Wheel width",
+          "unit": "mm",
+          "default": 22
+        },
+        {
+          "key": "body_length_mm",
+          "label": "Body length",
+          "unit": "mm",
+          "default": 178
+        },
+        {
+          "key": "body_width_mm",
+          "label": "Body width",
+          "unit": "mm",
+          "default": 138
+        },
+        {
+          "key": "decks",
+          "label": "Decks (stacked plates)",
+          "unit": "",
+          "default": 2
+        },
+        {
+          "key": "ground_clearance_mm",
+          "label": "Ground clearance",
+          "unit": "mm",
+          "default": 20
+        },
+        {
+          "key": "battery_cells",
+          "label": "Battery cells (LiPo)",
+          "unit": "S",
+          "default": 3
+        },
+        {
+          "key": "battery_capacity_mah",
+          "label": "Battery capacity",
+          "unit": "mAh",
+          "default": 1800
+        },
+        {
+          "key": "mass_kg",
+          "label": "Total mass (no payload)",
+          "unit": "kg",
+          "default": 0.93
+        },
+        {
+          "key": "payload_kg",
+          "label": "Payload margin",
+          "unit": "kg",
+          "default": 0
+        }
+      ],
+      "bom_hints": []
+    },
+    {
+      "id": "skid-steer",
+      "label": "Skid-steer rover",
+      "one_liner": "Four driven wheels, steered by skidding \u2014 the Pathfinder pattern.",
+      "gate_pack": "live",
+      "gate_note": "",
+      "reference": "Pathfinder (gated example; its turn check fails on scrub, honestly)",
+      "profile": false,
+      "locked": [
+        "4 driven wheels as two DiffDrive pairs",
+        "skid steering (turns scrub \u2014 the gate shows it)"
+      ],
+      "params": [
+        {
+          "key": "wheel_diameter_mm",
+          "label": "Wheel diameter",
+          "unit": "mm",
+          "default": 100
+        },
+        {
+          "key": "wheel_width_mm",
+          "label": "Wheel width",
+          "unit": "mm",
+          "default": 32
+        },
+        {
+          "key": "body_length_mm",
+          "label": "Body length",
+          "unit": "mm",
+          "default": 420
+        },
+        {
+          "key": "body_width_mm",
+          "label": "Body width",
+          "unit": "mm",
+          "default": 310
+        },
+        {
+          "key": "height_mm",
+          "label": "Body height",
+          "unit": "mm",
+          "default": 180
+        },
+        {
+          "key": "ground_clearance_mm",
+          "label": "Ground clearance",
+          "unit": "mm",
+          "default": 35
+        },
+        {
+          "key": "battery_cells",
+          "label": "Battery cells (LiPo)",
+          "unit": "S",
+          "default": 4
+        },
+        {
+          "key": "battery_capacity_mah",
+          "label": "Battery capacity",
+          "unit": "mAh",
+          "default": 5200
+        },
+        {
+          "key": "mass_kg",
+          "label": "Total mass (no payload)",
+          "unit": "kg",
+          "default": 3.4
+        },
+        {
+          "key": "payload_kg",
+          "label": "Payload margin",
+          "unit": "kg",
+          "default": 0
+        }
+      ],
+      "bom_hints": []
+    },
+    {
+      "id": "mecanum",
+      "label": "Mecanum rover",
+      "one_liner": "Skid-steer body on mecanum rollers \u2014 drives sideways, at a price.",
+      "gate_pack": "partial",
+      "gate_note": "Gate grades drive + turn only; strafe is not gated, and mecanum odometry is unreliable by design.",
+      "reference": "Skid-steer body plan + mecanum wheels",
+      "profile": false,
+      "locked": [
+        "4 mecanum wheels",
+        "drive + turn gate only"
+      ],
+      "params": [
+        {
+          "key": "wheel_diameter_mm",
+          "label": "Wheel diameter",
+          "unit": "mm",
+          "default": 100
+        },
+        {
+          "key": "wheel_width_mm",
+          "label": "Wheel width",
+          "unit": "mm",
+          "default": 32
+        },
+        {
+          "key": "body_length_mm",
+          "label": "Body length",
+          "unit": "mm",
+          "default": 420
+        },
+        {
+          "key": "body_width_mm",
+          "label": "Body width",
+          "unit": "mm",
+          "default": 310
+        },
+        {
+          "key": "height_mm",
+          "label": "Body height",
+          "unit": "mm",
+          "default": 180
+        },
+        {
+          "key": "ground_clearance_mm",
+          "label": "Ground clearance",
+          "unit": "mm",
+          "default": 35
+        },
+        {
+          "key": "roller_config",
+          "label": "Roller configuration",
+          "unit": "",
+          "default": "X"
+        },
+        {
+          "key": "battery_cells",
+          "label": "Battery cells (LiPo)",
+          "unit": "S",
+          "default": 4
+        },
+        {
+          "key": "battery_capacity_mah",
+          "label": "Battery capacity",
+          "unit": "mAh",
+          "default": 5200
+        },
+        {
+          "key": "mass_kg",
+          "label": "Total mass (no payload)",
+          "unit": "kg",
+          "default": 3.4
+        },
+        {
+          "key": "payload_kg",
+          "label": "Payload margin",
+          "unit": "kg",
+          "default": 0
+        }
+      ],
+      "bom_hints": []
+    },
+    {
+      "id": "tracked",
+      "label": "Tracked rover",
+      "one_liner": "Tracks for rough ground, on the skid-steer body plan.",
+      "gate_pack": "partial",
+      "gate_note": "The twin approximates tracks as skid-steer wheel pairs: scrub is representative, track slip is not simulated.",
+      "reference": "Skid-steer body plan, tracks approximated",
+      "profile": false,
+      "locked": [
+        "twin models tracks as skid-steer wheel pairs"
+      ],
+      "params": [
+        {
+          "key": "sprocket_diameter_mm",
+          "label": "Sprocket diameter",
+          "unit": "mm",
+          "default": 80
+        },
+        {
+          "key": "track_width_mm",
+          "label": "Track width",
+          "unit": "mm",
+          "default": 40
+        },
+        {
+          "key": "body_length_mm",
+          "label": "Body length (\u2248 track contact)",
+          "unit": "mm",
+          "default": 420
+        },
+        {
+          "key": "body_width_mm",
+          "label": "Body width",
+          "unit": "mm",
+          "default": 310
+        },
+        {
+          "key": "height_mm",
+          "label": "Body height",
+          "unit": "mm",
+          "default": 180
+        },
+        {
+          "key": "ground_clearance_mm",
+          "label": "Ground clearance",
+          "unit": "mm",
+          "default": 35
+        },
+        {
+          "key": "battery_cells",
+          "label": "Battery cells (LiPo)",
+          "unit": "S",
+          "default": 4
+        },
+        {
+          "key": "battery_capacity_mah",
+          "label": "Battery capacity",
+          "unit": "mAh",
+          "default": 5200
+        },
+        {
+          "key": "mass_kg",
+          "label": "Total mass (no payload)",
+          "unit": "kg",
+          "default": 3.4
+        },
+        {
+          "key": "payload_kg",
+          "label": "Payload margin",
+          "unit": "kg",
+          "default": 0
+        }
+      ],
+      "bom_hints": []
+    },
+    {
+      "id": "ackermann",
+      "label": "RC car (Ackermann)",
+      "one_liner": "One drive motor, real steering geometry up front.",
+      "gate_pack": "partial",
+      "gate_note": "The twin grades drive/turn with the 4-wheel approximation, not true Ackermann geometry.",
+      "reference": "RC car class template",
+      "profile": false,
+      "locked": [
+        "1 drive motor + steering servo (BOM)",
+        "4 wheels, front steering"
+      ],
+      "params": [
+        {
+          "key": "wheel_diameter_mm",
+          "label": "Wheel diameter",
+          "unit": "mm",
+          "default": 90
+        },
+        {
+          "key": "body_length_mm",
+          "label": "Body length (\u2248 wheelbase + wheel \u00d8)",
+          "unit": "mm",
+          "default": 400
+        },
+        {
+          "key": "body_width_mm",
+          "label": "Track width (body width)",
+          "unit": "mm",
+          "default": 210
+        },
+        {
+          "key": "height_mm",
+          "label": "Body height",
+          "unit": "mm",
+          "default": 140
+        },
+        {
+          "key": "ground_clearance_mm",
+          "label": "Ground clearance",
+          "unit": "mm",
+          "default": 25
+        },
+        {
+          "key": "max_steer_deg",
+          "label": "Max steering angle",
+          "unit": "deg",
+          "default": 30
+        },
+        {
+          "key": "battery_cells",
+          "label": "Battery cells (LiPo)",
+          "unit": "S",
+          "default": 3
+        },
+        {
+          "key": "battery_capacity_mah",
+          "label": "Battery capacity",
+          "unit": "mAh",
+          "default": 2200
+        },
+        {
+          "key": "mass_kg",
+          "label": "Total mass (no payload)",
+          "unit": "kg",
+          "default": 2.2
+        },
+        {
+          "key": "payload_kg",
+          "label": "Payload margin",
+          "unit": "kg",
+          "default": 0
+        }
+      ],
+      "bom_hints": []
+    },
+    {
+      "id": "quadcopter",
+      "label": "Quadcopter",
+      "one_liner": "Four motors, props, a flight controller \u2014 parts and prints, no gate yet.",
+      "gate_pack": "catalogue-only",
+      "gate_note": "No flight gate pack exists; this kind drives the catalogue, inventory and print kit only.",
+      "reference": "Quadcopter class template",
+      "profile": true,
+      "locked": [
+        "BOM-level kind \u2014 no spec, no twin, no gate"
+      ],
+      "params": [
+        {
+          "key": "frame_wheelbase_mm",
+          "label": "Frame wheelbase (motor to motor, diagonal)",
+          "unit": "mm",
+          "default": 220
+        },
+        {
+          "key": "prop_in",
+          "label": "Propeller size",
+          "unit": "in",
+          "default": 5
+        },
+        {
+          "key": "battery_cells",
+          "label": "Battery cells (LiPo)",
+          "unit": "S",
+          "default": 4
+        },
+        {
+          "key": "motor_kv",
+          "label": "Motor KV",
+          "unit": "KV",
+          "default": 1960
+        }
+      ],
+      "bom_hints": [
+        "4\u00d7 brushless motors + spares",
+        "4-in-1 ESC (BLHeli_S class)",
+        "flight controller (F405 class)",
+        "props \u00d74 + spares",
+        "frame + arms (printable)"
+      ]
+    },
+    {
+      "id": "arm",
+      "label": "Robot arm",
+      "one_liner": "A chain of joint servos with a gripper \u2014 parts and prints, no gate yet.",
+      "gate_pack": "catalogue-only",
+      "gate_note": "No arm gate pack exists; this kind drives the catalogue, inventory and print kit only.",
+      "reference": "Arm class template",
+      "profile": true,
+      "locked": [
+        "BOM-level kind \u2014 no spec, no twin, no gate"
+      ],
+      "params": [
+        {
+          "key": "dof",
+          "label": "Degrees of freedom",
+          "unit": "",
+          "default": 3
+        },
+        {
+          "key": "reach_mm",
+          "label": "Reach (links summed)",
+          "unit": "mm",
+          "default": 300
+        },
+        {
+          "key": "servo_torque_kgcm",
+          "label": "Joint servo torque class",
+          "unit": "kg\u00b7cm",
+          "default": 30
+        },
+        {
+          "key": "gripper",
+          "label": "Gripper",
+          "unit": "",
+          "default": "yes"
+        }
+      ],
+      "bom_hints": [
+        "joint servos \u00d7DOF (STS3215 class)",
+        "link shells + brackets (printable)",
+        "base bearing + mounting plate"
+      ]
+    }
+  ]
+}

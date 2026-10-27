@@ -504,6 +504,282 @@
       }).join('') + '</ul><p>Ask again with the fuller name.</p>';
   }
 
+
+  /* ---------------- build planning ----------------
+   * Planning answers are assembled from two recorded sources:
+   * the starter kinds (catalog/kinds.json — kind, gate badge,
+   * starter parameters) and the class templates in parts.json
+   * (the reference BOM as required part ids x qty). Nothing here
+   * invents a part or a verdict: a kind with no gate pack says
+   * so in its own badge. */
+
+  var KIND_TEMPLATE = {
+    differential: 'rover_diff_drive',
+    'skid-steer': 'rover_skid_steer',
+    mecanum: 'rover_skid_steer',
+    tracked: 'rover_skid_steer',
+    ackermann: 'rc_car',
+    quadcopter: 'quadcopter_5inch',
+    arm: 'robot_arm_6dof'
+  };
+  var KIND_TEMPLATE_NOTE = {
+    mecanum: 'Uses the skid-steer template; its plain wheels become mecanum wheels (the template lists one as an optional part).',
+    tracked: 'Uses the skid-steer template; tracks are not a catalogue part yet, so the template\u2019s wheels stand in for the track units.'
+  };
+  var KIND_PHRASES = [
+    { id: 'differential', phrases: ['differential'] },
+    { id: 'skid-steer', phrases: ['skid steer', 'skidsteer'] },
+    { id: 'mecanum', phrases: ['mecanum'] },
+    { id: 'tracked', phrases: ['tracked', 'treads', 'tank'] },
+    { id: 'ackermann', phrases: ['ackermann', 'rc car'] },
+    { id: 'quadcopter', phrases: ['quadcopter', 'quad', 'drone'] },
+    { id: 'arm', phrases: ['robot arm', 'robotic arm'] }
+  ];
+
+  function findKindId(qt) {
+    for (var i = 0; i < KIND_PHRASES.length; i++) {
+      var ps = KIND_PHRASES[i].phrases;
+      for (var j = 0; j < ps.length; j++) {
+        if (phraseIn(qt, ps[j])) return KIND_PHRASES[i].id;
+      }
+    }
+    return null;
+  }
+  function kindById(ctx, id) {
+    var found = null;
+    (ctx.data.kinds || []).forEach(function (k) {
+      if (k.id === id) found = k;
+    });
+    return found;
+  }
+  function templateByName(ctx, name) {
+    var found = null;
+    (ctx.data.templateList || []).forEach(function (t) {
+      if (t.name === name) found = t;
+    });
+    return found;
+  }
+  function partById(ctx, id) {
+    var found = null;
+    ctx.data.parts.forEach(function (p) { if (p.id === id) found = p; });
+    return found;
+  }
+  function gateBadge(pack) {
+    return { live: 'gate pack LIVE', partial: 'gate pack PARTIAL',
+      'catalogue-only': 'CATALOGUE ONLY \u2014 no gate pack yet',
+      roadmap: 'no gate pack yet (roadmap)' }[pack] || pack;
+  }
+  function kindHit(kind, root) {
+    return { kind: 'kind', id: kind.id,
+             label: kind.label + ' \u2014 starter kind',
+             route: root + 'app/forge/' };
+  }
+  function bomItems(ctx, template) {
+    return Object.keys(template.required || {}).map(function (id) {
+      return { id: id, qty: template.required[id],
+               part: partById(ctx, id) };
+    }).map(function (it) {
+      it.name = it.part ? it.part.name : it.id;
+      return it;
+    });
+  }
+
+  function planAnswer(ctx, kind) {
+    var out = '<p><strong>' + esc(kind.label) + '</strong> \u2014 ' +
+      esc(kind.one_liner) + '</p>';
+    out += '<p><strong>' + esc(gateBadge(kind.gate_pack)) + '</strong>' +
+      (kind.gate_note ? ' ' + esc(kind.gate_note) : '') +
+      '<br><span class="fc-dim">Reference: ' + esc(kind.reference) +
+      '</span></p>';
+    var hits = [kindHit(kind, ctx.root)];
+    var tname = KIND_TEMPLATE[kind.id];
+    var template = tname ? templateByName(ctx, tname) : null;
+    if (template) {
+      var items = bomItems(ctx, template);
+      out += '<p><strong>The reference build</strong> (the ' +
+        esc(template.label) + ' template):</p><ul>' +
+        items.map(function (it) {
+          return '<li>' + esc(it.name) + ' \u00d7' + it.qty + '</li>';
+        }).join('') + '</ul>';
+      items.slice(0, 5).forEach(function (it) {
+        if (it.part) hits.push(partHit(it.part));
+      });
+      var opt = (template.optional || []).length;
+      if (opt) {
+        out += '<p>Plus ' + opt + ' optional parts in the template ' +
+          '(sensors, safety, upgrades).</p>';
+      }
+      if (KIND_TEMPLATE_NOTE[kind.id]) {
+        out += '<p>' + esc(KIND_TEMPLATE_NOTE[kind.id]) + '</p>';
+      }
+    } else if (kind.bom_hints && kind.bom_hints.length) {
+      out += '<p><strong>The build, at BOM level:</strong></p><ul>' +
+        kind.bom_hints.map(function (h) {
+          return '<li>' + esc(h) + '</li>';
+        }).join('') + '</ul>';
+    }
+    var params = (kind.params || []).slice(0, 5);
+    if (params.length) {
+      out += '<p><strong>Starter parameters</strong> (defaults): ' +
+        params.map(function (p) {
+          return esc(p.label) + ' ' + esc(p.default) +
+            (p.unit ? ' ' + esc(p.unit) : '');
+        }).join(' \u00b7 ') + '</p>';
+    }
+    out += '<p>Start from this kind in the <a href="' +
+      esc(ctx.root + 'app/forge/') + '">Forge</a>, or ask me what ' +
+      'you still need: \u2018I have wheels and motors, what else do ' +
+      'I need for a ' + esc(kind.id) + ' build?\u2019</p>';
+    return { html: out, hits: hits };
+  }
+
+  function kindPickerAnswer(ctx, lead) {
+    var kinds = ctx.data.kinds || [];
+    if (!kinds.length) return null;
+    var out = '<p>' + esc(lead) + '</p><ul>' + kinds.map(function (k) {
+      return '<li><strong>' + esc(k.label) + '</strong> \u2014 ' +
+        esc(k.one_liner) + ' <em>' + esc(gateBadge(k.gate_pack)) +
+        '</em></li>';
+    }).join('') + '</ul><p>Name a kind and I\u2019ll lay out its ' +
+      'reference build.</p>';
+    return { html: out,
+             hits: kinds.map(function (k) {
+               return kindHit(k, ctx.root);
+             }) };
+  }
+
+  function haveNeedAnswer(ctx, q, qt, kind) {
+    var ownedIds = {}, ownedClasses = {}, classWords = [];
+    findParts(q, qt, ctx.data.parts).forEach(function (h) {
+      if (h.score >= 7) ownedIds[h.part.id] = 1;
+    });
+    CLASS_SYNONYMS.forEach(function (d) {
+      if (d.words.some(function (w) { return qt.indexOf(w) !== -1; })) {
+        d.classes.forEach(function (c) {
+          ownedClasses[c] = 1;
+          if (classWords.indexOf(c) === -1) classWords.push(c);
+        });
+      }
+    });
+    var tname = KIND_TEMPLATE[kind.id];
+    var template = tname ? templateByName(ctx, tname) : null;
+    if (!template) {
+      return { html: '<p>For a ' + esc(kind.label) + ' there is no ' +
+          'part-by-part template yet \u2014 it is a BOM-level kind (' +
+          esc(gateBadge(kind.gate_pack)) + '). Its build list:</p><ul>' +
+          (kind.bom_hints || []).map(function (h) {
+            return '<li>' + esc(h) + '</li>';
+          }).join('') + '</ul>',
+        hits: [kindHit(kind, ctx.root)] };
+    }
+    var missing = [], covered = [];
+    bomItems(ctx, template).forEach(function (it) {
+      var cls = it.part ? it.part.part_class : null;
+      if (ownedIds[it.id] || (cls && ownedClasses[cls])) {
+        covered.push(it);
+      } else { missing.push(it); }
+    });
+    var haveBits = [];
+    Object.keys(ownedIds).forEach(function (id) {
+      var p = partById(ctx, id);
+      if (p) haveBits.push(p.name);
+    });
+    classWords.forEach(function (c) {
+      haveBits.push(c.replace(/_/g, ' ') + ' (class)');
+    });
+    var out = '<p><strong>' + esc(kind.label) + '</strong> \u2014 ' +
+      esc(gateBadge(kind.gate_pack)) + '</p>';
+    out += '<p>Counting what you named (' +
+      (haveBits.length ? esc(haveBits.join(', ')) : 'nothing specific') +
+      '), the ' + esc(template.label) + ' template still needs:</p>';
+    if (missing.length) {
+      out += '<ul>' + missing.map(function (it) {
+        return '<li>' + esc(it.name) + ' \u00d7' + it.qty + '</li>';
+      }).join('') + '</ul>';
+    } else {
+      out += '<p><strong>Nothing \u2014 the required list is ' +
+        'covered.</strong> The template also lists ' +
+        ((template.optional || []).length) + ' optional parts.</p>';
+    }
+    if (covered.length && missing.length) {
+      out += '<p>Already covered: ' + covered.map(function (it) {
+        return esc(it.name);
+      }).join(', ') + '.</p>';
+    }
+    out += '<p><span class="fc-dim">Counting is by part class: ' +
+      'naming \u2018wheels\u2019 covers the template\u2019s wheel line, ' +
+      'whatever the specific wheel. Quantities are the ' +
+      'template\u2019s.</span></p>';
+    var hits = [kindHit(kind, ctx.root)];
+    missing.slice(0, 5).forEach(function (it) {
+      if (it.part) hits.push(partHit(it.part));
+    });
+    return { html: out, hits: hits };
+  }
+
+  var BUILD_VERBS = ['build', 'building', 'plan', 'planning',
+    'assemble', 'assembling'];
+  function planningAnswer(ctx, q, qt) {
+    /* Pricing questions belong to the topics table, not planning. */
+    if (qt.indexOf('cost') !== -1 || qt.indexOf('price') !== -1 ||
+        qt.indexOf('expensive') !== -1) return null;
+    var kindId = findKindId(qt);
+    var kind = kindId ? kindById(ctx, kindId) : null;
+    var hasBuild = BUILD_VERBS.some(function (v) {
+      return qt.indexOf(v) !== -1;
+    }) || (qt.indexOf('start') !== -1 &&
+           (qt.indexOf('robot') !== -1 || !!kind)) ||
+      (qt.indexOf('new') !== -1 && qt.indexOf('robot') !== -1) ||
+      (qt.indexOf('custom') !== -1 && qt.indexOf('robot') !== -1);
+    var needPhrase = phraseIn(qt, 'what do i need') ||
+      phraseIn(qt, 'parts do i need') || phraseIn(qt, 'do i need') ||
+      phraseIn(qt, 'what else') || phraseIn(qt, 'whats missing') ||
+      phraseIn(qt, 'am i missing');
+    var havePhrase = phraseIn(qt, 'i have') ||
+      phraseIn(qt, 'i already have') || phraseIn(qt, 'i own') ||
+      phraseIn(qt, 'i got');
+    var missingAsk = havePhrase ||
+      (needPhrase && (qt.indexOf('else') !== -1 ||
+                      qt.indexOf('missing') !== -1));
+
+    if (missingAsk) {
+      if (kind) return haveNeedAnswer(ctx, q, qt, kind);
+      return kindPickerAnswer(ctx, 'Tell me which kind you are ' +
+        'building and I will diff what you have against its ' +
+        'reference build. The starter kinds:');
+    }
+    if (kind && (hasBuild || needPhrase)) return planAnswer(ctx, kind);
+    if (needPhrase && !kind) {
+      /* "What motors do I need for a rover?" is a catalogue
+       * question in planning clothes — the filter answers it. */
+      var fq = filterPartsQuery(q, qt, ctx.data.parts);
+      if (fq) return fq;
+    }
+    /* Recommendation routing runs before the generic picker:
+     * "what battery should I use for a 4S build?" names a build
+     * but asks a catalogue question — strip the modal words and
+     * let the filter answer with the attribute that is meant. */
+    if (qt.indexOf('should') !== -1 ||
+        qt.indexOf('recommend') !== -1) {
+      var cleaned = qt.filter(function (tk) {
+        return ['should', 'would', 'recommend', 'best', 'pick',
+          'choose', 'use', 'get', 'buy', 'build'].indexOf(tk) === -1;
+      }).join(' ');
+      var rf = filterPartsQuery(cleaned, tokens(cleaned),
+        ctx.data.parts);
+      if (rf) {
+        rf.html = '<p>From the catalogue:</p>' + rf.html;
+        return rf;
+      }
+    }
+    if (hasBuild || needPhrase) {
+      return kindPickerAnswer(ctx, 'Every custom build starts ' +
+        'from a starter kind \u2014 a body plan with real defaults ' +
+        'and an honest gate badge. Pick one:');
+    }
+    return null;
+  }
+
   /* ---------------- data-driven topic handlers ---------------- */
 
   var HANDLERS = {
@@ -651,6 +927,8 @@
         }),
         parts: data.parts || [],
         templates: data.templates || 0,
+        templateList: data.templateList || [],
+        kinds: data.kinds || [],
         reports: data.reports || null
       },
       root: data.root || '',
@@ -705,6 +983,12 @@
                  }) };
       }
 
+      /* 2.2 build planning: kinds + templates + have-vs-need.
+       * "What do I need to build..." plans a build here instead
+       * of falling through to word matches or the fallback. */
+      var plan = planningAnswer(ctx, q, qt);
+      if (plan) return plan;
+
       /* 2.5 query cards: catalogue filter questions ("show me 4S
        * batteries", "parts with xt60", bare "lidar"). Only fires on a
        * real filter signal and only when it finds something; otherwise
@@ -753,7 +1037,7 @@
         html: '<p>I don&rsquo;t have that in RobotForge&rsquo;s recorded data, and ' +
           'I&rsquo;d rather say so than guess.</p>' +
           '<p>I can answer about the Robodex robots and their gate verdicts, the ' +
-          'parts catalogue, how the gate works and its thresholds, and how ' +
+          'parts catalogue, planning a build from a starter kind, how the gate works and its thresholds, and how ' +
           'RobotForge works. Try one of these:</p>',
         chips: chips.length ? chips : suggestions,
         /* The one answer chat.js may route to a live model when a
