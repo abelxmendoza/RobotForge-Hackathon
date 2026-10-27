@@ -20,6 +20,11 @@ async function fetchJSON(path) {
   return r.json();
 }
 
+/* AI-generated illustrations (app/app-images.js). Real robots always
+   lead with their official photos (catalog image_url); generated art is
+   used only where no photo exists and is captioned as AI work. */
+const RFI = window.RF_IMAGES || {};
+
 /* ---------------- view router ---------------- */
 const VIEWS = ['home', 'robodex', 'takeapart', 'replay', 'evidence'];
 const inited = {};
@@ -58,6 +63,8 @@ const FALLBACK_ROBOTS = [
   {
     number: 1, name: 'Andino', 'class': 'Differential-drive ground robot',
     description: 'An open-source ROS 2 robot from Ekumen. Its Robodex entry — spec read from the official project files, plus its gate run — is being recorded today and arrives with the catalog publish. Until then this slot stays unwritten rather than guessed.',
+    image_url: 'https://raw.githubusercontent.com/Ekumen-OS/andino/main/docs/real_robot.png',
+    image_credit: 'Photo: Ekumen — the real robot, from the official Andino repository (docs/real_robot.png)',
     key_specs: {}, spec_file: 'examples/andino.json',
     provenance: { source_name: 'Ekumen-OS/andino (official project repository)',
                   source_url: 'https://github.com/Ekumen-OS/andino', license: null, note: '' },
@@ -66,6 +73,8 @@ const FALLBACK_ROBOTS = [
   {
     number: 2, name: 'TurtleBot3 Burger', 'class': 'Differential-drive ground robot',
     description: 'ROBOTIS\u2019s small research-and-teaching rover: two driven wheels, a caster, and a 360-degree lidar. RobotForge\u2019s reference robot for the differential-drive layout.',
+    image_url: 'https://emanual.robotis.com/assets/images/platform/turtlebot3/hardware_setup/turtlebot3_burger.png',
+    image_credit: 'Photo: ROBOTIS — official TurtleBot3 e-Manual',
     key_specs: { battery: 'LiPo 11.1 V, 1800 mAh', drivetrain: 'differential \u2014 2 driven wheels + caster',
                  footprint: '0.178 m x 0.138 m, 0.192 m tall', mass: '0.93 kg (reference spec)',
                  sensors: '360-degree 2D lidar (top)', wheels: '66 mm diameter' },
@@ -83,6 +92,8 @@ const FALLBACK_ROBOTS = [
   {
     number: 3, name: 'TurtleBot3 Waffle Pi', 'class': 'Differential-drive ground robot',
     description: 'The bigger TurtleBot3: a waffle-shaped deck carrying a lidar and a camera. RobotForge knows this one from a photograph \u2014 the photo intake identified it and drafted its spec, so every dimension here is an estimate until somebody measures the real robot.',
+    image_url: 'https://emanual.robotis.com/assets/images/platform/turtlebot3/hardware_setup/turtlebot3_models.png',
+    image_credit: 'Photo: ROBOTIS — official TurtleBot3 lineup; Waffle Pi at right (e-Manual)',
     key_specs: { drivetrain: 'differential \u2014 2 driven wheels + caster',
                  footprint: '0.306 m x 0.281 m x 0.141 m \u2014 ESTIMATED from the photo draft, based on the published approximate size',
                  mass: '1.8 kg (photo draft)', motors: '2x Dynamixel XL430 (photo draft)',
@@ -142,6 +153,21 @@ function gateBlock(gs) {
     gs.runs.map(r => '<li>' + runLine(r) + '</li>').join('') + '</ul>' +
     (gs.note ? '<br>' + esc(gs.note) : '') + '</div>';
 }
+function robotFigure(r) {
+  if (r.image_url) {
+    return '<figure class="robot-photo"><img src="' + esc(r.image_url) +
+      '" alt="' + esc(r.name) + ' — official image" loading="lazy">' +
+      (r.image_credit ? '<figcaption>' + esc(r.image_credit) + '</figcaption>' : '') +
+      '</figure>';
+  }
+  if (r.name === 'Pathfinder' && RFI.pathfinder) {
+    return '<figure class="robot-photo ai"><img src="' + RFI.pathfinder +
+      '" alt="Pathfinder — AI concept illustration" loading="lazy">' +
+      '<figcaption>AI concept illustration — Pathfinder is a RobotForge design, ' +
+      'not built hardware. No photo of it exists.</figcaption></figure>';
+  }
+  return '';
+}
 function robotCard(r) {
   const specs = Object.keys(r.key_specs || {}).sort()
     .map(k => '<tr><th>' + esc(k) + '</th><td>' + esc(r.key_specs[k]) + '</td></tr>').join('');
@@ -151,6 +177,7 @@ function robotCard(r) {
     gateBadge(r.gate_status) + '</div>' +
     '<h2>' + esc(r.name) + '</h2><div class="class">' + esc(r['class']) + '</div>' +
     '<p class="desc">' + esc(r.description) + '</p>' +
+    robotFigure(r) +
     (specs ? '<table>' + specs + '</table>' : '') +
     '<p class="prov"><strong>Provenance:</strong> ' + esc(p.source_name || '') +
     (p.license ? ' · license: ' + esc(p.license) : '') +
@@ -493,9 +520,14 @@ function taSelect(id, keep) {
   if (!p) return;
   $$('#view-takeapart .part-shape').forEach(g =>
     g.classList.toggle('sel', g.dataset.part === id));
+  const spot = RFI[p.id]
+    ? '<img class="spot" src="' + RFI[p.id] + '" alt="AI illustration of the ' + esc(p.name) + '">' +
+      '<p class="credit">AI illustration (muse-image-1.0). The printable part itself is generated from the spec by <code>robotforge cad</code>.</p>'
+    : '';
   $('#ta-detail').innerHTML =
     '<span class="qty">Qty ' + p.qty + ' \u00b7 ' + esc(p.file) + '</span>' +
     '<h3>' + esc(p.name) + '</h3>' +
+    spot +
     '<dl>' +
     '<dt>What it is</dt><dd>' + esc(p.does) + '</dd>' +
     '<dt>Key dimensions</dt><dd class="dim">' + esc(p.dims) + '</dd>' +
@@ -647,6 +679,17 @@ function stopPlay(rerender) {
   if (replayState.timer) { clearInterval(replayState.timer); replayState.timer = null; }
   if (rerender) renderReplay();
 }
+
+/* ---------------- hero art (AI illustration, labeled) ---------------- */
+(function heroArt() {
+  const f = $('#hero-art');
+  if (f && RFI.hero) {
+    f.hidden = false;
+    f.innerHTML = '<img src="' + RFI.hero + '" alt="AI illustration of a rover on a workbench">' +
+      '<figcaption>AI illustration (muse-image-1.0) \u2014 the forge\u2019s rover, imagined. ' +
+      'The real robots in the Robodex carry real photos, credited.</figcaption>';
+  }
+})();
 
 /* ---------------- boot ---------------- */
 showView((location.hash || '#home').slice(1));

@@ -313,6 +313,8 @@ class RobotEntry:
     spec_file: str | None
     provenance: dict
     gate_status: GateStatus
+    image_url: str | None = None
+    image_credit: str = ""
 
     @property
     def dex_id(self) -> str:
@@ -326,10 +328,12 @@ class RobotEntry:
                    key_specs=dict(d.get("key_specs", {})),
                    spec_file=d.get("spec_file"),
                    provenance=dict(d.get("provenance", {})),
-                   gate_status=GateStatus.from_dict(d["gate_status"]))
+                   gate_status=GateStatus.from_dict(d["gate_status"]),
+                   image_url=d.get("image_url"),
+                   image_credit=str(d.get("image_credit", "")))
 
     def to_dict(self) -> dict:
-        return {"number": self.number, "name": self.name,
+        d = {"number": self.number, "name": self.name,
                 "class": self.robot_class,
                 "description": self.description,
                 "key_specs": self.key_specs,
@@ -347,6 +351,10 @@ class RobotEntry:
                               "source": r.source}
                              for r in self.gate_status.runs],
                     "note": self.gate_status.note}}
+        if self.image_url:
+            d["image_url"] = self.image_url
+            d["image_credit"] = self.image_credit
+        return d
 
 
 class Robodex:
@@ -521,6 +529,10 @@ _PAGE_CSS = """
     vertical-align:top}
   th{color:var(--muted);font-weight:600;width:32%}
   td{color:var(--text)}
+  .robot-photo{margin:18px 0 4px}
+  .robot-photo img{max-width:100%;max-height:340px;display:block;
+    border-radius:8px;background:#dfe3e8;padding:10px}
+  .robot-photo figcaption{color:var(--muted);font-size:0.85rem;margin-top:8px}
   .prov,.gate{margin-top:16px;color:var(--muted);font-size:0.93rem}
   .prov strong,.gate strong{color:var(--text)}
   .gate ul{margin:6px 0 0 18px}
@@ -556,11 +568,19 @@ def _robot_card(r: RobotEntry) -> str:
         gate_line += f"<br>{e(gs.note)}"
     spec_line = (f"<br>Spec: <code>{e(r.spec_file)}</code>"
                  if r.spec_file else "")
+    figure = ""
+    if r.image_url:
+        cap = (f"<figcaption>{e(r.image_credit)}</figcaption>"
+               if r.image_credit else "")
+        figure = (f'\n      <figure class="robot-photo">'
+                  f'<img src="{e(r.image_url)}" '
+                  f'alt="{e(r.name)} — official image" loading="lazy">'
+                  f'{cap}</figure>')
     return f"""<article class="card" data-number="{r.number}" data-name="{e(r.name)}">
       <div class="card-top"><span class="dex">{e(r.dex_id)}</span>{badge}</div>
       <h2>{e(r.name)}</h2>
       <div class="class">{e(r.robot_class)}</div>
-      <p class="desc">{e(r.description)}</p>
+      <p class="desc">{e(r.description)}</p>{figure}
       <table>{specs}</table>
       <p class="prov"><strong>Provenance:</strong> {prov_line}{spec_line}</p>
       <div class="gate">{gate_line}</div>

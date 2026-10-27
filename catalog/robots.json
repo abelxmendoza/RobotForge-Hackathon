@@ -25,6 +25,8 @@
         ],
         "note": "Two recorded runs on scythe (2026-10-26), no PASS \u2014 recorded as measured; the locked thresholds were not touched. The drive is excellent in both runs (1.497% / 0.347% against ground truth, odometry distance error 0.003%), but the pivot turn is the failure mode: the robot is heavy (3.364 kg \u2014 the sum of the official URDF link masses) on two passive caster balls, so in a turn it physically under-rotates while its wheel odometry (perfect joint integration) over-reads heading by 8.285-11.624 degrees. The gate's own suspect line names wheel_separation / caster scrub. Diagnosis recorded; the verdict was not massaged."
       },
+      "image_credit": "Photo: Ekumen \u2014 the real robot, from the official Andino repository (docs/real_robot.png)",
+      "image_url": "https://raw.githubusercontent.com/Ekumen-OS/andino/main/docs/real_robot.png",
       "key_specs": {
         "battery": "3x 18650 Li-ion cells, ~11.1 V nominal (official BOM holder); capacity varies by cell \u2014 the spec uses 2600 mAh as a labelled estimate",
         "chassis": "0.25 m long x 0.10 m wide base deck (official URDF base.yaml); overall width 0.153 m across the wheels, wheel track 0.128 m",
@@ -70,6 +72,8 @@
         ],
         "status": "PASS"
       },
+      "image_credit": "Photo: ROBOTIS \u2014 official TurtleBot3 e-Manual",
+      "image_url": "https://emanual.robotis.com/assets/images/platform/turtlebot3/hardware_setup/turtlebot3_burger.png",
       "key_specs": {
         "battery": "LiPo 11.1 V, 1800 mAh",
         "drivetrain": "differential \u2014 2 driven wheels + caster",
@@ -96,6 +100,8 @@
         "runs": [],
         "status": "NOT_GATED"
       },
+      "image_credit": "Photo: ROBOTIS \u2014 official TurtleBot3 lineup; Waffle Pi at right (e-Manual)",
+      "image_url": "https://emanual.robotis.com/assets/images/platform/turtlebot3/hardware_setup/turtlebot3_models.png",
       "key_specs": {
         "drivetrain": "differential \u2014 2 driven wheels + caster",
         "footprint": "0.306 m x 0.281 m x 0.141 m \u2014 ESTIMATED from the photo draft, based on the published approximate size",
