@@ -199,6 +199,79 @@ function taBuildParts(spec) {
   return { parts, pos };
 }
 
+/* == ta3d-geom:start == */
+/* 3D take-apart geometry: the SAME derivation as the 2D views,
+   expressed as kit units in robot coordinates (metres; x forward,
+   y left, z up). Built from taBuildParts' own output — the parts
+   list and the wheel positions — so the 3D scene can never grow a
+   part the flat kit does not have: one unit per drawn instance
+   (wheels and mounts per wheel position, casters front and rear,
+   one lidar assembly of post + disc meshes, one bracket per sensor
+   face, exactly as the 2D views draw them). Explode directions
+   mirror the flat views: wheels/mounts slide out along their side,
+   the lidar rises, face sensors push forward, casters drop away.
+   Pure data — no DOM, no three.js: the test suite extracts this
+   block and runs it in Node against the real specs, and
+   assets/js/robot3d.js turns the units into meshes. */
+function taGeom3d(spec, parts, pos) {
+  const L = spec.length_m, W = spec.width_m, H = spec.height_m;
+  const C = spec.ground_clearance_m, r = spec.wheel.diameter_m / 2;
+  const deckTop = C + PLATE_T;
+  const units = [];
+  const byId = id => parts.find(p => p.id === id);
+  if (byId('plate')) {
+    units.push({ part: 'plate', explode: [0, 0, 0], meshes: [
+      { kind: 'box', size: [L, W, PLATE_T],
+        center: [0, 0, C + PLATE_T / 2] }] });
+  }
+  pos.forEach(([x0, y0]) => {
+    const ex = Math.sign(x0) * 0.7, ey = Math.sign(y0);
+    if (byId('wheel')) {
+      units.push({ part: 'wheel', explode: [ex, ey, 0], meshes: [
+        { kind: 'cyl', axis: 'y', size: [r, spec.wheel.width_m],
+          center: [x0, y0, r] }] });
+    }
+    if (byId('mount')) {
+      units.push({ part: 'mount', explode: [ex * 0.7, ey * 0.7, 0], meshes: [
+        { kind: 'box',
+          size: [spec.wheel.diameter_m * 0.36, 0.010, deckTop],
+          center: [x0, Math.sign(y0) * (W / 2 + 0.005), deckTop / 2] }] });
+    }
+  });
+  if (byId('caster')) {
+    const cx = L / 2 - C;
+    [-cx, cx].forEach(x0 => {
+      units.push({ part: 'caster',
+        explode: [Math.sign(x0) * 0.5, 0, -0.25], meshes: [
+          { kind: 'sphere', size: [C / 2], center: [x0, 0, C / 2] }] });
+    });
+  }
+  const lp = byId('lidar');
+  if (lp) {
+    const postH = H - 0.010 - deckTop;
+    units.push({ part: 'lidar', explode: [0, 0, 1], meshes: [
+      { kind: 'cyl', axis: 'z', size: [POST_D / 2, postH],
+        center: [lp.x, lp.y, deckTop + postH / 2] },
+      { kind: 'cyl', axis: 'z', size: [LIDAR_DISC_D / 2, 0.010],
+        center: [lp.x, lp.y, H - 0.005] }] });
+  }
+  const cp = byId('camera');
+  if (cp) {
+    units.push({ part: 'camera', explode: [cp.face, 0, 0.2], meshes: [
+      { kind: 'box', size: [PLATE_T, CAM_W, CAM_H],
+        center: [cp.face * (L / 2 + PLATE_T / 2), 0, C + H / 2] }] });
+  }
+  const up = byId('ultrasonic');
+  if (up) {
+    units.push({ part: 'ultrasonic', explode: [up.face, 0, 0.2], meshes: [
+      { kind: 'box', size: [PLATE_T, 0.052, ULTRA_H],
+        center: [up.face * (L / 2 + PLATE_T / 2), 0,
+                 deckTop + ULTRA_H / 2] }] });
+  }
+  return units;
+}
+/* == ta3d-geom:end == */
+
 /* --- Electrical overlay + dimensions (SVG) ---
    Deck components (battery, driver, motors, controller — none of
    them drawn kit parts) sit on two rails at the top of each view;
@@ -538,6 +611,7 @@ function taSelect(id, keep) {
   taSelNode = null; taSelWire = null;
   $$('#ta .wire-g').forEach(g => g.classList.remove('sel'));
   $$('#ta .node-chip').forEach(g => g.classList.remove('sel'));
+  if (window.RF3D) window.RF3D.setSelected(id);
   const p = taParts.find(x => x.id === id);
   if (!p) return;
   $$('#ta .part-shape').forEach(g =>
@@ -695,12 +769,27 @@ const TA_PANEL = `
   </div>
   <p id="ta-wire-info" class="ta-wire-info" hidden></p>
   <p id="ta-elec-note" class="faint" style="font-size:var(--fs-xs);margin-top:8px" hidden></p>
+  <div class="ta-controls" id="ta-view-controls">
+    <div class="tabs" role="tablist" aria-label="Take-apart view">
+      <button class="tab" type="button" id="ta-view-2d" role="tab" aria-selected="true">2D views</button>
+      <button class="tab" type="button" id="ta-view-3d" role="tab" aria-selected="false">3D</button>
+    </div>
+    <span class="faint" style="font-size:12px">Same kit, same explode slider, same click-a-part panel.</span>
+  </div>
+  <p id="ta-3d-note" class="callout" style="margin-bottom:12px" hidden><span>The 3D view is a schematic of the same kit. The electrical overlay and the dimension lines are <strong>2D-only</strong> for now &mdash; switch back to 2D views for those.</span></p>
   <div class="ta-stage">
     <div>
-      <div class="ta-view"><div id="ta-side"></div>
-        <p class="cap">Side view. Rear is left, front is right; ground is z = 0 and axles sit at wheel-radius height.</p></div>
-      <div class="ta-view"><div id="ta-top"></div>
-        <p class="cap">Top view. Explode moves the wheels outward, like the kit's <code>explode_mm</code>.</p></div>
+      <div id="ta-2d">
+        <div class="ta-view"><div id="ta-side"></div>
+          <p class="cap">Side view. Rear is left, front is right; ground is z = 0 and axles sit at wheel-radius height.</p></div>
+        <div class="ta-view"><div id="ta-top"></div>
+          <p class="cap">Top view. Explode moves the wheels outward, like the kit's <code>explode_mm</code>.</p></div>
+      </div>
+      <div class="ta-view" id="ta-3dwrap" hidden>
+        <div id="ta-3d"></div>
+        <p class="cap">3D take-apart. Drag to orbit, scroll to zoom, click a part &mdash; the panel beside it is the same one the flat views use.</p>
+        <p class="state-box" id="ta-3d-fallback" hidden>3D unavailable here &mdash; the 2D take-apart still works.</p>
+      </div>
     </div>
     <aside class="card ta-detail" id="ta-detail">
       <h3>Pick a part</h3>
@@ -727,7 +816,39 @@ const TA_PANEL = `
     taExplode = Number(slider.value);
     $('#ta-explode-val').textContent = taExplode + ' mm';
     taRender();
+    if (window.RF3D) window.RF3D.setExplode(taExplode);
   });
+  /* 2D / 3D toggle. The 3D scene lives in assets/js/robot3d.js (an
+     ES module loaded by the page); it registers window.RF3D when it
+     loads. If it never registers — module or CDN failure — the 3D
+     pane shows its fallback line and the 2D views are untouched. */
+  const b2d = $('#ta-view-2d'), b3d = $('#ta-view-3d');
+  function taSetMode(mode) {
+    const is3d = mode === '3d';
+    b2d.setAttribute('aria-selected', String(!is3d));
+    b3d.setAttribute('aria-selected', String(is3d));
+    $('#ta-2d').hidden = is3d;
+    $('#ta-3dwrap').hidden = !is3d;
+    $('#ta-3d-note').hidden = !is3d;
+    if (is3d) {
+      const start = () => {
+        if (window.RF3D) {
+          window.RF3D.activate({
+            spec: taSpec, explode: taExplode,
+            select: id => taSelect(id),
+            onFail: () => { $('#ta-3d-fallback').hidden = false; }
+          });
+        } else {
+          $('#ta-3d-fallback').hidden = false;
+        }
+      };
+      if (window.RF3D) start(); else setTimeout(start, 2500);
+    } else if (window.RF3D) {
+      window.RF3D.deactivate();
+    }
+  }
+  b2d.addEventListener('click', () => taSetMode('2d'));
+  b3d.addEventListener('click', () => taSetMode('3d'));
   if (taSpec.wiring) {
     $('#ta-elec-controls').hidden = false;
     const elecBtn = $('#ta-elec'), powerBtn = $('#ta-power');

@@ -39,6 +39,7 @@
         "sensors": "RPLIDAR A1M8 2D lidar (top), Raspberry Pi Camera V2 (front), BNO055 IMU, wheel encoders",
         "wheels": "66.2 mm diameter x 25 mm \u2014 official wheel.yaml radius 0.0331 m"
       },
+      "mobility_class": "Ground \u2014 wheeled",
       "name": "Andino",
       "number": 1,
       "provenance": {
@@ -47,7 +48,8 @@
         "source_name": "Ekumen-OS/andino (official project repository)",
         "source_url": "https://github.com/Ekumen-OS/andino"
       },
-      "spec_file": "examples/andino.json"
+      "spec_file": "examples/andino.json",
+      "subtype": "Differential rover"
     },
     {
       "class": "Differential-drive ground robot",
@@ -82,6 +84,7 @@
         "sensors": "360-degree 2D lidar (top)",
         "wheels": "66 mm diameter"
       },
+      "mobility_class": "Ground \u2014 wheeled",
       "name": "TurtleBot3 Burger",
       "number": 2,
       "provenance": {
@@ -90,7 +93,8 @@
         "source_name": "ROBOTIS-GIT/turtlebot3 (official vendor repository)",
         "source_url": "https://github.com/ROBOTIS-GIT/turtlebot3"
       },
-      "spec_file": "examples/turtlebot3-burger.json"
+      "spec_file": "examples/turtlebot3-burger.json",
+      "subtype": "Differential rover"
     },
     {
       "class": "Differential-drive ground robot",
@@ -110,6 +114,7 @@
         "sensors": "2D lidar (top), RGB camera (front), IMU, wheel encoders",
         "wheels": "66 mm diameter (photo draft)"
       },
+      "mobility_class": "Ground \u2014 wheeled",
       "name": "TurtleBot3 Waffle Pi",
       "number": 3,
       "provenance": {
@@ -118,7 +123,8 @@
         "source_name": "Identified by RobotForge photo intake; published model at ROBOTIS-GIT/turtlebot3",
         "source_url": "https://github.com/ROBOTIS-GIT/turtlebot3"
       },
-      "spec_file": "examples/photo-turtlebot.json"
+      "spec_file": "examples/photo-turtlebot.json",
+      "subtype": "Differential rover"
     },
     {
       "class": "Skid-steer ground rover",
@@ -152,6 +158,7 @@
         "sensors": "ultrasonic ranger (front), IMU (centre)",
         "wheels": "100 mm diameter x4"
       },
+      "mobility_class": "Ground \u2014 wheeled",
       "name": "Pathfinder",
       "number": 4,
       "provenance": {
@@ -160,7 +167,8 @@
         "source_name": "Original design in this repository",
         "source_url": "https://github.com/abelxmendoza/RobotForge-Hackathon"
       },
-      "spec_file": "examples/pathfinder.json"
+      "spec_file": "examples/pathfinder.json",
+      "subtype": "Skid-steer rover"
     }
   ],
   "title": "Robodex"

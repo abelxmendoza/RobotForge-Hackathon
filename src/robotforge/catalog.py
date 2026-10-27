@@ -28,8 +28,13 @@ Layers:
   #001 Andino, #002 TurtleBot3 Burger, #003 TurtleBot3 Waffle Pi,
   #004 Pathfinder. A robot's gate status comes ONLY from recorded gate
   runs stored in its entry; a robot with no runs is NOT_GATED, never
-  badged green. The app's Robots pages are generated from this data by
-  ``robotforge site`` (see site.py); never hand-edit them.
+  badged green. Every robot also carries a classification from the
+  ONE taxonomy tree (``MOBILITY_TAXONOMY``: mobility class + subtype,
+  e.g. Ground — wheeled · Differential rover); the loader rejects any
+  pair the tree does not name, and classes with no robots yet render
+  as "none yet" — structure, never invented entries. The app's Robots
+  pages are generated from this data by ``robotforge site`` (see
+  site.py); never hand-edit them.
 
 Zero dependencies. Data lives in the repo-root ``catalog/`` directory
 (the examples/ folder holds robot *specs*; the catalog is its own
@@ -79,6 +84,32 @@ LICENSE_ALLOWLIST = ("MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause",
                      "CC-BY-4.0", "CC-BY-SA-4.0", "proprietary-part")
 
 GATE_STATUSES = ("PASS", "MARGINAL", "FAIL", "NOT_GATED")
+
+# The Robodex classification tree: mobility class -> its subtypes, in
+# display order. This is the ONE home of the taxonomy — the loader
+# validates every robot's (mobility_class, subtype) pair against it,
+# and the site renders its class filters from it. A class with no
+# robots yet is structure, not an entry: it shows as "none yet" and
+# never invents a robot. Add a branch here and in a robot's data;
+# nowhere else.
+MOBILITY_TAXONOMY = (
+    ("Aerial", ("Quadcopter", "Hexacopter", "Fixed-wing", "VTOL")),
+    ("Ground — wheeled", ("Differential rover", "Skid-steer rover",
+                          "Mecanum rover", "Car-like")),
+    ("Ground — tracked", ("Tracked rover",)),
+    ("Legged", ("Quadruped", "Humanoid", "Biped")),
+    ("Marine", ("Surface", "Underwater")),
+    ("Stationary", ("Robotic arm", "Gantry")),
+)
+MOBILITY_CLASSES = tuple(cls for cls, _ in MOBILITY_TAXONOMY)
+
+
+def mobility_subtypes(mobility_class: str) -> tuple:
+    """The subtypes a mobility class allows (empty tuple if unknown)."""
+    for cls, subs in MOBILITY_TAXONOMY:
+        if cls == mobility_class:
+            return subs
+    return ()
 
 
 class CatalogError(ValueError):
@@ -316,6 +347,8 @@ class RobotEntry:
     spec_file: str | None
     provenance: dict
     gate_status: GateStatus
+    mobility_class: str = ""
+    subtype: str = ""
     image_url: str | None = None
     image_credit: str = ""
 
@@ -323,8 +356,24 @@ class RobotEntry:
     def dex_id(self) -> str:
         return f"#{self.number:03d}"
 
+    @property
+    def class_path(self) -> str:
+        """Taxonomy path, e.g. 'Ground — wheeled · Differential rover'."""
+        return f"{self.mobility_class} · {self.subtype}"
+
     @classmethod
     def from_dict(cls, d: dict) -> "RobotEntry":
+        mobility_class = str(d.get("mobility_class", ""))
+        subtype = str(d.get("subtype", ""))
+        if mobility_class not in MOBILITY_CLASSES:
+            raise CatalogError(
+                f"{d.get('name')}: unknown mobility class "
+                f"{mobility_class!r} — the taxonomy lives in "
+                "MOBILITY_TAXONOMY (catalog.py)")
+        if subtype not in mobility_subtypes(mobility_class):
+            raise CatalogError(
+                f"{d.get('name')}: subtype {subtype!r} is not a "
+                f"{mobility_class} subtype in MOBILITY_TAXONOMY")
         return cls(number=int(d["number"]), name=str(d["name"]),
                    robot_class=str(d["class"]),
                    description=str(d["description"]),
@@ -332,6 +381,8 @@ class RobotEntry:
                    spec_file=d.get("spec_file"),
                    provenance=dict(d.get("provenance", {})),
                    gate_status=GateStatus.from_dict(d["gate_status"]),
+                   mobility_class=mobility_class,
+                   subtype=subtype,
                    image_url=d.get("image_url"),
                    image_credit=str(d.get("image_credit", "")))
 
@@ -340,7 +391,9 @@ class RobotEntry:
                 "class": self.robot_class,
                 "description": self.description,
                 "key_specs": self.key_specs,
+                "mobility_class": self.mobility_class,
                 "spec_file": self.spec_file,
+                "subtype": self.subtype,
                 "provenance": self.provenance,
                 "gate_status": {
                     "status": self.gate_status.status,
@@ -443,7 +496,8 @@ def format_catalog_summary(cat: Catalog, dex: Robodex) -> str:
 
 
 def format_robot(r: RobotEntry) -> str:
-    out = [f"{r.dex_id} {r.name}", f"class: {r.robot_class}", "",
+    out = [f"{r.dex_id} {r.name}", f"class: {r.robot_class}",
+           f"type: {r.class_path}", "",
            r.description, "", "key specs:"]
     for k, v in r.key_specs.items():
         out.append(f"  {k}: {v}")

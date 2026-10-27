@@ -175,6 +175,15 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .ta-detail dt{color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .ta-detail dd{color:var(--text-muted)}
 .ta-detail dd.m{font-family:var(--mono);font-size:13px;color:var(--text)}
+/* take-apart 3D pane (assets/js/robot3d.js; Three.js from the CDN
+   importmap). The canvas fills the pane; if the module or WebGL is
+   unavailable the pane's fallback state-box shows instead. */
+#ta-3d{min-height:430px}
+#ta-3d canvas{display:block;width:100%;height:430px;border-radius:var(--r-sm);cursor:grab}
+#ta-3d canvas:active{cursor:grabbing}
+/* Robodex class chips for taxonomy branches with no robots yet */
+.chip[disabled]{opacity:.45;cursor:default}
+.chip[disabled]:hover{color:var(--text-muted);border-color:var(--border)}
 /* take-apart: electrical overlay + dimensions. Power uses the brand
    amber (--accent), data a steel blue; unpowered is muted grey.
    Green/yellow stay reserved for gate verdicts — the only red here
