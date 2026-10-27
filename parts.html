@@ -9,11 +9,12 @@
        font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
        line-height:1.55}
   .wrap{max-width:1060px;margin:0 auto;padding:0 22px 80px}
-  nav{display:flex;gap:18px;flex-wrap:wrap;padding:18px 0 0;font-size:14.5px}
-  nav a{color:var(--dim);text-decoration:none}
-  nav a:hover{color:var(--ink)}
-  nav a.here{color:var(--accent);font-weight:700}
-  nav .brand{color:var(--ink);font-weight:800;letter-spacing:.08em;margin-right:8px}
+  .rfnav{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;padding:18px 0 0}
+  .rfnav-brand{color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.9rem;white-space:nowrap;text-decoration:none}
+  .rfnav-links{display:flex;gap:6px;flex-wrap:wrap}
+  .rfnav-links a{color:var(--dim);text-decoration:none;font-size:.95rem;font-weight:600;padding:6px 12px;border:1px solid transparent;border-radius:999px}
+  .rfnav-links a:hover{color:var(--ink);border-color:var(--line)}
+  .rfnav-links a.active{color:#14161a;background:var(--accent);border-color:var(--accent)}
   header{padding:34px 0 6px}
   .kicker{letter-spacing:.22em;font-size:12px;color:var(--accent);text-transform:uppercase;font-weight:700}
   h1{font-size:36px;line-height:1.15;margin:10px 0 10px}
@@ -35,10 +36,21 @@
   #pdetail td:first-child{color:var(--dim);white-space:nowrap}
   .cls{margin:26px 0 6px;text-transform:capitalize}
 </style></head>
-<body><div class="wrap"><nav><span class="brand">ROBOTFORGE</span>
-  <a href="index.html">Home</a><a href="robodex.html">Robodex</a>
-  <a href="parts.html" class="here">Parts Kit</a><a href="try.html">Try It</a>
-  <a href="reports.html">Gate Reports</a></nav><header><div class="kicker">RobotForge · Take-Apart Kit</div>
+<body><div class="wrap"><nav class="rfnav" aria-label="RobotForge">
+      <a class="rfnav-brand" href="index.html#home">RobotForge</a>
+      <div class="rfnav-links">
+        <a href="index.html#home" data-view="home">Home</a>
+        <a href="index.html#robodex" data-view="robodex">Robodex</a>
+        <a href="index.html#takeapart" data-view="takeapart">Take-Apart</a>
+        <a href="index.html#replay" data-view="replay">Describe Replay</a>
+        <a href="index.html#evidence" data-view="evidence">Gate Evidence</a>
+        <a href="robodex.html">Robodex page</a>
+        <a href="parts.html" class="active" aria-current="page">Parts Kit</a>
+        <a href="try.html">Try It</a>
+        <a href="reports.html">Gate Reports</a>
+        <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub</a>
+      </div>
+    </nav><header><div class="kicker">RobotForge · Take-Apart Kit</div>
 <h1>The Parts Kit</h1>
 <p class="sub">RobotForge robots aren't monoliths — they're a kit of parts, each one its own
 editable file, each one swappable. Drag the slider to explode the stack; click any layer

@@ -491,6 +491,45 @@ def format_part(p: CatalogPart) -> str:
 _BADGE_CLASS = {"PASS": "badge-pass", "MARGINAL": "badge-marginal",
                 "FAIL": "badge-fail", "NOT_GATED": "badge-none"}
 
+# The one shared site nav. Every page of the site — this generated page,
+# the app shell (index.html) and the hand-written pages (parts.html,
+# try.html, reports.html) — carries this exact block, so any page is one
+# click from every other. App-view links point at index.html#<view>; the
+# app router honours the hash on load and on hashchange. Only the
+# current page's own link differs: it gains class="active" and
+# aria-current="page".
+_NAV_LINKS = [
+    ("index.html#home", "home", "Home"),
+    ("index.html#robodex", "robodex", "Robodex"),
+    ("index.html#takeapart", "takeapart", "Take-Apart"),
+    ("index.html#replay", "replay", "Describe Replay"),
+    ("index.html#evidence", "evidence", "Gate Evidence"),
+    ("robodex.html", "", "Robodex page"),
+    ("parts.html", "", "Parts Kit"),
+    ("try.html", "", "Try It"),
+    ("reports.html", "", "Gate Reports"),
+    ("https://github.com/abelxmendoza/RobotForge-Hackathon", "", "GitHub"),
+]
+
+
+def site_nav(active_href: str = "") -> str:
+    """Render the shared site nav; ``active_href`` marks the current page."""
+    items = []
+    for href, view, label in _NAV_LINKS:
+        attrs = f'href="{href}"'
+        if view:
+            attrs += f' data-view="{view}"'
+        if href == active_href:
+            attrs += ' class="active" aria-current="page"'
+        items.append(f"        <a {attrs}>{label}</a>")
+    links = "\n".join(items)
+    return f"""<nav class="rfnav" aria-label="RobotForge">
+      <a class="rfnav-brand" href="index.html#home">RobotForge</a>
+      <div class="rfnav-links">
+{links}
+      </div>
+    </nav>"""
+
 _PAGE_CSS = """
   :root{
     --bg:#14161a; --panel:#1b1e24; --line:#2a2e36; --text:#e8eaee;
@@ -504,9 +543,19 @@ _PAGE_CSS = """
   .wrap{max-width:820px;margin:0 auto;padding:0 24px}
   a{color:var(--accent);text-decoration:none}
   a:hover{text-decoration:underline}
-  .wordmark{color:var(--accent);font-weight:700;letter-spacing:0.14em;
-    text-transform:uppercase;font-size:0.85rem;margin-bottom:18px}
-  header{padding:80px 0 30px}
+  .rfnav{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;
+    padding:26px 0 0}
+  .rfnav-brand{color:var(--accent);font-weight:700;letter-spacing:0.14em;
+    text-transform:uppercase;font-size:0.85rem;white-space:nowrap}
+  .rfnav-brand:hover{text-decoration:none}
+  .rfnav-links{display:flex;gap:6px;flex-wrap:wrap}
+  .rfnav-links a{color:var(--muted);font-size:0.95rem;font-weight:600;
+    padding:6px 12px;border:1px solid transparent;border-radius:999px}
+  .rfnav-links a:hover{color:var(--text);border-color:var(--line);
+    text-decoration:none}
+  .rfnav-links a.active{color:#14161a;background:var(--accent);
+    border-color:var(--accent)}
+  header{padding:34px 0 30px}
   h1{font-size:2.6rem;line-height:1.1;letter-spacing:-0.02em}
   .intro{color:var(--muted);max-width:62ch;margin-top:16px}
   .card{background:var(--panel);border:1px solid var(--line);
@@ -600,8 +649,8 @@ def render_robodex_html(dex: Robodex) -> str:
 </head>
 <body>
 <div class="wrap">
+{site_nav("robodex.html")}
   <header>
-    <div class="wordmark">RobotForge</div>
     <h1>Robodex</h1>
     <p class="intro">Every robot the forge knows, numbered in the order it
     learned them. Gate badges come only from recorded gate runs — a robot

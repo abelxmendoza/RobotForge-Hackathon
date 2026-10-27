@@ -32,7 +32,7 @@ function showView(name) {
   if (!VIEWS.includes(name)) name = 'home';
   VIEWS.forEach(v => {
     $('#view-' + v).classList.toggle('active', v === name);
-    const b = $('nav.views button[data-view="' + v + '"]');
+    const b = $('.rfnav a[data-view="' + v + '"]');
     if (b) b.classList.toggle('active', v === name);
   });
   if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
@@ -41,8 +41,15 @@ function showView(name) {
   if (name === 'takeapart') initTakeApart();
   if (name === 'replay') initReplay();
 }
-$$('nav.views button[data-view]').forEach(b =>
-  b.addEventListener('click', () => showView(b.dataset.view)));
+$$('.rfnav a[data-view]').forEach(a =>
+  a.addEventListener('click', ev => { ev.preventDefault(); showView(a.dataset.view); }));
+/* Deep links: the boot call at the bottom honours location.hash on
+   load; this listener honours it while the app is already open —
+   back/forward, or arriving at index.html#<view> from a standalone
+   page's nav in the same tab. showView syncs the hash with
+   history.replaceState, which does not fire hashchange, so no loop. */
+addEventListener('hashchange', () =>
+  showView((location.hash || '#home').slice(1)));
 $$('[data-goto]').forEach(b =>
   b.addEventListener('click', () => showView(b.dataset.goto)));
 

@@ -55,11 +55,31 @@
   footer{color:var(--dim);font-size:13px;margin-top:44px;border-top:1px solid var(--line);padding-top:18px}
   a{color:var(--accent)}
   .note{font-size:13px;color:var(--dim)}
+  .rfnav{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;padding:18px 0 0}
+  .rfnav-brand{color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.9rem;white-space:nowrap;text-decoration:none}
+  .rfnav-links{display:flex;gap:6px;flex-wrap:wrap}
+  .rfnav-links a{color:var(--dim);text-decoration:none;font-size:.95rem;font-weight:600;padding:6px 12px;border:1px solid transparent;border-radius:999px}
+  .rfnav-links a:hover{color:var(--ink);border-color:var(--line)}
+  .rfnav-links a.active{color:#14161a;background:var(--accent);border-color:var(--accent)}
 </style>
 </head>
 <body>
 <div class="wrap">
-<nav style="display:flex;gap:18px;flex-wrap:wrap;padding:18px 0 0;font-size:14.5px"><span style="font-weight:800;letter-spacing:.08em;margin-right:8px">ROBOTFORGE</span><a href="index.html" style="color:var(--dim);text-decoration:none">Home</a><a href="robodex.html" style="color:var(--dim);text-decoration:none">Robodex</a><a href="parts.html" style="color:var(--dim);text-decoration:none">Parts Kit</a><a href="try.html" style="color:var(--dim);text-decoration:none">Try It</a><a href="reports.html" style="color:var(--accent);font-weight:700;text-decoration:none">Gate Reports</a></nav>
+<nav class="rfnav" aria-label="RobotForge">
+      <a class="rfnav-brand" href="index.html#home">RobotForge</a>
+      <div class="rfnav-links">
+        <a href="index.html#home" data-view="home">Home</a>
+        <a href="index.html#robodex" data-view="robodex">Robodex</a>
+        <a href="index.html#takeapart" data-view="takeapart">Take-Apart</a>
+        <a href="index.html#replay" data-view="replay">Describe Replay</a>
+        <a href="index.html#evidence" data-view="evidence">Gate Evidence</a>
+        <a href="robodex.html">Robodex page</a>
+        <a href="parts.html">Parts Kit</a>
+        <a href="try.html">Try It</a>
+        <a href="reports.html" class="active" aria-current="page">Gate Reports</a>
+        <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub</a>
+      </div>
+    </nav>
 <header>
   <div class="kicker">RobotForge · Acceptance Gate Evidence</div>
   <h1>Measured, not believed.</h1>
