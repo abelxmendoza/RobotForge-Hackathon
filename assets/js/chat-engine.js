@@ -254,11 +254,21 @@
     if (phraseIn(qt, nameN)) return 10;
     if (headN && headN !== nameN && phraseIn(qt, headN)) return 9;
     if (phraseIn(qt, String(part.id).replace(/_/g, ' '))) return 8;
+    /* An accessory (mount/bracket/post/holder) must not outrank the
+     * part itself on a bare type word: "lidar" is the RPLIDAR first,
+     * its mount post second — unless the question names the accessory. */
+    var accessory = /(mount|bracket|post|holder)/.test(headN) &&
+      qt.indexOf('mount') === -1 && qt.indexOf('bracket') === -1 &&
+      qt.indexOf('post') === -1 && qt.indexOf('holder') === -1;
     var segs = String(part.id).split('_');
     for (var i = 0; i < segs.length; i++) {
-      if (segs[i].length >= 4 && qt.indexOf(segs[i]) !== -1) return 7;
+      if (segs[i].length >= 4 && qt.indexOf(segs[i]) !== -1) return accessory ? 4 : 7;
     }
     var headToks = tokens(headN);
+    tokens(String((part.specs || {}).kind || '').replace(/_/g, ' '))
+      .forEach(function (tk) {
+        if (headToks.indexOf(tk) === -1) headToks.push(tk);
+      });
     if (headToks.length >= 2) {
       /* a run of >= 2 question tokens that starts the part's head name
          ("lidar mount" -> "Lidar mount post (3D-printed)") */
@@ -268,6 +278,7 @@
       var sig = headToks.filter(function (t) { return t.length >= 3 && !STOP[t]; });
       var matched = sig.filter(function (t) { return qt.indexOf(t) !== -1; });
       if (matched.length >= 2 && matched.length / sig.length >= 0.75) return 5;
+      if (matched.length >= 1 && matched.length / sig.length >= 0.5) return accessory ? 3 : 5;
     } else if (headToks.length === 1 && headToks[0].length >= 4 &&
                qt.indexOf(headToks[0]) !== -1) {
       return 6;
@@ -282,6 +293,149 @@
       if (s) hits.push({ part: p, score: s });
     });
     return hits.sort(function (a, b) { return b.score - a.score; });
+  }
+
+  /* ---------------- query cards: hits + catalogue filters ----------------
+   * Answers carry structured hits (kind/id/label/route) alongside the
+   * HTML, so the UI can render result buttons that pop the entity up
+   * in the app — a robot's page, or the part's own catalogue card. */
+
+  function partHit(part) {
+    return { kind: 'part', id: part.id, label: part.name };
+  }
+
+  function robotHit(robot, root) {
+    return { kind: 'robot', id: slugify(robot.name),
+             label: dexId(robot) + ' ' + robot.name,
+             route: robotPage(root, robot) };
+  }
+
+  function partText(part) {
+    var bits = [part.name, String(part.id).replace(/_/g, ' '),
+      String(part.part_class || '').replace(/_/g, ' '),
+      part.blurb || '', part.used_for || '', part.source || '',
+      (part.robot_types || []).join(' ')];
+    var specs = part.specs || {};
+    Object.keys(specs).forEach(function (k) {
+      var v = specs[k];
+      bits.push(k.replace(/_/g, ' ') + ' ' +
+        (Array.isArray(v) ? v.join(' ') : String(v)));
+    });
+    return normalize(bits.join(' '));
+  }
+
+  var FILTER_STOP = { what: 1, how: 1, does: 1, do: 1, did: 1, is: 1,
+    are: 1, was: 1, were: 1, which: 1, who: 1, why: 1, when: 1, where: 1,
+    the: 1, a: 1, an: 1, of: 1, for: 1, with: 1, on: 1, in: 1, me: 1,
+    about: 1, tell: 1, show: 1, find: 1, search: 1, list: 1, filter: 1,
+    give: 1, get: 1, parts: 1, part: 1, robots: 1, robot: 1, used: 1,
+    use: 1, using: 1, there: 1, any: 1, and: 1, or: 1, to: 1, from: 1,
+    work: 1, works: 1, i: 1, want: 1, need: 1, have: 1, has: 1, can: 1,
+    could: 1, please: 1, all: 1, one: 1, ones: 1 };
+
+  /* Class words a question might use, mapped to catalogue classes.
+   * `any` tokens offer a text route in for parts filed elsewhere
+   * (a battery charger lives under power, a BMS board does not). */
+  var CLASS_SYNONYMS = [
+    { words: ['battery', 'batteries'], classes: ['power'], any: ['battery', 'pack'] },
+    { words: ['lidar'], classes: ['cameras_sensors'], any: ['lidar'] },
+    { words: ['camera', 'cameras'], classes: ['cameras_sensors'], any: ['camera'] },
+    { words: ['sensor', 'sensors'], classes: ['cameras_sensors'], any: [] },
+    { words: ['imu'], classes: ['cameras_sensors'], any: ['imu'] },
+    { words: ['motor', 'motors'], classes: ['actuators'], any: ['motor'] },
+    { words: ['servo', 'servos'], classes: ['actuators'], any: ['servo'] },
+    { words: ['stepper'], classes: ['actuators'], any: ['stepper'] },
+    { words: ['wheel', 'wheels'], classes: ['wheels'], any: ['wheel'] },
+    { words: ['caster', 'casters'], classes: ['wheels'], any: ['caster'] },
+    { words: ['driver', 'drivers'], classes: ['drivers'], any: ['driver'] },
+    { words: ['esc'], classes: ['drivers'], any: ['esc'] },
+    { words: ['charger', 'chargers'], classes: ['power'], any: ['charger'] },
+    { words: ['connector', 'connectors'], classes: ['cables_connectors'], any: [] },
+    { words: ['wire', 'wires', 'cable', 'cables'], classes: ['cables_connectors'], any: [] },
+    { words: ['microcontroller', 'microcontrollers'], classes: ['microcontrollers'], any: [] },
+    { words: ['frame', 'frames'], classes: ['structure'], any: ['frame'] },
+    { words: ['filament'], classes: ['materials'], any: ['filament'] },
+    { words: ['gripper', 'grippers'], classes: ['end_effectors'], any: ['gripper'] },
+    { words: ['propeller', 'propellers', 'prop', 'props'], classes: ['propulsion_air'], any: ['propeller'] },
+    { words: ['fuse', 'fuses'], classes: ['safety_protection'], any: ['fuse'] }
+  ];
+
+  function filterPartsQuery(q, qt, parts) {
+    var qn = normalize(q);
+    var typePhrase = null;
+    parts.forEach(function (p) {
+      (p.robot_types || []).forEach(function (tp) {
+        if (normalize(tp) && qn.indexOf(normalize(tp)) !== -1) typePhrase = tp;
+      });
+    });
+    var syn = null;
+    var synWords = {};
+    CLASS_SYNONYMS.forEach(function (d) {
+      d.words.forEach(function (w) {
+        synWords[w] = 1;
+        if (qt.indexOf(w) !== -1) syn = d;
+      });
+    });
+    var attrs = qt.filter(function (tk) {
+      return !FILTER_STOP[tk] && !synWords[tk];
+    });
+    var intentVerb = ['show', 'find', 'search', 'filter', 'list']
+      .some(function (v) { return qt.indexOf(v) !== -1; });
+    var signal = syn || typePhrase ||
+      (attrs.length >= 1 && (intentVerb || qt.indexOf('parts') !== -1)) ||
+      attrs.length >= 2;
+    if (!signal) return null;
+    var hits = parts.filter(function (p) {
+      if (typePhrase && (p.robot_types || []).indexOf(typePhrase) === -1) {
+        return false;
+      }
+      var text = partText(p);
+      var toks = tokens(text);
+      if (syn) {
+        if (syn.any.length) {
+          /* A specific type word must be named by the part itself
+           * (name, id, kind or a spec value) — class membership alone
+           * is too broad: every sensor in the class is not a lidar. */
+          var corpus = tokens([p.name, String(p.id).replace(/_/g, ' '),
+            String((p.specs || {}).kind || '').replace(/_/g, ' ')].join(' '));
+          var squash = normalize(p.name + ' ' + p.id).replace(/ /g, '');
+          var named = syn.any.some(function (tk) {
+            return corpus.indexOf(tk) !== -1 || squash.indexOf(tk) !== -1;
+          });
+          if (!named) return false;
+        } else if (syn.classes.indexOf(p.part_class) === -1) {
+          return false;
+        }
+      }
+      var squash = text.replace(/ /g, '');
+      return attrs.every(function (a) {
+        return toks.indexOf(a) !== -1 || squash.indexOf(a) !== -1;
+      });
+    });
+    if (!hits.length) return null;
+    if (hits.length === 1) {
+      return { html: partAnswer(hits[0]), hits: [partHit(hits[0])] };
+    }
+    var shown = hits.slice(0, 8);
+    var out = '<p><strong>' + hits.length + ' catalogue parts</strong> match' +
+      (typePhrase ? ' for ' + esc(typePhrase) : '') + ':</p><ul>' +
+      shown.map(function (p) {
+        var specs = p.specs || {};
+        var ks = Object.keys(specs).slice(0, 3).map(function (k) {
+          var v = specs[k];
+          return esc(k.replace(/_/g, ' ')) + ': ' +
+            esc(Array.isArray(v) ? v.join(' / ') : v);
+        }).join(' · ');
+        return '<li><strong>' + esc(p.name) + '</strong> — ' +
+          esc(String(p.part_class || '').replace(/_/g, ' ')) +
+          (ks ? ' · ' + ks : '') + '</li>';
+      }).join('') + '</ul>' +
+      (hits.length > shown.length
+        ? '<p>…and ' + (hits.length - shown.length) +
+          ' more. Narrow it with a spec (voltage, connector, size), ' +
+          'or tap a result button below.</p>'
+        : '<p>Tap a result button below to pop one up in the catalogue.</p>');
+    return { html: out, hits: hits.slice(0, 6).map(partHit) };
   }
 
   function partAnswer(part) {
@@ -328,7 +482,10 @@
           esc(dexId(r)) + ' ' + esc(r.name) + '</a> — ' + esc(r.class) +
           '; gate: ' + esc(VLABEL[gs.status || 'NOT_GATED']) + '</li>';
       });
-      return out + '</ul>';
+      return { html: out + '</ul>',
+               hits: ctx.data.robots.map(function (r) {
+                 return robotHit(r, ctx.root);
+               }) };
     },
 
     passed_list: function (ctx) {
@@ -347,8 +504,9 @@
           ' recorded run' + (runs.length === 1 ? '' : 's') +
           (latest ? '; latest: ' + esc(runLine(latest)) : '') + '</li>';
       });
-      return out + '</ul><p><a href="' + esc(ctx.root + 'app/evidence/') +
-        '">See the gate evidence &rarr;</a></p>';
+      return { html: out + '</ul><p><a href="' + esc(ctx.root + 'app/evidence/') +
+        '">See the gate evidence &rarr;</a></p>',
+        hits: passed.map(function (r) { return robotHit(r, ctx.root); }) };
     },
 
     failed_list: function (ctx) {
@@ -378,7 +536,10 @@
             esc(dexId(r)) + ' ' + esc(r.name) + '</a>';
         }).join(', ') + '.</p>';
       }
-      return out;
+      return { html: out,
+               hits: failed.concat(ungated).map(function (r) {
+                 return robotHit(r, ctx.root);
+               }) };
     },
 
     parts_overview: function (ctx) {
@@ -413,8 +574,10 @@
           (worst ? '; largest error: ' + esc(worst.name.replace(/_/g, ' ')) + ' ' +
             fmt(worst.error) + esc(worst.unit === 'deg' ? '°' : worst.unit) : '') + '</li>';
       });
-      return out + '</ul><p><a href="' + esc(ctx.root + 'app/evidence/') +
-        '">Open the Evidence page &rarr;</a></p>';
+      return { html: out + '</ul><p><a href="' + esc(ctx.root + 'app/evidence/') +
+        '">Open the Evidence page &rarr;</a></p>',
+        hits: [{ kind: 'route', label: 'Open the Evidence page',
+                 route: ctx.root + 'app/evidence/' }] };
     }
   };
 
@@ -478,21 +641,41 @@
         return h.score >= 6;
       });
       if (rHits.length === 1) {
-        return { html: robotAnswer(rHits[0].robot, qt, ctx.root) };
+        return { html: robotAnswer(rHits[0].robot, qt, ctx.root),
+                 hits: [robotHit(rHits[0].robot, ctx.root)] };
       }
       if (rHits.length > 1) {
-        return { html: compareAnswer(rHits, ctx.root) };
+        return { html: compareAnswer(rHits, ctx.root),
+                 hits: rHits.map(function (h) {
+                   return robotHit(h.robot, ctx.root);
+                 }) };
       }
       var brand = brandAmbiguity(qt, ctx.data.robots);
-      if (brand) return { html: brandAnswer(brand, ctx.root) };
+      if (brand) return { html: brandAnswer(brand, ctx.root),
+                          hits: brand.map(function (r) {
+                            return robotHit(r, ctx.root);
+                          }) };
 
       /* 2. parts with a confident match beat generic topics */
       var pHits = findParts(q, qt, ctx.data.parts);
       var topPart = pHits.length ? pHits[0] : null;
       if (topPart && topPart.score >= 8) {
         var tied = pHits.filter(function (h) { return h.score === topPart.score; });
-        return { html: tied.length > 1 ? partAmbiguous(tied) : partAnswer(topPart.part) };
+        var near = pHits.filter(function (h) {
+          return h.score >= topPart.score - 2;
+        }).slice(0, 4);
+        return { html: tied.length > 1 ? partAmbiguous(tied) : partAnswer(topPart.part),
+                 hits: (tied.length > 1 ? tied : near).map(function (h) {
+                   return partHit(h.part);
+                 }) };
       }
+
+      /* 2.5 query cards: catalogue filter questions ("show me 4S
+       * batteries", "parts with xt60", bare "lidar"). Only fires on a
+       * real filter signal and only when it finds something; otherwise
+       * the topic/fallback flow below decides as before. */
+      var fq = filterPartsQuery(q, qt, ctx.data.parts);
+      if (fq) return fq;
 
       /* 3. intent topics */
       var best = null, bestScore = 0, bestLong = 0;
@@ -505,7 +688,8 @@
       });
       if (best && bestScore >= 2) {
         if (best.handler && HANDLERS[best.handler]) {
-          return { html: HANDLERS[best.handler](ctx) };
+          var hr = HANDLERS[best.handler](ctx);
+          return typeof hr === 'string' ? { html: hr } : hr;
         }
         if (best.answer) return { html: textAnswer(best.answer, best.link, ctx.root) };
       }
@@ -513,7 +697,13 @@
       /* 4. weaker part match */
       if (topPart && topPart.score >= 5) {
         var tied2 = pHits.filter(function (h) { return h.score === topPart.score; });
-        return { html: tied2.length > 1 ? partAmbiguous(tied2) : partAnswer(topPart.part) };
+        var near2 = pHits.filter(function (h) {
+          return h.score >= topPart.score - 2;
+        }).slice(0, 4);
+        return { html: tied2.length > 1 ? partAmbiguous(tied2) : partAnswer(topPart.part),
+                 hits: (tied2.length > 1 ? tied2 : near2).map(function (h) {
+                   return partHit(h.part);
+                 }) };
       }
 
       /* 5. honest fallback, with the nearest topics as suggestions */
