@@ -13,7 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from robotforge import cli
-from robotforge.photo import (PhotoDraft, SamRegion, parse_photo_payload,
+from robotforge.photo import (DOCUMENT_INSTRUCTIONS, DOCUMENT_PREFIX,
+                              DocumentDraft, PhotoDraft, SamRegion,
+                              parse_document_payload, parse_photo_payload,
                               parse_sam_text, sam_text_from_stream)
 from robotforge.schema import RobotSpec, SpecError
 
@@ -124,6 +126,113 @@ def test_cli_photo_flow(monkeypatch=None):
     # Spark said 4, SAM found 3: the disagreement must be printed, not hidden
     assert "Spark saw 4 / SAM found 3 regions — DISAGREE" in out
     assert '"name": "pathfinder"' in out  # spec JSON still emitted
+
+
+# ------------------------------------------------------------------
+# document mode (transcription, not estimation)
+# ------------------------------------------------------------------
+
+def _document_payload() -> dict:
+    spec = json.loads((Path(__file__).parent.parent / "examples" /
+                       "turtlebot3-burger.json").read_text())
+    for k in ("wiring", "component_mass_kg"):
+        spec.pop(k, None)
+    spec["description"] = "a burger-class reference robot"
+    values = [
+        {"label": "Overall length", "printed": "178 mm",
+         "field": "length_m"},
+        {"label": "Overall width", "printed": "138 mm",
+         "field": "width_m"},
+        {"label": "Overall height", "printed": "192 mm",
+         "field": "height_m"},
+        {"label": "Weight", "printed": "0.93 kg", "field": "mass_kg"},
+        {"label": "Ground clearance", "printed": "20 mm",
+         "field": "ground_clearance_m"},
+        {"label": "Wheel diameter", "printed": "66 mm",
+         "field": "wheel.diameter_m"},
+        {"label": "Wheel width", "printed": "22 mm",
+         "field": "wheel.width_m"},
+        {"label": "Wheel count", "printed": "2", "field": "wheel.count"},
+        {"label": "Motor voltage", "printed": "11.1 V",
+         "field": "motor.voltage_v"},
+        {"label": "Motor count", "printed": "2", "field": "motor.count"},
+        {"label": "Motor stall torque", "printed": "0.3 N·m",
+         "field": "motor.stall_torque_nm"},
+        {"label": "Battery voltage", "printed": "11.1 V",
+         "field": "battery.voltage_v"},
+        {"label": "Battery capacity", "printed": "1800 mAh",
+         "field": "battery.capacity_mah"},
+        {"label": "Lidar range", "printed": "3.5 m",
+         "field": "sensors.range_m"},
+    ]
+    return {"choices": [{"message": {"content": json.dumps({
+        "identity_guess": "TurtleBot3 Burger",
+        "values": values,
+        "spec": spec,
+    })}}]}
+
+
+def test_document_prompt_carries_the_hard_rules():
+    assert "TRANSCRIPTION" in DOCUMENT_INSTRUCTIONS
+    assert "drawing scale" in DOCUMENT_INSTRUCTIONS
+    assert "stays ABSENT" in DOCUMENT_INSTRUCTIONS
+    assert "no typical values" in DOCUMENT_INSTRUCTIONS
+
+
+def test_parse_document_payload_complete():
+    draft = parse_document_payload(_document_payload())
+    assert isinstance(draft, DocumentDraft)
+    assert draft.is_complete and isinstance(draft.spec, RobotSpec)
+    assert draft.spec.length_m == 0.178
+    assert draft.dropped == []
+    assert len(draft.values) == 14
+    # the banner prefix is enforced even when the model's text lacks it
+    assert draft.spec_data["description"].startswith(DOCUMENT_PREFIX)
+
+
+def test_parse_document_payload_drops_unbacked_numbers():
+    payload = _document_payload()
+    data = json.loads(payload["choices"][0]["message"]["content"])
+    # mass_kg stays in the spec but loses its transcribed value, and
+    # the battery (with its values) disappears entirely: the draft
+    # must under-claim, not over-claim.
+    data["values"] = [v for v in data["values"]
+                      if v["field"] != "mass_kg"]
+    data["spec"].pop("battery")
+    payload["choices"][0]["message"]["content"] = json.dumps(data)
+    draft = parse_document_payload(payload)
+    assert "mass_kg" in draft.dropped
+    assert "mass_kg" not in draft.spec_data
+    assert draft.spec is None and not draft.is_complete  # partial on purpose
+    assert draft.spec_data["length_m"] == 0.178  # backed values survive
+
+
+def test_parse_document_payload_rejects_garbage():
+    for bad in ({}, {"choices": []},
+                {"choices": [{"message": {"content": "not json"}}]},
+                {"choices": [{"message": {"content": '{"spec": 4}'}}]}):
+        try:
+            parse_document_payload(bad)
+            raise AssertionError(f"expected SpecError for {bad!r}")
+        except SpecError:
+            pass
+
+
+def test_cli_document_flow(monkeypatch=None):
+    draft = parse_document_payload(_document_payload())
+    orig = cli.draft_spec_from_document
+    cli.draft_spec_from_document = lambda path: draft
+    try:
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = cli.main(["describe", "--document", "sheet.png"])
+    finally:
+        cli.draft_spec_from_document = orig
+    out = buf.getvalue()
+    assert rc == 0
+    assert "DOCUMENT DRAFT" in out and "transcribed from the document" in out
+    assert "178 mm" in out and "length_m" in out
+    assert '"name": "turtlebot3-burger"' in out
 
 
 def test_cli_describe_still_requires_text_or_photo():

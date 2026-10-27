@@ -35,6 +35,17 @@ describe ──► spec ──► validate ──► urdf ──► gazebo twin 
 4. **twin + gate** — spawns the model in headless Gazebo and runs motion acceptance
    checks (drive / turn / stop) with explicit pass/fail thresholds.
 
+Two more intakes feed step 1, with opposite contracts. A **photo of a
+robot** (`robotforge describe --photo robot.jpg`) drafts a spec from
+appearance — every dimension ESTIMATED, banner and all. A **photo of a
+spec sheet, datasheet or blueprint** (`robotforge describe --document
+sheet.png`) *transcribes* the printed values instead: nothing is
+inferred from drawing scale, a value that isn't printed stays absent,
+and the draft is badged "Document draft". On the website, the Forge
+chat also takes a **.ply point-cloud scan**, measured in the browser
+(bounding box, badged MEASURED (scan)) — a scan gives shape and size
+only, never mass, motors or voltage.
+
 ## Quickstart
 
 ```bash

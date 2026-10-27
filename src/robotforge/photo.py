@@ -23,6 +23,15 @@ this process, the environment, or the repo):
 Photo mode needs the connector environment. Outside it (no
 ``dynamic_credentials`` module), both entry points raise SpecError saying so
 instead of guessing.
+
+Document mode (``draft_spec_from_document``) is the second intake for an
+image: a photo/scan of a spec sheet, datasheet or blueprint. It TRANSCRIBES
+printed values instead of estimating from appearance — the framing is
+"Document draft (values transcribed from the document)", never ESTIMATED,
+and the rules are enforced in code, not just in the prompt: a numeric spec
+value with no matching transcribed ``values`` entry is dropped by the
+parser (see ``parse_document_payload``), and a field the document does not
+print stays absent, so a document draft may be a partial spec on purpose.
 """
 from __future__ import annotations
 
@@ -70,6 +79,54 @@ design physically coherent: ground clearance must not exceed the wheel
 radius, and the motor voltage must not exceed the battery voltage. For a
 two-visible-wheel differential base with a caster, wheel count is the
 number of DRIVE wheels (usually 2), not the visible total.
+"""
+
+DOCUMENT_PREFIX = "Document draft (values transcribed from the document): "
+
+DOCUMENT_INSTRUCTIONS = """
+You are now looking at a DOCUMENT (attached as an image): a photo or scan
+of a spec sheet, datasheet or blueprint. Your job is TRANSCRIPTION, not
+estimation: read the values the document PRINTS and carry them into the
+draft exactly. Do not work from the appearance or proportions of anything
+in the image — there may be no robot in it at all.
+
+Output ONLY one JSON object with exactly these keys:
+- "identity_guess": the robot or product the document describes, as
+  printed (e.g. "TurtleBot3 Burger"), or "unknown document" if the
+  document does not name it.
+- "values": a list of {"label": ..., "printed": ..., "field": ...} —
+  one entry for EVERY value you transcribe: "label" is the document's
+  own label ("Overall length"), "printed" is the value exactly as
+  printed, with its unit ("178 mm"), and "field" is the spec field it
+  fills, as a dotted path ("length_m", "wheel.diameter_m",
+  "battery.capacity_mah"). Use ONLY these field paths: name,
+  description, drivetrain, length_m, width_m, height_m, mass_kg,
+  ground_clearance_m, wheel.diameter_m, wheel.width_m, wheel.count,
+  motor.kind, motor.voltage_v, motor.count, motor.stall_torque_nm,
+  battery.chemistry, battery.voltage_v, battery.capacity_mah, and for
+  sensors: sensors.kind, sensors.position, sensors.range_m.
+- "spec": the robot specification object in the field format described
+  above, built ONLY from the values you transcribed.
+
+Hard rules:
+- Transcribe ONLY printed values. A number you cannot read in the
+  document does not go in the draft: no typical values, no values from
+  memory of a similar product, no completing the table. This overrides
+  any instruction above about filling in realistic values for omissions.
+- NEVER infer a dimension from drawing scale, proportions, or the size
+  of anything in the image. If a blueprint dimension is not printed as
+  a callout, it is absent, even if the drawing looks measurable.
+- A value that is not printed stays ABSENT: leave the field out of the
+  spec entirely. A partial spec is a correct answer for a partial
+  document.
+- Units: keep the printed unit in "values". In the spec, convert to
+  metres / volts / kilograms ONLY when the printed unit is explicit
+  (178 mm becomes 0.178 in length_m; 1800 mAh stays 1800 in
+  battery.capacity_mah). If a printed value carries no unit, leave it
+  out of the spec and note that in the "description".
+- Prefix the spec "description" with "Document draft (values
+  transcribed from the document): " and mention anything you could not
+  read or had to leave out.
 """
 
 
@@ -216,6 +273,148 @@ def draft_spec_from_photo(image_path: str | Path,
     }
     payload = _post_json("/chat/completions", body)
     return parse_photo_payload(payload)
+
+
+# --------------------------------------------------------------------------
+# document mode (spec sheet / datasheet / blueprint -> transcribed draft)
+# --------------------------------------------------------------------------
+
+@dataclass
+class TranscribedValue:
+    label: str          # the document's own label ("Overall length")
+    printed: str        # exactly as printed, with unit ("178 mm")
+    field: str          # dotted spec path ("length_m", "wheel.diameter_m")
+
+
+@dataclass
+class DocumentDraft:
+    """A document-mode draft. ``spec_data`` is the raw spec dict and may
+    be PARTIAL on purpose: fields the document does not print stay absent.
+    ``spec`` parses it into a RobotSpec when (and only when) it is
+    complete enough for the strict schema."""
+    spec_data: dict
+    identity_guess: str
+    values: list[TranscribedValue] = field(default_factory=list)
+    dropped: list[str] = field(default_factory=list)  # unbacked numerics
+
+    @property
+    def spec(self) -> RobotSpec | None:
+        try:
+            return RobotSpec.from_dict(self.spec_data)
+        except SpecError:
+            return None
+
+    @property
+    def is_complete(self) -> bool:
+        return self.spec is not None
+
+
+_FIELD_ALIASES = {
+    "wheel_diameter_m": "wheel.diameter_m",
+    "wheel_width_m": "wheel.width_m",
+    "wheel_count": "wheel.count",
+    "motor_voltage_v": "motor.voltage_v",
+    "motor_count": "motor.count",
+    "motor_stall_torque_nm": "motor.stall_torque_nm",
+    "battery_chemistry": "battery.chemistry",
+    "battery_voltage_v": "battery.voltage_v",
+    "battery_capacity_mah": "battery.capacity_mah",
+}
+
+
+def _numeric_leaf_paths(data, prefix=""):
+    """Yield (dotted_path, parent_dict, key) for every numeric leaf."""
+    if isinstance(data, dict):
+        for k, v in data.items():
+            path = f"{prefix}.{k}" if prefix else str(k)
+            yield from _numeric_leaf_paths(v, path)
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                yield path, data, k
+    elif isinstance(data, list):
+        for item in data:
+            yield from _numeric_leaf_paths(item, prefix)
+
+
+def parse_document_payload(payload: dict) -> DocumentDraft:
+    """Parse a chat-completions payload from the document prompt (pure).
+
+    Enforcement, in code rather than in the prompt's goodwill:
+    - the spec description carries the DOCUMENT banner prefix;
+    - every numeric spec value must be backed by a transcribed
+      ``values`` entry naming its field — an unbacked number is
+      dropped and named in ``dropped`` (under-claim, never over-claim).
+    """
+    try:
+        text = payload["choices"][0]["message"]["content"].strip()
+    except (KeyError, IndexError, TypeError) as exc:
+        raise SpecError(f"document response has no message content: "
+                        f"{exc}") from exc
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise SpecError(f"document response is not valid JSON: {exc}") \
+            from exc
+    if not isinstance(data, dict) or not isinstance(data.get("spec"), dict):
+        raise SpecError("document response JSON has no 'spec' object: "
+                        + text[:200])
+    spec_data = data["spec"]
+    values: list[TranscribedValue] = []
+    for entry in data.get("values", []):
+        try:
+            raw_field = str(entry["field"]).strip()
+            values.append(TranscribedValue(
+                label=str(entry["label"]), printed=str(entry["printed"]),
+                field=_FIELD_ALIASES.get(raw_field, raw_field)))
+        except (KeyError, TypeError, ValueError):
+            continue  # a malformed value note must not sink the draft
+    backed = {v.field for v in values}
+    dropped: list[str] = []
+    # paths under these parents are backed by a same-prefix entry
+    for path, parent, key in list(_numeric_leaf_paths(spec_data)):
+        base = path.split(".")[0]
+        ok = path in backed or (
+            base == "component_mass_kg" and
+            any(f.startswith("component_mass_kg") for f in backed)) or (
+            base == "sensors" and
+            any(f == path for f in backed))
+        if not ok:
+            dropped.append(path)
+            del parent[key]
+    desc = spec_data.get("description")
+    if not isinstance(desc, str) or not desc.startswith("Document draft"):
+        spec_data["description"] = DOCUMENT_PREFIX + (
+            desc if isinstance(desc, str) else "")
+    return DocumentDraft(
+        spec_data=spec_data,
+        identity_guess=str(data.get("identity_guess",
+                                    "unknown document")),
+        values=values, dropped=dropped)
+
+
+def draft_spec_from_document(image_path: str | Path,
+                             model: str | None = None) -> DocumentDraft:
+    """One Muse Spark vision call: document image -> transcribed draft."""
+    model = model or os.environ.get("RF_MODEL") or DEFAULT_MODEL
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system",
+             "content": SYSTEM_PROMPT + DOCUMENT_INSTRUCTIONS},
+            {"role": "user", "content": [
+                {"type": "text",
+                 "text": "Transcribe the printed specification values "
+                         "in this document into a robot specification "
+                         "draft."},
+                {"type": "image_url",
+                 "image_url": {"url": image_data_uri(image_path)}},
+            ]},
+        ],
+        "temperature": 0.2,
+    }
+    payload = _post_json("/chat/completions", body)
+    return parse_document_payload(payload)
 
 
 # --------------------------------------------------------------------------

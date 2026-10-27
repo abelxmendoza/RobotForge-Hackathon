@@ -58,8 +58,31 @@ const LIST_REPLY = {
   draft_spec: GOOD_SPEC,
 };
 
+const DOC_DRAFT = {
+  identity_guess: 'TurtleBot3 Burger',
+  values: [
+    { label: 'Overall length', printed: '178 mm', field: 'length_m' },
+    { label: 'Battery voltage', printed: '11.1 V', field: 'battery.voltage_v' },
+    { label: 'Battery capacity', printed: '1800 mAh', field: 'battery.capacity_mah' },
+  ],
+  /* description deliberately lacks the DOCUMENT prefix, and mass_kg
+   * deliberately has NO transcribed value behind it: the Worker must
+   * add the prefix and DROP mass_kg, like photo.py's parser. */
+  spec: {
+    name: 'TURTLEBOT3 BURGER', description: 'transcribed table',
+    length_m: 0.178, mass_kg: 0.93,
+    battery: { chemistry: 'LiPo', voltage_v: 11.1, capacity_mah: 1800 },
+  },
+};
+
+const DOC_BAD = {
+  identity_guess: 'Some sheet',
+  values: [{ label: 'Length', printed: '178 mm', field: 'length_m' }],
+  spec: { name: 'Bad', length_m: 'one-seven-eight' },
+};
+
 let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft
-let metaMode = 'photo';   // photo | junk
+let metaMode = 'photo';   // photo | junk | document | document-bad
 const upstreamCalls = [];
 globalThis.fetch = async (url, opts) => {
   upstreamCalls.push({ url: String(url), opts });
@@ -67,6 +90,8 @@ globalThis.fetch = async (url, opts) => {
   if (u.startsWith('https://api.meta.ai/')) {
     assert.strictEqual(opts.headers.Authorization, 'Bearer meta-key-456');
     const content = metaMode === 'photo' ? JSON.stringify(PHOTO_DRAFT)
+      : metaMode === 'document' ? JSON.stringify(DOC_DRAFT)
+      : metaMode === 'document-bad' ? JSON.stringify(DOC_BAD)
       : 'this is not json at all';
     return new Response(JSON.stringify({
       choices: [{ message: { content } }],
@@ -304,6 +329,46 @@ await scenario('photo malformed model output is a 502', async () => {
   const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/photo', {
     method: 'POST',
     body: { image_data_url: 'data:image/png;base64,AAAA' },
+  });
+  assert.strictEqual(r.status, 502);
+  assert.strictEqual(r.body.code, 'bad_model_output');
+  metaMode = 'photo';
+});
+
+await scenario('document mode transcribes, prefixes and drops unbacked numbers', async () => {
+  metaMode = 'document';
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const before = upstreamCalls.length;
+  const r = await call(env, '/photo', {
+    method: 'POST',
+    body: { image_data_url: 'data:image/png;base64,AAAA', mode: 'document' },
+  });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.document_read, true);
+  assert.strictEqual(r.body.estimated, false);
+  assert.strictEqual(r.body.draft.identity_guess, 'TurtleBot3 Burger');
+  assert.strictEqual(r.body.draft.spec.length_m, 0.178);
+  assert.ok(!('mass_kg' in r.body.draft.spec),
+    'an unbacked number must be dropped, got: ' +
+    JSON.stringify(r.body.draft.spec));
+  assert.deepStrictEqual(r.body.draft.dropped, ['mass_kg']);
+  assert.ok(r.body.draft.spec.description.startsWith(
+    'Document draft (values transcribed from the document): '),
+    'DOCUMENT prefix was not enforced: ' + r.body.draft.spec.description);
+  assert.strictEqual(r.body.draft.values.length, 3);
+  const sent = JSON.parse(upstreamCalls[before].opts.body);
+  assert.ok(sent.messages[0].content.includes('drawing scale'),
+    'the document prompt must carry the no-inference rule');
+  assert.ok(sent.messages[0].content.includes('DOCUMENT'),
+    'the document system prompt must be used in document mode');
+  metaMode = 'photo';
+});
+
+await scenario('document mode rejects a mistyped printed value', async () => {
+  metaMode = 'document-bad';
+  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/photo', {
+    method: 'POST',
+    body: { image_data_url: 'data:image/png;base64,AAAA', mode: 'document' },
   });
   assert.strictEqual(r.status, 502);
   assert.strictEqual(r.body.code, 'bad_model_output');

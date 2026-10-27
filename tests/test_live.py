@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO / "src"))
 from robotforge import schema, site  # noqa: E402
 from robotforge.catalog import Catalog, Robodex  # noqa: E402
 from robotforge.describe import SYSTEM_PROMPT  # noqa: E402
-from robotforge.photo import PHOTO_INSTRUCTIONS  # noqa: E402
+from robotforge.photo import DOCUMENT_INSTRUCTIONS, PHOTO_INSTRUCTIONS  # noqa: E402
 from robotforge.schema import RobotSpec  # noqa: E402
 from robotforge.validate import validate as py_validate  # noqa: E402
 
@@ -91,6 +91,18 @@ def test_worker_photo_prompt_matches_python():
     embedded = _between(WORKER, "/*PHOTO_PROMPT_BEGIN*/`",
                         "`/*PHOTO_PROMPT_END*/")
     assert embedded == SYSTEM_PROMPT + PHOTO_INSTRUCTIONS
+
+
+def test_worker_document_prompt_matches_python():
+    embedded = _between(WORKER, "/*DOC_PROMPT_BEGIN*/`",
+                        "`/*DOC_PROMPT_END*/")
+    assert embedded == SYSTEM_PROMPT + DOCUMENT_INSTRUCTIONS
+    assert "drawing scale" in embedded
+    # document mode rides the /photo route with document_read marking
+    assert "document_read" in WORKER and "mode === 'document'" in WORKER
+    assert "validateSpecPartial" in WORKER
+    assert "Document draft (values transcribed from the document)" \
+        in WORKER
 
 
 def test_worker_spec_schema_matches_python():
@@ -164,6 +176,8 @@ def test_worker_mock_suite():
                  "ESTIMATED framing",
                  "budget exhausted is a 503",
                  "list happy path sanitizes",
+                 "document mode transcribes",
+                 "document mode rejects",
                  "malformed model output is a 502"):
         assert "PASS " + name.split(" is a 501")[0] in r.stdout or \
             name in r.stdout, name
@@ -228,6 +242,70 @@ def test_forge_input_flows_are_honest_per_mode():
     assert "'/list'" in FORGE_JS and "sampleOffer('list'" in FORGE_JS
     # waiting states show real elapsed time, never fake progress
     assert "startTimer" in FORGE_JS and "performance.now" in FORGE_JS
+
+
+# ------------------------------------------------------------------
+# Forge: document mode + scan attach
+# ------------------------------------------------------------------
+
+def test_forge_page_has_scan_attach_document_sample_and_3d_module():
+    page = site.render_forge()
+    for bit in ('id="att-scan"', 'id="file-scan"',
+                'data-sample="document"',
+                "Document &mdash; TurtleBot3 spec sheet",
+                'assets/js/scan.js', 'type="importmap"'):
+        assert bit in page, bit
+
+
+def test_forge_photo_asks_robot_or_document_before_sending():
+    assert "data-pmode" in FORGE_JS
+    assert "Spec sheet or blueprint" in FORGE_JS
+    assert "choosePhotoMode" in FORGE_JS
+    # document mode posts mode=document to the same /photo route
+    assert "mode: 'document'" in FORGE_JS
+    # offline: the document is NOT read and the recorded run is offered
+    assert "Your document was not read" in FORGE_JS
+    assert "sampleOffer('document'" in FORGE_JS
+    assert "Play the recorded document run" in FORGE_JS
+    # the draft wears the document banner, never the estimated one
+    assert "Document draft — values transcribed from the document; " \
+           "verify against the source" in FORGE_JS
+    assert "DOCUMENT-READ" in FORGE_JS
+    # unbacked numbers dropped by the endpoint are surfaced, not hidden
+    assert "Dropped as unbacked" in FORGE_JS
+
+
+def test_forge_document_recorded_run_is_real_and_scored():
+    run = json.loads((REPO / "examples" /
+                      "document-turtlebot3-burger.json").read_text())
+    assert run["kind"] == "document_run"
+    assert run["complete"] is True
+    assert run["score"]["total"] == 10
+    assert 0 <= run["score"]["exact"] <= 10
+    for row in run["score"]["rows"]:
+        assert row["match"] == (row["got"] == row["expected"])
+    # the input was an image of printed values, hash-recorded
+    assert len(run["input"]["png_sha256"]) == 64
+    assert run["input"]["display_svg"].endswith(".svg")
+    assert (REPO / run["input"]["display_svg"]).exists()
+    assert "document" in FORGE_JS and "document-turtlebot3-burger" \
+        in FORGE_JS
+    # the run card prints the score, whatever it is
+    assert "printed values transcribed exactly" in FORGE_JS
+
+
+def test_forge_scan_flow_is_local_measured_and_seeds_honestly():
+    for bit in ("runScan", "RFScan", "parsePly", "measureCloud",
+                "MEASURED (scan)",
+                "bounding box of the uploaded point cloud",
+                "depth scans arrive measured",
+                "Seed a draft spec with these dimensions",
+                "shape and size only",
+                "not</strong> been run through the checks"):
+        assert bit in FORGE_JS, bit
+    # a scan is never sent to the live endpoint
+    assert "postJSON('/scan'" not in FORGE_JS
+    assert '"/scan"' not in FORGE_JS
 
 
 # ------------------------------------------------------------------

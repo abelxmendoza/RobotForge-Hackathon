@@ -150,8 +150,12 @@ def test_robot_pages_carry_the_3d_assets_and_importmap():
         assert ('<script type="module" '
                 'src="../../../assets/js/robot3d.js"></script>') in page, \
             r.name
-    # pages without a take-apart viewer do not pay for the 3D assets
-    assert "importmap" not in render_forge()
+    # the Forge carries the importmap for its scan (.ply) points view
+    # (assets/js/scan.js) — but the take-apart module stays robot-only
+    forge = render_forge()
+    assert '<script type="importmap">' in forge
+    assert "assets/js/scan.js" in forge
+    assert "robot3d.js" not in forge
 
 
 def test_viewer_markup_and_module_contracts():

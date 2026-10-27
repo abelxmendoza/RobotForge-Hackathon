@@ -330,3 +330,15 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .elapsed{font-family:var(--mono)}
 .fv-side,.fv-top{margin-top:var(--s3)}
 .fv-detail{margin-top:var(--s4)}
+.docd{
+  display:inline-block;font:700 11px/1.3 var(--font);letter-spacing:.06em;
+  text-transform:uppercase;color:#4db2e8;border:1px solid #4db2e8;
+  border-radius:6px;padding:5px 8px;
+}
+.docsheet{max-width:640px}
+.score-line{font-size:var(--fs-md)}
+.scan-view{
+  height:340px;border:1px solid var(--border);border-radius:var(--r);
+  overflow:hidden;background:#101216;margin-top:var(--s3);
+}
+.scan-view canvas{display:block}

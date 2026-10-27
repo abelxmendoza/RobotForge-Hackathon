@@ -18,12 +18,38 @@ one constant lights the live steps up.
 | `POST /describe` | `{description}` → validated spec JSON (Baseten, `meta-models/muse-spark-open`, RobotForge's describe prompt) | `BASETEN_API_KEY` |
 | `POST /chat` | `{message}` → Forge Guide live-model answer (Baseten) | `BASETEN_API_KEY` |
 | `POST /list` | `{text}` → model-generated parts-list import matched against the site catalogue (Baseten) | `BASETEN_API_KEY` |
-| `POST /photo` | `{image_data_url, note?}` → ESTIMATED photo draft spec (Meta Model API vision, `muse-spark-1.3`) | `META_API_KEY` (**optional**) |
+| `POST /photo` | `{image_data_url, note?, mode?}` → photo draft spec (Meta Model API vision, `muse-spark-1.3`). `mode` omitted/`"photo"`: an ESTIMATED draft from a robot photo. `mode: "document"`: a TRANSCRIBED draft from a spec-sheet/blueprint photo (below) | `META_API_KEY` (**optional**) |
 
 `/photo` without the Meta key answers `501 photo_not_configured`
 and the site falls back to its recorded photo sample — that is the
 designed behavior, not an error. Malformed model output is a 502
 with a plain error; raw model junk never reaches the page.
+
+## Document mode (`/photo` with `mode: "document"`)
+
+For a photo of a spec sheet, datasheet or blueprint, the same route
+runs the document prompt (a mirror of `DOCUMENT_INSTRUCTIONS` in
+`src/robotforge/photo.py`): **transcription, not estimation**. The
+response is marked `document_read: true` (and `estimated: false`),
+and the draft is shaped differently on purpose:
+
+- Values come back as a `values` list — each printed value with its
+  printed unit and the spec field it fills — so the site can badge
+  them DOCUMENT-READ.
+- The draft's description is forced to start with the banner
+  "Document draft (values transcribed from the document): ".
+- A numeric spec value with **no transcribed value behind it is
+  dropped server-side** and named in `dropped` — the endpoint
+  under-claims rather than letting an unprinted number through.
+- The spec may be **partial**: a field the document does not print
+  stays absent, and only the fields present are type/enum-checked
+  (`validateSpecPartial`). A partial document gives a partial draft,
+  which the Forge shows as partial.
+
+The Forge's fourth input — a `.ply` point-cloud **scan** — never
+touches this endpoint at all: it is parsed and measured in the
+visitor's browser (`assets/js/scan.js`, bounding-box measurement,
+badged MEASURED (scan)).
 
 ## Guardrails (this spends real credits)
 

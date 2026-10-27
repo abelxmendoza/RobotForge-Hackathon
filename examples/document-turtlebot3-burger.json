@@ -1,0 +1,303 @@
+{
+  "kind": "document_run",
+  "recorded": "Oct 26, 2026",
+  "input": {
+    "description": "A spec-sheet image rendered from the TurtleBot3 Burger's published values as recorded in this repo (tools/make_spec_sheet.py). The vision model read the PNG; the site displays the SVG twin of the same sheet.",
+    "png_file": "document-turtlebot3-burger-spec-sheet.png",
+    "png_sha256": "0bc1a0553dfde7e7f7a35183c73d3f33d6f720d925992f1cbc45229c02a8dbee",
+    "png_bytes": 85638,
+    "display_svg": "examples/document-turtlebot3-burger-spec-sheet.svg",
+    "generator": "tools/make_spec_sheet.py",
+    "source_spec": "examples/turtlebot3-burger.json",
+    "printed_values": [
+      {
+        "label": "Overall length",
+        "printed": "178 mm",
+        "field": "length_m",
+        "expected": 0.178
+      },
+      {
+        "label": "Overall width",
+        "printed": "138 mm",
+        "field": "width_m",
+        "expected": 0.138
+      },
+      {
+        "label": "Overall height",
+        "printed": "192 mm",
+        "field": "height_m",
+        "expected": 0.192
+      },
+      {
+        "label": "Weight",
+        "printed": "0.93 kg",
+        "field": "mass_kg",
+        "expected": 0.93
+      },
+      {
+        "label": "Ground clearance",
+        "printed": "20 mm",
+        "field": "ground_clearance_m",
+        "expected": 0.02
+      },
+      {
+        "label": "Wheel diameter",
+        "printed": "66 mm",
+        "field": "wheel.diameter_m",
+        "expected": 0.066
+      },
+      {
+        "label": "Wheel width",
+        "printed": "22 mm",
+        "field": "wheel.width_m",
+        "expected": 0.022
+      },
+      {
+        "label": "Battery voltage",
+        "printed": "11.1 V",
+        "field": "battery.voltage_v",
+        "expected": 11.1
+      },
+      {
+        "label": "Battery capacity",
+        "printed": "1800 mAh",
+        "field": "battery.capacity_mah",
+        "expected": 1800
+      },
+      {
+        "label": "Motor voltage",
+        "printed": "11.1 V",
+        "field": "motor.voltage_v",
+        "expected": 11.1
+      }
+    ]
+  },
+  "model": "muse-spark-1.3",
+  "identity_guess": "TurtleBot3 Burger",
+  "values": [
+    {
+      "label": "TURTLEBOT3 BURGER",
+      "printed": "TURTLEBOT3 BURGER",
+      "field": "name"
+    },
+    {
+      "label": "Overall length",
+      "printed": "178 mm",
+      "field": "length_m"
+    },
+    {
+      "label": "Overall width",
+      "printed": "138 mm",
+      "field": "width_m"
+    },
+    {
+      "label": "Overall height",
+      "printed": "192 mm",
+      "field": "height_m"
+    },
+    {
+      "label": "Weight",
+      "printed": "0.93 kg",
+      "field": "mass_kg"
+    },
+    {
+      "label": "Ground clearance",
+      "printed": "20 mm",
+      "field": "ground_clearance_m"
+    },
+    {
+      "label": "Wheel diameter",
+      "printed": "66 mm",
+      "field": "wheel.diameter_m"
+    },
+    {
+      "label": "Wheel width",
+      "printed": "22 mm",
+      "field": "wheel.width_m"
+    },
+    {
+      "label": "Drivetrain",
+      "printed": "Differential drive, 2 driven wheels",
+      "field": "drivetrain"
+    },
+    {
+      "label": "Drivetrain",
+      "printed": "Differential drive, 2 driven wheels",
+      "field": "wheel.count"
+    },
+    {
+      "label": "Motors",
+      "printed": "2 \u00d7 DC geared motors",
+      "field": "motor.count"
+    },
+    {
+      "label": "Motors",
+      "printed": "2 \u00d7 DC geared motors",
+      "field": "motor.kind"
+    },
+    {
+      "label": "Motor voltage",
+      "printed": "11.1 V",
+      "field": "motor.voltage_v"
+    },
+    {
+      "label": "Motor stall torque",
+      "printed": "0.3 N\u00b7m",
+      "field": "motor.stall_torque_nm"
+    },
+    {
+      "label": "Battery chemistry",
+      "printed": "LiPo",
+      "field": "battery.chemistry"
+    },
+    {
+      "label": "Battery voltage",
+      "printed": "11.1 V",
+      "field": "battery.voltage_v"
+    },
+    {
+      "label": "Battery capacity",
+      "printed": "1800 mAh",
+      "field": "battery.capacity_mah"
+    },
+    {
+      "label": "Top sensor",
+      "printed": "360\u00b0 2D lidar, range 3.5 m",
+      "field": "sensors.kind"
+    },
+    {
+      "label": "Top sensor",
+      "printed": "360\u00b0 2D lidar, range 3.5 m",
+      "field": "sensors.position"
+    },
+    {
+      "label": "Top sensor",
+      "printed": "360\u00b0 2D lidar, range 3.5 m",
+      "field": "sensors.range_m"
+    }
+  ],
+  "spec": {
+    "name": "TURTLEBOT3 BURGER",
+    "description": "Document draft (values transcribed from the document): All table values legible and transcribed; wheel driven flag omitted - no allowed field path for transcription; component_mass_kg not printed so omitted; no unitless numeric values left out.",
+    "drivetrain": "differential",
+    "length_m": 0.178,
+    "width_m": 0.138,
+    "height_m": 0.192,
+    "mass_kg": 0.93,
+    "ground_clearance_m": 0.02,
+    "wheel": {
+      "diameter_m": 0.066,
+      "width_m": 0.022,
+      "count": 2
+    },
+    "motor": {
+      "kind": "DC geared motors",
+      "voltage_v": 11.1,
+      "count": 2,
+      "stall_torque_nm": 0.3
+    },
+    "battery": {
+      "chemistry": "LiPo",
+      "voltage_v": 11.1,
+      "capacity_mah": 1800
+    },
+    "sensors": [
+      {
+        "kind": "lidar_2d",
+        "position": "top",
+        "range_m": 3.5
+      }
+    ]
+  },
+  "dropped": [],
+  "complete": true,
+  "findings": [
+    "[INFO] all: spec passed all engineering checks"
+  ],
+  "score": {
+    "exact": 10,
+    "total": 10,
+    "rows": [
+      {
+        "field": "length_m",
+        "label": "Overall length",
+        "printed": "178 mm",
+        "expected": 0.178,
+        "got": 0.178,
+        "match": true
+      },
+      {
+        "field": "width_m",
+        "label": "Overall width",
+        "printed": "138 mm",
+        "expected": 0.138,
+        "got": 0.138,
+        "match": true
+      },
+      {
+        "field": "height_m",
+        "label": "Overall height",
+        "printed": "192 mm",
+        "expected": 0.192,
+        "got": 0.192,
+        "match": true
+      },
+      {
+        "field": "mass_kg",
+        "label": "Weight",
+        "printed": "0.93 kg",
+        "expected": 0.93,
+        "got": 0.93,
+        "match": true
+      },
+      {
+        "field": "ground_clearance_m",
+        "label": "Ground clearance",
+        "printed": "20 mm",
+        "expected": 0.02,
+        "got": 0.02,
+        "match": true
+      },
+      {
+        "field": "wheel.diameter_m",
+        "label": "Wheel diameter",
+        "printed": "66 mm",
+        "expected": 0.066,
+        "got": 0.066,
+        "match": true
+      },
+      {
+        "field": "wheel.width_m",
+        "label": "Wheel width",
+        "printed": "22 mm",
+        "expected": 0.022,
+        "got": 0.022,
+        "match": true
+      },
+      {
+        "field": "battery.voltage_v",
+        "label": "Battery voltage",
+        "printed": "11.1 V",
+        "expected": 11.1,
+        "got": 11.1,
+        "match": true
+      },
+      {
+        "field": "battery.capacity_mah",
+        "label": "Battery capacity",
+        "printed": "1800 mAh",
+        "expected": 1800,
+        "got": 1800,
+        "match": true
+      },
+      {
+        "field": "motor.voltage_v",
+        "label": "Motor voltage",
+        "printed": "11.1 V",
+        "expected": 11.1,
+        "got": 11.1,
+        "match": true
+      }
+    ]
+  }
+}

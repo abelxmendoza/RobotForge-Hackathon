@@ -11,7 +11,10 @@
  *   POST /describe -> { description }      => { spec, model }
  *   POST /chat     -> { message }          => { answer, model }
  *   POST /list     -> { text }             => { import, model_generated, model }
- *   POST /photo    -> { image_data_url }   => { draft, estimated, model }
+ *   POST /photo    -> { image_data_url, mode? }   => { draft, ... }
+ *                     mode "photo" (default): ESTIMATED robot-photo
+ *                     draft. mode "document": TRANSCRIBED draft from a
+ *                     spec sheet / blueprint photo — document_read.
  *
  * /describe, /chat and /list proxy Baseten (key: BASETEN_API_KEY
  * secret). /photo proxies the Meta Model API vision model (key:
@@ -153,6 +156,75 @@ two-visible-wheel differential base with a caster, wheel count is the
 number of DRIVE wheels (usually 2), not the visible total.
 `/*PHOTO_PROMPT_END*/;
 // END photo prompt mirror
+
+/* The document system prompt: a MIRROR of SYSTEM_PROMPT +
+ * DOCUMENT_INSTRUCTIONS as composed in src/robotforge/photo.py
+ * (transcription of printed values from a spec sheet / datasheet /
+ * blueprint — never inference from drawing scale). tests/test_live.py
+ * asserts the two are byte-identical. */
+// BEGIN document prompt mirror
+const DOC_SYSTEM_PROMPT = /*DOC_PROMPT_BEGIN*/`You convert a plain-language robot description into a strict JSON
+robot specification. Output ONLY the JSON object, no prose, no markdown fences.
+
+Fields (all lengths in metres, masses in kg, voltages in V):
+name (string), description (string),
+drivetrain: one of differential|skid_steer|ackermann|mecanum|tracked,
+length_m, width_m, height_m, mass_kg, ground_clearance_m (numbers),
+wheel: {diameter_m, width_m, count, driven},
+motor: {kind, voltage_v, count, stall_torque_nm or null},
+battery: {chemistry, voltage_v, capacity_mah},
+sensors: [{kind: ultrasonic|lidar_2d|depth_camera|rgb_camera|imu|gps|bumper|encoder,
+           position, range_m or null}],
+component_mass_kg: {part_name: mass} — include when the description gives part masses.
+
+Use realistic values for anything the description omits, and keep the design
+physically coherent: ground clearance must not exceed the wheel radius, and the
+motor voltage must not exceed the battery voltage.
+You are now looking at a DOCUMENT (attached as an image): a photo or scan
+of a spec sheet, datasheet or blueprint. Your job is TRANSCRIPTION, not
+estimation: read the values the document PRINTS and carry them into the
+draft exactly. Do not work from the appearance or proportions of anything
+in the image — there may be no robot in it at all.
+
+Output ONLY one JSON object with exactly these keys:
+- "identity_guess": the robot or product the document describes, as
+  printed (e.g. "TurtleBot3 Burger"), or "unknown document" if the
+  document does not name it.
+- "values": a list of {"label": ..., "printed": ..., "field": ...} —
+  one entry for EVERY value you transcribe: "label" is the document's
+  own label ("Overall length"), "printed" is the value exactly as
+  printed, with its unit ("178 mm"), and "field" is the spec field it
+  fills, as a dotted path ("length_m", "wheel.diameter_m",
+  "battery.capacity_mah"). Use ONLY these field paths: name,
+  description, drivetrain, length_m, width_m, height_m, mass_kg,
+  ground_clearance_m, wheel.diameter_m, wheel.width_m, wheel.count,
+  motor.kind, motor.voltage_v, motor.count, motor.stall_torque_nm,
+  battery.chemistry, battery.voltage_v, battery.capacity_mah, and for
+  sensors: sensors.kind, sensors.position, sensors.range_m.
+- "spec": the robot specification object in the field format described
+  above, built ONLY from the values you transcribed.
+
+Hard rules:
+- Transcribe ONLY printed values. A number you cannot read in the
+  document does not go in the draft: no typical values, no values from
+  memory of a similar product, no completing the table. This overrides
+  any instruction above about filling in realistic values for omissions.
+- NEVER infer a dimension from drawing scale, proportions, or the size
+  of anything in the image. If a blueprint dimension is not printed as
+  a callout, it is absent, even if the drawing looks measurable.
+- A value that is not printed stays ABSENT: leave the field out of the
+  spec entirely. A partial spec is a correct answer for a partial
+  document.
+- Units: keep the printed unit in "values". In the spec, convert to
+  metres / volts / kilograms ONLY when the printed unit is explicit
+  (178 mm becomes 0.178 in length_m; 1800 mAh stays 1800 in
+  battery.capacity_mah). If a printed value carries no unit, leave it
+  out of the spec and note that in the "description".
+- Prefix the spec "description" with "Document draft (values
+  transcribed from the document): " and mention anything you could not
+  read or had to leave out.
+`/*DOC_PROMPT_END*/;
+// END document prompt mirror
 
 /* The parts catalogue the /list prompt matches against: id + name for
  * every part in catalog/parts.json, mirrored here (tests/test_live.py
@@ -306,16 +378,21 @@ async function callModel(env, messages, temperature, maxTokens) {
   return messageContent(payload);
 }
 
-/* One Meta Model API vision call: photo -> ESTIMATED spec draft.
- * Mirrors photo.py's draft_spec_from_photo request shape. */
-async function callMetaVision(env, imageDataUrl, note) {
+/* One Meta Model API vision call. mode 'photo' mirrors photo.py's
+ * draft_spec_from_photo (ESTIMATED draft); mode 'document' mirrors
+ * draft_spec_from_document (TRANSCRIBED draft from printed values). */
+async function callMetaVision(env, imageDataUrl, note, mode) {
+  const doc = mode === 'document';
   const payload = await postChatCompletions(META_URL, env.META_API_KEY, {
     model: PHOTO_MODEL,
     messages: [
-      { role: 'system', content: PHOTO_SYSTEM_PROMPT },
+      { role: 'system', content: doc ? DOC_SYSTEM_PROMPT : PHOTO_SYSTEM_PROMPT },
       { role: 'user', content: [
         { type: 'text',
-          text: 'Draft a robot specification from this photo.' +
+          text: (doc
+            ? 'Transcribe the printed specification values in this ' +
+              'document into a robot specification draft.'
+            : 'Draft a robot specification from this photo.') +
             (note ? ' The photographer adds: ' + note : '') },
         { type: 'image_url', image_url: { url: imageDataUrl } },
       ] },
@@ -351,6 +428,53 @@ function validateSpec(spec) {
   }
   if (!SPEC_SCHEMA.drivetrains.includes(spec.drivetrain)) {
     return 'unknown drivetrain: ' + String(spec.drivetrain);
+  }
+  if (spec.sensors !== undefined) {
+    if (!Array.isArray(spec.sensors)) return 'sensors is not a list';
+    for (const s of spec.sensors) {
+      if (!s || !SPEC_SCHEMA.sensor_kinds.includes(s.kind)) {
+        return 'unknown sensor kind: ' + String(s && s.kind);
+      }
+    }
+  }
+  return null;
+}
+
+/* Document drafts may be PARTIAL on purpose (a value the document
+ * does not print stays absent), so the document path validates only
+ * what is present: types of present fields and the enums. */
+function validateSpecPartial(spec) {
+  if (typeof spec !== 'object' || spec === null || Array.isArray(spec)) {
+    return 'the reply is not a JSON object';
+  }
+  for (const k of ['length_m', 'width_m', 'height_m', 'mass_kg',
+                   'ground_clearance_m']) {
+    if (k in spec && (typeof spec[k] !== 'number' ||
+        !Number.isFinite(spec[k]))) {
+      return k + ' is not a number';
+    }
+  }
+  if ('drivetrain' in spec &&
+      !SPEC_SCHEMA.drivetrains.includes(spec.drivetrain)) {
+    return 'unknown drivetrain: ' + String(spec.drivetrain);
+  }
+  const nestedNums = {
+    wheel: ['diameter_m', 'width_m', 'count'],
+    motor: ['voltage_v', 'count', 'stall_torque_nm'],
+    battery: ['voltage_v', 'capacity_mah'],
+  };
+  for (const [obj, keys] of Object.entries(nestedNums)) {
+    if (!(obj in spec)) continue;
+    if (typeof spec[obj] !== 'object' || spec[obj] === null) {
+      return obj + ' is not an object';
+    }
+    for (const k of keys) {
+      if (k in spec[obj] && spec[obj][k] !== null &&
+          (typeof spec[obj][k] !== 'number' ||
+           !Number.isFinite(spec[obj][k]))) {
+        return obj + '.' + k + ' is not a number';
+      }
+    }
   }
   if (spec.sensors !== undefined) {
     if (!Array.isArray(spec.sensors)) return 'sensors is not a list';
@@ -464,6 +588,84 @@ async function handleChat(request, env) {
 }
 
 const ESTIMATED_PREFIX = 'Photo draft (all dimensions ESTIMATED): ';
+const DOCUMENT_PREFIX =
+  'Document draft (values transcribed from the document): ';
+
+/* Document mode's result shaping — mirrors photo.py's
+ * parse_document_payload enforcement: the DOCUMENT banner prefix is
+ * mandatory, and a numeric spec value with no transcribed values[]
+ * entry behind it is DROPPED (named in `dropped`), never passed
+ * through. A partial spec is a valid result here. */
+function photoDocumentResult(request, parsed) {
+  const problem = validateSpecPartial(parsed.spec);
+  if (problem) {
+    return err(request, 502, 'bad_model_output',
+      'The document draft failed the schema check (' + problem +
+      '). Nothing was saved.');
+  }
+  const spec = parsed.spec;
+  if (typeof spec.description !== 'string' ||
+      !spec.description.startsWith('Document draft')) {
+    spec.description = DOCUMENT_PREFIX +
+      (typeof spec.description === 'string' ? spec.description : '');
+  }
+  const FIELD_ALIASES = {
+    wheel_diameter_m: 'wheel.diameter_m',
+    wheel_width_m: 'wheel.width_m',
+    wheel_count: 'wheel.count',
+    motor_voltage_v: 'motor.voltage_v',
+    motor_count: 'motor.count',
+    motor_stall_torque_nm: 'motor.stall_torque_nm',
+    battery_chemistry: 'battery.chemistry',
+    battery_voltage_v: 'battery.voltage_v',
+    battery_capacity_mah: 'battery.capacity_mah',
+  };
+  const values = Array.isArray(parsed.values)
+    ? parsed.values
+        .filter(v => v && typeof v === 'object')
+        .map(v => {
+          const f = String(v.field || '').slice(0, 80);
+          return {
+            label: String(v.label || '').slice(0, 120),
+            printed: String(v.printed || '').slice(0, 120),
+            field: FIELD_ALIASES[f] || f,
+          };
+        })
+        .filter(v => v.field)
+    : [];
+  const backed = new Set(values.map(v => v.field));
+  const dropped = [];
+  (function walk(node, path) {
+    if (Array.isArray(node)) {
+      node.forEach(item => walk(item, path));
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    for (const k of Object.keys(node)) {
+      const p = path ? path + '.' + k : k;
+      const v = node[k];
+      if (typeof v === 'number') {
+        const ok = backed.has(p) || (p.startsWith('component_mass_kg.') &&
+          [...backed].some(f => f.startsWith('component_mass_kg')));
+        if (!ok) { dropped.push(p); delete node[k]; }
+      } else {
+        walk(v, p);
+      }
+    }
+  })(spec, '');
+  return json(request, 200, {
+    draft: {
+      spec,
+      identity_guess: String(parsed.identity_guess ||
+        'unknown document'),
+      values,
+      dropped,
+    },
+    document_read: true,
+    estimated: false,
+    model: PHOTO_MODEL,
+  });
+}
 
 async function handlePhoto(request, env) {
   /* The Meta key is OPTIONAL by design: without it this route is
@@ -481,11 +683,12 @@ async function handlePhoto(request, env) {
       'Send { "image_data_url": "data:image/..." }.');
   }
   const note = typeof data.note === 'string' ? data.note.slice(0, 500) : '';
+  const mode = data.mode === 'document' ? 'document' : 'photo';
   const gate = await gateBudget(env, request);
   if (gate) return gate;
   let content;
   try {
-    content = await callMetaVision(env, image, note);
+    content = await callMetaVision(env, image, note, mode);
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The photo model call failed (' + e.message + '). Your photo was not stored anywhere.');
@@ -500,6 +703,9 @@ async function handlePhoto(request, env) {
   if (!parsed || typeof parsed !== 'object' || !parsed.spec) {
     return err(request, 502, 'bad_model_output',
       'The photo model returned no spec object. Nothing was saved.');
+  }
+  if (mode === 'document') {
+    return photoDocumentResult(request, parsed);
   }
   const problem = validateSpec(parsed.spec);
   if (problem) {
@@ -533,6 +739,7 @@ async function handlePhoto(request, env) {
       visible_parts: parts,
     },
     estimated: true,
+    document_read: false,
     model: PHOTO_MODEL,
   });
 }

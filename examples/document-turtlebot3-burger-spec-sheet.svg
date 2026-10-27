@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="920" viewBox="0 0 1120 920" font-family="Liberation Sans, Arial, sans-serif">
+<rect width="1120" height="920" fill="#fcfcfa"/>
+<rect width="1120" height="118" fill="#1b1e24"/>
+<text x="56" y="70" font-size="40" font-weight="bold" fill="#f59e0b">TURTLEBOT3 BURGER</text>
+<text x="56" y="102" font-size="19" fill="#e8eaee">Specification sheet — reference values as published for the ROBOTIS TurtleBot3 Burger</text>
+<rect x="56" y="201" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="232" font-size="22" fill="#1b1e24">Overall length</text>
+<text x="620" y="232" font-size="22" font-weight="bold" fill="#1b1e24">178 mm</text>
+<text x="70" y="272" font-size="22" fill="#1b1e24">Overall width</text>
+<text x="620" y="272" font-size="22" font-weight="bold" fill="#1b1e24">138 mm</text>
+<rect x="56" y="281" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="312" font-size="22" fill="#1b1e24">Overall height</text>
+<text x="620" y="312" font-size="22" font-weight="bold" fill="#1b1e24">192 mm</text>
+<text x="70" y="352" font-size="22" fill="#1b1e24">Weight</text>
+<text x="620" y="352" font-size="22" font-weight="bold" fill="#1b1e24">0.93 kg</text>
+<rect x="56" y="361" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="392" font-size="22" fill="#1b1e24">Ground clearance</text>
+<text x="620" y="392" font-size="22" font-weight="bold" fill="#1b1e24">20 mm</text>
+<text x="70" y="432" font-size="22" fill="#1b1e24">Wheel diameter</text>
+<text x="620" y="432" font-size="22" font-weight="bold" fill="#1b1e24">66 mm</text>
+<rect x="56" y="441" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="472" font-size="22" fill="#1b1e24">Wheel width</text>
+<text x="620" y="472" font-size="22" font-weight="bold" fill="#1b1e24">22 mm</text>
+<text x="70" y="512" font-size="22" fill="#1b1e24">Drivetrain</text>
+<text x="620" y="512" font-size="22" font-weight="bold" fill="#1b1e24">Differential drive, 2 driven wheels</text>
+<rect x="56" y="521" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="552" font-size="22" fill="#1b1e24">Motors</text>
+<text x="620" y="552" font-size="22" font-weight="bold" fill="#1b1e24">2 × DC geared motors</text>
+<text x="70" y="592" font-size="22" fill="#1b1e24">Motor voltage</text>
+<text x="620" y="592" font-size="22" font-weight="bold" fill="#1b1e24">11.1 V</text>
+<rect x="56" y="601" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="632" font-size="22" fill="#1b1e24">Motor stall torque</text>
+<text x="620" y="632" font-size="22" font-weight="bold" fill="#1b1e24">0.3 N·m</text>
+<text x="70" y="672" font-size="22" fill="#1b1e24">Battery chemistry</text>
+<text x="620" y="672" font-size="22" font-weight="bold" fill="#1b1e24">LiPo</text>
+<rect x="56" y="681" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="712" font-size="22" fill="#1b1e24">Battery voltage</text>
+<text x="620" y="712" font-size="22" font-weight="bold" fill="#1b1e24">11.1 V</text>
+<text x="70" y="752" font-size="22" fill="#1b1e24">Battery capacity</text>
+<text x="620" y="752" font-size="22" font-weight="bold" fill="#1b1e24">1800 mAh</text>
+<rect x="56" y="761" width="1008" height="40" fill="#eef0f3"/>
+<text x="70" y="792" font-size="22" fill="#1b1e24">Top sensor</text>
+<text x="620" y="792" font-size="22" font-weight="bold" fill="#1b1e24">360° 2D lidar, range 3.5 m</text>
+<line x1="56" y1="814" x2="1064" y2="814" stroke="#787e8a" stroke-width="2"/>
+<text x="56" y="854" font-size="16" fill="#5a606c">RobotForge fixture: values as recorded in examples/turtlebot3-burger.json.</text>
+<text x="56" y="878" font-size="16" fill="#5a606c">This sheet is a rendering made for document-mode testing, not a ROBOTIS document.</text>
+</svg>

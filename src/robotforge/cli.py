@@ -17,7 +17,8 @@ from .gate import (evaluate_drive, evaluate_odometry_distance,
 from .listimport import import_list, render_text
 from .lookup import (LookupError, format_pull, format_report, lookup_robot,
                      pull_candidate, report_to_dict)
-from .photo import draft_spec_from_photo, locate_parts
+from .photo import (draft_spec_from_document, draft_spec_from_photo,
+                    locate_parts)
 from .schema import RobotSpec, SpecError
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
@@ -70,6 +71,41 @@ def _describe_photo(args) -> RobotSpec:
     return draft.spec
 
 
+def _describe_document(args) -> int:
+    """Document intake: transcribe a spec sheet / datasheet / blueprint.
+
+    The opposite contract from photo mode: nothing here is estimated.
+    Values are the document's printed values, carried over with their
+    printed units alongside; a value the document does not print stays
+    absent, so the draft may be partial on purpose.
+    """
+    draft = draft_spec_from_document(args.document)
+    print("*** DOCUMENT DRAFT — values transcribed from the document; "
+          "verify against the source ***")
+    print(f"identity guess: {draft.identity_guess}")
+    if draft.values:
+        print("transcribed values (as printed):")
+        for v in draft.values:
+            print(f"  - {v.label}: {v.printed}  -> {v.field}")
+    else:
+        print("transcribed values: none reported by the document draft")
+    for path in draft.dropped:
+        print(f"  ! dropped {path}: the model put a number in the spec "
+              "with no transcribed value behind it")
+    text = json.dumps(draft.spec_data, indent=2)
+    if args.out:
+        Path(args.out).write_text(text + "\n")
+        print(f"draft written to {args.out}")
+    else:
+        print(text)
+    if draft.spec is not None:
+        return _print_findings(draft.spec)
+    print("note: the draft is PARTIAL — the document did not print "
+          "everything a complete spec needs, and absent fields were "
+          "left absent rather than filled in.")
+    return 0
+
+
 def _sam_cross_check(photo: str, draft) -> None:
     """Compare Spark's visible counts against SAM 3.1 region counts.
 
@@ -112,6 +148,10 @@ def main(argv: list[str] | None = None) -> int:
     d.add_argument("--photo", metavar="IMAGE",
                    help="draft the spec from a robot photo instead of text "
                         "(all dimensions ESTIMATED; SAM cross-check included)")
+    d.add_argument("--document", metavar="IMAGE",
+                   help="transcribe the spec from a photo/scan of a spec "
+                        "sheet, datasheet or blueprint (printed values "
+                        "only; never inferred from drawing scale)")
     d.add_argument("--mock", action="store_true",
                    help="offline canned parse (no API key needed)")
     d.add_argument("--out", help="write spec JSON here (default: stdout)")
@@ -179,13 +219,16 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     try:
         if args.cmd == "describe":
+            if args.document:
+                return _describe_document(args)
             if args.photo:
                 spec = _describe_photo(args)
             elif args.text is not None:
                 spec = describe_mock(args.text) if args.mock \
                     else describe_live(args.text)
             else:
-                p.error("describe needs a TEXT argument or --photo IMAGE")
+                p.error("describe needs a TEXT argument, --photo IMAGE "
+                        "or --document IMAGE")
             text = json.dumps(spec.to_dict(), indent=2)
             if args.out:
                 Path(args.out).write_text(text + "\n")

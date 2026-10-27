@@ -332,7 +332,7 @@ FORGE_BODY = """<div class="page-head">
   <div>
     <div class="eyebrow">Forge</div>
     <h1>Talk to the forge</h1>
-    <p class="lede">One conversation: describe a robot in words, or attach a photo, a parts list, or a spec file. Every stage of every run wears the badge it earned &mdash; <strong>LIVE</strong> (a real model call through the live endpoint), <strong>LOCAL</strong> (real computation in your browser) or <strong>RECORDED</strong> (a replayed run, labeled with its date). Nothing wears a badge it didn&rsquo;t earn.</p>
+    <p class="lede">One conversation: describe a robot in words, or attach a photo, a parts list, a spec file, or a 3D scan. A photo of a spec sheet or blueprint is read as a document &mdash; printed values transcribed, never inferred from drawing scale &mdash; and a scan (.ply) is measured right in your browser. Every stage of every run wears the badge it earned &mdash; <strong>LIVE</strong> (a real model call through the live endpoint), <strong>LOCAL</strong> (real computation in your browser) or <strong>RECORDED</strong> (a replayed run, labeled with its date). Nothing wears a badge it didn&rsquo;t earn.</p>
   </div>
 </div>
 <div class="forge-status" id="forge-status" role="status">Checking what this deployment can do&hellip;</div>
@@ -342,6 +342,7 @@ FORGE_BODY = """<div class="page-head">
   <button class="btn btn-sm" type="button" data-sample="words">Words &mdash; indoor rover</button>
   <button class="btn btn-sm" type="button" data-sample="photo">Photo &mdash; TurtleBot (SAMPLE)</button>
   <button class="btn btn-sm" type="button" data-sample="list">Parts list &mdash; quadcopter</button>
+  <button class="btn btn-sm" type="button" data-sample="document">Document &mdash; TurtleBot3 spec sheet</button>
 </div>
 <form class="forge-composer" id="forge-composer">
   <div class="attach-row" id="attach-row" hidden>
@@ -349,13 +350,14 @@ FORGE_BODY = """<div class="page-head">
     <button class="btn btn-sm btn-ghost" type="button" id="attach-clear">Remove</button>
   </div>
   <label class="faint" for="forge-input" style="font-size:var(--fs-xs)">Message the forge</label>
-  <textarea id="forge-input" rows="3" placeholder="Describe a robot in plain words&hellip; or attach a photo, a parts list, or a spec file below."></textarea>
+  <textarea id="forge-input" rows="3" placeholder="Describe a robot in plain words&hellip; or attach a photo, a parts list, a spec file, or a .ply scan below."></textarea>
   <div class="composer-row">
     <div class="attach-btns">
       <span class="faint" style="font-size:var(--fs-xs)">Attach:</span>
       <button class="btn btn-sm" type="button" id="att-photo">Photo</button>
       <button class="btn btn-sm" type="button" id="att-doc">Parts list</button>
       <button class="btn btn-sm" type="button" id="att-spec">Spec JSON</button>
+      <button class="btn btn-sm" type="button" id="att-scan">Scan (.ply)</button>
     </div>
     <button class="btn btn-primary" type="submit" id="forge-send">Send</button>
   </div>
@@ -363,6 +365,7 @@ FORGE_BODY = """<div class="page-head">
   <input type="file" id="file-photo" accept="image/*" hidden>
   <input type="file" id="file-doc" accept=".txt,.md,.csv,text/plain" hidden>
   <input type="file" id="file-spec" accept=".json,application/json" hidden>
+  <input type="file" id="file-scan" accept=".ply" hidden>
 </form>"""
 
 
@@ -370,10 +373,13 @@ def render_forge() -> str:
     return app_shell(active="forge", title="Forge", depth=2, body=FORGE_BODY,
                      crumbs=[("App", "app/forge/"), ("Forge", "app/forge/")],
                      scripts=("robot.js", "forge.js"),
+                     module_scripts=("scan.js",),
+                     importmap=THREE_IMPORTMAP,
                      description="The Forge as one conversation: describe a "
-                                 "robot, or attach a photo, a parts list or "
-                                 "a spec file. Stages are badged LIVE, LOCAL "
-                                 "or RECORDED — only what they earned.")
+                                 "robot, or attach a photo, a parts list, "
+                                 "a spec file or a .ply scan. Stages are "
+                                 "badged LIVE, LOCAL or RECORDED — only "
+                                 "what they earned.")
 
 
 CLASS_LABEL = {"sbc": "single-board computers",
