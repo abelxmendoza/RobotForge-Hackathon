@@ -102,6 +102,7 @@ class CatalogPart:
     robot_types: tuple = ()
     notes: str = ""
     buy: str | None = None
+    image: str = ""  # repo-relative illustration path (assets/img/parts/…)
 
     @classmethod
     def from_dict(cls, d: dict) -> "CatalogPart":
@@ -118,15 +119,19 @@ class CatalogPart:
                    used_for=str(d.get("used_for", "")),
                    robot_types=tuple(d.get("robot_types", ())),
                    notes=str(d.get("notes", "")),
-                   buy=d.get("buy"))
+                   buy=d.get("buy"),
+                   image=str(d.get("image", "")))
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "name": self.name,
-                "part_class": self.part_class, "specs": self.specs,
-                "license": self.license, "source": self.source,
-                "blurb": self.blurb, "used_for": self.used_for,
-                "robot_types": list(self.robot_types),
-                "notes": self.notes, "buy": self.buy}
+        d = {"id": self.id, "name": self.name,
+             "part_class": self.part_class, "specs": self.specs,
+             "license": self.license, "source": self.source,
+             "blurb": self.blurb, "used_for": self.used_for,
+             "robot_types": list(self.robot_types),
+             "notes": self.notes, "buy": self.buy}
+        if self.image:
+            d["image"] = self.image
+        return d
 
 
 @dataclass(frozen=True)

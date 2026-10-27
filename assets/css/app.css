@@ -129,6 +129,9 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .part h4{font-size:var(--fs-sm);font-weight:600}
 .part p{color:var(--text-muted);font-size:var(--fs-xs);margin-top:4px;line-height:1.5}
 .part .specs{font:12px/1.5 var(--mono);color:var(--text-faint);margin-top:6px}
+.part .pfig{margin:0 0 10px}
+.part .pfig img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:var(--r-sm);background:var(--surface-2)}
+.part .pfig figcaption{font-size:11px;color:var(--text-faint);margin-top:4px}
 
 /* robot detail */
 .robot-hero{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:var(--s6);align-items:start}

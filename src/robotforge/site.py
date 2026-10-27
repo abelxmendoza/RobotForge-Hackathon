@@ -306,7 +306,7 @@ CLASS_LABEL = {"sbc": "single-board computers",
                "propulsion_air": "air propulsion"}
 
 
-def _parts_catalog(cat: Catalog) -> str:
+def _parts_catalog(cat: Catalog, root: str) -> str:
     groups: dict[str, list] = {}
     for p in sorted(cat.parts.values(), key=lambda p: (p.part_class, p.name)):
         groups.setdefault(p.part_class, []).append(p)
@@ -319,8 +319,18 @@ def _parts_catalog(cat: Catalog) -> str:
                 + (" / ".join(map(str, v)) if isinstance(v, (list, tuple)) else str(v))
                 for k, v in p.specs.items())
             hay = " ".join([p.name, p.id, cls, p.blurb, p.used_for]).lower()
+            # The illustration is an AI drawing of a real part, captioned
+            # as such; if the image file is not on the site yet, the whole
+            # figure removes itself instead of showing a broken image.
+            fig = ""
+            if p.image:
+                fig = (f'<figure class="pfig"><img src="{root}{e(p.image)}" '
+                       f'alt="AI illustration of the {e(p.name)}" '
+                       f'loading="lazy" '
+                       f'onerror="this.parentElement.remove()">'
+                       f"<figcaption>AI illustration</figcaption></figure>")
             items.append(
-                f'<div class="part" data-q="{e(hay)}"><h4>{e(p.name)}</h4>'
+                f'<div class="part" data-q="{e(hay)}">{fig}<h4>{e(p.name)}</h4>'
                 + (f"<p>{e(p.blurb)}</p>" if p.blurb else "")
                 + (f'<div class="specs">{e(specs)}</div>' if specs else "")
                 + "</div>")
@@ -368,7 +378,7 @@ def render_robots_index(dex: Robodex, cat: Catalog) -> str:
   <p class="sub">{len(cat.parts)} real parts with datasheet-sourced specs, grouped by class. These are what the forge assembles robots from and checks parts lists against.</p>
   <div class="toolbar"><input type="search" id="part-search" placeholder="Search parts, e.g. lidar, 12 V, ESP32" aria-label="Search parts"></div>
   <div id="parts-list">
-{_parts_catalog(cat)}
+{_parts_catalog(cat, root)}
   </div>
   <p class="state-box" id="parts-empty" hidden>No parts match that search.</p>
 </section>"""

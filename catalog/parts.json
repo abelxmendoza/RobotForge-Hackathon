@@ -2,6 +2,7 @@
   "parts": [
     {
       "id": "lipo_4s_5200",
+      "image": "assets/img/parts/lipo_4s_5200.jpg",
       "license": "proprietary-part",
       "name": "LiPo battery 4S 5200 mAh",
       "part_class": "power",
@@ -23,6 +24,7 @@
     },
     {
       "id": "lipo_4s_1500",
+      "image": "assets/img/parts/lipo_4s_1500.jpg",
       "license": "proprietary-part",
       "name": "LiPo battery 4S 1500 mAh (5-inch quad)",
       "part_class": "power",
@@ -43,6 +45,7 @@
     },
     {
       "id": "lipo_3s_2200",
+      "image": "assets/img/parts/lipo_3s_2200.jpg",
       "license": "proprietary-part",
       "name": "LiPo battery 3S 2200 mAh",
       "part_class": "power",
@@ -65,6 +68,7 @@
     },
     {
       "id": "buck_converter_5v",
+      "image": "assets/img/parts/buck_converter_5v.jpg",
       "license": "proprietary-part",
       "name": "Buck converter 5 V / 5 A",
       "part_class": "power",
@@ -86,6 +90,7 @@
     },
     {
       "id": "lipo_balance_charger",
+      "image": "assets/img/parts/lipo_balance_charger.jpg",
       "license": "proprietary-part",
       "name": "LiPo balance charger",
       "part_class": "power",
@@ -104,6 +109,7 @@
     },
     {
       "id": "xt60_pigtail",
+      "image": "assets/img/parts/xt60_pigtail.jpg",
       "license": "proprietary-part",
       "name": "XT60 pigtail lead",
       "part_class": "cables_connectors",
@@ -122,6 +128,7 @@
     },
     {
       "id": "silicone_wire_14awg",
+      "image": "assets/img/parts/silicone_wire_14awg.jpg",
       "license": "proprietary-part",
       "name": "Silicone wire 14 AWG (per metre)",
       "part_class": "cables_connectors",
@@ -137,6 +144,7 @@
     },
     {
       "id": "driver_tb6612fng",
+      "image": "assets/img/parts/driver_tb6612fng.jpg",
       "license": "proprietary-part",
       "name": "TB6612FNG dual motor driver",
       "part_class": "drivers",
@@ -157,6 +165,7 @@
     },
     {
       "id": "driver_l298n",
+      "image": "assets/img/parts/driver_l298n.jpg",
       "license": "proprietary-part",
       "name": "L298N dual motor driver module",
       "part_class": "drivers",
@@ -174,6 +183,7 @@
     },
     {
       "id": "esc_4in1_45a",
+      "image": "assets/img/parts/esc_4in1_45a.jpg",
       "license": "proprietary-part",
       "name": "4-in-1 ESC 45 A (BLHeli_S class)",
       "part_class": "drivers",
@@ -193,6 +203,7 @@
     },
     {
       "id": "esc_quicrun_1060",
+      "image": "assets/img/parts/esc_quicrun_1060.jpg",
       "license": "proprietary-part",
       "name": "Brushed ESC 60 A (QuicRun 1060 class)",
       "part_class": "drivers",
@@ -212,6 +223,7 @@
     },
     {
       "id": "esp32_devkit",
+      "image": "assets/img/parts/esp32_devkit.jpg",
       "license": "proprietary-part",
       "name": "ESP32 development board",
       "part_class": "microcontrollers",
@@ -237,6 +249,7 @@
     },
     {
       "id": "teensy_41",
+      "image": "assets/img/parts/teensy_41.jpg",
       "license": "proprietary-part",
       "name": "Teensy 4.1",
       "part_class": "microcontrollers",
@@ -260,6 +273,7 @@
     },
     {
       "id": "pico_rp2040",
+      "image": "assets/img/parts/pico_rp2040.jpg",
       "license": "proprietary-part",
       "name": "Raspberry Pi Pico (RP2040)",
       "part_class": "microcontrollers",
@@ -281,6 +295,7 @@
     },
     {
       "id": "raspberry_pi_5",
+      "image": "assets/img/parts/raspberry_pi_5.jpg",
       "license": "proprietary-part",
       "name": "Raspberry Pi 5",
       "part_class": "sbc",
@@ -306,6 +321,7 @@
     },
     {
       "id": "microsd_128gb",
+      "image": "assets/img/parts/microsd_128gb.jpg",
       "license": "proprietary-part",
       "name": "microSD card 128 GB (A2/V30)",
       "part_class": "memory_storage",
@@ -324,6 +340,7 @@
     },
     {
       "id": "sik_telemetry_v3",
+      "image": "assets/img/parts/sik_telemetry_v3.jpg",
       "license": "proprietary-part",
       "name": "SiK telemetry radio pair (915 MHz)",
       "part_class": "comms",
@@ -340,6 +357,7 @@
     },
     {
       "id": "elrs_receiver",
+      "image": "assets/img/parts/elrs_receiver.jpg",
       "license": "proprietary-part",
       "name": "ExpressLRS receiver",
       "part_class": "comms",
@@ -359,6 +377,7 @@
     },
     {
       "id": "realsense_d435",
+      "image": "assets/img/parts/realsense_d435.jpg",
       "license": "proprietary-part",
       "name": "Intel RealSense D435 depth camera",
       "part_class": "cameras_sensors",
@@ -383,6 +402,7 @@
     },
     {
       "id": "rplidar_a1",
+      "image": "assets/img/parts/rplidar_a1.jpg",
       "license": "proprietary-part",
       "name": "RPLIDAR A1 2D lidar",
       "part_class": "cameras_sensors",
@@ -403,6 +423,7 @@
     },
     {
       "id": "imu_bno055",
+      "image": "assets/img/parts/imu_bno055.jpg",
       "license": "proprietary-part",
       "name": "BNO055 9-DOF IMU breakout",
       "part_class": "cameras_sensors",
@@ -423,6 +444,7 @@
     },
     {
       "id": "ultrasonic_hcsr04",
+      "image": "assets/img/parts/ultrasonic_hcsr04.jpg",
       "license": "proprietary-part",
       "name": "HC-SR04 ultrasonic ranger",
       "part_class": "cameras_sensors",
@@ -442,6 +464,7 @@
     },
     {
       "id": "pla_filament",
+      "image": "assets/img/parts/pla_filament.jpg",
       "license": "proprietary-part",
       "name": "PLA filament 1.75 mm, 1 kg",
       "part_class": "materials",
@@ -458,6 +481,7 @@
     },
     {
       "id": "petg_filament",
+      "image": "assets/img/parts/petg_filament.jpg",
       "license": "proprietary-part",
       "name": "PETG filament 1.75 mm, 1 kg",
       "part_class": "materials",
@@ -474,6 +498,7 @@
     },
     {
       "id": "fuse_inline",
+      "image": "assets/img/parts/fuse_inline.jpg",
       "license": "proprietary-part",
       "name": "Inline blade fuse holder + fuse",
       "part_class": "safety_protection",
@@ -494,6 +519,7 @@
     },
     {
       "id": "estop_button",
+      "image": "assets/img/parts/estop_button.jpg",
       "license": "proprietary-part",
       "name": "Emergency stop button (latching)",
       "part_class": "safety_protection",
@@ -513,6 +539,7 @@
     },
     {
       "id": "bms_4s",
+      "image": "assets/img/parts/bms_4s.jpg",
       "license": "proprietary-part",
       "name": "BMS protection board 4S 40 A",
       "part_class": "safety_protection",
@@ -529,6 +556,7 @@
     },
     {
       "id": "custom_pcb_kicad",
+      "image": "assets/img/parts/custom_pcb_kicad.jpg",
       "license": "proprietary-part",
       "name": "Custom PCB (KiCad import)",
       "part_class": "custom_boards",
@@ -545,6 +573,7 @@
     },
     {
       "id": "gearmotor_12v",
+      "image": "assets/img/parts/gearmotor_12v.jpg",
       "license": "proprietary-part",
       "name": "DC gearmotor 12 V (37 mm class)",
       "part_class": "actuators",
@@ -565,6 +594,7 @@
     },
     {
       "id": "brushed_motor_540",
+      "image": "assets/img/parts/brushed_motor_540.jpg",
       "license": "proprietary-part",
       "name": "Brushed motor 540 size",
       "part_class": "actuators",
@@ -583,6 +613,7 @@
     },
     {
       "id": "servo_mg996r",
+      "image": "assets/img/parts/servo_mg996r.jpg",
       "license": "proprietary-part",
       "name": "MG996R servo",
       "part_class": "actuators",
@@ -603,6 +634,7 @@
     },
     {
       "id": "servo_sts3215",
+      "image": "assets/img/parts/servo_sts3215.jpg",
       "license": "proprietary-part",
       "name": "STS3215 serial bus servo (Feetech)",
       "part_class": "actuators",
@@ -625,6 +657,7 @@
     },
     {
       "id": "stepper_nema17",
+      "image": "assets/img/parts/stepper_nema17.jpg",
       "license": "proprietary-part",
       "name": "Stepper motor NEMA 17",
       "part_class": "actuators",
@@ -642,6 +675,7 @@
     },
     {
       "id": "brushless_2207_1960kv",
+      "image": "assets/img/parts/brushless_2207_1960kv.jpg",
       "license": "proprietary-part",
       "name": "Brushless motor 2207 1960 KV",
       "part_class": "actuators",
@@ -661,6 +695,7 @@
     },
     {
       "id": "wheel_100mm",
+      "image": "assets/img/parts/wheel.jpg",
       "license": "proprietary-part",
       "name": "Wheel 100 mm diameter",
       "part_class": "wheels",
@@ -680,6 +715,7 @@
     },
     {
       "id": "mecanum_wheel_100mm",
+      "image": "assets/img/parts/mecanum_wheel_100mm.jpg",
       "license": "proprietary-part",
       "name": "Mecanum wheel 100 mm",
       "part_class": "wheels",
@@ -698,6 +734,7 @@
     },
     {
       "id": "caster_ball",
+      "image": "assets/img/parts/caster.jpg",
       "license": "proprietary-part",
       "name": "Ball caster",
       "part_class": "wheels",
@@ -715,6 +752,7 @@
     },
     {
       "id": "propeller_5040",
+      "image": "assets/img/parts/propeller_5040.jpg",
       "license": "proprietary-part",
       "name": "Propeller 5x4.0x3 tri-blade",
       "part_class": "propulsion_air",
@@ -734,6 +772,7 @@
     },
     {
       "id": "fc_f405_stack",
+      "image": "assets/img/parts/fc_f405_stack.jpg",
       "license": "proprietary-part",
       "name": "Flight controller stack F405",
       "part_class": "flight_control",
@@ -752,6 +791,7 @@
     },
     {
       "id": "gripper_2finger",
+      "image": "assets/img/parts/gripper_2finger.jpg",
       "license": "proprietary-part",
       "name": "2-finger parallel gripper kit",
       "part_class": "end_effectors",
@@ -769,6 +809,7 @@
     },
     {
       "id": "quad_frame_5inch",
+      "image": "assets/img/parts/quad_frame_5inch.jpg",
       "license": "proprietary-part",
       "name": "Quadcopter frame 5 inch (carbon)",
       "part_class": "structure",
@@ -787,6 +828,7 @@
     },
     {
       "id": "extrusion_2020",
+      "image": "assets/img/parts/extrusion_2020.jpg",
       "license": "proprietary-part",
       "name": "Aluminium extrusion 2020 (per metre)",
       "part_class": "structure",
@@ -802,6 +844,7 @@
     },
     {
       "id": "chassis_plate",
+      "image": "assets/img/parts/plate.jpg",
       "name": "Chassis plate (3D-printed)",
       "part_class": "structure",
       "license": "Apache-2.0",
@@ -821,6 +864,7 @@
     },
     {
       "id": "motor_mount",
+      "image": "assets/img/parts/mount.jpg",
       "name": "Motor mount bracket (3D-printed)",
       "part_class": "structure",
       "license": "Apache-2.0",
@@ -840,6 +884,7 @@
     },
     {
       "id": "lidar_mount",
+      "image": "assets/img/parts/lidar.jpg",
       "name": "Lidar mount post (3D-printed)",
       "part_class": "structure",
       "license": "Apache-2.0",
@@ -859,6 +904,7 @@
     },
     {
       "id": "camera_bracket",
+      "image": "assets/img/parts/camera.jpg",
       "name": "Camera bracket (3D-printed)",
       "part_class": "structure",
       "license": "Apache-2.0",
@@ -879,6 +925,7 @@
     },
     {
       "id": "ultrasonic_bracket",
+      "image": "assets/img/parts/ultrasonic.jpg",
       "name": "Ultrasonic bracket (3D-printed)",
       "part_class": "structure",
       "license": "Apache-2.0",
@@ -898,6 +945,7 @@
     },
     {
       "id": "camera_rpi_v2",
+      "image": "assets/img/parts/camera_rpi_v2.jpg",
       "name": "Raspberry Pi Camera Module V2 (8 MP)",
       "part_class": "cameras_sensors",
       "license": "proprietary-part",
@@ -917,6 +965,7 @@
     },
     {
       "id": "liion_18650_3s",
+      "image": "assets/img/parts/liion_18650_3s.jpg",
       "name": "18650 Li-ion pack 3S (3 cells)",
       "part_class": "power",
       "license": "proprietary-part",

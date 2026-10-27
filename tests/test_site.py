@@ -87,6 +87,17 @@ def test_committed_pages_match_the_generator():
                 f"{rel} is stale: run `robotforge site`"
 
 
+def test_parts_catalogue_renders_an_illustration_per_part():
+    page = render_robots_index(dex, cat)
+    assert page.count('class="pfig"') == len(cat.parts)
+    for p in cat.parts.values():
+        assert f'src="../../{p.image}"' in page, p.id
+    # Graceful degradation: until an image file is on the site, its
+    # figure removes itself — no broken-image icons.
+    assert 'onerror="this.parentElement.remove()"' in page
+    assert "AI illustration" in page
+
+
 def test_legacy_urls_redirect_into_the_app():
     for old, (target, _) in LEGACY_REDIRECTS.items():
         page = (REPO / old).read_text()

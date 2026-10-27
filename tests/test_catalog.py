@@ -4,7 +4,7 @@ Ported from the unmerged feature/catalogue-classes branch and extended
 for the main-line catalog (data now in catalog/parts.json, parts carry
 beginner fields, and part lookup is wired for the CLI).
 """
-from robotforge.catalog import Catalog, CatalogError
+from robotforge.catalog import Catalog, CatalogError, CatalogPart
 
 cat = Catalog.load()
 
@@ -108,6 +108,19 @@ def test_typical_parts_vocabulary_is_covered():
     }
     missing = expected - ids
     assert not missing, f"vocabulary gaps: {missing}"
+
+
+def test_every_part_has_an_illustration_path():
+    for p in cat.parts.values():
+        assert p.image.startswith("assets/img/parts/"), p.id
+        assert p.image.endswith(".jpg"), p.id
+        # the path round-trips through the dataclass unchanged
+        assert CatalogPart.from_dict(p.to_dict()).image == p.image
+
+
+def test_part_illustration_filenames_are_unique():
+    paths = [p.image for p in cat.parts.values()]
+    assert len(paths) == len(set(paths))
 
 
 def test_find_part_by_id_name_and_fragment():
