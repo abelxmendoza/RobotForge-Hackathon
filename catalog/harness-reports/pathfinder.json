@@ -147,13 +147,6 @@
         ]
       },
       {
-        "input": "logic_v for ultrasonic",
-        "count": 1,
-        "subjects": [
-          "controller -> ultrasonic"
-        ]
-      },
-      {
         "input": "rated output current for battery",
         "count": 1,
         "subjects": [
@@ -406,12 +399,13 @@
       "subject": "controller -> ultrasonic",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for controller",
-        "logic_v for ultrasonic"
+        "logic_v for controller"
       ],
       "inputs": {
         "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_to": [
+          5.0
+        ]
       },
       "results": {},
       "findings": []
@@ -529,5 +523,5 @@
     }
   ],
   "findings": [],
-  "date": "2026-10-26"
+  "date": "2026-10-27"
 }

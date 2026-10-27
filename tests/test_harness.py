@@ -20,7 +20,8 @@ from pathlib import Path
 
 from robotforge.catalog import Robodex
 from robotforge.cli import main
-from robotforge.harness import (AMPACITY_A, HarnessError, ampacity_a,
+from robotforge.harness import (AMPACITY_A, CHECKED, NOT_CHECKED,
+                                PARTIAL, WARN, HarnessError, ampacity_a,
                                 awg_area_mm2, check_spec_data,
                                 format_harness_report, has_errors,
                                 voltage_drop_v, wire_loop_resistance_ohm)
@@ -325,15 +326,39 @@ def test_recorded_reports_rederive_from_the_specs():
 
 
 def test_fleet_truth_is_mostly_not_checked_and_names_the_gaps():
+    # The fleet's recorded harness data is still mostly gaps — that is
+    # the truth the reports exist to state. The 2026-10-27 backfill
+    # recorded what primary sources actually publish (logic levels,
+    # rated rail outputs, both-ends connectors, one leaf load current),
+    # so a minority of evaluations now genuinely run. The invariants
+    # below are the posture that must survive any future backfill.
+    all_findings = []
     for r, raw in _wired_entries():
         rep = check_spec_data(raw)
         s = rep.summary()
-        # no current/cable/connector data is recorded for the fleet
-        # yet, so nothing may claim to be checked clean
-        assert s["checked_clean"] == 0, r.name
-        assert s["states"]["NOT_CHECKED"] == s["evaluations"], r.name
+        # not-checked still dominates every wired robot's report
+        assert s["states"]["NOT_CHECKED"] > s["evaluations"] // 2, r.name
+        # every robot still has named gaps
         assert s["missing_inputs"], r.name
-        assert not rep.findings, r.name
+        # no robot is fully checked — nothing here is a blanket pass
+        assert s["checked_clean"] < s["evaluations"], r.name
+        for ev in rep.evaluations:
+            # an evaluation that could not fully run names its gaps
+            if ev.state in (NOT_CHECKED, PARTIAL):
+                assert ev.missing, (r.name, ev.check, ev.subject)
+            # findings ride only on evaluations that actually ran
+            if ev.findings:
+                assert ev.state in (CHECKED, PARTIAL), \
+                    (r.name, ev.check, ev.subject)
+        all_findings += [(r.name, f) for f in rep.findings]
+    # The fleet's one genuine finding: Andino's Pi (3.3 V GPIO logic,
+    # Raspberry Pi documentation) talks serial to its Nano (5 V TTL,
+    # Arduino datasheet) with no level shifter recorded — datasheet
+    # data on both ends, flagged exactly as the check intends.
+    assert len(all_findings) == 1, all_findings
+    name, f = all_findings[0]
+    assert name == "Andino" and f.check == "harness.logic_levels"
+    assert f.severity == WARN and f.subject == "controller -> nano"
 
 
 # ----------------------------------------------------------------------

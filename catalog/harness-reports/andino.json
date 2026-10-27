@@ -10,17 +10,17 @@
   },
   "summary": {
     "evaluations": 34,
-    "checked_clean": 0,
-    "evaluations_with_warnings": 0,
+    "checked_clean": 2,
+    "evaluations_with_warnings": 1,
     "evaluations_with_errors": 0,
     "states": {
-      "CHECKED": 0,
-      "PARTIAL": 0,
-      "NOT_CHECKED": 34
+      "CHECKED": 3,
+      "PARTIAL": 2,
+      "NOT_CHECKED": 29
     },
     "findings": {
       "ERROR": 0,
-      "WARN": 0,
+      "WARN": 1,
       "INFO": 0
     },
     "by_check": {
@@ -35,14 +35,14 @@
         "NOT_CHECKED": 6
       },
       "logic_levels": {
-        "CHECKED": 0,
+        "CHECKED": 3,
         "PARTIAL": 0,
-        "NOT_CHECKED": 6
+        "NOT_CHECKED": 3
       },
       "rail_budget": {
         "CHECKED": 0,
-        "PARTIAL": 0,
-        "NOT_CHECKED": 4
+        "PARTIAL": 2,
+        "NOT_CHECKED": 2
       },
       "connector_match": {
         "CHECKED": 0,
@@ -80,16 +80,6 @@
         ]
       },
       {
-        "input": "current_a for lidar",
-        "count": 7,
-        "subjects": [
-          "battery -> regulator",
-          "regulator -> controller",
-          "controller -> lidar",
-          "controller rail"
-        ]
-      },
-      {
         "input": "current_a for nano",
         "count": 7,
         "subjects": [
@@ -118,25 +108,6 @@
           "battery -> driver",
           "driver -> motors",
           "driver rail"
-        ]
-      },
-      {
-        "input": "logic_v for controller",
-        "count": 4,
-        "subjects": [
-          "controller -> nano",
-          "controller -> lidar",
-          "controller -> camera",
-          "controller -> imu"
-        ]
-      },
-      {
-        "input": "logic_v for nano",
-        "count": 3,
-        "subjects": [
-          "controller -> nano",
-          "nano -> driver",
-          "motors -> nano"
         ]
       },
       {
@@ -176,24 +147,10 @@
         ]
       },
       {
-        "input": "logic_v for driver",
-        "count": 1,
-        "subjects": [
-          "nano -> driver"
-        ]
-      },
-      {
         "input": "logic_v for imu",
         "count": 1,
         "subjects": [
           "controller -> imu"
-        ]
-      },
-      {
-        "input": "logic_v for lidar",
-        "count": 1,
-        "subjects": [
-          "controller -> lidar"
         ]
       },
       {
@@ -216,24 +173,10 @@
         "subjects": [
           "controller rail"
         ]
-      },
-      {
-        "input": "rated output current for driver",
-        "count": 1,
-        "subjects": [
-          "driver rail"
-        ]
-      },
-      {
-        "input": "rated output current for regulator",
-        "count": 1,
-        "subjects": [
-          "regulator rail"
-        ]
       }
     ]
   },
-  "headline": "0 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 34 not checked \u00b7 missing data: cable.gauge_awg \u00d712, connector at both ends (connector_from / connector_to) \u00d712, current_a for lidar \u00d77",
+  "headline": "2 checked clean \u00b7 1 with warnings \u00b7 0 with errors \u00b7 2 partial \u00b7 29 not checked \u00b7 missing data: cable.gauge_awg \u00d712, connector at both ends (connector_from / connector_to) \u00d712, current_a for nano \u00d77",
   "evaluations": [
     {
       "check": "voltage_drop",
@@ -290,8 +233,7 @@
       "missing": [
         "cable.gauge_awg",
         "cable.length_mm",
-        "current_a for nano",
-        "current_a for lidar"
+        "current_a for nano"
       ],
       "inputs": {
         "gauge_awg": null,
@@ -308,8 +250,7 @@
       "state": "NOT_CHECKED",
       "missing": [
         "cable.gauge_awg",
-        "current_a for nano",
-        "current_a for lidar"
+        "current_a for nano"
       ],
       "inputs": {
         "gauge_awg": null,
@@ -340,8 +281,7 @@
       "missing": [
         "cable.gauge_awg",
         "cable.length_mm",
-        "current_a for nano",
-        "current_a for lidar"
+        "current_a for nano"
       ],
       "inputs": {
         "gauge_awg": null,
@@ -358,8 +298,7 @@
       "state": "NOT_CHECKED",
       "missing": [
         "cable.gauge_awg",
-        "current_a for nano",
-        "current_a for lidar"
+        "current_a for nano"
       ],
       "inputs": {
         "gauge_awg": null,
@@ -434,17 +373,26 @@
     {
       "check": "logic_levels",
       "subject": "controller -> nano",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "logic_v for controller",
-        "logic_v for nano"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_from": [
+          3.3
+        ],
+        "logic_v_to": [
+          5.0
+        ],
+        "level_shifted": false
       },
       "results": {},
-      "findings": []
+      "findings": [
+        {
+          "severity": "WARN",
+          "check": "harness.logic_levels",
+          "message": "controller -> nano: logic levels 3.3 V and 5 V do not agree and no level shifter is recorded on the link \u2014 a 3.3 V input is not 5 V tolerant; add a shifter or record one",
+          "subject": "controller -> nano"
+        }
+      ]
     },
     {
       "check": "connector_match",
@@ -463,14 +411,16 @@
     {
       "check": "logic_levels",
       "subject": "nano -> driver",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "logic_v for nano",
-        "logic_v for driver"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_from": [
+          5.0
+        ],
+        "logic_v_to": [
+          5.0
+        ],
+        "level_shifted": false
       },
       "results": {},
       "findings": []
@@ -543,12 +493,13 @@
       "subject": "motors -> nano",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for motors",
-        "logic_v for nano"
+        "logic_v for motors"
       ],
       "inputs": {
         "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_to": [
+          5.0
+        ]
       },
       "results": {},
       "findings": []
@@ -574,14 +525,13 @@
       "missing": [
         "cable.gauge_awg",
         "cable.length_mm",
-        "connection voltage (volts)",
-        "current_a for lidar"
+        "connection voltage (volts)"
       ],
       "inputs": {
         "gauge_awg": null,
         "length_mm": null,
         "volts": null,
-        "current_a": null
+        "current_a": 0.4
       },
       "results": {},
       "findings": []
@@ -591,12 +541,11 @@
       "subject": "controller -> lidar",
       "state": "NOT_CHECKED",
       "missing": [
-        "cable.gauge_awg",
-        "current_a for lidar"
+        "cable.gauge_awg"
       ],
       "inputs": {
         "gauge_awg": null,
-        "current_a": null,
+        "current_a": 0.4,
         "ampacity_a": null
       },
       "results": {},
@@ -619,14 +568,16 @@
     {
       "check": "logic_levels",
       "subject": "controller -> lidar",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "logic_v for controller",
-        "logic_v for lidar"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_from": [
+          3.3
+        ],
+        "logic_v_to": [
+          3.3
+        ],
+        "level_shifted": false
       },
       "results": {},
       "findings": []
@@ -650,11 +601,12 @@
       "subject": "controller -> camera",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for controller",
         "logic_v for camera"
       ],
       "inputs": {
-        "logic_v_from": [],
+        "logic_v_from": [
+          3.3
+        ],
         "logic_v_to": []
       },
       "results": {},
@@ -679,11 +631,12 @@
       "subject": "controller -> imu",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for controller",
         "logic_v for imu"
       ],
       "inputs": {
-        "logic_v_from": [],
+        "logic_v_from": [
+          3.3
+        ],
         "logic_v_to": []
       },
       "results": {},
@@ -732,13 +685,12 @@
     {
       "check": "rail_budget",
       "subject": "regulator rail",
-      "state": "NOT_CHECKED",
+      "state": "PARTIAL",
       "missing": [
-        "rated output current for regulator",
         "current_a for controller"
       ],
       "inputs": {
-        "rated_output_a": null,
+        "rated_output_a": 5.0,
         "known_load_a": 0.0,
         "branches": [
           {
@@ -747,19 +699,20 @@
           }
         ]
       },
-      "results": {},
+      "results": {
+        "over_budget": false
+      },
       "findings": []
     },
     {
       "check": "rail_budget",
       "subject": "driver rail",
-      "state": "NOT_CHECKED",
+      "state": "PARTIAL",
       "missing": [
-        "rated output current for driver",
         "current_a for motors"
       ],
       "inputs": {
-        "rated_output_a": null,
+        "rated_output_a": 4.0,
         "known_load_a": 0.0,
         "branches": [
           {
@@ -768,7 +721,9 @@
           }
         ]
       },
-      "results": {},
+      "results": {
+        "over_budget": false
+      },
       "findings": []
     },
     {
@@ -777,12 +732,11 @@
       "state": "NOT_CHECKED",
       "missing": [
         "rated output current for controller",
-        "current_a for nano",
-        "current_a for lidar"
+        "current_a for nano"
       ],
       "inputs": {
         "rated_output_a": null,
-        "known_load_a": 0.0,
+        "known_load_a": 0.4,
         "branches": [
           {
             "to": "nano",
@@ -790,7 +744,7 @@
           },
           {
             "to": "lidar",
-            "current_a": null
+            "current_a": 0.4
           }
         ]
       },
@@ -798,6 +752,13 @@
       "findings": []
     }
   ],
-  "findings": [],
-  "date": "2026-10-26"
+  "findings": [
+    {
+      "severity": "WARN",
+      "check": "harness.logic_levels",
+      "message": "controller -> nano: logic levels 3.3 V and 5 V do not agree and no level shifter is recorded on the link \u2014 a 3.3 V input is not 5 V tolerant; add a shifter or record one",
+      "subject": "controller -> nano"
+    }
+  ],
+  "date": "2026-10-27"
 }
