@@ -37,5 +37,94 @@
     "battery": 0.19,
     "chassis": 0.3,
     "electronics": 0.14
+  },
+  "wiring": {
+    "note": "The spec names no computer or driver model for this robot, so the driver and controller appear as the distribution points the wiring passes through, with requirements 'not specified' where the data names none. Motor voltage is the spec's own: the motors are rated at the 11.1 V battery voltage.",
+    "nodes": [
+      {
+        "id": "battery",
+        "label": "Battery — LiPo",
+        "req_label": "11.1 V",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      },
+      {
+        "id": "driver",
+        "label": "Motor driver",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      },
+      {
+        "id": "motors",
+        "label": "DC gearmotors ×2",
+        "req_label": "11.1 V",
+        "rated_max_v": 11.1,
+        "kit": "mount",
+        "deck": true
+      },
+      {
+        "id": "controller",
+        "label": "Controller board",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      },
+      {
+        "id": "lidar",
+        "label": "2D lidar (360°)",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": "lidar",
+        "deck": false
+      }
+    ],
+    "connections": [
+      {
+        "from": "battery",
+        "to": "driver",
+        "kind": "power",
+        "volts": 11.1,
+        "label": "battery rail"
+      },
+      {
+        "from": "driver",
+        "to": "motors",
+        "kind": "power",
+        "volts": 11.1,
+        "label": "motor rail — the spec rates the motors at the battery voltage"
+      },
+      {
+        "from": "battery",
+        "to": "controller",
+        "kind": "power",
+        "volts": null,
+        "label": "regulated rail (not specified)"
+      },
+      {
+        "from": "controller",
+        "to": "driver",
+        "kind": "data",
+        "volts": null,
+        "label": "PWM + direction"
+      },
+      {
+        "from": "controller",
+        "to": "lidar",
+        "kind": "power",
+        "volts": null,
+        "label": "power (rail not specified)"
+      },
+      {
+        "from": "controller",
+        "to": "lidar",
+        "kind": "data",
+        "volts": null,
+        "label": "lidar data"
+      }
+    ]
   }
 }

@@ -46,5 +46,124 @@
       "range_m": null
     }
   ],
-  "component_mass_kg": {}
+  "component_mass_kg": {},
+  "wiring": {
+    "note": "This spec is a photo draft — every value in it is labelled ESTIMATED in the spec itself, and the wiring inherits that. The Dynamixel bus carries power and telemetry on one connection; the motors are rated at the 11.1 V battery voltage in the spec. The Pi is the 'Pi' in Waffle Pi; its 5 V requirement is the Raspberry Pi supply spec in the parts catalog.",
+    "nodes": [
+      {
+        "id": "battery",
+        "label": "Battery — LiPo",
+        "req_label": "11.1 V",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      },
+      {
+        "id": "driver",
+        "label": "Motor driver (Dynamixel bus)",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      },
+      {
+        "id": "motors",
+        "label": "Dynamixel XL430 ×2",
+        "req_label": "11.1 V",
+        "rated_max_v": 11.1,
+        "kit": "mount",
+        "deck": true
+      },
+      {
+        "id": "controller",
+        "label": "Raspberry Pi",
+        "req_label": "5 V",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      },
+      {
+        "id": "lidar",
+        "label": "2D lidar",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": "lidar",
+        "deck": false
+      },
+      {
+        "id": "camera",
+        "label": "RGB camera",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": "camera",
+        "deck": false
+      },
+      {
+        "id": "imu",
+        "label": "IMU",
+        "req_label": "not specified",
+        "rated_max_v": null,
+        "kit": null,
+        "deck": true
+      }
+    ],
+    "connections": [
+      {
+        "from": "battery",
+        "to": "driver",
+        "kind": "power",
+        "volts": 11.1,
+        "label": "battery rail"
+      },
+      {
+        "from": "driver",
+        "to": "motors",
+        "kind": "power",
+        "volts": 11.1,
+        "label": "Dynamixel bus power — the spec rates the motors at the battery voltage"
+      },
+      {
+        "from": "driver",
+        "to": "motors",
+        "kind": "data",
+        "volts": null,
+        "label": "Dynamixel bus — commands and encoder telemetry"
+      },
+      {
+        "from": "battery",
+        "to": "controller",
+        "kind": "power",
+        "volts": null,
+        "label": "regulated 5 V rail (made on the controller board; not specified in the spec)"
+      },
+      {
+        "from": "controller",
+        "to": "lidar",
+        "kind": "power",
+        "volts": null,
+        "label": "power (rail not specified)"
+      },
+      {
+        "from": "controller",
+        "to": "lidar",
+        "kind": "data",
+        "volts": null,
+        "label": "lidar data"
+      },
+      {
+        "from": "controller",
+        "to": "camera",
+        "kind": "data",
+        "volts": null,
+        "label": "camera link (carries power + data)"
+      },
+      {
+        "from": "controller",
+        "to": "imu",
+        "kind": "data",
+        "volts": null,
+        "label": "IMU link (carries power + data)"
+      }
+    ]
+  }
 }

@@ -169,6 +169,42 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .ta-detail dt{color:var(--text-faint);font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .ta-detail dd{color:var(--text-muted)}
 .ta-detail dd.m{font-family:var(--mono);font-size:13px;color:var(--text)}
+/* take-apart: electrical overlay + dimensions. Power uses the brand
+   amber (--accent), data a steel blue; unpowered is muted grey.
+   Green/yellow stay reserved for gate verdicts — the only red here
+   is the over-voltage fault, an error state like .sev.error. */
+.ta-toggle[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ta-wire-info{font-family:var(--mono);font-size:12.5px;color:var(--text);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:9px 12px;margin-bottom:var(--s3)}
+.ta-wire-info .elec-bad,.ta-detail .elec-bad{color:var(--fail);font-weight:600}
+.ta-detail .elec-ok{color:var(--text)}
+.ta-detail .elec-unchecked{color:var(--text-muted)}
+.dim line{stroke:#6f7884;stroke-width:1}
+.dim text,.dim-note{fill:#9aa3ae;font-size:11px;font-family:var(--mono)}
+.wire{fill:none;stroke:#454c59;stroke-width:2;pointer-events:none}
+.wire-hit{fill:none;stroke:transparent;stroke-width:13;pointer-events:stroke;cursor:pointer}
+.wire.on.power{stroke:var(--accent)}
+.wire.on.data{stroke:#4db2e8}
+.wire.on{stroke-dasharray:7 5;animation:wireflow .8s linear infinite}
+.wire.bad{stroke:var(--fail)}
+.wire-g.sel .wire{stroke-width:3.4}
+.wire-g:hover .wire,.wire-g:focus .wire{filter:brightness(1.35)}
+.wire-g:focus{outline:none}
+.wire-label{fill:#eceef2;font-size:10.5px;font-family:var(--mono);opacity:0;pointer-events:none}
+.wire-g:hover .wire-label,.wire-g.sel .wire-label{opacity:1}
+.wire-badtag{fill:var(--fail);font-size:10.5px;font-weight:700;pointer-events:none}
+@keyframes wireflow{to{stroke-dashoffset:-24}}
+.node-chip{cursor:pointer}
+.node-chip rect{fill:#1e222a;stroke:#454c59;stroke-width:1.2}
+.node-chip text.nl{fill:#eceef2;font-size:10.5px}
+.node-chip text.req{fill:#9aa3ae;font-size:9px;font-family:var(--mono)}
+.node-chip.on rect{stroke:var(--accent)}
+.node-chip.bad rect{stroke:var(--fail);stroke-width:2}
+.node-chip.sel rect{stroke:var(--accent);stroke-width:2.4}
+.node-chip:focus{outline:none}
+.node-chip:focus rect{stroke:var(--accent);stroke-width:2}
+.req-label{fill:#9aa3ae;font-size:10px;font-family:var(--mono)}
 
 /* ---------- evidence ---------- */
 .report-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s3)}

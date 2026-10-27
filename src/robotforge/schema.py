@@ -50,6 +50,105 @@ class Sensor:
     range_m: float | None = None
 
 
+WIRING_KINDS = ("power", "data")
+
+
+@dataclass
+class WiringNode:
+    """One electrical component in a robot's wiring diagram.
+
+    ``rated_max_v`` is the part's documented maximum voltage (a motor's
+    rated range top, a driver's datasheet input max) or None when the
+    sources name none — None means "cannot be checked", never "safe".
+    ``kit`` names the take-apart kit part this component maps to, if any.
+    ``deck`` marks components the viewer places on the chassis deck.
+    """
+    id: str
+    label: str
+    req_label: str            # display text: "11.1 V", "3-9 V", "not specified"
+    rated_max_v: float | None = None
+    kit: str | None = None
+    deck: bool = False
+
+
+@dataclass
+class WiringConnection:
+    """A wire between two nodes. ``volts`` is the fixed voltage the
+    connection is specified to carry, or None when it carries none
+    (data links, PWM drive, unspecified rails) — None connections are
+    never voltage-checked."""
+    src: str
+    dst: str
+    kind: str                 # one of WIRING_KINDS
+    volts: float | None = None
+    label: str = ""
+
+
+@dataclass
+class Wiring:
+    """A robot's documented/typical wiring: nodes + connections.
+
+    Optional on a spec — most specs carry none. Values come from the
+    spec's own electrical fields and the parts catalog's datasheet
+    specs; anything unsourced stays None / "not specified".
+    """
+    note: str
+    nodes: list[WiringNode]
+    connections: list[WiringConnection]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Wiring":
+        try:
+            nodes, seen = [], set()
+            for n in data["nodes"]:
+                nid = str(n["id"])
+                if not nid or nid in seen:
+                    raise SpecError(f"wiring node id must be unique and "
+                                    f"non-empty, got {nid!r}")
+                seen.add(nid)
+                rated = n.get("rated_max_v")
+                nodes.append(WiringNode(
+                    id=nid, label=str(n["label"]),
+                    req_label=str(n.get("req_label", "not specified")),
+                    rated_max_v=None if rated is None else float(rated),
+                    kit=n.get("kit"), deck=bool(n.get("deck", False))))
+            connections = []
+            for c in data["connections"]:
+                if c["kind"] not in WIRING_KINDS:
+                    raise SpecError(f"wiring kind must be one of "
+                                    f"{WIRING_KINDS}, got {c['kind']!r}")
+                for end in (c["from"], c["to"]):
+                    if end not in seen:
+                        raise SpecError(f"wiring connection names unknown "
+                                        f"node {end!r}")
+                volts = c.get("volts")
+                if volts is not None:
+                    volts = float(volts)
+                    if volts < 0:
+                        raise SpecError("wiring volts must be >= 0")
+                connections.append(WiringConnection(
+                    src=str(c["from"]), dst=str(c["to"]), kind=c["kind"],
+                    volts=volts, label=str(c.get("label", ""))))
+            return cls(note=str(data.get("note", "")), nodes=nodes,
+                       connections=connections)
+        except SpecError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SpecError(f"invalid wiring: {exc}") from exc
+
+    def to_dict(self) -> dict:
+        return {
+            "note": self.note,
+            "nodes": [{"id": n.id, "label": n.label,
+                       "req_label": n.req_label,
+                       "rated_max_v": n.rated_max_v, "kit": n.kit,
+                       "deck": n.deck} for n in self.nodes],
+            "connections": [{"from": c.src, "to": c.dst, "kind": c.kind,
+                             "volts": c.volts, "label": c.label}
+                            for c in self.connections],
+        }
+
+
 @dataclass
 class RobotSpec:
     name: str
@@ -65,6 +164,7 @@ class RobotSpec:
     battery: Battery
     sensors: list[Sensor] = field(default_factory=list)
     component_mass_kg: dict[str, float] = field(default_factory=dict)
+    wiring: Wiring | None = None
 
     # -- parsing ---------------------------------------------------------
     @classmethod
@@ -102,6 +202,8 @@ class RobotSpec:
                 sensors=sensors,
                 component_mass_kg={str(k): float(v) for k, v in
                                    data.get("component_mass_kg", {}).items()},
+                wiring=(Wiring.from_dict(data["wiring"])
+                        if data.get("wiring") is not None else None),
             )
         except (KeyError, TypeError, ValueError) as exc:
             if isinstance(exc, SpecError):
@@ -139,4 +241,6 @@ class RobotSpec:
             "sensors": [{"kind": s.kind, "position": s.position,
                          "range_m": s.range_m} for s in self.sensors],
             "component_mass_kg": self.component_mass_kg,
+            **({"wiring": self.wiring.to_dict()}
+               if self.wiring is not None else {}),
         }
