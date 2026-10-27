@@ -1,0 +1,161 @@
+{
+  "robots": [
+    {
+      "class": "Differential-drive ground robot",
+      "description": "An open-source ROS 2 robot from Ekumen, built to teach real robotics on a budget: two driven wheels and a caster, a spinning lidar on top, a Raspberry Pi for a brain. It is the first robot in the Robodex that RobotForge did not design \u2014 its spec here was read out of the official project's own files.",
+      "gate_status": {
+        "status": "FAIL",
+        "runs": [
+          {
+            "drive_error_pct": 1.497,
+            "heading_error_deg": 3.425,
+            "odometry_distance_error_pct": 0.003,
+            "odometry_heading_error_deg": 8.285,
+            "transport": "gz-transport bindings",
+            "source": "Gate run 1 on scythe, 2026-10-26, build/gate-andino-1/gate-report.json \u2014 run verdict MARGINAL (motion vs ground truth PASS; odometry heading MARGINAL)"
+          },
+          {
+            "drive_error_pct": 0.347,
+            "heading_error_deg": 9.104,
+            "odometry_distance_error_pct": 0.003,
+            "odometry_heading_error_deg": 11.624,
+            "transport": "gz-transport bindings",
+            "source": "Gate run 2 on scythe, 2026-10-26, build/gate-andino-2/gate-report.json \u2014 run verdict FAIL (turn vs ground truth MARGINAL at 9.104 deg; odometry heading FAIL at 11.624 deg)"
+          }
+        ],
+        "note": "Two recorded runs on scythe (2026-10-26), no PASS \u2014 recorded as measured; the locked thresholds were not touched. The drive is excellent in both runs (1.497% / 0.347% against ground truth, odometry distance error 0.003%), but the pivot turn is the failure mode: the robot is heavy (3.364 kg \u2014 the sum of the official URDF link masses) on two passive caster balls, so in a turn it physically under-rotates while its wheel odometry (perfect joint integration) over-reads heading by 8.285-11.624 degrees. The gate's own suspect line names wheel_separation / caster scrub. Diagnosis recorded; the verdict was not massaged."
+      },
+      "key_specs": {
+        "battery": "3x 18650 Li-ion cells, ~11.1 V nominal (official BOM holder); capacity varies by cell \u2014 the spec uses 2600 mAh as a labelled estimate",
+        "chassis": "0.25 m long x 0.10 m wide base deck (official URDF base.yaml); overall width 0.153 m across the wheels, wheel track 0.128 m",
+        "computer": "Raspberry Pi 4 + Arduino Nano (official BOM)",
+        "drivetrain": "differential \u2014 2 driven wheels + ball caster",
+        "ground_clearance": "~0.03 m \u2014 estimate; the URDF base plane rides at wheel radius (0.0331 m)",
+        "height": "~0.18 m \u2014 estimate derived from the URDF deck stack",
+        "mass": "3.364 kg \u2014 the sum of the official URDF link masses (several are round values upstream)",
+        "motors": "2x DG01D-E gearmotors with encoders, 48:1 gearbox, rated 3-9 V (SparkFun listing linked from the official BOM), driven via an L298N",
+        "sensors": "RPLIDAR A1M8 2D lidar (top), Raspberry Pi Camera V2 (front), BNO055 IMU, wheel encoders",
+        "wheels": "66.2 mm diameter x 25 mm \u2014 official wheel.yaml radius 0.0331 m"
+      },
+      "name": "Andino",
+      "number": 1,
+      "provenance": {
+        "license": "BSD-3-Clause",
+        "note": "License is per-package LICENSE files in the repo (each reads BSD 3-Clause, (c) 2023 Ekumen Inc.); the repo root carries no single LICENSE file. Spec values were read from andino_description/config/andino/*.yaml and the andino_hardware BOM.",
+        "source_name": "Ekumen-OS/andino (official project repository)",
+        "source_url": "https://github.com/Ekumen-OS/andino"
+      },
+      "spec_file": "examples/andino.json"
+    },
+    {
+      "class": "Differential-drive ground robot",
+      "description": "ROBOTIS's small research-and-teaching rover: two driven wheels, a caster, and a 360-degree lidar. RobotForge's reference robot for the differential-drive layout \u2014 its spec here uses the public ROBOTIS reference dimensions.",
+      "gate_status": {
+        "note": "The same spec with --inject-wheel-scale 0.9 FAILS the gate (odometry error 11.168%, suspect wheel.diameter_m) \u2014 that injected run is a fault-injection demo, not this robot's clean status.",
+        "runs": [
+          {
+            "drive_error_pct": 0.368,
+            "heading_error_deg": null,
+            "odometry_distance_error_pct": 0.042,
+            "source": "P1 launch verification on scythe from a fresh clone of main, 2026-10-26 (project record: 'burger clean GATE PASS, drive 0.368%, odometry honest 0.042%')",
+            "transport": null
+          },
+          {
+            "drive_error_pct": 0.968,
+            "heading_error_deg": 2.028,
+            "odometry_distance_error_pct": 0.042,
+            "source": "Evidence run embedded in reports.html (burger-clean): drive 0.968%, turn 2.028 deg, all four checks PASS",
+            "transport": null
+          }
+        ],
+        "status": "PASS"
+      },
+      "key_specs": {
+        "battery": "LiPo 11.1 V, 1800 mAh",
+        "drivetrain": "differential \u2014 2 driven wheels + caster",
+        "footprint": "0.178 m x 0.138 m, 0.192 m tall",
+        "mass": "0.93 kg (reference spec)",
+        "sensors": "360-degree 2D lidar (top)",
+        "wheels": "66 mm diameter"
+      },
+      "name": "TurtleBot3 Burger",
+      "number": 2,
+      "provenance": {
+        "license": "Apache-2.0",
+        "note": "The Waffle Pi URDF was pulled from this repo by `robotforge lookup` (chunk #4) with its LICENSE and a blob-SHA manifest; the Burger reference spec uses the public dimensions stated in examples/turtlebot3-burger.json.",
+        "source_name": "ROBOTIS-GIT/turtlebot3 (official vendor repository)",
+        "source_url": "https://github.com/ROBOTIS-GIT/turtlebot3"
+      },
+      "spec_file": "examples/turtlebot3-burger.json"
+    },
+    {
+      "class": "Differential-drive ground robot",
+      "description": "The bigger TurtleBot3: a waffle-shaped deck carrying a lidar and a camera. RobotForge knows this one from a photograph \u2014 the photo intake identified it and drafted its spec, so every dimension here is an estimate until somebody measures the real robot.",
+      "gate_status": {
+        "note": "Not gated yet \u2014 its spec is a photo estimate and has not been run through the motion gate.",
+        "runs": [],
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "drivetrain": "differential \u2014 2 driven wheels + caster",
+        "footprint": "0.306 m x 0.281 m x 0.141 m \u2014 ESTIMATED from the photo draft, based on the published approximate size",
+        "mass": "1.8 kg (photo draft)",
+        "motors": "2x Dynamixel XL430 (photo draft)",
+        "sensors": "2D lidar (top), RGB camera (front), IMU, wheel encoders",
+        "wheels": "66 mm diameter (photo draft)"
+      },
+      "name": "TurtleBot3 Waffle Pi",
+      "number": 3,
+      "provenance": {
+        "license": "Apache-2.0",
+        "note": "The spec is a photo draft (all dimensions ESTIMATED) produced by `robotforge describe --photo`; the official Waffle Pi URDF was pulled by `robotforge lookup` under Apache-2.0.",
+        "source_name": "Identified by RobotForge photo intake; published model at ROBOTIS-GIT/turtlebot3",
+        "source_url": "https://github.com/ROBOTIS-GIT/turtlebot3"
+      },
+      "spec_file": "examples/photo-turtlebot.json"
+    },
+    {
+      "class": "Skid-steer ground rover",
+      "description": "RobotForge's own demo robot \u2014 an original design, not a copy of anything: a four-wheel skid-steer rover for warehouse aisle patrol, described in one plain paragraph and built entirely by the forge. Entry #004 is ours.",
+      "gate_status": {
+        "note": "Two recorded PASS runs at the locked thresholds (drive <=5%, heading <=5 deg).",
+        "runs": [
+          {
+            "drive_error_pct": 1.5,
+            "heading_error_deg": 4.77,
+            "odometry_distance_error_pct": null,
+            "source": "Gate verification on scythe, 2026-10-26 (bindings transport, locked thresholds)",
+            "transport": "gz-transport bindings"
+          },
+          {
+            "drive_error_pct": 1.375,
+            "heading_error_deg": 2.205,
+            "odometry_distance_error_pct": null,
+            "source": "Gate verification on scythe, 2026-10-26 (repeat run)",
+            "transport": "gz-transport bindings"
+          }
+        ],
+        "status": "PASS"
+      },
+      "key_specs": {
+        "battery": "LiPo 14.8 V (4S), 5200 mAh",
+        "drivetrain": "skid-steer \u2014 4 driven wheels",
+        "footprint": "0.42 m x 0.31 m, 0.18 m tall",
+        "mass": "3.4 kg",
+        "motors": "4x 12 V DC gearmotors",
+        "sensors": "ultrasonic ranger (front), IMU (centre)",
+        "wheels": "100 mm diameter x4"
+      },
+      "name": "Pathfinder",
+      "number": 4,
+      "provenance": {
+        "license": "Apache-2.0",
+        "note": "RobotForge's in-repo reference design (examples/pathfinder.json), authored for the hackathon demo.",
+        "source_name": "Original design in this repository",
+        "source_url": "https://github.com/abelxmendoza/RobotForge-Hackathon"
+      },
+      "spec_file": "examples/pathfinder.json"
+    }
+  ],
+  "title": "Robodex"
+}

@@ -1,0 +1,616 @@
+"""Parts catalog, robot-class templates, build inventory, and the Robodex.
+
+Lineage: the parts catalogue core (part classes, robot-class BOM
+templates, inventory assessment) was first built on the unmerged branch
+``feature/catalogue-classes`` (2026-10-26) and is ported here onto main,
+extended with beginner-facing part fields and the Robodex. It is the
+single catalog — not a second one.
+
+Layers:
+
+- **Catalog** (``catalog/parts.json``): real parts split into UNIVERSAL
+  classes (every robot needs power, cables, compute, comms, sensors,
+  materials, safety) and SIGNATURE classes (what makes a robot type a
+  type: propellers for a quadcopter, joint servos for a humanoid). Each
+  part carries a plain-language blurb, what it is used for, the robot
+  types that use it, compatibility notes (general guidance only), its
+  licence and source, and an optional ``buy`` field — empty in v1 by
+  design; shop links are a deliberate later step.
+- **Robot-class templates**: a reference BOM per robot class (rover,
+  RC car, quadcopter, humanoid, quadruped, arm). The template makes
+  "what's missing?" answerable — an inventory is diffed against the
+  class's complete shape. Missing parts may be VIRTUAL-FILLED from the
+  catalogue so a sim model can be built today, but virtual parts exist
+  only in simulation and never inflate the on-hand count. Every motion
+  gate pack is per-class; templates state plainly which pack a class
+  has ("live" / "partial" / "roadmap").
+- **Robodex** (``catalog/robots.json``): the numbered robot index —
+  #001 Andino, #002 TurtleBot3 Burger, #003 TurtleBot3 Waffle Pi,
+  #004 Pathfinder. A robot's gate status comes ONLY from recorded gate
+  runs stored in its entry; a robot with no runs is NOT_GATED, never
+  badged green. ``render_robodex_html`` generates the browsable
+  ``robodex.html`` page from this data — regenerate it with
+  ``robotforge catalog --html robodex.html``; never hand-edit the page.
+
+Zero dependencies. Data lives in the repo-root ``catalog/`` directory
+(the examples/ folder holds robot *specs*; the catalog is its own
+dataset, and the generated page sits beside it at the repo root).
+Licences follow the project allowlist (MIT/Apache/BSD/CC-BY or a plain
+physical part); every catalogue part carries licence + source.
+"""
+from __future__ import annotations
+
+import html
+import json
+import os
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+def _catalog_dir() -> Path:
+    """Locate the repo-root catalog/ data directory.
+
+    ROBOTFORGE_CATALOG_DIR wins; otherwise the directory is resolved
+    relative to this file (repo layout: src/robotforge/catalog.py ->
+    ../../catalog), with the current directory as a last resort.
+    """
+    env = os.environ.get("ROBOTFORGE_CATALOG_DIR")
+    if env:
+        return Path(env)
+    by_layout = Path(__file__).resolve().parents[2] / "catalog"
+    if by_layout.is_dir():
+        return by_layout
+    return Path.cwd() / "catalog"
+
+
+PARTS_DATA = _catalog_dir() / "parts.json"
+ROBOTS_DATA = _catalog_dir() / "robots.json"
+
+UNIVERSAL_CLASSES = (
+    "power", "cables_connectors", "drivers", "microcontrollers", "sbc",
+    "memory_storage", "comms", "cameras_sensors", "materials",
+    "safety_protection", "custom_boards",
+)
+SIGNATURE_CLASSES = (
+    "actuators", "wheels", "propulsion_air", "flight_control",
+    "end_effectors", "structure",
+)
+PART_CLASSES = UNIVERSAL_CLASSES + SIGNATURE_CLASSES
+LICENSE_ALLOWLIST = ("MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause",
+                     "CC-BY-4.0", "CC-BY-SA-4.0", "proprietary-part")
+
+GATE_STATUSES = ("PASS", "MARGINAL", "FAIL", "NOT_GATED")
+
+
+class CatalogError(ValueError):
+    """Raised for unknown parts/classes/robots or malformed data."""
+
+
+# --------------------------------------------------------------------------
+# parts catalogue (ported from feature/catalogue-classes)
+# --------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class CatalogPart:
+    id: str
+    name: str
+    part_class: str
+    specs: dict
+    license: str
+    source: str
+    blurb: str = ""
+    used_for: str = ""
+    robot_types: tuple = ()
+    notes: str = ""
+    buy: str | None = None
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "CatalogPart":
+        if d["part_class"] not in PART_CLASSES:
+            raise CatalogError(f"{d.get('id')}: unknown part class "
+                               f"{d['part_class']!r}")
+        if d["license"] not in LICENSE_ALLOWLIST:
+            raise CatalogError(f"{d.get('id')}: licence {d['license']!r} "
+                               "not on the project allowlist")
+        return cls(id=d["id"], name=d["name"], part_class=d["part_class"],
+                   specs=dict(d.get("specs", {})), license=d["license"],
+                   source=d["source"],
+                   blurb=str(d.get("blurb", "")),
+                   used_for=str(d.get("used_for", "")),
+                   robot_types=tuple(d.get("robot_types", ())),
+                   notes=str(d.get("notes", "")),
+                   buy=d.get("buy"))
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "name": self.name,
+                "part_class": self.part_class, "specs": self.specs,
+                "license": self.license, "source": self.source,
+                "blurb": self.blurb, "used_for": self.used_for,
+                "robot_types": list(self.robot_types),
+                "notes": self.notes, "buy": self.buy}
+
+
+@dataclass(frozen=True)
+class RobotClassTemplate:
+    name: str
+    label: str
+    gate_pack: str  # "live" | "partial" | "roadmap"
+    required: dict  # part_id -> count for a complete build
+    optional: tuple = ()
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "RobotClassTemplate":
+        return cls(name=d["name"], label=d["label"],
+                   gate_pack=d["gate_pack"],
+                   required={k: int(v) for k, v in d["required"].items()},
+                   optional=tuple(d.get("optional", ())))
+
+
+@dataclass
+class AssessmentLine:
+    part_id: str
+    needed: int
+    on_hand: int
+
+    @property
+    def missing(self) -> int:
+        return max(0, self.needed - self.on_hand)
+
+    @property
+    def spares(self) -> int:
+        return max(0, self.on_hand - self.needed)
+
+    @property
+    def virtual(self) -> int:
+        """Missing units the sim model may borrow from the catalogue."""
+        return self.missing
+
+
+@dataclass
+class Assessment:
+    template: RobotClassTemplate
+    lines: list  # of AssessmentLine, template order
+    extras: dict = field(default_factory=dict)  # on-hand parts not in BOM
+
+    @property
+    def complete(self) -> bool:
+        return all(line.missing == 0 for line in self.lines)
+
+    def summary_lines(self) -> list:
+        t = self.template
+        out = [f"robot class: {t.label} (motion gate pack: {t.gate_pack})"]
+        for line in self.lines:
+            out.append(
+                f"{line.part_id}: needed {line.needed}, "
+                f"on hand {line.on_hand}, missing {line.missing}, "
+                f"virtual fill {line.virtual}, spares {line.spares}")
+        for pid, n in sorted(self.extras.items()):
+            out.append(f"{pid}: not in this class BOM — {n} on hand (spares)")
+        virt = sum(line.virtual for line in self.lines)
+        if virt:
+            out.append(f"NOTE: sim model may be built with {virt} virtual "
+                       "part(s); virtual parts are never on hand.")
+        out.append("verdict: " + ("COMPLETE — every needed part is on hand"
+                                  if self.complete else
+                                  "INCOMPLETE — see missing counts"))
+        return out
+
+
+class Catalog:
+    def __init__(self, parts: dict, templates: dict):
+        self.parts = parts          # id -> CatalogPart
+        self.templates = templates  # name -> RobotClassTemplate
+
+    @classmethod
+    def load(cls, path: Path = PARTS_DATA) -> "Catalog":
+        raw = json.loads(Path(path).read_text())
+        parts = {}
+        for d in raw["parts"]:
+            part = CatalogPart.from_dict(d)
+            if part.id in parts:
+                raise CatalogError(f"duplicate part id {part.id}")
+            parts[part.id] = part
+        templates = {}
+        for d in raw["templates"]:
+            t = RobotClassTemplate.from_dict(d)
+            for pid in list(t.required) + list(t.optional):
+                if pid not in parts:
+                    raise CatalogError(
+                        f"template {t.name} references unknown part {pid}")
+            templates[t.name] = t
+        return cls(parts, templates)
+
+    def assess(self, template_name: str, on_hand: dict) -> Assessment:
+        """Diff an on-hand inventory against a robot class's BOM."""
+        if template_name not in self.templates:
+            raise CatalogError(f"unknown robot class {template_name!r}")
+        for pid in on_hand:
+            if pid not in self.parts:
+                raise CatalogError(f"unknown part {pid!r} in inventory")
+        t = self.templates[template_name]
+        lines = [AssessmentLine(pid, need, int(on_hand.get(pid, 0)))
+                 for pid, need in t.required.items()]
+        extras = {pid: int(n) for pid, n in on_hand.items()
+                  if pid not in t.required and n > 0}
+        return Assessment(template=t, lines=lines, extras=extras)
+
+    def find_part(self, query: str) -> CatalogPart:
+        """Resolve a part by id, exact name, or unique name fragment."""
+        q = query.strip().lower()
+        pid = re.sub(r"[\s\-]+", "_", q)
+        if pid in self.parts:
+            return self.parts[pid]
+        exact = [p for p in self.parts.values() if p.name.lower() == q]
+        if len(exact) == 1:
+            return exact[0]
+        hits = [p for p in self.parts.values()
+                if q in p.name.lower() or q in p.id]
+        if len(hits) == 1:
+            return hits[0]
+        if hits:
+            names = ", ".join(sorted(p.id for p in hits))
+            raise CatalogError(f"part {query!r} is ambiguous — matches: "
+                               f"{names}")
+        raise CatalogError(f"unknown part {query!r} — try `robotforge "
+                           "catalog` for the full list")
+
+
+# --------------------------------------------------------------------------
+# Robodex (numbered robot index)
+# --------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class GateRun:
+    drive_error_pct: float
+    heading_error_deg: float | None
+    odometry_distance_error_pct: float | None
+    odometry_heading_error_deg: float | None
+    transport: str | None
+    source: str
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "GateRun":
+        return cls(drive_error_pct=float(d["drive_error_pct"]),
+                   heading_error_deg=d.get("heading_error_deg"),
+                   odometry_distance_error_pct=d.get(
+                       "odometry_distance_error_pct"),
+                   odometry_heading_error_deg=d.get(
+                       "odometry_heading_error_deg"),
+                   transport=d.get("transport"),
+                   source=str(d.get("source", "")))
+
+
+@dataclass(frozen=True)
+class GateStatus:
+    status: str  # one of GATE_STATUSES
+    runs: tuple = ()  # of GateRun
+    note: str = ""
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "GateStatus":
+        status = str(d["status"])
+        if status not in GATE_STATUSES:
+            raise CatalogError(f"gate status {status!r} not in "
+                               f"{GATE_STATUSES}")
+        runs = tuple(GateRun.from_dict(r) for r in d.get("runs", ()))
+        if status != "NOT_GATED" and not runs:
+            raise CatalogError("a gated status requires recorded runs — "
+                               "a badge without a run is not allowed")
+        if status == "NOT_GATED" and runs:
+            raise CatalogError("NOT_GATED with recorded runs is "
+                               "contradictory — record the real verdict")
+        return cls(status=status, runs=runs, note=str(d.get("note", "")))
+
+
+@dataclass(frozen=True)
+class RobotEntry:
+    number: int
+    name: str
+    robot_class: str
+    description: str
+    key_specs: dict
+    spec_file: str | None
+    provenance: dict
+    gate_status: GateStatus
+
+    @property
+    def dex_id(self) -> str:
+        return f"#{self.number:03d}"
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "RobotEntry":
+        return cls(number=int(d["number"]), name=str(d["name"]),
+                   robot_class=str(d["class"]),
+                   description=str(d["description"]),
+                   key_specs=dict(d.get("key_specs", {})),
+                   spec_file=d.get("spec_file"),
+                   provenance=dict(d.get("provenance", {})),
+                   gate_status=GateStatus.from_dict(d["gate_status"]))
+
+    def to_dict(self) -> dict:
+        return {"number": self.number, "name": self.name,
+                "class": self.robot_class,
+                "description": self.description,
+                "key_specs": self.key_specs,
+                "spec_file": self.spec_file,
+                "provenance": self.provenance,
+                "gate_status": {
+                    "status": self.gate_status.status,
+                    "runs": [{"drive_error_pct": r.drive_error_pct,
+                              "heading_error_deg": r.heading_error_deg,
+                              "odometry_distance_error_pct":
+                                  r.odometry_distance_error_pct,
+                              "odometry_heading_error_deg":
+                                  r.odometry_heading_error_deg,
+                              "transport": r.transport,
+                              "source": r.source}
+                             for r in self.gate_status.runs],
+                    "note": self.gate_status.note}}
+
+
+class Robodex:
+    def __init__(self, title: str, robots: list):
+        self.title = title
+        self.robots = robots  # of RobotEntry, sorted by number
+
+    @classmethod
+    def load(cls, path: Path = ROBOTS_DATA) -> "Robodex":
+        raw = json.loads(Path(path).read_text())
+        robots = [RobotEntry.from_dict(d) for d in raw["robots"]]
+        numbers = [r.number for r in robots]
+        if len(set(numbers)) != len(numbers):
+            raise CatalogError("duplicate Robodex numbers")
+        robots.sort(key=lambda r: r.number)
+        return cls(title=str(raw.get("title", "Robodex")), robots=robots)
+
+    def find(self, query: str) -> RobotEntry:
+        """Resolve a robot by number ('3', '#003') or name fragment."""
+        q = query.strip().lower()
+        m = re.fullmatch(r"#?0*(\d+)", q)
+        if m:
+            num = int(m.group(1))
+            for r in self.robots:
+                if r.number == num:
+                    return r
+            raise CatalogError(f"no Robodex entry #{num:03d}")
+        exact = [r for r in self.robots if r.name.lower() == q]
+        if len(exact) == 1:
+            return exact[0]
+        hits = [r for r in self.robots if q in r.name.lower()]
+        if len(hits) == 1:
+            return hits[0]
+        if hits:
+            names = ", ".join(f"{r.dex_id} {r.name}" for r in hits)
+            raise CatalogError(f"robot {query!r} is ambiguous — matches: "
+                               f"{names}")
+        raise CatalogError(f"unknown robot {query!r} — try `robotforge "
+                           "catalog` for the Robodex")
+
+
+# --------------------------------------------------------------------------
+# plain-text formatting for the CLI
+# --------------------------------------------------------------------------
+
+def gate_badge(status: str) -> str:
+    """Short text badge. A badge exists only as good as its runs."""
+    return {"PASS": "GATE: PASS", "MARGINAL": "GATE: MARGINAL",
+            "FAIL": "GATE: FAIL", "NOT_GATED": "not gated yet"}[status]
+
+
+def _run_line(r: GateRun) -> str:
+    parts = [f"drive error {r.drive_error_pct:.3f}%"]
+    if r.heading_error_deg is not None:
+        parts.append(f"turn error {r.heading_error_deg:.3f} deg")
+    if r.odometry_distance_error_pct is not None:
+        parts.append(f"odometry distance error "
+                     f"{r.odometry_distance_error_pct:.3f}%")
+    if r.odometry_heading_error_deg is not None:
+        parts.append(f"odometry heading error "
+                     f"{r.odometry_heading_error_deg:.3f} deg")
+    if r.transport:
+        parts.append(f"transport: {r.transport}")
+    line = " · ".join(parts)
+    if r.source:
+        line += f"\n      source: {r.source}"
+    return line
+
+
+def format_catalog_summary(cat: Catalog, dex: Robodex) -> str:
+    out = ["Robodex — the RobotForge robot index"]
+    for r in dex.robots:
+        out.append(f"  {r.dex_id} {r.name} — {r.robot_class} "
+                   f"[{gate_badge(r.gate_status.status)}]")
+    classes = sorted({p.part_class for p in cat.parts.values()})
+    out.append("")
+    out.append(f"Parts catalog: {len(cat.parts)} parts in "
+               f"{len(classes)} classes; {len(cat.templates)} robot-class "
+               "templates (BOMs).")
+    out.append("Look one up:  robotforge catalog robot <number-or-name>")
+    out.append("              robotforge catalog part <name-or-id>")
+    return "\n".join(out)
+
+
+def format_robot(r: RobotEntry) -> str:
+    out = [f"{r.dex_id} {r.name}", f"class: {r.robot_class}", "",
+           r.description, "", "key specs:"]
+    for k, v in r.key_specs.items():
+        out.append(f"  {k}: {v}")
+    prov = r.provenance
+    out += ["", "provenance:",
+            f"  source: {prov.get('source_name', '')}"]
+    if prov.get("source_url"):
+        out.append(f"  url: {prov['source_url']}")
+    if prov.get("license"):
+        out.append(f"  license: {prov['license']}")
+    if prov.get("note"):
+        out.append(f"  note: {prov['note']}")
+    if r.spec_file:
+        out.append(f"  spec file: {r.spec_file}")
+    gs = r.gate_status
+    out += ["", f"gate status: {gate_badge(gs.status)}"]
+    for run in gs.runs:
+        out.append(f"  - {_run_line(run)}")
+    if gs.note:
+        out.append(f"  note: {gs.note}")
+    return "\n".join(out)
+
+
+def format_part(p: CatalogPart) -> str:
+    out = [p.name, f"id: {p.id} · class: {p.part_class}", ""]
+    if p.blurb:
+        out += [p.blurb, ""]
+    if p.used_for:
+        out.append(f"used for: {p.used_for}")
+    if p.robot_types:
+        out.append(f"found on: {', '.join(p.robot_types)}")
+    if p.specs:
+        out.append("specs:")
+        for k, v in p.specs.items():
+            out.append(f"  {k}: {v}")
+    if p.notes:
+        out += ["", f"notes: {p.notes}"]
+    out += ["", f"source: {p.source}", f"license: {p.license}",
+            "buy: " + (p.buy if p.buy else
+                       "not set — shop links are a deliberate later step")]
+    return "\n".join(out)
+
+
+# --------------------------------------------------------------------------
+# robodex.html generation (data-driven; never hand-edit the output)
+# --------------------------------------------------------------------------
+
+_BADGE_CLASS = {"PASS": "badge-pass", "MARGINAL": "badge-marginal",
+                "FAIL": "badge-fail", "NOT_GATED": "badge-none"}
+
+_PAGE_CSS = """
+  :root{
+    --bg:#14161a; --panel:#1b1e24; --line:#2a2e36; --text:#e8eaee;
+    --muted:#9aa1ad; --accent:#f59e0b;
+    --green:#35b26f; --red:#e5534b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+    "Helvetica Neue",Arial,sans-serif;line-height:1.6;font-size:17px}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wordmark{color:var(--accent);font-weight:700;letter-spacing:0.14em;
+    text-transform:uppercase;font-size:0.85rem;margin-bottom:18px}
+  header{padding:80px 0 30px}
+  h1{font-size:2.6rem;line-height:1.1;letter-spacing:-0.02em}
+  .intro{color:var(--muted);max-width:62ch;margin-top:16px}
+  .card{background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:26px 28px;margin:26px 0}
+  .card-top{display:flex;justify-content:space-between;align-items:center;
+    gap:16px;flex-wrap:wrap}
+  .dex{color:var(--accent);font-weight:700;letter-spacing:0.1em}
+  .card h2{font-size:1.45rem;letter-spacing:-0.01em;margin-top:6px}
+  .class{color:var(--muted);font-size:0.95rem}
+  .desc{color:var(--muted);margin-top:12px}
+  .badge{display:inline-block;font-weight:700;font-size:0.8rem;
+    letter-spacing:0.08em;text-transform:uppercase;
+    border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  .badge-pass{color:var(--green);border-color:var(--green)}
+  .badge-marginal{color:var(--accent);border-color:var(--accent)}
+  .badge-fail{color:var(--red);border-color:var(--red)}
+  .badge-none{color:var(--muted)}
+  table{border-collapse:collapse;width:100%;margin-top:18px;font-size:0.95rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);
+    vertical-align:top}
+  th{color:var(--muted);font-weight:600;width:32%}
+  td{color:var(--text)}
+  .prov,.gate{margin-top:16px;color:var(--muted);font-size:0.93rem}
+  .prov strong,.gate strong{color:var(--text)}
+  .gate ul{margin:6px 0 0 18px}
+  footer{border-top:1px solid var(--line);padding:40px 0 60px;
+    color:var(--muted);font-size:0.92rem;margin-top:40px}
+"""
+
+
+def _robot_card(r: RobotEntry) -> str:
+    e = html.escape
+    gs = r.gate_status
+    badge = (f'<span class="badge {_BADGE_CLASS[gs.status]}">'
+             f'{e(gate_badge(gs.status))}</span>')
+    specs = "".join(
+        f"<tr><th>{e(str(k))}</th><td>{e(str(v))}</td></tr>"
+        for k, v in r.key_specs.items())
+    prov = r.provenance
+    prov_bits = [e(str(prov.get("source_name", "")))]
+    if prov.get("license"):
+        prov_bits.append(f"license: {e(str(prov['license']))}")
+    prov_line = " · ".join(prov_bits)
+    if prov.get("source_url"):
+        prov_line += (f' · <a href="{e(str(prov["source_url"]))}">'
+                      f'source</a>')
+    if prov.get("note"):
+        prov_line += f"<br>{e(str(prov['note']))}"
+    if gs.runs:
+        items = "".join(f"<li>{e(_run_line(run))}</li>" for run in gs.runs)
+        gate_line = f"<strong>Recorded runs:</strong><ul>{items}</ul>"
+    else:
+        gate_line = "No recorded gate runs yet."
+    if gs.note:
+        gate_line += f"<br>{e(gs.note)}"
+    spec_line = (f"<br>Spec: <code>{e(r.spec_file)}</code>"
+                 if r.spec_file else "")
+    return f"""<article class="card" data-number="{r.number}" data-name="{e(r.name)}">
+      <div class="card-top"><span class="dex">{e(r.dex_id)}</span>{badge}</div>
+      <h2>{e(r.name)}</h2>
+      <div class="class">{e(r.robot_class)}</div>
+      <p class="desc">{e(r.description)}</p>
+      <table>{specs}</table>
+      <p class="prov"><strong>Provenance:</strong> {prov_line}{spec_line}</p>
+      <div class="gate">{gate_line}</div>
+    </article>"""
+
+
+def render_robodex_html(dex: Robodex) -> str:
+    """Render the browsable Robodex page from catalog data only."""
+    cards = "\n".join(_robot_card(r) for r in dex.robots)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robodex — the RobotForge robot index</title>
+<style>{_PAGE_CSS}</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="wordmark">RobotForge</div>
+    <h1>Robodex</h1>
+    <p class="intro">Every robot the forge knows, numbered in the order it
+    learned them. Gate badges come only from recorded gate runs — a robot
+    with no run says so, in grey, instead of borrowing a green it has not
+    earned.</p>
+  </header>
+{cards}
+  <footer>
+    <p>Generated by <code>robotforge catalog --html robodex.html</code>
+    from <code>catalog/robots.json</code> — regenerate after data changes;
+    do not hand-edit this page.</p>
+    <p style="margin-top:10px"><a href="index.html">&larr; Back to
+    RobotForge</a></p>
+  </footer>
+</div>
+</body>
+</html>
+"""
+
+
+def _demo() -> None:
+    """Abel's scenario: a skid-steer rover with only 2 of 4 motors logged."""
+    cat = Catalog.load()
+    a = cat.assess("rover_skid_steer", {
+        "gearmotor_12v": 2, "wheel_100mm": 6, "driver_tb6612fng": 1,
+        "lipo_4s_5200": 1, "esp32_devkit": 1, "fuse_inline": 1,
+    })
+    print("\n".join(a.summary_lines()))
+
+
+if __name__ == "__main__":
+    _demo()

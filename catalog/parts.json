@@ -1,0 +1,1060 @@
+{
+  "parts": [
+    {
+      "id": "lipo_4s_5200",
+      "license": "proprietary-part",
+      "name": "LiPo battery 4S 5200 mAh",
+      "part_class": "power",
+      "source": "generic 4S LiPo pack (manufacturer datasheet values)",
+      "specs": {
+        "capacity_mah": 5200,
+        "chemistry": "lipo",
+        "connector": "XT60",
+        "voltage_v": 14.8
+      },
+      "blurb": "A rechargeable lithium-polymer battery pack: 4 cells in series, 14.8 V, lots of capacity.",
+      "used_for": "Main power source for medium ground robots.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Never discharge below about 3.0 V per cell; charge with a balance charger, never unattended. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "lipo_4s_1500",
+      "license": "proprietary-part",
+      "name": "LiPo battery 4S 1500 mAh (5-inch quad)",
+      "part_class": "power",
+      "source": "generic 4S quad pack",
+      "specs": {
+        "capacity_mah": 1500,
+        "chemistry": "lipo",
+        "connector": "XT60",
+        "voltage_v": 14.8
+      },
+      "blurb": "A smaller 4-cell LiPo pack sized for a 5-inch quadcopter.",
+      "used_for": "Flight battery for small quads where weight matters.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Flight packs work hard: retire a pack that comes down puffy or hot. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "lipo_3s_2200",
+      "license": "proprietary-part",
+      "name": "LiPo battery 3S 2200 mAh",
+      "part_class": "power",
+      "source": "generic 3S LiPo pack",
+      "specs": {
+        "capacity_mah": 2200,
+        "chemistry": "lipo",
+        "connector": "XT60",
+        "voltage_v": 11.1
+      },
+      "blurb": "A 3-cell LiPo pack, 11.1 V \u2014 the classic small-robot battery.",
+      "used_for": "Main power for small rovers, RC cars and servo robots.",
+      "robot_types": [
+        "RC car",
+        "humanoid",
+        "quadruped"
+      ],
+      "notes": "Never discharge below about 3.0 V per cell; balance-charge only. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "buck_converter_5v",
+      "license": "proprietary-part",
+      "name": "Buck converter 5 V / 5 A",
+      "part_class": "power",
+      "source": "generic synchronous buck module",
+      "specs": {
+        "input_v_max": 24,
+        "output_a": 5,
+        "output_v": 5.0
+      },
+      "blurb": "Steps a higher battery voltage down to a clean 5 V.",
+      "used_for": "Powers the computer and logic from the main battery.",
+      "robot_types": [
+        "humanoid",
+        "quadruped",
+        "robot arm"
+      ],
+      "notes": "Budget its current for the hungriest load \u2014 an SBC under load plus servos can brown out a weak converter. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "lipo_balance_charger",
+      "license": "proprietary-part",
+      "name": "LiPo balance charger",
+      "part_class": "power",
+      "source": "generic balance charger",
+      "specs": {
+        "cells": "1-6S",
+        "charge_a_max": 6
+      },
+      "blurb": "Charger that keeps every cell in a LiPo pack at the same voltage.",
+      "used_for": "Safely recharging LiPo packs between runs.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "A balance charger is not optional for LiPo packs \u2014 it is how you avoid damaging cells. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "xt60_pigtail",
+      "license": "proprietary-part",
+      "name": "XT60 pigtail lead",
+      "part_class": "cables_connectors",
+      "source": "generic XT60 pigtail",
+      "specs": {
+        "connector": "XT60",
+        "gauge_awg": 14
+      },
+      "blurb": "A short lead with the yellow XT60 battery connector already soldered on.",
+      "used_for": "Connects the battery to the robot's power wiring.",
+      "robot_types": [
+        "RC car"
+      ],
+      "notes": "XT60 is polarised, but check polarity before first plug-in \u2014 reversed power destroys electronics instantly. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "silicone_wire_14awg",
+      "license": "proprietary-part",
+      "name": "Silicone wire 14 AWG (per metre)",
+      "part_class": "cables_connectors",
+      "source": "generic silicone hookup wire",
+      "specs": {
+        "gauge_awg": 14
+      },
+      "blurb": "Flexible silicone-insulated wire thick enough for battery current.",
+      "used_for": "Main power runs between battery, fuse and drivers.",
+      "robot_types": [],
+      "notes": "Match wire gauge to current: thin wire on a battery lead is a fuse you did not choose. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "driver_tb6612fng",
+      "license": "proprietary-part",
+      "name": "TB6612FNG dual motor driver",
+      "part_class": "drivers",
+      "source": "Toshiba TB6612FNG breakout (Pololu/SparkFun class)",
+      "specs": {
+        "channels": 2,
+        "current_a_per_channel": 1.2,
+        "voltage_v_max": 15
+      },
+      "blurb": "A small dual motor driver: runs two DC motors forward, reverse and brake from logic signals.",
+      "used_for": "Driving the two (or four, with two boards) gearmotors of a small rover.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Rated about 1.2 A per channel continuous \u2014 right for small gearmotors, too small for big motors at stall. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "driver_l298n",
+      "license": "proprietary-part",
+      "name": "L298N dual motor driver module",
+      "part_class": "drivers",
+      "source": "generic L298N module",
+      "specs": {
+        "channels": 2,
+        "current_a_per_channel": 2,
+        "voltage_v_max": 35
+      },
+      "blurb": "The classic red dual H-bridge module for two DC motors or one stepper.",
+      "used_for": "Cheap motor driving for school and hobby robots (it is the driver in the official Andino build).",
+      "robot_types": [],
+      "notes": "It drops roughly 2 V across the bridge and runs hot, so motors see noticeably less than the battery voltage. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "esc_4in1_45a",
+      "license": "proprietary-part",
+      "name": "4-in-1 ESC 45 A (BLHeli_S class)",
+      "part_class": "drivers",
+      "source": "generic 4-in-1 ESC",
+      "specs": {
+        "cells": "3-6S",
+        "channels": 4,
+        "current_a_per_channel": 45
+      },
+      "blurb": "Four brushless speed controllers on one board for a quadcopter.",
+      "used_for": "Driving a quad's four brushless motors from the flight controller.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Match ESC current rating and cell count to motors and battery. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "esc_quicrun_1060",
+      "license": "proprietary-part",
+      "name": "Brushed ESC 60 A (QuicRun 1060 class)",
+      "part_class": "drivers",
+      "source": "Hobbywing QuicRun WP 1060 class",
+      "specs": {
+        "cells": "2-3S",
+        "channels": 1,
+        "current_a": 60
+      },
+      "blurb": "A single brushed speed controller for an RC car's main motor.",
+      "used_for": "Lets a receiver/computer throttle one brushed motor.",
+      "robot_types": [
+        "RC car"
+      ],
+      "notes": "Set its battery-type jumper correctly (LiPo cutoff) before first run. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "esp32_devkit",
+      "license": "proprietary-part",
+      "name": "ESP32 development board",
+      "part_class": "microcontrollers",
+      "source": "Espressif ESP32 DevKit class",
+      "specs": {
+        "interfaces": [
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "wifi",
+          "ble"
+        ],
+        "logic_v": 3.3
+      },
+      "blurb": "A Wi-Fi/Bluetooth microcontroller board \u2014 the robot's reflexes.",
+      "used_for": "Real-time jobs: motor PWM, encoder counting, sensor polling.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "GPIO is 3.3 V logic and not 5 V tolerant \u2014 level-shift 5 V sensor outputs. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "teensy_41",
+      "license": "proprietary-part",
+      "name": "Teensy 4.1",
+      "part_class": "microcontrollers",
+      "source": "PJRC Teensy 4.1",
+      "specs": {
+        "interfaces": [
+          "i2c",
+          "spi",
+          "uart",
+          "can"
+        ],
+        "logic_v": 3.3
+      },
+      "blurb": "A very fast microcontroller board popular for precise motion control.",
+      "used_for": "Arms and robots that need many fast, timed control loops.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "3.3 V logic, not 5 V tolerant. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "pico_rp2040",
+      "license": "proprietary-part",
+      "name": "Raspberry Pi Pico (RP2040)",
+      "part_class": "microcontrollers",
+      "source": "Raspberry Pi Pico",
+      "specs": {
+        "interfaces": [
+          "i2c",
+          "spi",
+          "uart",
+          "pio"
+        ],
+        "logic_v": 3.3
+      },
+      "blurb": "Raspberry Pi's cheap dual-core microcontroller board.",
+      "used_for": "Small control jobs, custom sensor hubs, PIO-based timing tricks.",
+      "robot_types": [],
+      "notes": "3.3 V logic, not 5 V tolerant. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "raspberry_pi_5",
+      "license": "proprietary-part",
+      "name": "Raspberry Pi 5",
+      "part_class": "sbc",
+      "source": "Raspberry Pi 5",
+      "specs": {
+        "interfaces": [
+          "usb",
+          "ethernet",
+          "csi",
+          "gpio"
+        ],
+        "supply": "5V/5A USB-C"
+      },
+      "blurb": "A full Linux computer the size of a credit card.",
+      "used_for": "The robot's brain: ROS 2, cameras, mapping, decision-making.",
+      "robot_types": [
+        "differential-drive rover",
+        "humanoid",
+        "quadruped"
+      ],
+      "notes": "Needs a stiff 5 V / 5 A USB-C supply; undervoltage shows up as throttling and random reboots. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "microsd_128gb",
+      "license": "proprietary-part",
+      "name": "microSD card 128 GB (A2/V30)",
+      "part_class": "memory_storage",
+      "source": "generic A2/V30 microSD",
+      "specs": {
+        "capacity_gb": 128,
+        "speed_class": "V30"
+      },
+      "blurb": "The removable flash card a Raspberry Pi boots from.",
+      "used_for": "Operating system, code and logged data storage.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "The card is the robot's hard drive \u2014 a spare imaged card is cheap insurance. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "sik_telemetry_v3",
+      "license": "proprietary-part",
+      "name": "SiK telemetry radio pair (915 MHz)",
+      "part_class": "comms",
+      "source": "Holybro SiK Telemetry Radio V3 class",
+      "specs": {
+        "band_mhz": 915,
+        "interface": "uart"
+      },
+      "blurb": "A pair of long-range radio modems that make a wireless serial link.",
+      "used_for": "Telemetry and parameter tuning for drones/field robots at range.",
+      "robot_types": [],
+      "notes": "The 915 MHz variant suits the Americas; other regions use 433/868 MHz variants. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "elrs_receiver",
+      "license": "proprietary-part",
+      "name": "ExpressLRS receiver",
+      "part_class": "comms",
+      "source": "generic ExpressLRS receiver",
+      "specs": {
+        "band_ghz": 2.4,
+        "interface": "crsf/uart"
+      },
+      "blurb": "A tiny ExpressLRS radio-control receiver.",
+      "used_for": "Manual RC control link for cars, quads and boats.",
+      "robot_types": [
+        "RC car",
+        "quadcopter"
+      ],
+      "notes": "Receiver and transmitter must run compatible ELRS versions and the same binding phrase. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "realsense_d435",
+      "license": "proprietary-part",
+      "name": "Intel RealSense D435 depth camera",
+      "part_class": "cameras_sensors",
+      "source": "Intel RealSense D435",
+      "specs": {
+        "depth_range_m": "0.3-10",
+        "interface": "usb3",
+        "kind": "rgbd_camera"
+      },
+      "blurb": "A stereo depth camera: sees colour plus distance per pixel.",
+      "used_for": "Obstacle avoidance, 3D mapping, grasping.",
+      "robot_types": [
+        "differential-drive rover",
+        "humanoid",
+        "quadcopter",
+        "quadruped",
+        "robot arm",
+        "skid-steer rover"
+      ],
+      "notes": "Needs USB 3 for full depth rates; depth is unreliable in bright sunlight and on glass. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "rplidar_a1",
+      "license": "proprietary-part",
+      "name": "RPLIDAR A1 2D lidar",
+      "part_class": "cameras_sensors",
+      "source": "SLAMTEC RPLIDAR A1",
+      "specs": {
+        "interface": "uart/usb",
+        "kind": "lidar_2d",
+        "range_m": 12
+      },
+      "blurb": "A spinning 2D laser scanner \u2014 it sweeps a room and reports distances all around.",
+      "used_for": "Mapping and localisation for indoor rovers (SLAM). It is the lidar on Andino and the TurtleBot3 class.",
+      "robot_types": [
+        "differential-drive rover",
+        "quadruped"
+      ],
+      "notes": "Keep its scan plane unobstructed for the full 360 degrees or the map gets blind spots. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "imu_bno055",
+      "license": "proprietary-part",
+      "name": "BNO055 9-DOF IMU breakout",
+      "part_class": "cameras_sensors",
+      "source": "Bosch BNO055 breakout class",
+      "specs": {
+        "interface": "i2c",
+        "kind": "imu"
+      },
+      "blurb": "A 9-axis motion sensor with on-chip orientation fusion (compass + gyro + accelerometer).",
+      "used_for": "Heading and tilt sensing for rovers, humanoids and arms. Also the IMU in the official Andino BOM.",
+      "robot_types": [
+        "differential-drive rover",
+        "humanoid",
+        "quadruped"
+      ],
+      "notes": "Keep it away from motors and power wires \u2014 magnetic interference corrupts its heading. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "ultrasonic_hcsr04",
+      "license": "proprietary-part",
+      "name": "HC-SR04 ultrasonic ranger",
+      "part_class": "cameras_sensors",
+      "source": "generic HC-SR04",
+      "specs": {
+        "kind": "ultrasonic",
+        "logic_v": 5.0,
+        "range_m": 4
+      },
+      "blurb": "The two-eyed sonar module: pings and times the echo to measure distance.",
+      "used_for": "Cheap short-range obstacle detection on a budget.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Its echo pin outputs 5 V \u2014 divide it down before a 3.3 V input. Soft or angled surfaces absorb/deflect the ping. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "pla_filament",
+      "license": "proprietary-part",
+      "name": "PLA filament 1.75 mm, 1 kg",
+      "part_class": "materials",
+      "source": "generic PLA filament",
+      "specs": {
+        "density_g_cm3": 1.24,
+        "print_temp_c": "190-220"
+      },
+      "blurb": "The standard easy-print 3D printing plastic, on a 1 kg spool.",
+      "used_for": "Chassis plates, brackets and mounts (like this catalogue's CAD-kit parts).",
+      "robot_types": [],
+      "notes": "PLA is stiff and easy but softens in a hot car; PETG is the tougher choice for parts near motors. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "petg_filament",
+      "license": "proprietary-part",
+      "name": "PETG filament 1.75 mm, 1 kg",
+      "part_class": "materials",
+      "source": "generic PETG filament",
+      "specs": {
+        "density_g_cm3": 1.27,
+        "print_temp_c": "230-250"
+      },
+      "blurb": "A tougher, slightly flexible printing filament.",
+      "used_for": "Functional brackets and parts that take knocks.",
+      "robot_types": [],
+      "notes": "Prints hotter than PLA and strings more; a dried spool prints noticeably better. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "fuse_inline",
+      "license": "proprietary-part",
+      "name": "Inline blade fuse holder + fuse",
+      "part_class": "safety_protection",
+      "source": "generic inline fuse holder",
+      "specs": {
+        "fuse_a": 10,
+        "gauge_awg": 14
+      },
+      "blurb": "A fuse holder wired into the battery's main lead.",
+      "used_for": "The last line of defence against a short circuit cooking the wiring.",
+      "robot_types": [
+        "RC car",
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Size the fuse above normal draw and below the wire's rating. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "estop_button",
+      "license": "proprietary-part",
+      "name": "Emergency stop button (latching)",
+      "part_class": "safety_protection",
+      "source": "generic panel e-stop",
+      "specs": {
+        "action": "latching twist-release"
+      },
+      "blurb": "A big latching red button that cuts power when slapped.",
+      "used_for": "Emergency stop for arms, humanoids and anything that can pinch.",
+      "robot_types": [
+        "humanoid",
+        "robot arm",
+        "skid-steer rover"
+      ],
+      "notes": "Wire it in the main power path, not in software \u2014 it must work when the code doesn't. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "bms_4s",
+      "license": "proprietary-part",
+      "name": "BMS protection board 4S 40 A",
+      "part_class": "safety_protection",
+      "source": "generic 4S BMS board",
+      "specs": {
+        "cells": "4S",
+        "current_a": 40
+      },
+      "blurb": "A battery-management board that protects a 4-cell pack from over/under-voltage.",
+      "used_for": "Protection for DIY 4S packs built from bare cells.",
+      "robot_types": [],
+      "notes": "A BMS protects the pack; it is not a charger \u2014 still use a proper balance charger. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "custom_pcb_kicad",
+      "license": "proprietary-part",
+      "name": "Custom PCB (KiCad import)",
+      "part_class": "custom_boards",
+      "source": "imported from the builder's own KiCad project",
+      "specs": {
+        "import_from": "kicad_pcb/step",
+        "provenance": "CONFIRMED (design files)"
+      },
+      "blurb": "Your own circuit board, designed in KiCad and fabricated to order.",
+      "used_for": "Tidying a proven breadboard design into one reliable board.",
+      "robot_types": [],
+      "notes": "Prove the circuit on a breadboard first \u2014 a PCB faithfully reproduces design mistakes. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "gearmotor_12v",
+      "license": "proprietary-part",
+      "name": "DC gearmotor 12 V (37 mm class)",
+      "part_class": "actuators",
+      "source": "generic 37D gearmotor class (pathfinder demo spec)",
+      "specs": {
+        "kind": "dc_gearmotor",
+        "stall_torque_nm": 0.8,
+        "voltage_v": 12.0
+      },
+      "blurb": "A DC motor with a built-in gearbox: slow, strong turning for wheels.",
+      "used_for": "Driving rover wheels \u2014 torque matters more than speed here.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Stall current is several times the running current \u2014 size the driver for stall or limit current. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "brushed_motor_540",
+      "license": "proprietary-part",
+      "name": "Brushed motor 540 size",
+      "part_class": "actuators",
+      "source": "generic 540 RC motor",
+      "specs": {
+        "kind": "dc_brushed",
+        "voltage_v": 7.4
+      },
+      "blurb": "The standard 540-size brushed motor from RC cars.",
+      "used_for": "Main drive motor in 1/10 RC cars.",
+      "robot_types": [
+        "RC car"
+      ],
+      "notes": "Brushed motors spark and wear brushes; gearing decides whether it is fast or strong. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "servo_mg996r",
+      "license": "proprietary-part",
+      "name": "MG996R servo",
+      "part_class": "actuators",
+      "source": "generic MG996R",
+      "specs": {
+        "interface": "pwm",
+        "kind": "servo_positional",
+        "torque_kg_cm": 11,
+        "voltage_v": "4.8-7.2"
+      },
+      "blurb": "A metal-gear hobby servo that turns to a commanded angle.",
+      "used_for": "Steering, grippers, camera tilts, small arm joints.",
+      "robot_types": [
+        "RC car"
+      ],
+      "notes": "Power servos from their own regulated rail, not a microcontroller pin \u2014 brownouts reset controllers. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "servo_sts3215",
+      "license": "proprietary-part",
+      "name": "STS3215 serial bus servo (Feetech)",
+      "part_class": "actuators",
+      "source": "Feetech STS3215",
+      "specs": {
+        "interface": "uart bus, position feedback",
+        "kind": "servo_serial_bus",
+        "torque_kg_cm": 30,
+        "voltage_v": 7.4
+      },
+      "blurb": "A serial-bus servo: many chain on one wire and report their position back.",
+      "used_for": "Humanoid, quadruped and arm joints that need feedback.",
+      "robot_types": [
+        "humanoid",
+        "quadruped",
+        "robot arm"
+      ],
+      "notes": "Each bus servo needs a unique ID set before chaining; the bus is half-duplex UART. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "stepper_nema17",
+      "license": "proprietary-part",
+      "name": "Stepper motor NEMA 17",
+      "part_class": "actuators",
+      "source": "generic NEMA 17",
+      "specs": {
+        "holding_torque_nm": 0.45,
+        "kind": "stepper",
+        "steps_per_rev": 200
+      },
+      "blurb": "A stepper motor that moves in precise 1.8-degree steps.",
+      "used_for": "3D printers, CNC axes, precise positioners.",
+      "robot_types": [],
+      "notes": "Needs a stepper driver (A4988/DRV8825 class) \u2014 never wire coils straight to a microcontroller. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "brushless_2207_1960kv",
+      "license": "proprietary-part",
+      "name": "Brushless motor 2207 1960 KV",
+      "part_class": "actuators",
+      "source": "generic 2207 FPV motor",
+      "specs": {
+        "cells": "4-6S",
+        "kind": "brushless_outrunner",
+        "kv": 1960
+      },
+      "blurb": "An FPV quad motor: small, light, spins very fast.",
+      "used_for": "One of four motors on a 5-inch quadcopter.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "KV times battery volts is roughly unloaded RPM \u2014 match prop size to KV and cell count. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "wheel_100mm",
+      "license": "proprietary-part",
+      "name": "Wheel 100 mm diameter",
+      "part_class": "wheels",
+      "source": "generic 100 mm robot wheel (pathfinder demo spec)",
+      "specs": {
+        "diameter_m": 0.1,
+        "width_m": 0.032
+      },
+      "blurb": "A 100 mm robot wheel \u2014 the size on the Pathfinder spec.",
+      "used_for": "Main drive wheels for medium rovers.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Wheel diameter sets both ground clearance and the distance each motor turn travels \u2014 the motion gate measures exactly this. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "mecanum_wheel_100mm",
+      "license": "proprietary-part",
+      "name": "Mecanum wheel 100 mm",
+      "part_class": "wheels",
+      "source": "generic mecanum wheel set",
+      "specs": {
+        "diameter_m": 0.1,
+        "note": "mecanum odometry is unreliable by design; gate heading checks differ"
+      },
+      "blurb": "A wheel with angled rollers that lets a robot slide sideways.",
+      "used_for": "Holonomic (any-direction) drive on flat floors.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Mecanum rollers make wheel odometry unreliable by design \u2014 expect heading drift and fuse with an IMU. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "caster_ball",
+      "license": "proprietary-part",
+      "name": "Ball caster",
+      "part_class": "wheels",
+      "source": "generic ball caster",
+      "specs": {
+        "kind": "caster"
+      },
+      "blurb": "A free-rolling ball that supports the end of a two-wheel robot without steering it.",
+      "used_for": "The third contact point on differential-drive robots like Andino and TurtleBot3.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Casters carry weight but no drive \u2014 the robot's balance point should sit close to the driven axle. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "propeller_5040",
+      "license": "proprietary-part",
+      "name": "Propeller 5x4.0x3 tri-blade",
+      "part_class": "propulsion_air",
+      "source": "generic 5040 tri-blade prop",
+      "specs": {
+        "blades": 3,
+        "diameter_in": 5,
+        "pitch_in": 4.0
+      },
+      "blurb": "A 5-inch tri-blade propeller for FPV quads.",
+      "used_for": "Thrust for 5-inch quadcopters.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Props are the dangerous part of a quad \u2014 remove them for every bench test. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "fc_f405_stack",
+      "license": "proprietary-part",
+      "name": "Flight controller stack F405",
+      "part_class": "flight_control",
+      "source": "generic F405 stack",
+      "specs": {
+        "firmware": "Betaflight/iNav class",
+        "mcu": "STM32F405"
+      },
+      "blurb": "Flight-controller board stack that stabilises a quadcopter.",
+      "used_for": "Reads the gyro, runs the control loop, drives the ESCs.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Mount it soft (vibration isolation) \u2014 a rigidly mounted gyro reads the frame's buzz as motion. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "gripper_2finger",
+      "license": "proprietary-part",
+      "name": "2-finger parallel gripper kit",
+      "part_class": "end_effectors",
+      "source": "generic parallel gripper kit",
+      "specs": {
+        "actuation": "servo (not included)"
+      },
+      "blurb": "A two-finger parallel gripper kit (servo not included).",
+      "used_for": "The hand on a robot arm.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Check servo torque against gripper + payload weight at full reach, not just at the base. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "quad_frame_5inch",
+      "license": "proprietary-part",
+      "name": "Quadcopter frame 5 inch (carbon)",
+      "part_class": "structure",
+      "source": "generic 5-inch freestyle frame",
+      "specs": {
+        "material": "carbon fibre",
+        "wheelbase_mm": 220
+      },
+      "blurb": "A carbon-fibre frame sized for 5-inch propellers.",
+      "used_for": "The skeleton of a freestyle quadcopter.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Carbon fibre is conductive \u2014 insulate every board and wire that touches the frame. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "extrusion_2020",
+      "license": "proprietary-part",
+      "name": "Aluminium extrusion 2020 (per metre)",
+      "part_class": "structure",
+      "source": "generic 2020 extrusion",
+      "specs": {
+        "profile_mm": "20x20"
+      },
+      "blurb": "Slotted aluminium profile, 20 by 20 mm, sold by the metre.",
+      "used_for": "Frames for arms, gantries and test rigs.",
+      "robot_types": [],
+      "notes": "Uses M3/M4 T-slot nuts \u2014 order fasteners when you order lengths. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "chassis_plate",
+      "name": "Chassis plate (3D-printed)",
+      "part_class": "structure",
+      "license": "Apache-2.0",
+      "source": "RobotForge CAD kit (this repository)",
+      "specs": {
+        "kind": "flat_plate",
+        "origin": "generated per-robot by `robotforge cad`"
+      },
+      "blurb": "The flat deck everything bolts onto \u2014 in RobotForge it is generated for your robot, ready to print.",
+      "used_for": "The base layer of a ground robot: motors, battery and boards all mount to it.",
+      "robot_types": [
+        "skid-steer rover",
+        "differential-drive rover"
+      ],
+      "notes": "Keep mounting holes a few millimetres from plate edges in printed plastic, and print flat-side down. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "motor_mount",
+      "name": "Motor mount bracket (3D-printed)",
+      "part_class": "structure",
+      "license": "Apache-2.0",
+      "source": "RobotForge CAD kit (this repository)",
+      "specs": {
+        "kind": "bracket",
+        "origin": "generated per-robot by `robotforge cad`"
+      },
+      "blurb": "A small bracket that holds a gearmotor at exactly axle height.",
+      "used_for": "Bolting drive motors to the chassis plate.",
+      "robot_types": [
+        "skid-steer rover",
+        "differential-drive rover"
+      ],
+      "notes": "Printed mounts flex under hard stall torque \u2014 gussets or a second bolt point help. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "lidar_mount",
+      "name": "Lidar mount post (3D-printed)",
+      "part_class": "structure",
+      "license": "Apache-2.0",
+      "source": "RobotForge CAD kit (this repository)",
+      "specs": {
+        "kind": "mount_post",
+        "origin": "generated per-robot by `robotforge cad`"
+      },
+      "blurb": "A post that raises the 2D lidar above the deck for a clear 360-degree view.",
+      "used_for": "Mounting a spinning lidar on rovers.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "The lidar must see over the robot's own body in every direction, or the map has a permanent blind wedge. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "camera_bracket",
+      "name": "Camera bracket (3D-printed)",
+      "part_class": "structure",
+      "license": "Apache-2.0",
+      "source": "RobotForge CAD kit (this repository)",
+      "specs": {
+        "kind": "bracket",
+        "origin": "generated per-robot by `robotforge cad`"
+      },
+      "blurb": "A small flat bracket that holds a camera facing forward.",
+      "used_for": "Mounting RGB/depth cameras on the chassis.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover",
+        "robot arm"
+      ],
+      "notes": "A slightly downward tilt sees near-field obstacles; level sees the horizon. Pick per job. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "ultrasonic_bracket",
+      "name": "Ultrasonic bracket (3D-printed)",
+      "part_class": "structure",
+      "license": "Apache-2.0",
+      "source": "RobotForge CAD kit (this repository)",
+      "specs": {
+        "kind": "bracket",
+        "origin": "generated per-robot by `robotforge cad`"
+      },
+      "blurb": "A twin-can bracket sized for an HC-SR04-style ultrasonic ranger.",
+      "used_for": "Holding an ultrasonic sensor square to the direction of travel.",
+      "robot_types": [
+        "skid-steer rover",
+        "differential-drive rover"
+      ],
+      "notes": "Angle it straight ahead: a tilted sonar measures the floor, not the wall. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "camera_rpi_v2",
+      "name": "Raspberry Pi Camera Module V2 (8 MP)",
+      "part_class": "cameras_sensors",
+      "license": "proprietary-part",
+      "source": "Raspberry Pi Camera Module V2 (the camera in the official Andino BOM)",
+      "specs": {
+        "interface": "csi ribbon",
+        "kind": "rgb_camera",
+        "megapixels": 8
+      },
+      "blurb": "The little ribbon-cable camera made for the Raspberry Pi.",
+      "used_for": "Vision on Pi-based robots \u2014 it is Andino's camera.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "The CSI ribbon is fragile and keyed \u2014 seat it straight and never hot-swap it. (General guidance.)",
+      "buy": null
+    },
+    {
+      "id": "liion_18650_3s",
+      "name": "18650 Li-ion pack 3S (3 cells)",
+      "part_class": "power",
+      "license": "proprietary-part",
+      "source": "generic 18650 cells in a 3-cell holder (the battery in the official Andino BOM)",
+      "specs": {
+        "capacity_mah": "varies by cell (2600 typical)",
+        "chemistry": "liion",
+        "voltage_v": 11.1
+      },
+      "blurb": "Three cylindrical 18650 cells in series \u2014 11.1 V of robot power.",
+      "used_for": "Main battery for small rovers \u2014 Andino runs on exactly this.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Use matched cells from one batch, and a holder with a fuse or BMS for a robot that drives unattended. (General guidance.)",
+      "buy": null
+    }
+  ],
+  "templates": [
+    {
+      "gate_pack": "live",
+      "label": "Rover \u2014 skid-steer (pathfinder class)",
+      "name": "rover_skid_steer",
+      "optional": [
+        "realsense_d435",
+        "ultrasonic_hcsr04",
+        "mecanum_wheel_100mm",
+        "estop_button"
+      ],
+      "required": {
+        "driver_tb6612fng": 2,
+        "esp32_devkit": 1,
+        "fuse_inline": 1,
+        "gearmotor_12v": 4,
+        "lipo_4s_5200": 1,
+        "wheel_100mm": 4
+      }
+    },
+    {
+      "gate_pack": "live",
+      "label": "Rover \u2014 differential drive (TurtleBot class)",
+      "name": "rover_diff_drive",
+      "optional": [
+        "realsense_d435",
+        "imu_bno055",
+        "microsd_128gb"
+      ],
+      "required": {
+        "caster_ball": 1,
+        "driver_tb6612fng": 1,
+        "fuse_inline": 1,
+        "gearmotor_12v": 2,
+        "lipo_4s_5200": 1,
+        "raspberry_pi_5": 1,
+        "rplidar_a1": 1,
+        "wheel_100mm": 2
+      }
+    },
+    {
+      "gate_pack": "partial",
+      "label": "RC car (1/10 touring/drift class)",
+      "name": "rc_car",
+      "optional": [
+        "fuse_inline"
+      ],
+      "required": {
+        "brushed_motor_540": 1,
+        "elrs_receiver": 1,
+        "esc_quicrun_1060": 1,
+        "lipo_3s_2200": 1,
+        "servo_mg996r": 1,
+        "xt60_pigtail": 1
+      }
+    },
+    {
+      "gate_pack": "roadmap",
+      "label": "Quadcopter \u2014 5 inch freestyle",
+      "name": "quadcopter_5inch",
+      "optional": [
+        "realsense_d435"
+      ],
+      "required": {
+        "brushless_2207_1960kv": 4,
+        "elrs_receiver": 1,
+        "esc_4in1_45a": 1,
+        "fc_f405_stack": 1,
+        "lipo_4s_1500": 1,
+        "lipo_balance_charger": 1,
+        "propeller_5040": 4,
+        "quad_frame_5inch": 1
+      }
+    },
+    {
+      "gate_pack": "roadmap",
+      "label": "Humanoid \u2014 biped, serial-servo class",
+      "name": "humanoid_biped",
+      "optional": [
+        "realsense_d435",
+        "estop_button"
+      ],
+      "required": {
+        "buck_converter_5v": 1,
+        "imu_bno055": 1,
+        "lipo_3s_2200": 1,
+        "raspberry_pi_5": 1,
+        "servo_sts3215": 12
+      }
+    },
+    {
+      "gate_pack": "roadmap",
+      "label": "Quadruped \u2014 serial-servo class (12 DOF)",
+      "name": "quadruped",
+      "optional": [
+        "realsense_d435",
+        "rplidar_a1"
+      ],
+      "required": {
+        "buck_converter_5v": 1,
+        "imu_bno055": 1,
+        "lipo_3s_2200": 1,
+        "raspberry_pi_5": 1,
+        "servo_sts3215": 12
+      }
+    },
+    {
+      "gate_pack": "roadmap",
+      "label": "Robot arm \u2014 6 DOF + gripper",
+      "name": "robot_arm_6dof",
+      "optional": [
+        "realsense_d435"
+      ],
+      "required": {
+        "buck_converter_5v": 1,
+        "estop_button": 1,
+        "gripper_2finger": 1,
+        "servo_sts3215": 6,
+        "teensy_41": 1
+      }
+    }
+  ]
+}
