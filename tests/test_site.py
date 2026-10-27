@@ -103,3 +103,17 @@ def test_legacy_urls_redirect_into_the_app():
         page = (REPO / old).read_text()
         assert f'url={target}' in page
         assert target.startswith("app/")
+
+
+def test_app_pages_carry_the_docked_chat_rail_landing_keeps_the_widget():
+    # App pages: the Forge Guide is a persistent left rail in the
+    # shell (Muse-style), not the floating bubble.
+    for page in (render_forge(), render_robots_index(dex, cat),
+                 render_evidence(dex)):
+        assert '<div class="forge-chat docked" id="forge-chat">' in page
+        assert 'id="fc-panel"' in page and 'id="fc-form"' in page
+    # The landing page keeps the floating widget between its markers.
+    landing = (REPO / "index.html").read_text()
+    block = landing.split(CHAT_START := "<!-- chat:start -->")[1] \
+        .split("<!-- chat:end -->")[0]
+    assert 'class="forge-chat"' in block and "docked" not in block

@@ -86,3 +86,22 @@
   .forge-chat{right:12px;bottom:12px}
   .fc-panel{width:calc(100vw - 24px);height:min(600px,calc(100dvh - 104px))}
 }
+
+/* ---------- docked rail (app pages) ----------
+   Same chat, framed as Muse frames it: a persistent conversation
+   column on the left with the composer at its foot. Under 1280px the
+   docked wrapper keeps the floating launcher + panel behaviour above,
+   so narrow screens lose nothing. */
+@media (min-width:1280px){
+  .forge-chat.docked{
+    position:fixed;left:0;top:0;bottom:0;width:320px;z-index:60;
+  }
+  .forge-chat.docked .fc-launcher{display:none}
+  .forge-chat.docked .fc-panel{
+    position:absolute;inset:0;width:auto;height:auto;
+    border:0;border-right:1px solid var(--border-strong);
+    border-radius:0;box-shadow:none;background:var(--surface);
+  }
+  .forge-chat.docked .fc-close{display:none}
+  .forge-chat.docked .fc-msgs{padding:16px 14px}
+}

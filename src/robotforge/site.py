@@ -72,8 +72,12 @@ CHAT_HONEST = ("Answers from RobotForge's recorded data "
                "(not a live AI)")
 
 
-def chat_widget() -> str:
-    return f"""<div class="forge-chat" id="forge-chat">
+def chat_widget(docked: bool = False) -> str:
+    """The Forge Guide chat. Default: the floating launcher + panel
+    (landing page). Docked: the same chat as a persistent left rail
+    inside the app shell — same ids and engine, different frame."""
+    wrap = "forge-chat docked" if docked else "forge-chat"
+    return f"""<div class="{wrap}" id="forge-chat">
   <button class="fc-launcher" id="fc-launcher" type="button" aria-expanded="false" aria-controls="fc-panel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>
     <span>Forge Guide</span>
@@ -197,6 +201,7 @@ def app_shell(*, active: str, title: str, depth: int, body: str,
       <a href="{REPO_URL}">GitHub</a>
     </div>
   </aside>
+{chat_widget(docked=True)}
   <div class="main">
     <header class="topbar">
       <a class="mobile-brand" href="{root}" aria-label="RobotForge site">{BRAND_MARK}</a>
@@ -208,7 +213,6 @@ def app_shell(*, active: str, title: str, depth: int, body: str,
     </main>
   </div>
 </div>
-{chat_widget()}
 {script_tags}
 </body>
 </html>
