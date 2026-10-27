@@ -3,6 +3,12 @@
    art, monospace data, cards. Shares tokens.css with the landing. */
 
 body.app{min-height:100vh}
+/* Wide screens: the docked Forge Guide rail (320px, fixed left) gets
+   its room from shell padding; below 1280px it is the floating widget
+   again (chat.css) and the shell takes the full width. */
+@media (min-width:1280px){
+  .shell{padding-left:320px}
+}
 .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 
 /* ---------- sidebar ---------- */

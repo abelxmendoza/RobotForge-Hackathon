@@ -106,6 +106,28 @@
     setChips(engine ? engine.suggestions : null);
   }
 
+  /* A real in-page action, not just an answer: on the Robots page,
+   * "find lidar" / "show servos" drives the catalogue's own search
+   * box, so the page itself responds to the conversation. */
+  function filterPartsHere(q) {
+    var ps = document.getElementById('part-search');
+    if (!ps) return;
+    var m = q.match(/^(?:find|search|show(?: me)?|filter)\s+(.+)$/i);
+    if (!m) return;
+    ps.value = m[1].trim();
+    ps.dispatchEvent(new Event('input', { bubbles: true }));
+    var note = document.createElement('div');
+    note.className = 'fc-msg bot';
+    var p = document.createElement('p');
+    p.textContent = 'I filtered the parts catalogue on this page for \u201c' +
+      m[1].trim() + '\u201d — it is just below.';
+    note.appendChild(p);
+    msgs.appendChild(note);
+    msgs.scrollTop = msgs.scrollHeight;
+    var sec = document.getElementById('parts');
+    if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+  }
+
   function localAnswer(question) {
     return engine.answer(question);
   }
@@ -120,6 +142,7 @@
       wait.innerHTML = ans.html;
       msgs.scrollTop = msgs.scrollHeight;
       setChips(ans.chips || (engine ? engine.suggestions : null));
+      filterPartsHere(q);
     };
     load().then(function () {
       if (FG.CONFIG.endpoint) {
@@ -139,23 +162,39 @@
     });
   }
 
+  /* Docked mode (app pages, wide screens): the panel is a fixed
+   * left rail and is simply open — there is nothing to toggle. The
+   * media query mirrors the one in chat.css / app.css. */
+  var dockMQ = window.matchMedia('(min-width: 1280px)');
+  function isDocked() {
+    return box.classList.contains('docked') && dockMQ.matches;
+  }
+
   function setOpen(open) {
     panel.hidden = !open;
     launcher.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) {
       load().then(function () {
         greet();
-        input.focus();
+        if (!isDocked()) input.focus();
       });
     }
   }
 
+  function applyMode() {
+    if (box.classList.contains('docked')) setOpen(isDocked());
+  }
+  if (dockMQ.addEventListener) dockMQ.addEventListener('change', applyMode);
+  applyMode();
+
   launcher.addEventListener('click', function () {
-    setOpen(panel.hidden);
+    if (!isDocked()) setOpen(panel.hidden);
   });
-  closeBtn.addEventListener('click', function () { setOpen(false); });
+  closeBtn.addEventListener('click', function () {
+    if (!isDocked()) setOpen(false);
+  });
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && !panel.hidden) setOpen(false);
+    if (ev.key === 'Escape' && !panel.hidden && !isDocked()) setOpen(false);
   });
   form.addEventListener('submit', function (ev) {
     ev.preventDefault();
