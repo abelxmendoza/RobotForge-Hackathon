@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .describe import describe_live, describe_mock
 from .gate import evaluate_drive, evaluate_run, evaluate_turn
+from .listimport import import_list, render_text
 from .photo import draft_spec_from_photo, locate_parts
 from .schema import RobotSpec, SpecError
 from .twin import TwinError, run_motion_check
@@ -121,6 +122,11 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--drive-m", type=float, default=1.0)
     g.add_argument("--turn-deg", type=float, default=90.0)
 
+    li = sub.add_parser("import-list", help="paste a shopping/wish list -> "
+                        "assembled robot draft, wiring, missing parts")
+    li.add_argument("listfile", help="text file with the pasted list")
+    li.add_argument("--out", help="write the JSON report here")
+
     args = p.parse_args(argv)
     try:
         if args.cmd == "describe":
@@ -138,6 +144,14 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(text)
             return _print_findings(spec)
+        if args.cmd == "import-list":
+            report = import_list(Path(args.listfile).read_text())
+            print(render_text(report), end="")
+            if args.out:
+                Path(args.out).write_text(
+                    json.dumps(report, indent=2) + "\n")
+                print(f"report written to {args.out}")
+            return 0
         spec = RobotSpec.from_json(Path(args.spec).read_text())
         if args.cmd == "validate":
             return _print_findings(spec)
