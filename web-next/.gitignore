@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+# Synced at prebuild/predev by scripts/sync-data.mjs from the repo —
+# do not commit the copies.
+src/data/*.json
+src/styles/*.css
+public/assets/
+public/examples/
+public/catalog/
+public/problem-space.html
