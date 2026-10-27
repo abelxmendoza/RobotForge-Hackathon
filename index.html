@@ -3,179 +3,260 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RobotForge — plain language in, measured verdict out</title>
-<link rel="stylesheet" href="app/app.css">
+<title>RobotForge — check a robot before you build it</title>
+<meta name="description" content="Describe a robot or paste its parts list. Muse Spark drafts the spec, RobotForge catches the numbers that don't add up, and a simulated twin has to pass a measured motion test.">
+<meta name="theme-color" content="#0f1115">
+<script>
+  /* Links from the old single-page site (index.html#robodex etc.) now
+     live in the app. Forward them before anything renders. */
+  (function () {
+    var map = { robodex: 'app/robots/', takeapart: 'app/robots/pathfinder/#take-apart',
+                replay: 'app/forge/', evidence: 'app/evidence/' };
+    var h = location.hash.slice(1);
+    if (map[h]) location.replace(map[h]);
+  })();
+</script>
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/site.css">
 </head>
 <body>
 
-<header class="appbar">
+<header class="site-header" id="top">
   <div class="wrap">
-    <nav class="rfnav" aria-label="RobotForge">
-      <a class="rfnav-brand" href="index.html#home">RobotForge</a>
-      <div class="rfnav-links">
-        <a href="index.html#home" data-view="home">Home</a>
-        <a href="index.html#robodex" data-view="robodex">Robodex</a>
-        <a href="index.html#takeapart" data-view="takeapart">Take-Apart</a>
-        <a href="index.html#replay" data-view="replay">Describe Replay</a>
-        <a href="index.html#evidence" data-view="evidence">Gate Evidence</a>
-        <a href="robodex.html">Robodex page</a>
-        <a href="parts.html">Parts Kit</a>
-        <a href="try.html">Try It</a>
-        <a href="reports.html">Gate Reports</a>
-        <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub</a>
-      </div>
+    <a class="brand" href="./">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#1a1204" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="9" rx="2"/><circle cx="8" cy="17.5" r="2"/><circle cx="16" cy="17.5" r="2"/></svg></span>
+      RobotForge
+    </a>
+    <nav class="site-nav" aria-label="Page sections">
+      <a href="#workflow">How it works</a>
+      <a href="#proof">Evidence</a>
+      <a href="#robots">Robots</a>
+      <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub</a>
     </nav>
+    <a class="btn btn-primary" href="app/forge/">Open the app &rarr;</a>
   </div>
 </header>
 
-<!-- ===================== HOME ===================== -->
-<main class="view active" id="view-home">
-  <div class="wrap">
-    <section class="hero">
-      <h1>Plain language in.<br>Measured verdict out.</h1>
-      <p class="pitch">Describe a robot in plain words. RobotForge drafts the spec, builds its simulation twin, and measures whether the model actually does what it claims.</p>
-      <div class="links">
-        <button class="btn solid" data-goto="takeapart">Take a robot apart &rarr;</button>
-        <button class="btn" data-goto="replay">Watch a describe run</button>
-        <button class="btn" data-goto="robodex">Browse the Robodex</button>
-        <a class="btn" href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub repository &rarr;</a>
+<main>
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow">Meta Global AI Developer Hackathon · Indie track</div>
+      <h1>Check a robot before you build it.</h1>
+      <p class="lede">Describe a robot or paste its parts list. Muse Spark drafts the spec, RobotForge catches the numbers that don't add up, and a simulated twin has to pass a measured motion test.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="app/forge/">Open the app &rarr;</a>
+        <a class="btn" href="#proof">See the evidence</a>
       </div>
-      <figure class="hero-art" id="hero-art" hidden></figure>
-    </section>
+      <p class="powered">Spec drafting by Muse Spark via the Meta Model API · twin and gate in Gazebo Sim</p>
+      <figure class="hero-art">
+        <img src="assets/img/hero.jpg" width="900" height="386" alt="Illustration of a rugged four-wheel rover on a workbench, lit in amber">
+        <figcaption>AI illustration (muse-image-1.0). The real robots in the app carry real, credited photos.</figcaption>
+      </figure>
+    </div>
+  </section>
 
-    <section class="block" id="how">
-      <h2>How it works</h2>
-      <div class="steps">
-        <div class="step">
-          <h3><span class="n">1</span>Describe</h3>
-          <p>Muse Spark drafts a structured robot spec from your plain-language description.</p>
+  <!-- ============ WORKFLOW ============ -->
+  <section class="band" id="workflow">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">The workflow</div>
+        <h2>Five steps from an idea to a verdict.</h2>
+        <p>Every robot goes through the same path. Nothing downstream trusts the step before it: the model's spec is checked, and the twin is measured.</p>
+      </div>
+      <ol class="flow">
+        <li><span class="n">01</span><h3>Input</h3><p>Plain words, a pasted parts list, or a photo.</p></li>
+        <li><span class="n">02</span><h3>Spec</h3><p>Muse Spark drafts a strict, structured hardware spec.</p></li>
+        <li><span class="n">03</span><h3>Checks</h3><p>Engineering checks catch impossible or inconsistent numbers.</p></li>
+        <li><span class="n">04</span><h3>Twin &amp; gate</h3><p>The twin drives 1 m and turns 90° in Gazebo, graded on ground truth.</p></li>
+        <li><span class="n">05</span><h3>Outputs</h3><p>URDF, a printable take-apart kit, and what's missing to buy.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ PROOF ============ -->
+  <section class="band" id="proof">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Evidence</div>
+        <h2>The gate is not a rubber stamp.</h2>
+        <p>Thresholds are locked: distance error 5% passes and over 10% fails, heading error 5° passes and over 10° fails. Here is one robot that earned a PASS, and one that was rigged to fail.</p>
+      </div>
+      <div class="proof">
+        <article class="card">
+          <div class="card-head"><span class="eyebrow">Described in words, never drawn</span><span class="verdict pass">Pass</span></div>
+          <h3>Indoor Delivery Rover</h3>
+          <p>One paragraph of plain English became a spec, a twin, and a measured PASS. Its odometry matched ground truth to 0.002%.</p>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-top"><span class="metric-label">Drive error</span></div>
+              <div class="metric-value">0.398<small>%</small></div>
+              <div class="meter"><span class="z-pass" style="width:33.3%"></span><span class="z-marg" style="left:33.3%;width:33.3%"></span><span class="fill pass" style="width:2.7%"></span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-top"><span class="metric-label">Turn error</span></div>
+              <div class="metric-value">3.653<small>°</small></div>
+              <div class="meter"><span class="z-pass" style="width:33.3%"></span><span class="z-marg" style="left:33.3%;width:33.3%"></span><span class="fill pass" style="width:24.4%"></span></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head"><span class="eyebrow">Fault injection</span><span class="verdict fail">Fail</span></div>
+          <h3>Wheels 10% smaller than the paperwork</h3>
+          <p>TurtleBot3 Burger with its physical wheels shrunk to 0.9× while odometry kept believing the spec. The robot's own sensors couldn't see it. The gate could.</p>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-top"><span class="metric-label">Drive error</span></div>
+              <div class="metric-value">7.617<small>%</small></div>
+              <div class="meter"><span class="z-pass" style="width:33.3%"></span><span class="z-marg" style="left:33.3%;width:33.3%"></span><span class="fill marginal" style="width:50.8%"></span></div>
+            </div>
+            <div class="metric">
+              <div class="metric-top"><span class="metric-label">Odometry vs truth</span></div>
+              <div class="metric-value">11.168<small>%</small></div>
+              <div class="meter"><span class="z-pass" style="width:33.3%"></span><span class="z-marg" style="left:33.3%;width:33.3%"></span><span class="fill fail" style="width:74.5%"></span></div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="proof-foot">
+        <p class="muted" style="font-size:var(--fs-xs)">Bars run 0–15. Green zone passes, yellow is marginal, past it fails. Recorded in Gazebo Sim, headless, Oct 26, 2026.</p>
+        <a class="btn" href="app/evidence/">All gate reports &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROBOTS ============ -->
+  <section class="band" id="robots">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Robodex</div>
+        <h2>Robots the forge knows.</h2>
+        <p>Each badge comes only from recorded gate runs. A robot that hasn't been gated says so in grey instead of borrowing a green it hasn't earned.</p>
+      </div>
+      <div class="robot-row">
+<!-- robots:start (generated by `robotforge site`; edit catalog/robots.json, not this block) -->
+<a class="robot-card" href="app/robots/andino/" data-status="FAIL"><div class="ph"><img src="https://raw.githubusercontent.com/Ekumen-OS/andino/main/docs/real_robot.png" alt="Andino" loading="lazy"></div><div class="body"><span class="dex">#001</span><h3>Andino</h3><span class="cls">Differential-drive ground robot</span><span class="verdict fail">Fail</span></div></a>
+<a class="robot-card" href="app/robots/turtlebot3-burger/" data-status="PASS"><div class="ph"><img src="https://emanual.robotis.com/assets/images/platform/turtlebot3/hardware_setup/turtlebot3_burger.png" alt="TurtleBot3 Burger" loading="lazy"></div><div class="body"><span class="dex">#002</span><h3>TurtleBot3 Burger</h3><span class="cls">Differential-drive ground robot</span><span class="verdict pass">Pass</span></div></a>
+<a class="robot-card" href="app/robots/turtlebot3-waffle-pi/" data-status="NOT_GATED"><div class="ph"><img src="https://emanual.robotis.com/assets/images/platform/turtlebot3/hardware_setup/turtlebot3_models.png" alt="TurtleBot3 Waffle Pi" loading="lazy"></div><div class="body"><span class="dex">#003</span><h3>TurtleBot3 Waffle Pi</h3><span class="cls">Differential-drive ground robot</span><span class="verdict norun">Not gated</span></div></a>
+<a class="robot-card" href="app/robots/pathfinder/" data-status="PASS"><div class="ph ai"><img src="assets/img/pathfinder.jpg" alt="Pathfinder (AI concept illustration)" loading="lazy"></div><div class="body"><span class="dex">#004</span><h3>Pathfinder</h3><span class="cls">Skid-steer ground rover</span><span class="verdict pass">Pass</span></div></a>
+<!-- robots:end -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="band" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Under the hood</div>
+        <h2>How RobotForge decides.</h2>
+        <p>The model sits on the critical path, and nothing it says is trusted until it is checked and measured.</p>
+      </div>
+
+      <div class="pipeline" role="list" aria-label="Pipeline">
+        <div class="node" role="listitem">Describe<small>words · list · photo</small></div><span class="arrow" aria-hidden="true">&rarr;</span>
+        <div class="node ai" role="listitem">Spec<small>Muse Spark</small></div><span class="arrow" aria-hidden="true">&rarr;</span>
+        <div class="node" role="listitem">Validate<small>engineering checks</small></div><span class="arrow" aria-hidden="true">&rarr;</span>
+        <div class="node" role="listitem">URDF<small>model</small></div><span class="arrow" aria-hidden="true">&rarr;</span>
+        <div class="node" role="listitem">Twin<small>Gazebo, headless</small></div><span class="arrow" aria-hidden="true">&rarr;</span>
+        <div class="node gate" role="listitem">Gate<small>pass · marginal · fail</small></div>
+      </div>
+
+      <div class="split">
+        <div class="card yes">
+          <h3>What a PASS proves</h3>
+          <ul>
+            <li>The spec's numbers are consistent with each other: geometry, mass budget, voltages.</li>
+            <li>A twin built from exactly that spec drives 1 m and turns 90° within the locked thresholds.</li>
+            <li>The twin's own odometry agrees with simulator ground truth, so its sensors aren't lying to it.</li>
+          </ul>
         </div>
-        <div class="step">
-          <h3><span class="n">2</span>Validate</h3>
-          <p>Engineering checks catch impossible or inconsistent numbers before anything is simulated.</p>
-        </div>
-        <div class="step">
-          <h3><span class="n">3</span>Twin</h3>
-          <p>The spec becomes a digital twin that runs headless in Gazebo Sim.</p>
-        </div>
-        <div class="step">
-          <h3><span class="n">4</span>Gate</h3>
-          <p>A measured motion test grades the twin against fixed thresholds — pass, marginal, or fail.</p>
+        <div class="card no">
+          <h3>What it doesn't prove</h3>
+          <ul>
+            <li>That a physical robot will behave the same. The gate tests the spec's simulated twin, not hardware.</li>
+            <li>That a photo-drafted spec is accurate. Photo dimensions are marked ESTIMATED until measured.</li>
+            <li>Anything beyond drive and turn. Other behaviours aren't gated yet.</li>
+          </ul>
         </div>
       </div>
-    </section>
 
-    <section class="block" id="gate">
-      <h2>The Gate</h2>
-      <p>The twin is commanded to <strong>drive 1 metre</strong> and <strong>turn 90 degrees</strong>. Odometry measures what it actually did, and the difference between commanded and measured is the grade.</p>
-      <table class="grid">
-        <thead>
-          <tr><th>Measurement</th><th>Pass</th><th>Marginal</th><th>Fail</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Distance error</td><td>&le;5%</td><td>5&ndash;10%</td><td>&gt;10%</td></tr>
-          <tr><td>Heading error</td><td>&le;5&deg;</td><td>5&ndash;10&deg;</td><td>&gt;10&deg;</td></tr>
-        </tbody>
-      </table>
-      <p class="note">Thresholds are printed on every report and never quietly loosened.</p>
-      <p style="margin-top:14px"><a href="reports.html"><strong>See the evidence &rarr;</strong> three real gate reports: a clean PASS, an injected-wheel FAIL, and the turn odometry couldn't see</a></p>
-    </section>
-
-    <section class="block" id="status">
-      <h2>Status — Oct 26, 2026</h2>
-      <ul class="status-list">
-        <li><span class="tag">Live</span>Natural-language describe runs on <strong>muse-spark-1.3</strong> via the Meta Model API. The first live spec passed all engineering checks with zero errors and zero warnings.</li>
-        <li><span class="tag">Passing</span>The motion gate now passes both reference robots across repeated runs — drive error 0.3&ndash;1.5% and turn error 2.2&ndash;4.8&deg;, against fixed thresholds of 5% and 5&deg;.</li>
-      </ul>
-      <p class="framing">A verification tool that flatters would be worthless &mdash; earlier today this page reported the FAIL while the twin was overshooting, with the cause measured.</p>
-    </section>
-  </div>
-</main>
-
-<!-- ===================== ROBODEX ===================== -->
-<main class="view" id="view-robodex">
-  <div class="wrap">
-    <h1>Robodex</h1>
-    <p class="lede">Every robot the forge knows, numbered in the order it learned them. Gate badges come only from recorded gate runs — a robot with no run says so, in grey, instead of borrowing a green it has not earned. There is also a <a href="robodex.html">standalone Robodex page</a> generated from the same data.</p>
-    <div id="robodex-root">
-      <div class="state-box">Loading the Robodex from <code>catalog/robots.json</code>&hellip;</div>
-    </div>
-  </div>
-</main>
-
-<!-- ===================== TAKE-APART ===================== -->
-<main class="view" id="view-takeapart">
-  <div class="wrap">
-    <h1>Take a robot apart</h1>
-    <p class="lede">Every RobotForge spec becomes a take-apart kit of simple, 3D-printable parts (<code>robotforge cad</code>). This viewer lays the kit out exactly the way the kit's own assembly file does — same wheel positions, same axle height, same deck placement — straight from the robot's spec file. Drag <strong>Explode</strong> to spread the parts, and click any part to learn what it is.</p>
-    <div id="takeapart-est"></div>
-    <div class="ta-controls">
-      <label for="ta-robot">Robot</label>
-      <select id="ta-robot"></select>
-      <label for="ta-explode">Explode</label>
-      <input type="range" id="ta-explode" min="0" max="60" value="0" step="1">
-      <span id="ta-explode-val" class="note" style="margin:0">0 mm</span>
-    </div>
-    <div class="ta-stage">
-      <div>
-        <div class="ta-svgbox">
-          <div id="ta-side"></div>
-          <p class="cap">Side view — the robot's length runs left (rear) to right (front); height is up. Ground is z&nbsp;=&nbsp;0 and wheel axles sit at wheel-radius height, as in the kit assembly.</p>
+      <div class="grid-3">
+        <div class="card">
+          <div class="eyebrow">Meta model</div>
+          <h3 style="margin-top:8px">Muse Spark drafts the spec</h3>
+          <p>Through the Meta Model API in Standard mode. It turns words or a photo into a strict spec schema and never writes simulation code.</p>
         </div>
-        <div class="ta-svgbox" style="margin-top:22px">
-          <div id="ta-top"></div>
-          <p class="cap">Top view — length left&ndash;right, width up&ndash;down. Explode moves the wheels outward here, exactly like the kit's <code>explode_mm</code>.</p>
+        <div class="card">
+          <div class="eyebrow">Cross-check</div>
+          <h3 style="margin-top:8px">SAM 3.1 double-checks photos</h3>
+          <p>It locates parts in the picture independently. When it disagrees with Spark, both answers are printed, not smoothed over.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Gate</div>
+          <h3 style="margin-top:8px">Ground truth, not belief</h3>
+          <p>Drive and turn are judged against the simulator's true pose. Odometry is graded too, so a robot can't pass on its own word.</p>
         </div>
       </div>
-      <aside class="detail" id="ta-detail">
-        <h3>Pick a part</h3>
-        <p style="color:var(--muted)">Click any part in either view. You will get what it is in plain words, its key dimensions from the spec, one beginner tweak, and a print suggestion (labeled as a suggestion).</p>
-      </aside>
+
+      <div class="card thresholds">
+        <div class="card-head"><h3 style="font-size:var(--fs-md)">Locked thresholds</h3><span class="faint" style="font-size:var(--fs-xs)">Printed on every report, never quietly loosened</span></div>
+        <div class="table-scroll" style="margin-top:12px">
+          <table class="data">
+            <thead><tr><th>Measurement</th><th>Pass</th><th>Marginal</th><th>Fail</th></tr></thead>
+            <tbody>
+              <tr><td>Distance error</td><td class="num">≤ 5%</td><td class="num">5–10%</td><td class="num">&gt; 10%</td></tr>
+              <tr><td>Heading error</td><td class="num">≤ 5°</td><td class="num">5–10°</td><td class="num">&gt; 10°</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card quickstart">
+        <div class="card-head"><h3 style="font-size:var(--fs-md)">Run it yourself</h3><span class="faint" style="font-size:var(--fs-xs)">Python, zero required dependencies for the core</span></div>
+        <div class="codeblock" style="margin-top:12px">
+<pre><code>pip install -e .
+robotforge describe "a four-wheel rover, 30 cm long, with a front ultrasonic sensor" --mock --out rover.json
+robotforge validate rover.json
+robotforge urdf rover.json --out build/rover.urdf
+robotforge run-gate rover.json</code></pre>
+          <button class="btn btn-sm copy" type="button" data-copy>Copy</button>
+        </div>
+      </div>
     </div>
-    <p class="note">This is a layout viewer built from the spec's numbers, not a CAD render. The printable files themselves are generated per robot by <code>robotforge cad</code> — one OpenSCAD file per part, so each part can be opened and edited on its own. The generated kits are browsable on the <a href="parts.html">Parts Kit page</a>.</p>
-  </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section class="band cta-band">
+    <div class="wrap">
+      <h2>Watch a robot go through the forge.</h2>
+      <p>Step through a real recorded run: the paragraph, the spec Muse Spark returned, the checks, and the gate's measured verdict.</p>
+      <a class="btn btn-primary" href="app/forge/" style="padding:14px 22px;font-size:var(--fs-md)">Open the app &rarr;</a>
+    </div>
+  </section>
 </main>
 
-<!-- ===================== DESCRIBE REPLAY ===================== -->
-<main class="view" id="view-replay">
+<footer class="site-footer">
   <div class="wrap">
-    <h1>Describe replay</h1>
-    <p class="lede">Two real runs from Oct 26, 2026, replayed step by step. Nothing here calls a server or an AI model — these are recordings of runs that already happened, with their real outputs, including the parts where two systems disagreed.</p>
-    <div class="replay-tabs" id="replay-tabs"></div>
-    <div class="replay-panel" id="replay-panel"></div>
-  </div>
-</main>
-
-<!-- ===================== GATE EVIDENCE ===================== -->
-<main class="view" id="view-evidence">
-  <div class="wrap">
-    <h1>Gate evidence</h1>
-    <p class="lede">The real numbers room. The gate commands a drive of 1 metre and a turn of 90 degrees, then grades the twin against simulator ground truth — where the robot actually went — and cross-checks what the robot's own odometry believed. Thresholds are locked and printed on every report.</p>
-    <div class="card">
-      <h3>Locked thresholds</h3>
-      <table class="grid" style="margin-top:10px">
-        <thead><tr><th>Measurement</th><th>Pass</th><th>Marginal</th><th>Fail</th></tr></thead>
-        <tbody>
-          <tr><td>Distance error</td><td>&le;5%</td><td>5&ndash;10%</td><td>&gt;10%</td></tr>
-          <tr><td>Heading error</td><td>&le;5&deg;</td><td>5&ndash;10&deg;</td><td>&gt;10&deg;</td></tr>
-        </tbody>
-      </table>
-      <p class="prov">Never quietly loosened. The full recorded reports — raw measurements, per-check verdicts, named suspects, and ground-truth trajectories — live on the <a href="reports.html">gate reports page</a>.</p>
-    </div>
-    <div id="evidence-root">
-      <div class="state-box">Loading recorded gate results from <code>catalog/robots.json</code>&hellip;</div>
-    </div>
-  </div>
-</main>
-
-<footer class="site">
-  <div class="wrap">
-    <p>Built fresh Oct 26 &ndash; Nov 4, 2026 for the Meta Global AI Developer Hackathon — Indie track, &ldquo;Push the Frontier.&rdquo; Pre-existing design exploration informed the project and is disclosed in the repository.</p>
-    <p>By Abel Mendoza · <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">github.com/abelxmendoza/RobotForge-Hackathon</a></p>
+    <p>Built Oct 26 – Nov 4, 2026 for the Meta Global AI Developer Hackathon, Indie track, “Push the Frontier.” Earlier design exploration informed the project and is disclosed in the repository.</p>
+    <p>By Abel Mendoza · <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub</a> · Apache-2.0</p>
   </div>
 </footer>
 
-<script src="app/app-images.js"></script>
-<script src="app/app.js"></script>
+<script>
+  (function () {
+    var h = document.querySelector('.site-header');
+    var on = function () { h.classList.toggle('scrolled', scrollY > 8); };
+    addEventListener('scroll', on, { passive: true }); on();
+    document.querySelectorAll('[data-copy]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var t = b.parentNode.querySelector('code').textContent;
+        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(
+          function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); },
+          function () { b.textContent = 'Select & copy'; });
+      });
+    });
+  })();
+</script>
 </body>
 </html>

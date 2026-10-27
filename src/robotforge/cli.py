@@ -9,7 +9,8 @@ from pathlib import Path
 
 from .cad import (is_estimated, kit_slug, render_stls, write_kit)
 from .catalog import (Catalog, CatalogError, Robodex, format_catalog_summary,
-                      format_part, format_robot, render_robodex_html)
+                      format_part, format_robot)
+from .site import build_site
 from .describe import describe_live, describe_mock
 from .gate import (evaluate_drive, evaluate_odometry_distance,
                    evaluate_odometry_heading, evaluate_run, evaluate_turn)
@@ -135,10 +136,6 @@ def main(argv: list[str] | None = None) -> int:
                     help="number, name or fragment to look up")
     ct.add_argument("--json", action="store_true",
                     help="machine-readable output instead of text")
-    ct.add_argument("--html", metavar="PATH",
-                    help="generate the browsable Robodex page from "
-                         "catalog/robots.json and write it to PATH "
-                         "(e.g. robodex.html)")
 
     v = sub.add_parser("validate", help="engineering checks on a spec file")
     v.add_argument("spec")
@@ -155,6 +152,12 @@ def main(argv: list[str] | None = None) -> int:
     cd.add_argument("--stl", action="store_true",
                     help="also render per-part + assembly STLs if an "
                          "openscad binary is on PATH (skipped otherwise)")
+
+    st = sub.add_parser("site", help="regenerate the web app pages (app/), "
+                                     "legacy redirects and the landing "
+                                     "page's robot row from catalog data")
+    st.add_argument("--root", default=".",
+                    help="repository root to write into (default: .)")
 
     g = sub.add_parser("run-gate", help="spawn the twin in headless Gazebo and "
                                        "run the motion acceptance gate")
@@ -201,16 +204,17 @@ def main(argv: list[str] | None = None) -> int:
             except LookupError as exc:
                 print(f"lookup error: {exc}", file=sys.stderr)
                 return 2
+        if args.cmd == "site":
+            try:
+                written = build_site(Path(args.root))
+            except CatalogError as exc:
+                print(f"catalog error: {exc}", file=sys.stderr)
+                return 2
+            for w in written:
+                print(f"wrote {w}")
+            return 0
         if args.cmd == "catalog":
             try:
-                if args.html:
-                    dex = Robodex.load()
-                    out_path = Path(args.html)
-                    out_path.write_text(render_robodex_html(dex))
-                    print(f"Robodex page written to {out_path} "
-                          f"({len(dex.robots)} robots, generated from "
-                          "catalog/robots.json)")
-                    return 0
                 cat = Catalog.load()
                 dex = Robodex.load()
                 if args.section == "robot":

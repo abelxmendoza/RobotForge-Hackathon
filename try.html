@@ -1,122 +1,13 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Try It — RobotForge</title><style>
-  :root{--bg:#14161a;--panel:#1b1e24;--panel2:#21252e;--ink:#e8eaed;--dim:#9aa3ad;
-        --line:#2c313a;--accent:#f59e0b;--pass:#34d399;--marg:#fbbf24;--fail:#f87171}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-       line-height:1.55}
-  .wrap{max-width:1060px;margin:0 auto;padding:0 22px 80px}
-  .rfnav{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;padding:18px 0 0}
-  .rfnav-brand{color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.9rem;white-space:nowrap;text-decoration:none}
-  .rfnav-links{display:flex;gap:6px;flex-wrap:wrap}
-  .rfnav-links a{color:var(--dim);text-decoration:none;font-size:.95rem;font-weight:600;padding:6px 12px;border:1px solid transparent;border-radius:999px}
-  .rfnav-links a:hover{color:var(--ink);border-color:var(--line)}
-  .rfnav-links a.active{color:#14161a;background:var(--accent);border-color:var(--accent)}
-  header{padding:34px 0 6px}
-  .kicker{letter-spacing:.22em;font-size:12px;color:var(--accent);text-transform:uppercase;font-weight:700}
-  h1{font-size:36px;line-height:1.15;margin:10px 0 10px}
-  .sub{color:var(--dim);max-width:760px}
-  a{color:var(--accent)}
-  .pass{color:var(--pass)} .fail{color:var(--fail)} .dim{color:var(--dim)}
-
-  .rec{display:inline-block;background:rgba(248,113,113,.12);border:1px solid var(--fail);
-       color:var(--fail);font-weight:800;font-size:12px;letter-spacing:.12em;
-       border-radius:8px;padding:2px 10px}
-  .step{display:none;background:var(--panel);border:1px solid var(--line);
-        border-radius:14px;padding:22px;margin:22px 0}
-  .step.on{display:block}
-  .bubble{background:var(--panel2);border-left:3px solid var(--accent);
-          border-radius:8px;padding:14px 16px;font-size:17px}
-  pre{background:#0e1013;border:1px solid var(--line);border-radius:10px;
-      padding:14px;overflow:auto;font-size:12.5px;line-height:1.5}
-  .ctl{display:flex;gap:12px;align-items:center;margin:8px 0 20px}
-  button{background:var(--accent);border:0;color:#14161a;font-weight:700;
-         border-radius:9px;padding:9px 18px;cursor:pointer;font-size:14.5px}
-  button.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
-  .dots{color:var(--dim);letter-spacing:.3em}
-</style></head>
-<body><div class="wrap"><nav class="rfnav" aria-label="RobotForge">
-      <a class="rfnav-brand" href="index.html#home">RobotForge</a>
-      <div class="rfnav-links">
-        <a href="index.html#home" data-view="home">Home</a>
-        <a href="index.html#robodex" data-view="robodex">Robodex</a>
-        <a href="index.html#takeapart" data-view="takeapart">Take-Apart</a>
-        <a href="index.html#replay" data-view="replay">Describe Replay</a>
-        <a href="index.html#evidence" data-view="evidence">Gate Evidence</a>
-        <a href="robodex.html">Robodex page</a>
-        <a href="parts.html">Parts Kit</a>
-        <a href="try.html" class="active" aria-current="page">Try It</a>
-        <a href="reports.html">Gate Reports</a>
-        <a href="https://github.com/abelxmendoza/RobotForge-Hackathon">GitHub</a>
-      </div>
-    </nav><header><div class="kicker">RobotForge · Try It</div>
-<h1>Words in. Verdict out.</h1>
-<p><span class="rec">● RECORDED</span></p>
-<p class="sub">This is a real run, recorded 2026-10-26 on the forge's Linux box — not a mockup
-and not labeled live, because it isn't. A hosted live version needs a runner behind the page;
-until then, every step below is the genuine artifact: the actual paragraph, the actual spec
-Muse Spark returned, the actual gate output. Step through it.</p></header>
-<div class="ctl"><button id="prev" class="ghost">← Back</button>
-<span class="dots" id="dots"></span><button id="next">Next step →</button></div>
-<section class="step" data-i="0"><h2>1. You describe it</h2><div class="bubble">“A small indoor delivery rover with differential drive. It is about 40 cm long, 30 cm wide and 25 cm tall, weighs 6 kg, rides on wheels 10 cm in diameter and 2.5 cm wide, ground clearance 3 cm, top speed about 1 m/s. It carries a 2D lidar on top for navigation and runs from an 11.1 V 5 Ah battery.”</div><p>One paragraph of plain English. No forms, no CAD, no config files.</p></section><section class="step" data-i="1"><h2>2. Muse Spark drafts the spec</h2><pre>{
-  "name": "Indoor Delivery Rover",
-  "description": "Small indoor delivery rover with differential drive for indoor delivery tasks, top speed about 1 m/s",
-  "drivetrain": "differential",
-  "length_m": 0.4,
-  "width_m": 0.3,
-  "height_m": 0.25,
-  "mass_kg": 6.0,
-  "ground_clearance_m": 0.03,
-  "wheel": {
-    "diameter_m": 0.1,
-    "width_m": 0.025,
-    "count": 2,
-    "driven": true
-  },
-  "motor": {
-    "kind": "brushed_dc",
-    "voltage_v": 11.1,
-    "count": 2,
-    "stall_torque_nm": 1.5
-  },
-  "battery": {
-    "chemistry": "li-ion",
-    "voltage_v": 11.1,
-    "capacity_mah": 5000
-  },
-  "sensors": [
-    {
-      "kind": "lidar_2d",
-      "position": "top",
-      "range_m": 12
-    }
-  ],
-  "component_mass_kg": {}
-}</pre><p>The model fills a strict engineering registry — it never writes simulation code. The validator then checks the numbers against each other: <b>[INFO] all: spec passed all engineering checks</b>.</p></section><section class="step" data-i="2"><h2>3. The forge builds its twin</h2><p>The validated spec becomes a Gazebo twin deterministically — same spec, same robot, every time. It spawns headless on a Linux box and waits for the gate.</p><pre>transport: gz-transport bindings (gz.transport13)
-ground truth: gz-transport bindings (Pose_V)</pre></section><section class="step" data-i="3"><h2>4. The gate measures it</h2><pre>[PASS] drive_distance: error 0.398 %
-[PASS] turn_heading: error 3.653 deg
-[PASS] odometry_distance: error 0.002 %
-[PASS] odometry_heading: error 1.088 deg
-GATE: PASS</pre><p>Drive and turn are judged against the simulator's ground-truth pose stream — and odometry is graded against truth, not trusted. Full measurements are in the <a href="reports.html#run-r5-rover">public report</a>.</p></section></div>
-<script>
-const steps = [...document.querySelectorAll('.step')];
-const dots = document.getElementById('dots');
-let i = 0;
-function show(n){
-  i = Math.max(0, Math.min(steps.length - 1, n));
-  steps.forEach((s, k) => s.classList.toggle('on', k === i));
-  dots.textContent = steps.map((_, k) => k === i ? '●' : '○').join(' ');
-  document.getElementById('prev').style.visibility = i === 0 ? 'hidden' : 'visible';
-  document.getElementById('next').textContent =
-    i === steps.length - 1 ? 'See all gate reports →' : 'Next step →';
-}
-document.getElementById('prev').addEventListener('click', () => show(i - 1));
-document.getElementById('next').addEventListener('click', () => {
-  if (i === steps.length - 1) location.href = 'reports.html';
-  else show(i + 1);
-});
-show(0);
-</script></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Try It — moved</title>
+<meta http-equiv="refresh" content="0; url=app/forge/">
+<link rel="canonical" href="app/forge/">
+<script>location.replace('app/forge/' + location.hash);</script>
+</head>
+<body style="background:#0f1115;color:#eceef2;font-family:system-ui,sans-serif;padding:40px">
+<p>Try It has moved. <a style="color:#f59e0b" href="app/forge/">Continue &rarr;</a></p>
+</body>
+</html>
