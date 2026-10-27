@@ -20,6 +20,7 @@ from .lookup import (LookupError, format_pull, format_report, lookup_robot,
 from .photo import (draft_spec_from_document, draft_spec_from_photo,
                     locate_parts)
 from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
+from .specimen import build_specimen
 from .schema import RobotSpec, SpecError
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
@@ -232,6 +233,24 @@ def main(argv: list[str] | None = None) -> int:
     li.add_argument("listfile", help="text file with the pasted list")
     li.add_argument("--out", help="write the JSON report here")
 
+    sp = sub.add_parser("specimen", help="official URDF -> specimen "
+                        "assembly tree (real parts, poses, tiers)")
+    sp.add_argument("urdf", help="path to the robot's official URDF")
+    sp.add_argument("--repo", required=True,
+                    help="owner/name of the source repo on GitHub")
+    sp.add_argument("--commit", required=True,
+                    help="source commit SHA the meshes are pinned to")
+    sp.add_argument("--package", required=True,
+                    help="ROS package the URDF's package:// URLs use; "
+                         "also its directory inside the repo")
+    sp.add_argument("--robot", required=True, help="display name")
+    sp.add_argument("--dex", required=True, help="Robodex id, e.g. #002")
+    sp.add_argument("--license", required=True,
+                    help="license of the source repo, e.g. Apache-2.0")
+    sp.add_argument("--retrieved", required=True,
+                    help="retrieval date, YYYY-MM-DD")
+    sp.add_argument("--out", help="write the specimen JSON here")
+
     args = p.parse_args(argv)
     try:
         if args.cmd == "describe":
@@ -312,6 +331,19 @@ def main(argv: list[str] | None = None) -> int:
                 Path(args.out).write_text(
                     json.dumps(report, indent=2) + "\n")
                 print(f"report written to {args.out}")
+            return 0
+        if args.cmd == "specimen":
+            doc = build_specimen(
+                args.urdf, repo=args.repo, commit=args.commit,
+                package=args.package, robot_label=args.robot,
+                dex_id=args.dex, license_name=args.license,
+                retrieved=args.retrieved)
+            text = json.dumps(doc, indent=2)
+            if args.out:
+                Path(args.out).write_text(text + "\n")
+                print(f"specimen written to {args.out}")
+            else:
+                print(text)
             return 0
         spec = RobotSpec.from_json(Path(args.spec).read_text())
         if args.cmd == "validate":
