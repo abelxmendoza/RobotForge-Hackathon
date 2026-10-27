@@ -59,6 +59,7 @@
 </head>
 <body>
 <div class="wrap">
+<nav style="display:flex;gap:18px;flex-wrap:wrap;padding:18px 0 0;font-size:14.5px"><span style="font-weight:800;letter-spacing:.08em;margin-right:8px">ROBOTFORGE</span><a href="index.html" style="color:var(--dim);text-decoration:none">Home</a><a href="robodex.html" style="color:var(--dim);text-decoration:none">Robodex</a><a href="parts.html" style="color:var(--dim);text-decoration:none">Parts Kit</a><a href="try.html" style="color:var(--dim);text-decoration:none">Try It</a><a href="reports.html" style="color:var(--accent);font-weight:700;text-decoration:none">Gate Reports</a></nav>
 <header>
   <div class="kicker">RobotForge · Acceptance Gate Evidence</div>
   <h1>Measured, not believed.</h1>
@@ -145,7 +146,7 @@ RUNS.forEach((r, i) => {
       d.suspects.map(s => `<div><code>${s.field}</code> — ${s.reason}</div>`).join('') + `</div>`
     : `<div class="okbox">No suspects — odometry and ground truth agree inside tolerance on every check.</div>`;
   main.insertAdjacentHTML('beforeend',
-    `<section class="run"><div class="runhead"><div>
+    `<section class="run" id="run-${r.id}"><div class="runhead"><div>
        <h2>${r.title}</h2><p class="story">${r.story}</p></div>
        <div class="stamp ${CLS[d.verdict]}">${d.verdict}</div></div>
      <div class="grid"><div>${checks}${table}</div>
