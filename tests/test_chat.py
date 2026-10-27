@@ -297,7 +297,7 @@ def test_query_cards_hit_structure_and_filters():
         "show me 4S batteries",
         "4S XT60 batteries",
         "Tell me about TurtleBot3 Burger",
-        "What is a Jetson Orin?",
+        "What is a Coral Edge TPU?",
     ])
     if res is None:
         return  # no node on this machine; wiring tests still hold
@@ -318,7 +318,7 @@ def test_query_cards_hit_structure_and_filters():
     assert burger["hits"][0]["kind"] == "robot"
     assert burger["hits"][0]["route"] == "app/robots/turtlebot3-burger/"
 
-    unknown = res["What is a Jetson Orin?"]
+    unknown = res["What is a Coral Edge TPU?"]
     assert unknown["hits"] == []
     assert "rather say so than guess" in unknown["html"]
 

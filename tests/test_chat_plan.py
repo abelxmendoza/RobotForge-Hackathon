@@ -50,7 +50,7 @@ QUESTIONS = [
     "I have wheels and motors, what else do I need for a differential rover?",
     "What battery should I use for a 4S build?",
     "How much would it cost to build a rover?",
-    "What is a Jetson Orin?",
+    "What is a Coral Edge TPU?",
     "Tell me about TurtleBot3 Burger",
 ]
 
@@ -130,6 +130,6 @@ def test_engine_plans_builds_in_node():
     cost = answers["How much would it cost to build a rover?"]
     assert "shop links or prices" in cost["html"]
     # ... and the honest fallback still falls back
-    assert answers["What is a Jetson Orin?"]["fallback"] is True
+    assert answers["What is a Coral Edge TPU?"]["fallback"] is True
     robot = answers["Tell me about TurtleBot3 Burger"]
     assert robot["hits"] == ["robot:turtlebot3-burger"]
