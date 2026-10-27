@@ -1,0 +1,296 @@
+{
+  "check": "harness_checks",
+  "robot": "robotis-op3",
+  "method": "Electrical checks over the spec's documented wiring graph: voltage drop (copper loop resistance), ampacity (published table), logic-level agreement, rail budgets (downstream load sums vs rated output) and connector matching. Every evaluation is CHECKED, PARTIAL or NOT_CHECKED with its missing inputs named; no blanket harness pass is ever claimed.",
+  "thresholds": {
+    "voltage_drop_warn_pct": 5.0,
+    "voltage_drop_rule": "WARN when the computed drop exceeds this share of the connection's voltage (v1 threshold)",
+    "ampacity_source": "PowerStream, 'American Wire Gauge Chart and AWG Electrical Current Load Limits' (powerstream.com/Wire_Size.htm), following the Handbook of Electronic Tables and Formulas \u2014 the table's conservative power-transmission column (700 circular mils per amp, for bundled runs), not its free-air chassis-wiring column",
+    "copper_rho_ohm_m": 1.68e-08
+  },
+  "summary": {
+    "evaluations": 10,
+    "checked_clean": 0,
+    "evaluations_with_warnings": 0,
+    "evaluations_with_errors": 0,
+    "states": {
+      "CHECKED": 0,
+      "PARTIAL": 0,
+      "NOT_CHECKED": 10
+    },
+    "findings": {
+      "ERROR": 0,
+      "WARN": 0,
+      "INFO": 0
+    },
+    "by_check": {
+      "voltage_drop": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 2
+      },
+      "ampacity": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 2
+      },
+      "logic_levels": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 1
+      },
+      "rail_budget": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 2
+      },
+      "connector_match": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 3
+      }
+    },
+    "missing_inputs": [
+      {
+        "input": "current_a for motors",
+        "count": 5,
+        "subjects": [
+          "battery -> opencr",
+          "opencr -> motors",
+          "opencr rail"
+        ]
+      },
+      {
+        "input": "cable.gauge_awg",
+        "count": 4,
+        "subjects": [
+          "battery -> opencr",
+          "opencr -> motors"
+        ]
+      },
+      {
+        "input": "connector at both ends (connector_from / connector_to)",
+        "count": 3,
+        "subjects": [
+          "battery -> opencr",
+          "opencr -> motors"
+        ]
+      },
+      {
+        "input": "cable.length_mm",
+        "count": 2,
+        "subjects": [
+          "battery -> opencr",
+          "opencr -> motors"
+        ]
+      },
+      {
+        "input": "current_a for opencr",
+        "count": 1,
+        "subjects": [
+          "battery rail"
+        ]
+      },
+      {
+        "input": "logic_v for motors",
+        "count": 1,
+        "subjects": [
+          "opencr -> motors"
+        ]
+      },
+      {
+        "input": "logic_v for opencr",
+        "count": 1,
+        "subjects": [
+          "opencr -> motors"
+        ]
+      },
+      {
+        "input": "rated output current for battery",
+        "count": 1,
+        "subjects": [
+          "battery rail"
+        ]
+      },
+      {
+        "input": "rated output current for opencr",
+        "count": 1,
+        "subjects": [
+          "opencr rail"
+        ]
+      }
+    ]
+  },
+  "headline": "0 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 10 not checked \u00b7 missing data: current_a for motors \u00d75, cable.gauge_awg \u00d74, connector at both ends (connector_from / connector_to) \u00d73",
+  "evaluations": [
+    {
+      "check": "voltage_drop",
+      "subject": "battery -> opencr",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "cable.length_mm",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "length_mm": null,
+        "volts": 11.1,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "battery -> opencr",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "current_a": null,
+        "ampacity_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "battery -> opencr",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "voltage_drop",
+      "subject": "opencr -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "cable.length_mm",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "length_mm": null,
+        "volts": 11.1,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "opencr -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "current_a": null,
+        "ampacity_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "opencr -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "logic_levels",
+      "subject": "opencr -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "logic_v for opencr",
+        "logic_v for motors"
+      ],
+      "inputs": {
+        "logic_v_from": [],
+        "logic_v_to": []
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "opencr -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "battery rail",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "rated output current for battery",
+        "current_a for opencr"
+      ],
+      "inputs": {
+        "rated_output_a": null,
+        "known_load_a": 0.0,
+        "branches": [
+          {
+            "to": "opencr",
+            "current_a": null
+          }
+        ]
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "opencr rail",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "rated output current for opencr",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "rated_output_a": null,
+        "known_load_a": 0.0,
+        "branches": [
+          {
+            "to": "motors",
+            "current_a": null
+          }
+        ]
+      },
+      "results": {},
+      "findings": []
+    }
+  ],
+  "findings": [],
+  "date": "2026-10-26"
+}

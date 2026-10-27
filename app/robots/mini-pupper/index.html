@@ -60,9 +60,9 @@
     <h1>Mini Pupper</h1>
     <div class="cls">Legged · Quadruped</div>
     <div class="cls faint">Legged quadruped</div>
-    <span class="verdict norun lg">Not gated</span><span class="static-badge stable lg">Static check: STABLE — tip margin 28°</span>
+    <span class="verdict norun lg">Not gated</span><span class="static-badge stable lg">Static check: STABLE — tip margin 28°</span><span class="harness-badge lg">Harness checks: 0 clean · 0 warn · 0 err · 8 not checked</span>
     <p class="desc">A robot dog you build yourself: MangDang&#x27;s open-source quadruped packs 12 servos and a Raspberry Pi into 560 g, and the whole design — CAD, code, docs — is published. The Robodex&#x27;s smallest dog by far.</p>
-    <nav class="jump" aria-label="On this page"><a class="chip" href="#spec">Spec</a><a class="chip" href="#gate">Gate runs</a><a class="chip" href="#stability">Static stability</a><a class="chip" href="#take-apart">Take it apart</a><a class="chip" href="#commands">Reproduce</a></nav>
+    <nav class="jump" aria-label="On this page"><a class="chip" href="#spec">Spec</a><a class="chip" href="#gate">Gate runs</a><a class="chip" href="#stability">Static stability</a><a class="chip" href="#harness">Harness checks</a><a class="chip" href="#take-apart">Take it apart</a><a class="chip" href="#commands">Reproduce</a></nav>
   </div>
 </div>
 
@@ -101,6 +101,26 @@
   </div>
 </section>
 
+<section class="section" id="harness">
+  <h2>Harness checks</h2>
+  <p class="sub">Electrical computations over this robot's documented wiring graph — voltage drop, ampacity, logic levels, rail budgets, connector matching. Not a gate run and not a simulation: each check is Checked, Partial or Not checked, and the headline is counts, never a blanket pass.</p>
+  <div class="card">
+    <span class="harness-badge lg">Harness checks: 0 clean · 0 warn · 0 err · 8 not checked</span>
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">0 checked clean · 0 with warnings · 0 with errors · 0 partial · 8 not checked · missing data: current_a for motors ×5, cable.gauge_awg ×4, cable.length_mm ×2</p>
+    <div class="table-scroll" style="margin-top:12px"><table class="data">
+      <thead><tr><th>Check</th><th>Checked</th><th>Partial</th><th>Not checked</th></tr></thead>
+      <tbody><tr><td>voltage drop</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr><tr><td>ampacity</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr><tr><td>logic levels</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr><tr><td>rail budget</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr><tr><td>connector match</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr></tbody>
+    </table></div>
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">Findings: none — the inputs that could be checked raised nothing. That is not the same as everything being checked; the counts above say how much was.</p>
+    <p style="font-size:var(--fs-sm);margin-top:12px"><strong>Missing data</strong> — the datasheets still to hunt. A check that could not run says what it needs:</p>
+    <div class="table-scroll" style="margin-top:8px"><table class="data">
+      <thead><tr><th>Missing input</th><th>Blocks</th><th>Needed by</th></tr></thead>
+      <tbody><tr><td><code>current_a for motors</code></td><td class="num">5</td><td>battery -&gt; board, board -&gt; motors, board rail</td></tr><tr><td><code>cable.gauge_awg</code></td><td class="num">4</td><td>battery -&gt; board, board -&gt; motors</td></tr><tr><td><code>cable.length_mm</code></td><td class="num">2</td><td>battery -&gt; board, board -&gt; motors</td></tr><tr><td><code>connector at both ends (connector_from / connector_to)</code></td><td class="num">2</td><td>battery -&gt; board, board -&gt; motors</td></tr><tr><td><code>connection voltage (volts)</code></td><td class="num">1</td><td>board -&gt; motors</td></tr><tr><td><code>current_a for board</code></td><td class="num">1</td><td>battery rail</td></tr><tr><td><code>rated output current for battery</code></td><td class="num">1</td><td>battery rail</td></tr><tr><td><code>rated output current for board</code></td><td class="num">1</td><td>board rail</td></tr></tbody>
+    </table></div>
+    <p class="prov" style="margin-top:12px"><span><strong>Report:</strong> <a href="https://github.com/abelxmendoza/RobotForge-Hackathon/blob/main/catalog/harness-reports/mini-pupper.json"><code>catalog/harness-reports/mini-pupper.json</code></a> · checked 2026-10-26 · reproduce with <code>robotforge harness examples/mini-pupper.json</code></span></p>
+  </div>
+</section>
+
 <section class="section" id="take-apart">
   <h2>Take it apart</h2>
   <p class="sub">This viewer derives a schematic take-apart straight from the spec's numbers — the same one-derivation rule as the ground kits — flat views, or in 3D with the toggle. It is a schematic of the real robot's layout, not a printable kit: <code>robotforge cad</code> kits cover ground robots only today. Click any part.</p>
@@ -115,7 +135,8 @@
   <div class="codeblock card" style="padding:0;border:0;background:none">
 <pre><code>robotforge validate examples/mini-pupper.json
 robotforge stability examples/mini-pupper.json
-robotforge catalog robot 8</code></pre>
+robotforge catalog robot 8
+robotforge harness examples/mini-pupper.json</code></pre>
     <button class="btn btn-sm copy" type="button" data-copy>Copy</button>
   </div>
 </section>

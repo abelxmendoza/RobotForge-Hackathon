@@ -15,6 +15,8 @@ from .site import build_site
 from .describe import describe_live, describe_mock
 from .gate import (evaluate_drive, evaluate_odometry_distance,
                    evaluate_odometry_heading, evaluate_run, evaluate_turn)
+from .harness import (HarnessError, check_spec_data,
+                      format_harness_report, has_errors as harness_errors)
 from .listimport import import_list, render_text
 from .lookup import (LookupError, format_pull, format_report, lookup_robot,
                      pull_candidate, report_to_dict)
@@ -195,6 +197,20 @@ def main(argv: list[str] | None = None) -> int:
                     help="print the check report as JSON")
     sb.add_argument("--out", help="also write the JSON report here")
     sb.add_argument("--date", help="date to stamp into the report "
+                                   "(YYYY-MM-DD; default: today)")
+
+    hn = sub.add_parser("harness", help="electrical harness checks on a "
+                                        "spec's wiring graph (voltage "
+                                        "drop, ampacity, logic levels, "
+                                        "rail budgets, connector match "
+                                        "— CHECKED / PARTIAL / "
+                                        "NOT_CHECKED, never a blanket "
+                                        "pass)")
+    hn.add_argument("spec")
+    hn.add_argument("--json", action="store_true",
+                    help="print the check report as JSON")
+    hn.add_argument("--out", help="also write the JSON report here")
+    hn.add_argument("--date", help="date to stamp into the report "
                                    "(YYYY-MM-DD; default: today)")
 
     u = sub.add_parser("urdf", help="generate URDF from a valid spec")
@@ -428,6 +444,25 @@ def main(argv: list[str] | None = None) -> int:
                 print(text)
             return 0
         spec = RobotSpec.from_json(Path(args.spec).read_text())
+        if args.cmd == "harness":
+            try:
+                rep = check_spec_data(
+                    json.loads(Path(args.spec).read_text()))
+            except HarnessError as exc:
+                print(f"harness error: {exc}", file=sys.stderr)
+                return 2
+            rep.date = args.date or date.today().isoformat()
+            doc = rep.to_dict()
+            if args.out:
+                out = Path(args.out)
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(doc, indent=2) + "\n")
+                print(f"report written to {out}")
+            if args.json:
+                print(json.dumps(doc, indent=2))
+            else:
+                print(format_harness_report(rep))
+            return 1 if harness_errors(rep) else 0
         if args.cmd == "stability":
             try:
                 rep = check_spec(spec)

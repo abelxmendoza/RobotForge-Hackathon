@@ -1,0 +1,461 @@
+{
+  "check": "harness_checks",
+  "robot": "px4-x500",
+  "method": "Electrical checks over the spec's documented wiring graph: voltage drop (copper loop resistance), ampacity (published table), logic-level agreement, rail budgets (downstream load sums vs rated output) and connector matching. Every evaluation is CHECKED, PARTIAL or NOT_CHECKED with its missing inputs named; no blanket harness pass is ever claimed.",
+  "thresholds": {
+    "voltage_drop_warn_pct": 5.0,
+    "voltage_drop_rule": "WARN when the computed drop exceeds this share of the connection's voltage (v1 threshold)",
+    "ampacity_source": "PowerStream, 'American Wire Gauge Chart and AWG Electrical Current Load Limits' (powerstream.com/Wire_Size.htm), following the Handbook of Electronic Tables and Formulas \u2014 the table's conservative power-transmission column (700 circular mils per amp, for bundled runs), not its free-air chassis-wiring column",
+    "copper_rho_ohm_m": 1.68e-08
+  },
+  "summary": {
+    "evaluations": 17,
+    "checked_clean": 0,
+    "evaluations_with_warnings": 0,
+    "evaluations_with_errors": 0,
+    "states": {
+      "CHECKED": 0,
+      "PARTIAL": 0,
+      "NOT_CHECKED": 17
+    },
+    "findings": {
+      "ERROR": 0,
+      "WARN": 0,
+      "INFO": 0
+    },
+    "by_check": {
+      "voltage_drop": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 4
+      },
+      "ampacity": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 4
+      },
+      "logic_levels": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 1
+      },
+      "rail_budget": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 3
+      },
+      "connector_match": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 5
+      }
+    },
+    "missing_inputs": [
+      {
+        "input": "cable.gauge_awg",
+        "count": 8,
+        "subjects": [
+          "battery -> pdb",
+          "pdb -> esc",
+          "esc -> motors",
+          "pdb -> fc"
+        ]
+      },
+      {
+        "input": "current_a for motors",
+        "count": 7,
+        "subjects": [
+          "battery -> pdb",
+          "pdb -> esc",
+          "esc -> motors",
+          "esc rail"
+        ]
+      },
+      {
+        "input": "connector at both ends (connector_from / connector_to)",
+        "count": 5,
+        "subjects": [
+          "battery -> pdb",
+          "pdb -> esc",
+          "esc -> motors",
+          "pdb -> fc",
+          "fc -> esc"
+        ]
+      },
+      {
+        "input": "current_a for fc",
+        "count": 5,
+        "subjects": [
+          "battery -> pdb",
+          "pdb -> fc",
+          "pdb rail"
+        ]
+      },
+      {
+        "input": "cable.length_mm",
+        "count": 4,
+        "subjects": [
+          "battery -> pdb",
+          "pdb -> esc",
+          "esc -> motors",
+          "pdb -> fc"
+        ]
+      },
+      {
+        "input": "connection voltage (volts)",
+        "count": 2,
+        "subjects": [
+          "esc -> motors",
+          "pdb -> fc"
+        ]
+      },
+      {
+        "input": "current_a for esc",
+        "count": 1,
+        "subjects": [
+          "pdb rail"
+        ]
+      },
+      {
+        "input": "current_a for pdb",
+        "count": 1,
+        "subjects": [
+          "battery rail"
+        ]
+      },
+      {
+        "input": "logic_v for esc",
+        "count": 1,
+        "subjects": [
+          "fc -> esc"
+        ]
+      },
+      {
+        "input": "logic_v for fc",
+        "count": 1,
+        "subjects": [
+          "fc -> esc"
+        ]
+      },
+      {
+        "input": "rated output current for battery",
+        "count": 1,
+        "subjects": [
+          "battery rail"
+        ]
+      },
+      {
+        "input": "rated output current for esc",
+        "count": 1,
+        "subjects": [
+          "esc rail"
+        ]
+      },
+      {
+        "input": "rated output current for pdb",
+        "count": 1,
+        "subjects": [
+          "pdb rail"
+        ]
+      }
+    ]
+  },
+  "headline": "0 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 17 not checked \u00b7 missing data: cable.gauge_awg \u00d78, current_a for motors \u00d77, connector at both ends (connector_from / connector_to) \u00d75",
+  "evaluations": [
+    {
+      "check": "voltage_drop",
+      "subject": "battery -> pdb",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "cable.length_mm",
+        "current_a for motors",
+        "current_a for fc"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "length_mm": null,
+        "volts": 14.8,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "battery -> pdb",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "current_a for motors",
+        "current_a for fc"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "current_a": null,
+        "ampacity_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "battery -> pdb",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "voltage_drop",
+      "subject": "pdb -> esc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "cable.length_mm",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "length_mm": null,
+        "volts": 14.8,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "pdb -> esc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "current_a": null,
+        "ampacity_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "pdb -> esc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "voltage_drop",
+      "subject": "esc -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "cable.length_mm",
+        "connection voltage (volts)",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "length_mm": null,
+        "volts": null,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "esc -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "current_a": null,
+        "ampacity_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "esc -> motors",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "voltage_drop",
+      "subject": "pdb -> fc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "cable.length_mm",
+        "connection voltage (volts)",
+        "current_a for fc"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "length_mm": null,
+        "volts": null,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "pdb -> fc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "cable.gauge_awg",
+        "current_a for fc"
+      ],
+      "inputs": {
+        "gauge_awg": null,
+        "current_a": null,
+        "ampacity_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "pdb -> fc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "logic_levels",
+      "subject": "fc -> esc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "logic_v for fc",
+        "logic_v for esc"
+      ],
+      "inputs": {
+        "logic_v_from": [],
+        "logic_v_to": []
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "fc -> esc",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "battery rail",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "rated output current for battery",
+        "current_a for pdb"
+      ],
+      "inputs": {
+        "rated_output_a": null,
+        "known_load_a": 0.0,
+        "branches": [
+          {
+            "to": "pdb",
+            "current_a": null
+          }
+        ]
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "pdb rail",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "rated output current for pdb",
+        "current_a for esc",
+        "current_a for fc"
+      ],
+      "inputs": {
+        "rated_output_a": null,
+        "known_load_a": 0.0,
+        "branches": [
+          {
+            "to": "esc",
+            "current_a": null
+          },
+          {
+            "to": "fc",
+            "current_a": null
+          }
+        ]
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "esc rail",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "rated output current for esc",
+        "current_a for motors"
+      ],
+      "inputs": {
+        "rated_output_a": null,
+        "known_load_a": 0.0,
+        "branches": [
+          {
+            "to": "motors",
+            "current_a": null
+          }
+        ]
+      },
+      "results": {},
+      "findings": []
+    }
+  ],
+  "findings": [],
+  "date": "2026-10-26"
+}

@@ -89,6 +89,39 @@ model: bipeds stand by active balance, not stance. All four remain
 NOT_GATED; the check changes no gate status. Drones get nothing —
 flight stability is a different analysis.
 
+## Harness checks (2026-10-26)
+
+The wiring sibling of the spec checks and the static stability check
+(`src/robotforge/harness.py`, `robotforge harness <spec>`): five
+electrical computations over a spec's documented wiring graph —
+voltage drop (copper loop resistance, R = ρ·2L/A, ρ = 1.68e-8 Ω·m at
+20 °C; WARN above 5% of the connection's voltage, v1 threshold),
+ampacity, logic-level agreement, rail budgets (downstream load sums
+vs a source's rated output), and connector matching.
+
+Ampacity ratings come from PowerStream's *American Wire Gauge Chart
+and AWG Electrical Current Load Limits* (powerstream.com/Wire_Size.htm),
+following the *Handbook of Electronic Tables and Formulas*. The table
+prints two columns; RobotForge uses the conservative
+power-transmission column (700 circular mils per amp, for bundled
+runs), not the free-air chassis-wiring column — a harness is a
+bundle. Exceeding the table is an ERROR.
+
+The evidence posture is the point: no robot gets a blanket harness
+pass. Every evaluation is CHECKED, PARTIAL (rail budgets with some
+unmeasured loads), or NOT_CHECKED, and a check that could not run
+names its missing inputs (current data, cable gauge/length,
+both-ended connector data, logic levels, rated outputs). Reports
+live in `catalog/harness-reports/` and the test suite re-derives
+them from the specs, so the records cannot drift. First records
+(2026-10-26): all nine wired Robodex robots report 0 checked-clean
+evaluations — their wiring graphs carry voltages and topology but
+almost no current, cable or connector data yet. That gap list,
+printed on every robot page, is the deliverable: it names exactly
+which datasheets to hunt next. Harness checks are a third evidence
+kind — dashed amber badges, apart from gate verdicts and static
+checks — and they change no other status.
+
 ## Second reference robot — DECIDED (Abel, 2026-10-26)
 
 **Andino** (open-source differential-drive robot, ROS 2 native, published

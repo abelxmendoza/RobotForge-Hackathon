@@ -60,9 +60,9 @@
     <h1>TurtleBot3 Waffle Pi</h1>
     <div class="cls">Ground — wheeled · Differential rover</div>
     <div class="cls faint">Differential-drive ground robot</div>
-    <span class="verdict norun lg">Not gated</span>
+    <span class="verdict norun lg">Not gated</span><span class="harness-badge lg">Harness checks: 0 clean · 0 warn · 0 err · 23 not checked</span>
     <p class="desc">The bigger TurtleBot3: a waffle-shaped deck carrying a lidar and a camera. RobotForge knows this one from a photograph — the photo intake identified it and drafted its spec, so every dimension here is an estimate until somebody measures the real robot.</p>
-    <nav class="jump" aria-label="On this page"><a class="chip" href="#spec">Spec</a><a class="chip" href="#gate">Gate runs</a><a class="chip" href="#take-apart">Take it apart</a><a class="chip" href="#commands">Reproduce</a></nav>
+    <nav class="jump" aria-label="On this page"><a class="chip" href="#spec">Spec</a><a class="chip" href="#gate">Gate runs</a><a class="chip" href="#harness">Harness checks</a><a class="chip" href="#take-apart">Take it apart</a><a class="chip" href="#commands">Reproduce</a></nav>
   </div>
 </div>
 
@@ -81,6 +81,26 @@
 </section>
 
 
+<section class="section" id="harness">
+  <h2>Harness checks</h2>
+  <p class="sub">Electrical computations over this robot's documented wiring graph — voltage drop, ampacity, logic levels, rail budgets, connector matching. Not a gate run and not a simulation: each check is Checked, Partial or Not checked, and the headline is counts, never a blanket pass.</p>
+  <div class="card">
+    <span class="harness-badge lg">Harness checks: 0 clean · 0 warn · 0 err · 23 not checked</span>
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">0 checked clean · 0 with warnings · 0 with errors · 0 partial · 23 not checked · missing data: cable.gauge_awg ×8, connector at both ends (connector_from / connector_to) ×8, current_a for lidar ×5</p>
+    <div class="table-scroll" style="margin-top:12px"><table class="data">
+      <thead><tr><th>Check</th><th>Checked</th><th>Partial</th><th>Not checked</th></tr></thead>
+      <tbody><tr><td>voltage drop</td><td class="num">0</td><td class="num">0</td><td class="num">4</td></tr><tr><td>ampacity</td><td class="num">0</td><td class="num">0</td><td class="num">4</td></tr><tr><td>logic levels</td><td class="num">0</td><td class="num">0</td><td class="num">4</td></tr><tr><td>rail budget</td><td class="num">0</td><td class="num">0</td><td class="num">3</td></tr><tr><td>connector match</td><td class="num">0</td><td class="num">0</td><td class="num">8</td></tr></tbody>
+    </table></div>
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">Findings: none — the inputs that could be checked raised nothing. That is not the same as everything being checked; the counts above say how much was.</p>
+    <p style="font-size:var(--fs-sm);margin-top:12px"><strong>Missing data</strong> — the datasheets still to hunt. A check that could not run says what it needs:</p>
+    <div class="table-scroll" style="margin-top:8px"><table class="data">
+      <thead><tr><th>Missing input</th><th>Blocks</th><th>Needed by</th></tr></thead>
+      <tbody><tr><td><code>cable.gauge_awg</code></td><td class="num">8</td><td>battery -&gt; driver, driver -&gt; motors, battery -&gt; controller, controller -&gt; lidar</td></tr><tr><td><code>connector at both ends (connector_from / connector_to)</code></td><td class="num">8</td><td>battery -&gt; driver, driver -&gt; motors, battery -&gt; controller, controller -&gt; lidar …</td></tr><tr><td><code>current_a for lidar</code></td><td class="num">5</td><td>battery -&gt; controller, controller -&gt; lidar, controller rail</td></tr><tr><td><code>current_a for motors</code></td><td class="num">5</td><td>battery -&gt; driver, driver -&gt; motors, driver rail</td></tr><tr><td><code>cable.length_mm</code></td><td class="num">4</td><td>battery -&gt; driver, driver -&gt; motors, battery -&gt; controller, controller -&gt; lidar</td></tr><tr><td><code>logic_v for controller</code></td><td class="num">3</td><td>controller -&gt; lidar, controller -&gt; camera, controller -&gt; imu</td></tr><tr><td><code>connection voltage (volts)</code></td><td class="num">2</td><td>battery -&gt; controller, controller -&gt; lidar</td></tr><tr><td><code>current_a for controller</code></td><td class="num">1</td><td>battery rail</td></tr><tr><td><code>current_a for driver</code></td><td class="num">1</td><td>battery rail</td></tr><tr><td><code>logic_v for camera</code></td><td class="num">1</td><td>controller -&gt; camera</td></tr><tr><td><code>logic_v for driver</code></td><td class="num">1</td><td>driver -&gt; motors</td></tr><tr><td><code>logic_v for imu</code></td><td class="num">1</td><td>controller -&gt; imu</td></tr><tr><td><code>logic_v for lidar</code></td><td class="num">1</td><td>controller -&gt; lidar</td></tr><tr><td><code>logic_v for motors</code></td><td class="num">1</td><td>driver -&gt; motors</td></tr><tr><td><code>rated output current for battery</code></td><td class="num">1</td><td>battery rail</td></tr><tr><td><code>rated output current for controller</code></td><td class="num">1</td><td>controller rail</td></tr><tr><td><code>rated output current for driver</code></td><td class="num">1</td><td>driver rail</td></tr></tbody>
+    </table></div>
+    <p class="prov" style="margin-top:12px"><span><strong>Report:</strong> <a href="https://github.com/abelxmendoza/RobotForge-Hackathon/blob/main/catalog/harness-reports/turtlebot3-waffle-pi.json"><code>catalog/harness-reports/turtlebot3-waffle-pi.json</code></a> · checked 2026-10-26 · reproduce with <code>robotforge harness examples/photo-turtlebot.json</code></span></p>
+  </div>
+</section>
+
 <section class="section" id="take-apart">
   <h2>Take it apart</h2>
   <p class="sub">Every spec becomes a kit of simple, 3D-printable parts (<code>robotforge cad</code>). This viewer lays the kit out the way the kit's own assembly file does, straight from the spec's numbers — flat views, or in 3D with the toggle. Click any part.</p>
@@ -96,7 +116,8 @@
 <pre><code>robotforge validate examples/photo-turtlebot.json
 robotforge urdf examples/photo-turtlebot.json --out build/turtlebot3-waffle-pi.urdf
 robotforge cad examples/photo-turtlebot.json
-robotforge run-gate examples/photo-turtlebot.json</code></pre>
+robotforge run-gate examples/photo-turtlebot.json
+robotforge harness examples/photo-turtlebot.json</code></pre>
     <button class="btn btn-sm copy" type="button" data-copy>Copy</button>
   </div>
 </section>

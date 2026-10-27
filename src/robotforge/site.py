@@ -204,6 +204,39 @@ def _load_check_report(check: RobotCheck) -> dict | None:
         return None
 
 
+def _harness_report(r: RobotEntry) -> dict | None:
+    """The recorded harness-check report for a robot, if one exists.
+
+    Harness reports live in catalog/harness-reports/<slug>.json and
+    are re-derived from the spec by the test suite, so a report on
+    disk is the check's own output — the page renders its counts and
+    findings verbatim and claims nothing beyond them."""
+    path = ROBOTS_DATA.parent / "harness-reports" / f"{slugify(r.name)}.json"
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def _harness_report_path(r: RobotEntry) -> str:
+    return f"catalog/harness-reports/{slugify(r.name)}.json"
+
+
+def harness_badge(rep: dict, extra: str = "") -> str:
+    """Badge for a harness-check report — counts, never a verdict.
+
+    Styled (dashed amber) as its own evidence kind: not a gate pill,
+    not the steel-blue stability badge. The text is the summary's own
+    counts, so the badge cannot drift from the report."""
+    s = rep["summary"]
+    cls = "harness-badge" + (f" {extra}" if extra else "")
+    return (f'<span class="{cls}">Harness checks: '
+            f'{s["checked_clean"]} clean · '
+            f'{s["findings"]["WARN"]} warn · '
+            f'{s["findings"]["ERROR"]} err · '
+            f'{s["states"]["NOT_CHECKED"]} not checked</span>')
+
+
 def _grade(value: float | None) -> str:
     if value is None:
         return ""
@@ -613,6 +646,74 @@ def _stability_section(r: RobotEntry) -> str:
 </section>"""
 
 
+def _harness_section(r: RobotEntry) -> str:
+    """The harness checks section of a wired robot's page.
+
+    A third evidence kind, kept apart from gate verdicts and static
+    checks: computations over the documented wiring graph. The
+    section prints the report's counts (never a blanket pass), its
+    findings, and — just as prominently — the data the checks are
+    missing, because that gap list is half the deliverable."""
+    rep = _harness_report(r)
+    if rep is None:
+        return ""
+    s = rep["summary"]
+    by_check = "".join(
+        f"<tr><td>{e(name.replace('_', ' '))}</td>"
+        f'<td class="num">{counts["CHECKED"]}</td>'
+        f'<td class="num">{counts["PARTIAL"]}</td>'
+        f'<td class="num">{counts["NOT_CHECKED"]}</td></tr>'
+        for name, counts in s["by_check"].items())
+    findings = rep.get("findings", [])
+    if findings:
+        flist = "".join(
+            f'<li><strong>[{e(f["severity"])}]</strong> '
+            f'{e(f["message"])}</li>' for f in findings)
+        findings_html = (f'<p style="font-size:var(--fs-sm);'
+                         f'margin-top:12px"><strong>Findings</strong> '
+                         f'({len(findings)}):</p>'
+                         f'<ul class="prov" style="padding-left:18px">'
+                         f'{flist}</ul>')
+    else:
+        findings_html = ('<p class="muted" style="font-size:var(--fs-sm);'
+                         'margin-top:12px">Findings: none — the inputs '
+                         'that could be checked raised nothing. That '
+                         'is not the same as everything being '
+                         'checked; the counts above say how much '
+                         'was.</p>')
+    missing = s["missing_inputs"]
+    if missing:
+        mrows = "".join(
+            f"<tr><td><code>{e(m['input'])}</code></td>"
+            f'<td class="num">{m["count"]}</td>'
+            f"<td>{e(', '.join(m['subjects'][:4]))}"
+            f"{' …' if len(m['subjects']) > 4 else ''}</td></tr>"
+            for m in missing)
+        missing_html = f"""
+    <p style="font-size:var(--fs-sm);margin-top:12px"><strong>Missing data</strong> — the datasheets still to hunt. A check that could not run says what it needs:</p>
+    <div class="table-scroll" style="margin-top:8px"><table class="data">
+      <thead><tr><th>Missing input</th><th>Blocks</th><th>Needed by</th></tr></thead>
+      <tbody>{mrows}</tbody>
+    </table></div>"""
+    else:
+        missing_html = ""
+    return f"""
+<section class="section" id="harness">
+  <h2>Harness checks</h2>
+  <p class="sub">Electrical computations over this robot's documented wiring graph — voltage drop, ampacity, logic levels, rail budgets, connector matching. Not a gate run and not a simulation: each check is Checked, Partial or Not checked, and the headline is counts, never a blanket pass.</p>
+  <div class="card">
+    {harness_badge(rep, "lg")}
+    <p class="muted" style="font-size:var(--fs-sm);margin-top:12px">{e(rep["headline"])}</p>
+    <div class="table-scroll" style="margin-top:12px"><table class="data">
+      <thead><tr><th>Check</th><th>Checked</th><th>Partial</th><th>Not checked</th></tr></thead>
+      <tbody>{by_check}</tbody>
+    </table></div>
+    {findings_html}{missing_html}
+    <p class="prov" style="margin-top:12px"><span><strong>Report:</strong> <a href="{REPO_URL}/blob/main/{e(_harness_report_path(r))}"><code>{e(_harness_report_path(r))}</code></a> · checked {e(rep.get("date", ""))} · reproduce with <code>robotforge harness {e(r.spec_file or "")}</code></span></p>
+  </div>
+</section>"""
+
+
 def render_robot_page(r: RobotEntry) -> str:
     root = "../../../"
     slug = slugify(r.name)
@@ -677,6 +778,8 @@ def render_robot_page(r: RobotEntry) -> str:
                        "kit and motion gate (<code>urdf</code> / <code>cad</code> / "
                        "<code>run-gate</code>) cover ground robots today, so "
                        "they are not listed here.")
+        if _harness_report(r) is not None:
+            cmd_lines += f"\nrobotforge harness {e(r.spec_file)}"
         take_apart = f"""
 <section class="section" id="take-apart">
   <h2>Take it apart</h2>
@@ -704,6 +807,9 @@ def render_robot_page(r: RobotEntry) -> str:
     jump = ['<a class="chip" href="#spec">Spec</a>', '<a class="chip" href="#gate">Gate runs</a>']
     if r.static_check():
         jump.append('<a class="chip" href="#stability">Static stability</a>')
+    harness_rep = _harness_report(r)
+    if harness_rep is not None:
+        jump.append('<a class="chip" href="#harness">Harness checks</a>')
     if r.spec_file:
         jump += ['<a class="chip" href="#take-apart">Take it apart</a>',
                  '<a class="chip" href="#commands">Reproduce</a>']
@@ -715,7 +821,7 @@ def render_robot_page(r: RobotEntry) -> str:
     <h1>{e(r.name)}</h1>
     <div class="cls">{e(r.class_path)}</div>
     <div class="cls faint">{e(r.robot_class)}</div>
-    {verdict_badge(gs.status, "lg")}{static_badge(check, "lg") if check else ""}
+    {verdict_badge(gs.status, "lg")}{static_badge(check, "lg") if check else ""}{harness_badge(harness_rep, "lg") if harness_rep else ""}
     <p class="desc">{e(r.description)}</p>
     <nav class="jump" aria-label="On this page">{"".join(jump)}</nav>
   </div>
@@ -735,6 +841,7 @@ def render_robot_page(r: RobotEntry) -> str:
   <div class="card">{gate}{note}</div>
 </section>
 {_stability_section(r)}
+{_harness_section(r)}
 {take_apart}
 {commands}"""
     return app_shell(active="robots", title=r.name, depth=3, body=body,
@@ -758,6 +865,23 @@ def render_evidence(dex: Robodex) -> str:
             f'<td class="num">{len(gs.runs)}</td>'
             + (_fmt(best.drive_error_pct, "%") + _fmt(best.heading_error_deg, "°")
                if best else '<td class="num faint">—</td><td class="num faint">—</td>')
+            + "</tr>")
+    harness_rows = []
+    for r in dex.robots:
+        rep = _harness_report(r)
+        if rep is None:
+            continue
+        s = rep["summary"]
+        harness_rows.append(
+            f'<tr><td><a href="../robots/{slugify(r.name)}/">{e(r.name)}</a></td>'
+            f"<td>{harness_badge(rep)}</td>"
+            f'<td class="num">{s["checked_clean"]}</td>'
+            f'<td class="num">{s["findings"]["WARN"]}</td>'
+            f'<td class="num">{s["findings"]["ERROR"]}</td>'
+            f'<td class="num">{s["states"]["PARTIAL"]}</td>'
+            f'<td class="num">{s["states"]["NOT_CHECKED"]}</td>'
+            f"<td>{e(rep.get('date', ''))}</td>"
+            f'<td><a href="{REPO_URL}/blob/main/{e(_harness_report_path(r))}">report</a></td>'
             + "</tr>")
     stab_rows = []
     for r in dex.robots:
@@ -822,6 +946,15 @@ def render_evidence(dex: Robodex) -> str:
   <div class="card" style="padding:8px 8px 4px"><div class="table-scroll"><table class="data">
     <thead><tr><th>Robot</th><th>Static check</th><th>Tip angle</th><th>Weakest margin</th><th>Direction</th><th>Checked</th><th>Report</th></tr></thead>
     <tbody>{"".join(stab_rows)}</tbody>
+  </table></div></div>
+</section>
+
+<section class="section" id="harness-checks">
+  <h2>Harness checks</h2>
+  <p class="sub">A third kind of evidence, kept separate from gate runs and static checks: electrical computations over each robot's documented wiring graph — voltage drop, ampacity, logic levels, rail budgets, connector matching. The headline is never a blanket pass; it is counts. A check that could not run says which data it is missing, and that gap list is printed in full on each robot's page: it is the shopping list of datasheets still to hunt.</p>
+  <div class="card" style="padding:8px 8px 4px"><div class="table-scroll"><table class="data">
+    <thead><tr><th>Robot</th><th>Harness checks</th><th>Clean</th><th>Warn</th><th>Err</th><th>Partial</th><th>Not checked</th><th>Date</th><th>Report</th></tr></thead>
+    <tbody>{"".join(harness_rows)}</tbody>
   </table></div></div>
 </section>"""
     return app_shell(active="evidence", title="Evidence", depth=2, body=body,
