@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schema import RobotSpec
+from .schema import RobotSpec, spec_is_estimated
 
 ERROR, WARN, INFO = "ERROR", "WARN", "INFO"
 
@@ -132,6 +132,20 @@ def validate(spec: RobotSpec) -> list[Finding]:
             f.append(Finding(ERROR, "sensor.range",
                              f"{s.kind} sensor at {s.position} has non-positive "
                              f"range {s.range_m}"))
+
+    # Provenance: a photo draft's dimensions are estimates, not
+    # measurements. The engineering checks above still run — a draft
+    # should be coherent — but an estimated spec must never collect
+    # the clean "passed all engineering checks" line: that is a
+    # verdict, and estimates do not earn verdicts. This WARN is also
+    # what keeps that line from being appended below.
+    if spec_is_estimated(spec):
+        f.append(Finding(WARN, "provenance.estimated_dimensions",
+                         "every dimension in this spec is ESTIMATED from "
+                         "a photo, not measured — the checks ran against "
+                         "estimates, so this is not a verdict on the real "
+                         "robot; confirm the dimensions before trusting "
+                         "the spec"))
 
     if not f:
         f.append(Finding(INFO, "all", "spec passed all engineering checks"))
