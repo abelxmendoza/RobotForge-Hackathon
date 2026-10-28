@@ -13,7 +13,6 @@ import re
 import shutil
 import struct
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 

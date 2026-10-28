@@ -66,6 +66,43 @@ export RF_MODEL=...         # optional; default muse-spark-1.3
 robotforge describe "your robot description"
 ```
 
+### Optional Fireworks transport
+
+Fireworks AI is an optional additional inference provider for the
+hackathon credits Abel was awarded. It does **not** replace the Meta
+Model API / Baseten core path, and it is never selected merely because
+its key happens to be present.
+
+Setup:
+
+1. Redeem the Fireworks hackathon credits in the Fireworks account
+   billing page.
+2. Create a Fireworks API key in the Fireworks console.
+3. Supply that key through the secure connector/environment flow as
+   `FIREWORKS_API_KEY`. Never commit it or put it in a command-line
+   argument.
+4. Explicitly choose Fireworks for one run, or enable it as an extra
+   fallback after Meta and Baseten:
+
+```bash
+export FIREWORKS_API_KEY="<supplied through the secure flow>"
+export RF_DESCRIBE_TRANSPORT=fireworks
+robotforge describe "your robot description"
+
+# Alternative: add it to the fallback chain without forcing it
+export RF_FIREWORKS_ENABLED=1
+robotforge describe "your robot description"
+```
+
+The default model is Muse Spark Open on Fireworks serverless
+inference, `accounts/fireworks/models/muse-spark-open`, called at
+`https://api.fireworks.ai/inference/v1/chat/completions` with a Bearer
+key. Override it with `RF_FIREWORKS_MODEL` or the endpoint base with
+`RF_FIREWORKS_API_BASE` only when deliberately testing another
+Fireworks model. The stderr line names the transport that actually
+produced the spec, e.g. `describe transport: fireworks
+(accounts/fireworks/models/muse-spark-open), forced`.
+
 ## Layout
 
 - `src/robotforge/schema.py` — the robot specification (dataclasses, strict parsing)

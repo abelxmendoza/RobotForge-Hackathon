@@ -28,6 +28,7 @@ import math
 import os
 import re
 import select
+import shutil
 import signal
 import subprocess
 import sys
@@ -545,6 +546,21 @@ def make_transport(log_path: Path, model_name: str = ""):
     return _CliTransport(log_path, model_name), "gz CLI (streamed)"
 
 
+def _require_gz() -> None:
+    """Raise TwinError when the Gazebo CLI is not on PATH.
+
+    Every spawn in a twin run needs `gz` — `gz sim` itself plus the
+    streamed `gz topic` echo pair of the CLI transport — and a missing
+    binary otherwise surfaces as a raw FileNotFoundError traceback from
+    subprocess.Popen. Checking once, before anything spawns, turns that
+    into the clean TwinError the runner reports every other failure as.
+    """
+    if shutil.which("gz") is None:
+        raise TwinError(
+            "Gazebo (gz) not found on PATH — the gate runs the spec in "
+            "Gazebo, so gz is required; install Gazebo and re-run")
+
+
 def _pose_stable(a: tuple[float, float, float],
                  b: tuple[float, float, float]) -> bool:
     """True when two poses are the same within odometry noise (robot
@@ -576,6 +592,7 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
     Raises TwinError on any step that fails — the caller must surface that,
     never a fabricated measurement.
     """
+    _require_gz()
     workdir.mkdir(parents=True, exist_ok=True)
     model = workdir / "model.sdf"
     world = workdir / "world.sdf"

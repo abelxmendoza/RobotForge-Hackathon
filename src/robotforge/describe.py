@@ -18,12 +18,20 @@ stderr too):
    grant. Same surrogate-credential arrangement. Calls are slow (the
    model reasons; 15-95 s observed), so its timeouts are budgeted
    generously — it is insurance for the primary path, not a peer.
-3. ``direct`` — a direct OpenAI-compatible call using META_API_KEY, only
+3. ``fireworks`` — an OPTIONAL direct OpenAI-compatible call to
+   Fireworks AI's serverless inference API, serving the same Muse
+   Spark Open model under ``accounts/fireworks/models/muse-spark-open``.
+   It is never enabled merely because FIREWORKS_API_KEY exists: it
+   joins the chain only when explicitly opted in with
+   RF_DESCRIBE_TRANSPORT=fireworks or RF_FIREWORKS_ENABLED=1. When
+   enabled as a chain member it runs after the two connector
+   transports and before the direct Meta fallback.
+4. ``direct`` — a direct OpenAI-compatible call using META_API_KEY, only
    when that variable is set. Last resort for using the repo outside
    this workspace, where neither connector helper exists.
 
-Set RF_DESCRIBE_TRANSPORT=meta|baseten|direct to force one transport.
-Helper paths can be overridden with RF_META_API_HELPER /
+Set RF_DESCRIBE_TRANSPORT=meta|baseten|fireworks|direct to force one
+transport. Helper paths can be overridden with RF_META_API_HELPER /
 RF_BASETEN_HELPER.
 
 --mock mode returns a canned parse of the demo robot so the rest of the
@@ -45,6 +53,8 @@ from .schema import RobotSpec, SpecError
 API_BASE = os.environ.get("META_API_BASE", "https://api.meta.ai/v1")
 DEFAULT_MODEL = "muse-spark-1.3"
 BASETEN_MODEL = "meta-models/muse-spark-open"
+FIREWORKS_API_BASE = "https://api.fireworks.ai/inference/v1"
+FIREWORKS_MODEL = "accounts/fireworks/models/muse-spark-open"
 DEFAULT_HELPER = (Path.home() / "workspace" / "custom-connectors"
                   / "custom.meta-model-api" / "bin" / "meta_api.py")
 DEFAULT_BASETEN_HELPER = (Path.home() / "workspace" / "custom-connectors"
@@ -159,6 +169,64 @@ def _describe_via_baseten(description: str, model: str,
                             extra_args=("--timeout", "240"), timeout=300)
 
 
+def _fireworks_opted_in(forced_key: str = "") -> bool:
+    """Fireworks is opt-in, never a silent default.
+
+    Setting FIREWORKS_API_KEY alone must not reroute describe calls:
+    the operator either forces the transport for one run or enables it
+    as an additional fallback with RF_FIREWORKS_ENABLED=1.
+    """
+    if forced_key == "fireworks":
+        return True
+    return os.environ.get("RF_FIREWORKS_ENABLED", "").strip().lower() in {
+        "1", "true", "yes", "on"}
+
+
+def _describe_via_fireworks(description: str, model: str) -> RobotSpec:
+    """Optional transport: Muse Spark Open via Fireworks AI.
+
+    Fireworks exposes an OpenAI-compatible Chat Completions endpoint.
+    The API key comes only from FIREWORKS_API_KEY in the process
+    environment (in production, supplied by the caller's secret flow);
+    it is never stored in the repo or printed.
+    """
+    key = os.environ.get("FIREWORKS_API_KEY")
+    if not key:
+        raise SpecError(
+            "FIREWORKS_API_KEY is not set (Fireworks describe mode)")
+    api_base = os.environ.get(
+        "RF_FIREWORKS_API_BASE", FIREWORKS_API_BASE).rstrip("/")
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "system", "content": SYSTEM_PROMPT},
+                     {"role": "user", "content": description}],
+        "temperature": 0.2,
+        "max_tokens": 4000,
+    }).encode()
+    req = urllib.request.Request(
+        f"{api_base}/chat/completions", data=body,
+        headers={"Authorization": f"Bearer {key}",
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            payload = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace").strip()[:500]
+        suffix = f": {detail}" if detail else ""
+        raise SpecError(
+            f"Fireworks API returned HTTP {exc.code}{suffix}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise SpecError(f"Fireworks API call failed: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise SpecError("Fireworks API returned non-JSON output") from exc
+    try:
+        return _spec_from_chat_payload(payload)
+    except (AttributeError, KeyError, IndexError, TypeError) as exc:
+        raise SpecError(
+            f"Fireworks API returned an unexpected response: {exc}") \
+            from exc
+
+
 def _describe_direct(description: str, model: str) -> RobotSpec:
     """Last resort: direct OpenAI-compatible call with META_API_KEY."""
     key = os.environ.get("META_API_KEY")
@@ -186,10 +254,21 @@ def _describe_direct(description: str, model: str) -> RobotSpec:
 def describe_live(description: str, model: str | None = None) -> RobotSpec:
     model = model or os.environ.get("RF_MODEL") or DEFAULT_MODEL
     baseten_model = os.environ.get("RF_BASETEN_MODEL") or BASETEN_MODEL
+    fireworks_model = os.environ.get("RF_FIREWORKS_MODEL") or FIREWORKS_MODEL
     meta_helper = Path(os.environ.get(
         "RF_META_API_HELPER", str(DEFAULT_HELPER))).expanduser()
     baseten_helper = Path(os.environ.get(
         "RF_BASETEN_HELPER", str(DEFAULT_BASETEN_HELPER))).expanduser()
+
+    forced = os.environ.get("RF_DESCRIBE_TRANSPORT", "").strip().lower()
+    aliases = {"meta": "meta", "meta-connector": "meta",
+               "baseten": "baseten", "fireworks": "fireworks",
+               "direct": "direct"}
+    forced_key = aliases.get(forced) if forced else None
+    if forced and forced_key is None:
+        raise SpecError(
+            f"unknown RF_DESCRIBE_TRANSPORT {forced!r} "
+            "(expected meta|baseten|fireworks|direct)")
 
     # (key, display label, attempt) in the order they are tried.
     transports = []
@@ -203,32 +282,32 @@ def describe_live(description: str, model: str | None = None) -> RobotSpec:
             "baseten", f"baseten ({baseten_model})",
             lambda: _describe_via_baseten(description, baseten_model,
                                           baseten_helper)))
+    if _fireworks_opted_in(forced_key or ""):
+        transports.append((
+            "fireworks", f"fireworks ({fireworks_model})",
+            lambda: _describe_via_fireworks(description, fireworks_model)))
     if os.environ.get("META_API_KEY"):
         transports.append((
             "direct", f"direct ({model})",
             lambda: _describe_direct(description, model)))
 
-    forced = os.environ.get("RF_DESCRIBE_TRANSPORT", "").strip().lower()
     if forced:
-        aliases = {"meta": "meta", "meta-connector": "meta",
-                   "baseten": "baseten", "direct": "direct"}
-        key = aliases.get(forced)
-        if key is None:
-            raise SpecError(
-                f"unknown RF_DESCRIBE_TRANSPORT {forced!r} "
-                "(expected meta|baseten|direct)")
-        chosen = [t for t in transports if t[0] == key]
+        chosen = [t for t in transports if t[0] == forced_key]
         if not chosen:
             raise SpecError(
                 f"RF_DESCRIBE_TRANSPORT={forced} but that transport is "
-                "not available (helper missing or META_API_KEY unset)")
+                "not available (helper missing or the relevant API key "
+                "is unset)")
         transports = chosen
 
     if not transports:
         raise SpecError(
             "no live transport available: connector helpers not found at "
             f"{meta_helper} (set RF_META_API_HELPER) or {baseten_helper} "
-            "(set RF_BASETEN_HELPER), and META_API_KEY is not set")
+            "(set RF_BASETEN_HELPER), and META_API_KEY is not set; "
+            "Fireworks is opt-in and additionally needs "
+            "RF_DESCRIBE_TRANSPORT=fireworks or RF_FIREWORKS_ENABLED=1, "
+            "plus FIREWORKS_API_KEY")
 
     errors = []
     for attempt_no, (key, label, attempt) in enumerate(transports):

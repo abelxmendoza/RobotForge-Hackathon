@@ -10,13 +10,13 @@
   },
   "summary": {
     "evaluations": 23,
-    "checked_clean": 0,
+    "checked_clean": 3,
     "evaluations_with_warnings": 0,
     "evaluations_with_errors": 0,
     "states": {
-      "CHECKED": 0,
+      "CHECKED": 3,
       "PARTIAL": 0,
-      "NOT_CHECKED": 23
+      "NOT_CHECKED": 20
     },
     "findings": {
       "ERROR": 0,
@@ -35,9 +35,9 @@
         "NOT_CHECKED": 4
       },
       "logic_levels": {
-        "CHECKED": 0,
+        "CHECKED": 1,
         "PARTIAL": 0,
-        "NOT_CHECKED": 4
+        "NOT_CHECKED": 3
       },
       "rail_budget": {
         "CHECKED": 0,
@@ -45,9 +45,9 @@
         "NOT_CHECKED": 3
       },
       "connector_match": {
-        "CHECKED": 0,
+        "CHECKED": 2,
         "PARTIAL": 0,
-        "NOT_CHECKED": 8
+        "NOT_CHECKED": 6
       }
     },
     "missing_inputs": [
@@ -63,10 +63,9 @@
       },
       {
         "input": "connector at both ends (connector_from / connector_to)",
-        "count": 8,
+        "count": 6,
         "subjects": [
           "battery -> driver",
-          "driver -> motors",
           "battery -> controller",
           "controller -> lidar",
           "controller -> camera",
@@ -102,15 +101,6 @@
         ]
       },
       {
-        "input": "logic_v for controller",
-        "count": 3,
-        "subjects": [
-          "controller -> lidar",
-          "controller -> camera",
-          "controller -> imu"
-        ]
-      },
-      {
         "input": "connection voltage (volts)",
         "count": 2,
         "subjects": [
@@ -140,13 +130,6 @@
         ]
       },
       {
-        "input": "logic_v for driver",
-        "count": 1,
-        "subjects": [
-          "driver -> motors"
-        ]
-      },
-      {
         "input": "logic_v for imu",
         "count": 1,
         "subjects": [
@@ -158,13 +141,6 @@
         "count": 1,
         "subjects": [
           "controller -> lidar"
-        ]
-      },
-      {
-        "input": "logic_v for motors",
-        "count": 1,
-        "subjects": [
-          "driver -> motors"
         ]
       },
       {
@@ -190,7 +166,7 @@
       }
     ]
   },
-  "headline": "0 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 23 not checked \u00b7 missing data: cable.gauge_awg \u00d78, connector at both ends (connector_from / connector_to) \u00d78, current_a for lidar \u00d75",
+  "headline": "3 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 20 not checked \u00b7 missing data: cable.gauge_awg \u00d78, connector at both ends (connector_from / connector_to) \u00d76, current_a for lidar \u00d75",
   "evaluations": [
     {
       "check": "voltage_drop",
@@ -277,13 +253,11 @@
     {
       "check": "connector_match",
       "subject": "driver -> motors",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "connector at both ends (connector_from / connector_to)"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "connector_from": null,
-        "connector_to": null
+        "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)"
       },
       "results": {},
       "findings": []
@@ -291,14 +265,16 @@
     {
       "check": "logic_levels",
       "subject": "driver -> motors",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "logic_v for driver",
-        "logic_v for motors"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_from": [
+          5.0
+        ],
+        "logic_v_to": [
+          5.0
+        ],
+        "level_shifted": false
       },
       "results": {},
       "findings": []
@@ -306,13 +282,11 @@
     {
       "check": "connector_match",
       "subject": "driver -> motors",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "connector at both ends (connector_from / connector_to)"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "connector_from": null,
-        "connector_to": null
+        "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)"
       },
       "results": {},
       "findings": []
@@ -420,11 +394,12 @@
       "subject": "controller -> lidar",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for controller",
         "logic_v for lidar"
       ],
       "inputs": {
-        "logic_v_from": [],
+        "logic_v_from": [
+          3.3
+        ],
         "logic_v_to": []
       },
       "results": {},
@@ -449,11 +424,12 @@
       "subject": "controller -> camera",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for controller",
         "logic_v for camera"
       ],
       "inputs": {
-        "logic_v_from": [],
+        "logic_v_from": [
+          3.3
+        ],
         "logic_v_to": []
       },
       "results": {},
@@ -478,11 +454,12 @@
       "subject": "controller -> imu",
       "state": "NOT_CHECKED",
       "missing": [
-        "logic_v for controller",
         "logic_v for imu"
       ],
       "inputs": {
-        "logic_v_from": [],
+        "logic_v_from": [
+          3.3
+        ],
         "logic_v_to": []
       },
       "results": {},
@@ -572,5 +549,5 @@
     }
   ],
   "findings": [],
-  "date": "2026-10-26"
+  "date": "2026-10-27"
 }

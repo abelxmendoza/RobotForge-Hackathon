@@ -3,8 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from robotforge.listimport import (assemble, identify, import_list,
-                                   parse_paste, suggest_wiring)
+from robotforge.listimport import identify, import_list, parse_paste
 
 # Abel's real list, trimmed to the drone build + representative noise,
 # in Amazon's exact paste shape (titles doubled, prices interleaved).

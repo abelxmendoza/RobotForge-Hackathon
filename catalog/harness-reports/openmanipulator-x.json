@@ -10,13 +10,13 @@
   },
   "summary": {
     "evaluations": 10,
-    "checked_clean": 0,
+    "checked_clean": 3,
     "evaluations_with_warnings": 0,
     "evaluations_with_errors": 0,
     "states": {
-      "CHECKED": 0,
-      "PARTIAL": 0,
-      "NOT_CHECKED": 10
+      "CHECKED": 3,
+      "PARTIAL": 1,
+      "NOT_CHECKED": 6
     },
     "findings": {
       "ERROR": 0,
@@ -35,19 +35,19 @@
         "NOT_CHECKED": 2
       },
       "logic_levels": {
-        "CHECKED": 0,
+        "CHECKED": 1,
         "PARTIAL": 0,
-        "NOT_CHECKED": 1
+        "NOT_CHECKED": 0
       },
       "rail_budget": {
         "CHECKED": 0,
-        "PARTIAL": 0,
-        "NOT_CHECKED": 2
+        "PARTIAL": 1,
+        "NOT_CHECKED": 1
       },
       "connector_match": {
-        "CHECKED": 0,
+        "CHECKED": 2,
         "PARTIAL": 0,
-        "NOT_CHECKED": 3
+        "NOT_CHECKED": 1
       }
     },
     "missing_inputs": [
@@ -69,19 +69,18 @@
         ]
       },
       {
-        "input": "connector at both ends (connector_from / connector_to)",
-        "count": 3,
+        "input": "cable.length_mm",
+        "count": 2,
         "subjects": [
           "battery -> opencr",
           "opencr -> motors"
         ]
       },
       {
-        "input": "cable.length_mm",
-        "count": 2,
+        "input": "connector at both ends (connector_from / connector_to)",
+        "count": 1,
         "subjects": [
-          "battery -> opencr",
-          "opencr -> motors"
+          "battery -> opencr"
         ]
       },
       {
@@ -92,36 +91,15 @@
         ]
       },
       {
-        "input": "logic_v for motors",
-        "count": 1,
-        "subjects": [
-          "opencr -> motors"
-        ]
-      },
-      {
-        "input": "logic_v for opencr",
-        "count": 1,
-        "subjects": [
-          "opencr -> motors"
-        ]
-      },
-      {
         "input": "rated output current for battery",
         "count": 1,
         "subjects": [
           "battery rail"
         ]
-      },
-      {
-        "input": "rated output current for opencr",
-        "count": 1,
-        "subjects": [
-          "opencr rail"
-        ]
       }
     ]
   },
-  "headline": "0 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 10 not checked \u00b7 missing data: current_a for motors \u00d75, cable.gauge_awg \u00d74, connector at both ends (connector_from / connector_to) \u00d73",
+  "headline": "3 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 1 partial \u00b7 6 not checked \u00b7 missing data: current_a for motors \u00d75, cable.gauge_awg \u00d74, cable.length_mm \u00d72",
   "evaluations": [
     {
       "check": "voltage_drop",
@@ -208,13 +186,11 @@
     {
       "check": "connector_match",
       "subject": "opencr -> motors",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "connector at both ends (connector_from / connector_to)"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "connector_from": null,
-        "connector_to": null
+        "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)"
       },
       "results": {},
       "findings": []
@@ -222,14 +198,16 @@
     {
       "check": "logic_levels",
       "subject": "opencr -> motors",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "logic_v for opencr",
-        "logic_v for motors"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "logic_v_from": [],
-        "logic_v_to": []
+        "logic_v_from": [
+          5.0
+        ],
+        "logic_v_to": [
+          5.0
+        ],
+        "level_shifted": false
       },
       "results": {},
       "findings": []
@@ -237,13 +215,11 @@
     {
       "check": "connector_match",
       "subject": "opencr -> motors",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "connector at both ends (connector_from / connector_to)"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "connector_from": null,
-        "connector_to": null
+        "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)"
       },
       "results": {},
       "findings": []
@@ -272,13 +248,12 @@
     {
       "check": "rail_budget",
       "subject": "opencr rail",
-      "state": "NOT_CHECKED",
+      "state": "PARTIAL",
       "missing": [
-        "rated output current for opencr",
         "current_a for motors"
       ],
       "inputs": {
-        "rated_output_a": null,
+        "rated_output_a": 4.5,
         "known_load_a": 0.0,
         "branches": [
           {
@@ -287,10 +262,12 @@
           }
         ]
       },
-      "results": {},
+      "results": {
+        "over_budget": false
+      },
       "findings": []
     }
   ],
   "findings": [],
-  "date": "2026-10-26"
+  "date": "2026-10-27"
 }

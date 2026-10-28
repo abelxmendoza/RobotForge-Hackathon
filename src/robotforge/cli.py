@@ -5,6 +5,7 @@ import argparse
 import json
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from datetime import date
 from pathlib import Path
 
@@ -137,6 +138,23 @@ def _sam_cross_check(photo: str, draft) -> None:
             "DISAGREE — flagging, not hiding"
         print(f"cross-check {concept}: Spark saw {spark_count} / "
               f"SAM found {sam_count} regions — {verdict}")
+
+
+def _load_spec(path: str) -> RobotSpec:
+    """Read + parse a spec file, file problems reported as SpecError.
+
+    Every spec-taking command funnels through here so a missing or
+    unreadable file is the usual clean 'spec error: ...' (exit 2),
+    never a traceback. The parse half already raised SpecError; the
+    file read was the gap.
+    """
+    try:
+        text = Path(path).read_text()
+    except OSError as exc:
+        raise SpecError(
+            f"cannot read spec file {path}: "
+            f"{exc.strerror or exc}") from exc
+    return RobotSpec.from_json(text)
 
 
 def _print_findings(spec: RobotSpec) -> int:
@@ -374,7 +392,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"catalog error: {exc}", file=sys.stderr)
                 return 2
         if args.cmd == "import-list":
-            report = import_list(Path(args.listfile).read_text())
+            try:
+                list_text = Path(args.listfile).read_text()
+            except OSError as exc:
+                print(f"import error: cannot read list file "
+                      f"{args.listfile}: {exc.strerror or exc}",
+                      file=sys.stderr)
+                return 2
+            report = import_list(list_text)
             print(render_text(report), end="")
             if args.out:
                 Path(args.out).write_text(
@@ -382,11 +407,21 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"report written to {args.out}")
             return 0
         if args.cmd == "specimen":
-            doc = build_specimen(
-                args.urdf, repo=args.repo, commit=args.commit,
-                package=args.package, robot_label=args.robot,
-                dex_id=args.dex, license_name=args.license,
-                retrieved=args.retrieved)
+            try:
+                doc = build_specimen(
+                    args.urdf, repo=args.repo, commit=args.commit,
+                    package=args.package, robot_label=args.robot,
+                    dex_id=args.dex, license_name=args.license,
+                    retrieved=args.retrieved)
+            except OSError as exc:
+                print(f"specimen error: cannot read URDF file "
+                      f"{args.urdf}: {exc.strerror or exc}",
+                      file=sys.stderr)
+                return 2
+            except ET.ParseError as exc:
+                print(f"specimen error: {args.urdf} is not "
+                      f"well-formed XML: {exc}", file=sys.stderr)
+                return 2
             text = json.dumps(doc, indent=2)
             if args.out:
                 Path(args.out).write_text(text + "\n")
@@ -443,7 +478,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(text)
             return 0
-        spec = RobotSpec.from_json(Path(args.spec).read_text())
+        spec = _load_spec(args.spec)
         if args.cmd == "harness":
             try:
                 rep = check_spec_data(
@@ -489,8 +524,13 @@ def main(argv: list[str] | None = None) -> int:
                 print("refusing to generate a twin from an invalid spec",
                       file=sys.stderr)
                 return rc
-            Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-            Path(args.out).write_text(generate_urdf(spec))
+            try:
+                Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+                Path(args.out).write_text(generate_urdf(spec))
+            except OSError as exc:
+                print(f"urdf error: cannot write {args.out}: "
+                      f"{exc.strerror or exc}", file=sys.stderr)
+                return 2
             print(f"URDF written to {args.out}")
             return 0
         if args.cmd == "cad":
@@ -526,7 +566,17 @@ def main(argv: list[str] | None = None) -> int:
                         print(f"  rendered {stl} ({stl.stat().st_size} bytes)")
             return 0
         if args.cmd == "repair":
-            report_doc = json.loads(Path(args.report).read_text())
+            try:
+                report_doc = json.loads(Path(args.report).read_text())
+            except OSError as exc:
+                print(f"repair error: cannot read report file "
+                      f"{args.report}: {exc.strerror or exc}",
+                      file=sys.stderr)
+                return 2
+            except json.JSONDecodeError as exc:
+                print(f"repair error: report is not valid JSON: {exc}",
+                      file=sys.stderr)
+                return 2
             proposal = propose_repairs(spec, report_doc)
             if not args.no_narrate:
                 narrate(proposal)

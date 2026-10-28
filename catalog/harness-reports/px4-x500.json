@@ -10,13 +10,13 @@
   },
   "summary": {
     "evaluations": 17,
-    "checked_clean": 0,
+    "checked_clean": 2,
     "evaluations_with_warnings": 0,
     "evaluations_with_errors": 0,
     "states": {
-      "CHECKED": 0,
+      "CHECKED": 2,
       "PARTIAL": 0,
-      "NOT_CHECKED": 17
+      "NOT_CHECKED": 15
     },
     "findings": {
       "ERROR": 0,
@@ -45,9 +45,9 @@
         "NOT_CHECKED": 3
       },
       "connector_match": {
-        "CHECKED": 0,
+        "CHECKED": 2,
         "PARTIAL": 0,
-        "NOT_CHECKED": 5
+        "NOT_CHECKED": 3
       }
     },
     "missing_inputs": [
@@ -72,17 +72,6 @@
         ]
       },
       {
-        "input": "connector at both ends (connector_from / connector_to)",
-        "count": 5,
-        "subjects": [
-          "battery -> pdb",
-          "pdb -> esc",
-          "esc -> motors",
-          "pdb -> fc",
-          "fc -> esc"
-        ]
-      },
-      {
         "input": "current_a for fc",
         "count": 5,
         "subjects": [
@@ -98,6 +87,15 @@
           "battery -> pdb",
           "pdb -> esc",
           "esc -> motors"
+        ]
+      },
+      {
+        "input": "connector at both ends (connector_from / connector_to)",
+        "count": 3,
+        "subjects": [
+          "esc -> motors",
+          "pdb -> fc",
+          "fc -> esc"
         ]
       },
       {
@@ -159,7 +157,7 @@
       }
     ]
   },
-  "headline": "0 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 17 not checked \u00b7 missing data: cable.gauge_awg \u00d78, current_a for motors \u00d77, connector at both ends (connector_from / connector_to) \u00d75",
+  "headline": "2 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 0 partial \u00b7 15 not checked \u00b7 missing data: cable.gauge_awg \u00d78, current_a for motors \u00d77, current_a for fc \u00d75",
   "evaluations": [
     {
       "check": "voltage_drop",
@@ -200,13 +198,11 @@
     {
       "check": "connector_match",
       "subject": "battery -> pdb",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "connector at both ends (connector_from / connector_to)"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "connector_from": null,
-        "connector_to": null
+        "connector_from": "XT60",
+        "connector_to": "XT60"
       },
       "results": {},
       "findings": []
@@ -248,13 +244,11 @@
     {
       "check": "connector_match",
       "subject": "pdb -> esc",
-      "state": "NOT_CHECKED",
-      "missing": [
-        "connector at both ends (connector_from / connector_to)"
-      ],
+      "state": "CHECKED",
+      "missing": [],
       "inputs": {
-        "connector_from": null,
-        "connector_to": null
+        "connector_from": "XT30",
+        "connector_to": "XT30"
       },
       "results": {},
       "findings": []
@@ -455,5 +449,5 @@
     }
   ],
   "findings": [],
-  "date": "2026-10-26"
+  "date": "2026-10-27"
 }

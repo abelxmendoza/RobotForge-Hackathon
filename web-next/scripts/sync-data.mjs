@@ -8,6 +8,11 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = join(root, "..");
 
+// The sync targets are gitignored, so their directories may not exist
+// on a fresh clone — copyFileSync does not create parents.
+mkdirSync(join(root, "src", "data"), { recursive: true });
+mkdirSync(join(root, "src", "styles"), { recursive: true });
+
 copyFileSync(join(repo, "catalog", "kinds.json"), join(root, "src", "data", "kinds.json"));
 copyFileSync(join(repo, "assets", "js", "chat-intents.json"), join(root, "src", "data", "chat-intents.json"));
 for (const f of ["robots.json", "parts.json", "gate-reports.json"]) {
