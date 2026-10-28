@@ -37,7 +37,7 @@ import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
-from .schema import RobotSpec
+from .schema import RobotSpec, spec_is_estimated
 
 # ---------------------------------------------------------------------------
 # Assumption defaults (NOT in the spec — always labeled as such in output)
@@ -71,9 +71,10 @@ def _mm(metres: float) -> str:
 
 def is_estimated(spec: RobotSpec) -> bool:
     """Photo drafts carry their provenance in the spec description
-    (photo.py prefixes it with "Photo draft (all dimensions ESTIMATED):")."""
-    d = spec.description or ""
-    return d.startswith("Photo draft") or "ESTIMATED" in d
+    (photo.py prefixes it with "Photo draft (all dimensions ESTIMATED):").
+    The predicate itself lives in schema.py (``spec_is_estimated``) so
+    validate and the gate share exactly the same test."""
+    return spec_is_estimated(spec)
 
 
 def kit_slug(name: str) -> str:

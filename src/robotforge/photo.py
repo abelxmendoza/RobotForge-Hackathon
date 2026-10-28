@@ -81,6 +81,8 @@ two-visible-wheel differential base with a caster, wheel count is the
 number of DRIVE wheels (usually 2), not the visible total.
 """
 
+PHOTO_PREFIX = "Photo draft (all dimensions ESTIMATED): "
+
 DOCUMENT_PREFIX = "Document draft (values transcribed from the document): "
 
 DOCUMENT_INSTRUCTIONS = """
@@ -234,9 +236,20 @@ def parse_photo_payload(payload: dict) -> PhotoDraft:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
         raise SpecError(f"photo response is not valid JSON: {exc}") from exc
-    if not isinstance(data, dict) or "spec" not in data:
+    if not isinstance(data, dict) or not isinstance(data.get("spec"), dict):
         raise SpecError("photo response JSON has no 'spec' object: "
                         + text[:200])
+    spec_data = data["spec"]
+    # The ESTIMATED banner is enforced here, in code — the same way
+    # document mode enforces its banner — because the whole honesty
+    # chain keys off it (schema.spec_is_estimated): validate withholds
+    # its clean pass, the gate refuses the draft, the CAD kit banners
+    # every file. A model that forgets the prefix must not be able to
+    # launder a photo draft into a measured-looking spec.
+    desc = spec_data.get("description")
+    if not isinstance(desc, str) or not desc.startswith("Photo draft"):
+        spec_data["description"] = PHOTO_PREFIX + (
+            desc if isinstance(desc, str) else "")
     parts = []
     for entry in data.get("visible_parts", []):
         try:
