@@ -260,6 +260,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="fault injection: scale ONLY the physical wheel "
                         "geometry (odometry keeps the spec radius), to "
                         "prove the gate catches a lying robot")
+    g.add_argument("--in-process", action="store_true",
+                   help="run the Gazebo server in-process (gz.sim8) "
+                        "instead of as a `gz sim` subprocess — for hosts "
+                        "where cross-process gz-transport discovery "
+                        "cannot work (no UDP); by default the subprocess "
+                        "run is tried first and this is the fallback")
     g.add_argument("--repair", action="store_true",
                    help="fix-my-spec loop: on a FAIL, compute measured "
                         "repairs from the gate's suspects, write a repair "
@@ -597,7 +603,8 @@ def main(argv: list[str] | None = None) -> int:
                 return rc
             res = run_motion_check(spec, Path(args.workdir),
                                    drive_m=args.drive_m, turn_deg=args.turn_deg,
-                                   wheel_radius_scale=args.inject_wheel_scale)
+                                   wheel_radius_scale=args.inject_wheel_scale,
+                                   embedded=True if args.in_process else None)
             if res["drive"]["truth_m"] <= 0 and res["turn"]["truth_deg"] <= 0:
                 raise TwinError(
                     "ground-truth stream captured no motion — the run is "
