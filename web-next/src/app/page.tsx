@@ -147,8 +147,9 @@ export default function HomePage() {
               <h3>Indoor Delivery Rover</h3>
               <p>
                 One paragraph of plain English became a spec, a twin, and
-                a measured PASS. Its odometry matched ground truth to
-                0.002%.
+                a measured PASS. Its odometry — the robot&apos;s own
+                estimate of how far it has travelled, from its wheels and
+                sensors — matched ground truth to 0.002%.
               </p>
               <div className="metrics">
                 <div className="metric">
@@ -259,7 +260,8 @@ export default function HomePage() {
           <div className="proof-foot">
             <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
               Bars run 0–15. Green zone passes, yellow is marginal, past it
-              fails. Recorded in Gazebo Sim, headless, Oct 26, 2026.
+              fails. Recorded in Gazebo Sim, headless (no window opens —
+              the simulator runs unseen), Oct 26, 2026.
             </p>
             <Link className="btn" href="/evidence/">
               All gate reports →
