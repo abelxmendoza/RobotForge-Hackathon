@@ -12,7 +12,8 @@ export type TrajPoints = [number, number][];
 
 function drawTraj(cv: HTMLCanvasElement, pts: TrajPoints | null | undefined) {
   const dpr = window.devicePixelRatio || 1;
-  const W = cv.clientWidth || 480, H = 240;
+  const W = cv.clientWidth || 480;
+  const H = Math.round(Math.max(180, Math.min(240, W * 0.62)));
   cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + "px";
   const ctx = cv.getContext("2d");
   if (!ctx) return;

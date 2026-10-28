@@ -17,7 +17,7 @@ import Link from "next/link";
 import { gateReports, robotSlug, robots } from "@/lib/data";
 import { gateStatusOf, gradeOf, staticCheckOf } from "@/components/robots/shared";
 import { StaticBadge, VerdictBadge } from "@/components/robots/badges";
-import { REPO_URL } from "@/components/shell/AppShell";
+import AppShell, { REPO_URL } from "@/components/shell/AppShell";
 import ReportCard from "@/components/evidence/ReportCard";
 import ReportStrip from "@/components/evidence/ReportStrip";
 import HashScroller from "@/components/evidence/HashScroller";
@@ -53,7 +53,10 @@ const HARNESS_ROWS: HarnessRow[] = [
 export default function EvidencePage() {
   const runs = gateReports;
   return (
-    <>
+    <AppShell
+      active="evidence"
+      crumbs={[{ label: "App", href: "/forge/" }, { label: "Evidence" }]}
+    >
       <HashScroller />
       <div className="page-head">
         <div>
@@ -314,6 +317,6 @@ export default function EvidencePage() {
           </div>
         </div>
       </section>
-    </>
+    </AppShell>
   );
 }

@@ -192,13 +192,13 @@ function ScanStageBody({
         </tbody>
       </table>
       {showView && (
-        <div className="scan-view">
+        <div>
           <ScanView
             parsed={parsed}
             measure={measure}
             onReady={(info) =>
               setNoteText(
-                'Point cloud preview — drag to orbit, scroll to zoom' +
+                'Point cloud preview — drag to orbit, pinch or scroll to zoom' +
                   (info.shown < info.total
                     ? ' (drawing ' +
                       info.shown.toLocaleString('en-US') +
@@ -674,7 +674,7 @@ export default function ForgeThread() {
               <div className="eyebrow">
                 Transcribed values (as printed → spec field)
               </div>
-              <ul className="items">
+              <ul className="items rows">
                 {draft.values.map((v, i) => (
                   <li key={i}>
                     <span className="title">
@@ -866,7 +866,7 @@ export default function ForgeThread() {
             {draft.visible_parts && draft.visible_parts.length ? (
               <>
                 <div className="eyebrow">Parts the model could see</div>
-                <ul className="items">
+                <ul className="items rows">
                   {draft.visible_parts.map((p, i) => (
                     <li key={i}>
                       <strong>{p.kind}</strong> ×{p.count}

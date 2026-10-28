@@ -158,6 +158,9 @@ export default function KitScene({
         const controls = new OrbitControls(camera, canvas);
         controls.target.set(0, 0, 0.085);
         controls.enableDamping = true;
+        /* Two-finger pan on a phone-sized canvas loses the robot
+         * off-screen too easily; rotate + pinch-zoom stay. */
+        controls.enablePan = window.innerWidth >= 768;
         controls.minDistance = 0.15;
         controls.maxDistance = 1.4;
         controls.autoRotateSpeed = 2.2;
@@ -357,7 +360,7 @@ export default function KitScene({
           downAt = [e.clientX, e.clientY];
         };
         const onUp = (e: PointerEvent) => {
-          if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+          if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 10) return;
           downAt = null;
           const r = canvas.getBoundingClientRect();
           ptr.set(

@@ -109,3 +109,21 @@ footer.site-footer p{max-width:60ch}
 @media (max-width:480px){
   .robot-row{grid-template-columns:1fr}
 }
+
+/* ---------- mobile hardening (2026-10-28) ----------
+   The wrapped-header layout must start before the single row
+   overflows (~860px, not 720px), anchor jumps must clear the
+   taller wrapped header, and the nav row gets a fade at its
+   scrollable edge. */
+@media (max-width:860px){
+  .site-header .wrap{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px;row-gap:4px}
+  .site-nav{order:3;flex-basis:100%;margin-left:0;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(to right,#000 88%,transparent);mask-image:linear-gradient(to right,#000 88%,transparent)}
+  .site-nav::-webkit-scrollbar{display:none}
+  .site-nav a{white-space:nowrap;padding:9px 10px}
+  .site-header .btn-primary{margin-left:auto;min-height:44px}
+  section{scroll-margin-top:124px}
+}
+@media (max-width:560px){
+  .proof .metrics{grid-template-columns:1fr}
+}

@@ -230,5 +230,34 @@ img{max-width:100%}
 /* Phones: wide data tables scroll inside their own box instead of
    squeezing or pushing the page sideways. */
 @media (max-width:720px){
-  .kv,.data{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .kv,.data,.kitpage .cat,.kitpage .box table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+
+/* ---------- mobile hardening (2026-10-28) ----------
+   Grid items must be allowed to shrink below their content's
+   min-content size, or one wide child (a natural-size image, a
+   <pre>, an SVG diagram) stretches its track — and the page —
+   sideways. min-width:0 changes nothing when content fits. */
+.robot-hero>*,.cols>*,.two>*,.checks>*,.report-grid>*,.ta-stage>*,
+.wv-stage>*,.split>*,.grid-3>*,.flow>*,.proof>*,.metrics>*,
+.kitpage .cols>*{min-width:0}
+/* Long values break rather than push their card sideways. */
+.kv td{overflow-wrap:anywhere}
+:not(pre)>code{overflow-wrap:anywhere}
+/* The badges carry whole sentences; as nowrap pills their
+   min-content (550px+) hijacks any grid/flex track they land in
+   and crushes its siblings. Wrapping only ever happens when the
+   badge would not fit on one line anyway. */
+.harness-badge,.static-badge{white-space:normal;line-height:1.45}
+@media (max-width:720px){
+  /* Real touch targets for the small controls. */
+  .chip{min-height:38px}
+  .btn-sm{min-height:40px}
+  .tab{min-height:40px}
+  /* Range sliders: a thumb a thumb can hit. */
+  input[type="range"]{-webkit-appearance:none;appearance:none;background:transparent;min-height:32px}
+  input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:var(--surface-3)}
+  input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);margin-top:-9px;cursor:pointer}
+  input[type="range"]::-moz-range-track{height:4px;border-radius:999px;background:var(--surface-3)}
+  input[type="range"]::-moz-range-thumb{width:22px;height:22px;border:0;border-radius:50%;background:var(--accent);cursor:pointer}
 }

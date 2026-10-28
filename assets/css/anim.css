@@ -40,6 +40,9 @@ canvas.traj{animation:rf-fadein 1s ease both .2s}
 .dex-strip figure{margin:0;background:radial-gradient(300px 130px at 50% 0%,#232833,#14161a);
   border:1px solid var(--line,#2c313a);border-radius:12px;padding:10px 8px 6px;text-align:center}
 .dex-strip svg{width:100%;height:auto;display:block}
+/* The strip renders <img> tiles; the svg rule above never matched
+   them, so they sat at intrinsic size instead of filling the tile. */
+.dex-strip img{width:100%;height:auto;display:block}
 .dex-strip figcaption{font-size:12px;color:var(--dim,#9aa3ad);margin-top:4px}
 
 /* --- generic link/button life --- */

@@ -127,3 +127,16 @@
   color:var(--text-muted);font-size:var(--fs-xs);
   border-left:3px solid var(--accent);padding-left:10px;
 }
+
+/* ---------- mobile hardening (2026-10-28) ---------- */
+@media (max-width:720px){
+  .fc-close{min-width:40px;min-height:40px}
+  .fc-hit{min-height:36px;padding:8px 12px}
+  .fc-launcher{min-height:44px}
+}
+/* Touch devices: 16px input text, so iOS Safari does not
+   auto-zoom when the field takes focus (any width, not just
+   narrow portrait). */
+@media (pointer:coarse){
+  .fc-form input{font-size:16px}
+}

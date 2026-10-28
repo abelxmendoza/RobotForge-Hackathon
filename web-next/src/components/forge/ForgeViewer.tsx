@@ -43,6 +43,7 @@ export function ForgeViewer({ spec }: { spec: RobotSpec }) {
         <input
           type="range"
           className="fv-explode"
+          aria-label="Explode"
           min={0}
           max={60}
           step={1}

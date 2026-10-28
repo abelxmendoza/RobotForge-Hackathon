@@ -290,7 +290,7 @@ export default function TakeApartViewer({ spec }: { spec: RobotSpec }) {
                 />
               </div>
               <p className="cap">
-                3D take-apart. Drag to orbit, scroll to zoom, click a part —
+                3D take-apart. Drag to orbit, pinch or scroll to zoom, tap a part —
                 the panel beside it is the same one the flat views use.
               </p>
               {threeFailed ? (

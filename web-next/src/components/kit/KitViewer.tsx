@@ -55,6 +55,8 @@ const KIT_CSS = `
 .kitpage button:disabled{opacity:.45;cursor:default}
 .kitpage .cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 @media(max-width:820px){.kitpage .cols{grid-template-columns:1fr}}
+@media(max-width:720px){.kitpage button{min-height:40px}}
+@media(max-width:560px){.kitpage #view3d{height:340px}.kitpage .wrap{padding:0 14px 64px}}
 .kitpage .box{background:#1b1e24;border:1px solid #2c313a;border-radius:14px;padding:18px 20px}
 .kitpage .box table,.kitpage .cat{border-collapse:collapse;font-size:13.5px;width:100%}
 .kitpage .box td,.kitpage .cat td{border-bottom:1px solid #2c313a;padding:5px 10px 5px 0;vertical-align:top}
@@ -146,7 +148,7 @@ export default function KitViewer() {
           <h1>The Parts Kit, in 3D</h1>
           <p className="sub">
             A forged robot is a kit of parts, not a monolith. Drag to orbit,
-            scroll to zoom, click any part to inspect it — then pull the
+            pinch or scroll to zoom, tap any part to inspect it — then pull the
             explode slider and watch it come apart. Flip on <b>CAD mode</b>{' '}
             and the same model becomes parametric OpenSCAD you can download,
             open in OpenSCAD or FreeCAD, edit, and print. Geometry: TurtleBot3
@@ -184,7 +186,7 @@ export default function KitViewer() {
             onExplodeCur={setExplodeCur}
           />
           <div className="hud">
-            <b>Drag</b> orbit · <b>Scroll</b> zoom · <b>Click</b>{' '}
+            <b>Drag</b> orbit · <b>Pinch</b> zoom · <b>Tap</b>{' '}
             {real ? 'a real part to inspect it' : 'a part to inspect'}
           </div>
         </div>

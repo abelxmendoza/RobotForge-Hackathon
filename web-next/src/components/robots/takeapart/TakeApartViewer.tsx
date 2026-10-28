@@ -419,7 +419,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
           </div>
           <div className="ta-view" id="ta-3dwrap" hidden={mode !== "3d"}>
             <div id="ta-3d">
-              {spec && !threeFailed ? (
+              {mode === "3d" && spec && !threeFailed ? (
                 <Robot3D
                   spec={spec as unknown as ForgeSpec}
                   explode={explode}
@@ -435,8 +435,8 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
               ) : null}
             </div>
             <p className="cap">
-              3D take-apart. Drag to orbit, scroll to zoom, click a part
-              &mdash; the panel beside it is the same one the flat views use.
+              3D take-apart. Drag to orbit, pinch or scroll to zoom, tap
+              a part &mdash; the panel beside it is the same one the flat views use.
             </p>
             {threeFailed ? (
               <p className="state-box" id="ta-3d-fallback">

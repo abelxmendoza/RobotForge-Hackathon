@@ -106,6 +106,9 @@ export default function Robot3D({
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, spec.height_m * 0.45);
         controls.enableDamping = true;
+        /* Two-finger pan on a phone-sized canvas loses the robot
+         * off-screen too easily; rotate + pinch-zoom stay. */
+        controls.enablePan = window.innerWidth >= 768;
         controls.minDistance = span * 0.4;
         controls.maxDistance = span * 6;
 
@@ -235,6 +238,9 @@ export default function Robot3D({
         };
         let downAt: [number, number] | null = null;
         const onMove = (ev: PointerEvent) => {
+          /* Hover picking is mouse-only: on touch it just burns a
+           * raycast per move during orbits. */
+          if (ev.pointerType !== 'mouse') return;
           st.hover = pick(ev);
           renderer.domElement.style.cursor = st.hover ? 'pointer' : '';
           refresh();
@@ -249,7 +255,7 @@ export default function Robot3D({
             ev.clientY - downAt[1],
           );
           downAt = null;
-          if (moved > 5) return; // it was an orbit drag
+          if (moved > 10) return; // it was an orbit drag (fingertip jitter on touch runs past 5px)
           const part = pick(ev);
           if (part) cbRef.current.onSelect(part);
         };
@@ -257,11 +263,35 @@ export default function Robot3D({
         renderer.domElement.addEventListener('pointerdown', onDown);
         renderer.domElement.addEventListener('pointerup', onUp);
 
+        let fitted = false;
         const resize = () => {
           const w = host.clientWidth || 700;
-          const h = 430;
+          const h = window.innerWidth <= 560 ? 320 : 430;
           renderer.setSize(w, h);
           camera.aspect = w / h;
+          if (!fitted) {
+            fitted = true;
+            /* Portrait viewports crop the model's width at the
+             * span-derived distance: pull the camera back once,
+             * before first render, until the bounding sphere fits
+             * horizontally as well as vertically. */
+            const r =
+              0.62 *
+              Math.hypot(spec.length_m, spec.width_m, spec.height_m);
+            const vFit = r / Math.tan(THREE.MathUtils.degToRad(21));
+            const need = Math.max(vFit, vFit / camera.aspect);
+            const dist = camera.position.distanceTo(controls.target);
+            if (need > dist) {
+              const dir = camera.position
+                .clone()
+                .sub(controls.target)
+                .normalize();
+              camera.position
+                .copy(controls.target)
+                .addScaledVector(dir, need);
+              controls.maxDistance = Math.max(controls.maxDistance, need * 1.6);
+            }
+          }
           camera.updateProjectionMatrix();
         };
         resize();

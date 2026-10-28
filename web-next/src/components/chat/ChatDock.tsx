@@ -242,7 +242,12 @@ export function ChatWidget({ docked }: { docked: boolean }) {
     if (!open) return;
     greet();
     void checkLive(); // updates the header disclosure when live is on
-    if (!dockedWide) inputRef.current?.focus();
+    /* Auto-focus only with a fine pointer: on touch devices the
+     * keyboard would immediately cover the panel the user just
+     * opened. */
+    if (!dockedWide && window.matchMedia("(pointer: fine)").matches) {
+      inputRef.current?.focus();
+    }
   }, [open, dockedWide, greet, checkLive]);
 
   useEffect(() => {
