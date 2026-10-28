@@ -7,7 +7,12 @@
  * or a spec sheet / blueprint (TRANSCRIBED — printed values only,
  * never inferred from drawing scale; the draft is badged
  * DOCUMENT-READ). A scan is parsed and measured entirely in the
- * browser (bounding box; badged MEASURED (scan)).
+ * browser (bounding box; badged MEASURED (scan)). A Gaussian-splat
+ * .ply (a SAM 3D export) is detected by its property signature and
+ * treated as what it is — a reconstruction inferred from a single
+ * photo: bounding box in the file's own relative units, dimensions
+ * ESTIMATED, badged RECONSTRUCTED (single photo), never seeded
+ * into a spec, because it carries no real-world scale.
  * Every stage of every run wears exactly one badge:
  *
  *   LIVE     — a real model call through the live endpoint
@@ -1210,7 +1215,9 @@ function forgeValidateSpec(spec) {
     'Meshroom builds one from a photo set by photogrammetry. ' +
     'However you made it: <strong>depth scans arrive measured; ' +
     'photos arrive estimated</strong> — which is why the forge ' +
-    'treats them differently.</p>';
+    'treats them differently. A SAM 3D export is a reconstruction ' +
+    'from a single photo, not a scan; the forge detects it and ' +
+    'reports it as reconstructed and estimated.</p>';
 
   function downloadJSON(obj, filename) {
     const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'],
@@ -1250,6 +1257,70 @@ function forgeValidateSpec(spec) {
       downloadJSON(spec, 'scan-draft.json'));
   }
 
+  /* A Gaussian-splat .ply (SAM 3D and similar single-photo tools)
+   * is a RECONSTRUCTION, not a scan: a model inferred the shape from
+   * one photo and invented every surface the camera never saw. It is
+   * parsed and boxed locally exactly like a scan, but the card wears
+   * RECONSTRUCTED (single photo), the extents are reported in the
+   * file's own relative units as ESTIMATED, and — unlike a scan —
+   * it never seeds a draft spec: there is no real-world scale in
+   * the file to seed from. */
+  function runReconstruction(rs, parsed) {
+    const measure = rs.measureReconstruction(parsed.positions);
+    if (!measure.ok) {
+      stage('local', 'parsed in your browser',
+        'Reconstruction — no size to report',
+        '<p class="intro"><strong>' +
+        measure.count.toLocaleString('en-US') +
+        ' reconstructed points</strong> were read, but no size is ' +
+        'reported: ' + esc(measure.reason) + '. The raw extents are ' +
+        measure.rawExtents.map(v => String(Math.round(v * 1000) / 1000)).join(' × ') +
+        ' in the file\u2019s own units — shown as-is.</p>');
+      return;
+    }
+    const e = measure.extents;
+    const fmt = v => v.toFixed(3) + ' file units';
+    const el = stage('local', 'parsed in your browser just now',
+      'Reconstruction — RECONSTRUCTED (single photo)',
+      '<p class="intro"><strong>' + parsed.count.toLocaleString('en-US') +
+      ' points</strong> (' + esc(parsed.format) + ' PLY). This file ' +
+      'is a <strong>Gaussian-splat reconstruction</strong> — the ' +
+      'export shape of SAM 3D and similar single-photo tools: a ' +
+      'model inferred this shape from one photo. Method: ' +
+      '<strong>bounding box of the reconstructed points</strong> — ' +
+      'the extents below are the reconstruction\u2019s axis-aligned ' +
+      'size, axes as stored in the file (x \u2192 length, ' +
+      'y \u2192 width, z \u2192 height).</p>' +
+      '<div class="callout"><span>Unit note: ' + esc(measure.unitNote) +
+        '.</span></div>' +
+      '<table class="kv">' +
+      '<tr><th>Length (x)</th><td>' + fmt(e[0]) + '</td></tr>' +
+      '<tr><th>Width (y)</th><td>' + fmt(e[1]) + '</td></tr>' +
+      '<tr><th>Height (z)</th><td>' + fmt(e[2]) + '</td></tr></table>' +
+      '<div class="scan-view"></div>' +
+      '<p class="faint scan-view-note">Drawing the points\u2026</p>' +
+      '<div class="callout warn"><span>A reconstruction is ' +
+      '<strong>not a measurement</strong>: these dimensions are ' +
+      '<strong>ESTIMATED</strong> — relative shape only. Unlike a ' +
+      'depth scan, this file does <strong>not</strong> seed a draft ' +
+      'spec, because it carries no real-world scale. Real ' +
+      'dimensions come from a depth scan (MEASURED (scan)), a ' +
+      'document (DOCUMENT-READ), or a description.</span></div>');
+    const host = el.querySelector('.scan-view');
+    const vnote = el.querySelector('.scan-view-note');
+    rs.renderPoints(host, parsed, measure).then(info => {
+      vnote.textContent = 'Reconstruction preview — drag to orbit, ' +
+        'scroll to zoom' + (info.shown < info.total
+          ? ' (drawing ' + info.shown.toLocaleString('en-US') +
+            ' of ' + info.total.toLocaleString('en-US') + ' points)'
+          : '') + '. Drawn from your file, in this browser.';
+    }).catch(() => {
+      vnote.textContent = 'The 3D preview isn\u2019t available in ' +
+        'this browser — the extents above don\u2019t depend on it.';
+      host.remove();
+    });
+  }
+
   async function runScan(file) {
     userHTML(fileChip('Scan (.ply)', file));
     note(SCAN_GUIDANCE);
@@ -1272,9 +1343,22 @@ function forgeValidateSpec(spec) {
         'your browser and sent nowhere.');
       return;
     }
-    let parsed, measure;
+    let parsed;
     try {
       parsed = rs.parsePly(buf);
+    } catch (e) {
+      stage('local', 'parsed in your browser', 'Scan — not readable',
+        '<div class="callout bad"><span><strong>' + esc(e.message) +
+        '</strong></span></div><p class="intro">The file was read ' +
+        'only in your browser and sent nowhere.</p>');
+      return;
+    }
+    if (parsed.kind === 'splat') {
+      runReconstruction(rs, parsed);
+      return;
+    }
+    let measure;
+    try {
       measure = rs.measureCloud(parsed.positions);
     } catch (e) {
       stage('local', 'parsed in your browser', 'Scan — not readable',

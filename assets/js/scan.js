@@ -14,6 +14,15 @@
  * implausible either way are reported raw instead of rescaled in
  * silence. A scan gives shape and size only: mass, motors and
  * voltage cannot come from a point cloud, and the UI says that too.
+ *
+ * A Gaussian-splat PLY (SAM 3D and other single-photo reconstruction
+ * exports) is NOT a scan: nobody measured anything, the model
+ * inferred a shape from one picture and invented the surfaces the
+ * camera never saw. parsePly detects the splat property signature
+ * and tags the result kind: 'splat'; the Forge then measures it with
+ * measureReconstruction — the same bounding box, but reported in
+ * the file's own relative units, never rescaled into metres — and
+ * badges it RECONSTRUCTED (single photo), never MEASURED (scan).
  */
 'use strict';
 
@@ -45,11 +54,24 @@ function plyRead(dv, off, kind, le) {
   }
 }
 
+/* The Gaussian-splat property signature: a vertex element carrying
+ * spherical-harmonic colour (f_dc_*), opacity, anisotropic scales
+ * and rotations is a 3D Gaussian splat export (SAM 3D, Luma, nerf
+ * tooling), not a depth scan. Plain scans never carry these. */
+function isSplatProps(props) {
+  const names = new Set(props.map(p => p.name));
+  return names.has('f_dc_0') && names.has('opacity') &&
+    names.has('scale_0') && names.has('rot_0');
+}
+
 /* Parse a PLY file (ascii or binary, vertex element first — the
  * layout RealSense Viewer, Scaniverse, Polycam and Meshroom all
- * export). Returns { count, positions (Float32Array, raw file
- * units), format }. Throws a plain-language Error on anything else:
- * an unsupported layout must fail loudly, never measure wrong. */
+ * export; extra properties, splat exports included, are tolerated
+ * and skipped over). Returns { count, positions (Float32Array, raw
+ * file units), format, kind } where kind is 'splat' for a Gaussian-
+ * splat reconstruction export and 'scan' otherwise. Throws a
+ * plain-language Error on anything else: an unsupported layout must
+ * fail loudly, never measure wrong. */
 function parsePly(buffer) {
   const bytes = new Uint8Array(buffer);
   const headText = new TextDecoder('ascii').decode(
@@ -149,7 +171,10 @@ function parsePly(buffer) {
   } else {
     throw new Error('unsupported PLY format "' + format + '"');
   }
-  return { count: vertexCount, positions, format };
+  return {
+    count: vertexCount, positions, format,
+    kind: isSplatProps(props) ? 'splat' : 'scan',
+  };
 }
 
 /* Axis-aligned bounding box with the visible unit rule. Returns
@@ -192,6 +217,48 @@ function measureCloud(positions) {
     (min[0] + max[0]) / 2 * scale, (min[1] + max[1]) / 2 * scale,
     (min[2] + max[2]) / 2 * scale], scale };
 }
+
+/* Bounding box for a RECONSTRUCTION (Gaussian splat from a single
+ * photo, e.g. a SAM 3D export). Same box as measureCloud, different
+ * honesty contract: reconstruction units are relative — the model
+ * chose them, no sensor measured them — so the extents are reported
+ * in the file's own units and NEVER rescaled into metres (the scan
+ * path's millimetre rule must not fire here: a splat 42 units wide
+ * is 42 relative units, not a 42 mm robot). Returns { ok, count,
+ * extents (raw file units), unitNote, center, scale: 1 }, or
+ * { ok: false, count, reason, rawExtents } for a degenerate cloud. */
+function measureReconstruction(positions) {
+  const n = Math.floor(positions.length / 3);
+  if (!n) return { ok: false, reason: 'the reconstruction has no points' };
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < n; i++) {
+    for (let a = 0; a < 3; a++) {
+      const v = positions[i * 3 + a];
+      if (v < min[a]) min[a] = v;
+      if (v > max[a]) max[a] = v;
+    }
+  }
+  const raw = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
+  const maxExt = Math.max(raw[0], raw[1], raw[2]);
+  if (!Number.isFinite(maxExt)) {
+    return { ok: false, count: n, rawExtents: raw,
+      reason: 'the reconstruction coordinates are not finite numbers' };
+  }
+  if (maxExt === 0) {
+    return { ok: false, count: n, rawExtents: raw,
+      reason: 'every reconstructed point sits in the same place — ' +
+        'the reconstruction has no size to report' };
+  }
+  return {
+    ok: true, count: n, extents: raw, scale: 1,
+    unitNote: 'reconstruction units are relative — set by the ' +
+      'model that inferred this shape from one photo, not measured ' +
+      'against the real robot',
+    center: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2,
+      (min[2] + max[2]) / 2],
+  };
+}
 /* == ply:end == */
 
 /* ---------------- points view (three.js, lazy) ---------------- */
@@ -216,7 +283,10 @@ async function renderPoints(host, parsed, measure) {
   const cx = (measure.center ? measure.center[0] : 0) / scale;
   const cy = (measure.center ? measure.center[1] : 0) / scale;
   const cz = (measure.center ? measure.center[2] : 0) / scale;
-  const spanM = Math.max(...measure.extentsM);
+  /* scans carry extentsM, reconstructions carry raw extents; the
+   * viewer frames either the same way (its units are the file's). */
+  const extents = measure.extentsM || measure.extents;
+  const spanM = Math.max(...extents);
   const raw = parsed.positions;
   const stride = Math.max(1, Math.ceil(parsed.count / 90000));
   const shown = Math.ceil(parsed.count / stride);
@@ -247,7 +317,7 @@ async function renderPoints(host, parsed, measure) {
   const grid = new THREE.PolarGridHelper(
     Math.max(spanM * 0.75, 0.05), 12, 6, 48, 0x2c313a, 0x23262e);
   grid.rotation.x = Math.PI / 2;
-  grid.position.z = -measure.extentsM[2] / 2 - 0.001;
+  grid.position.z = -extents[2] / 2 - 0.001;
   scene.add(grid);
   const points = new THREE.Points(geo, new THREE.PointsMaterial({
     color: 0xf59e0b, size: Math.max(spanM * 0.006, 0.0012),
@@ -271,4 +341,7 @@ async function renderPoints(host, parsed, measure) {
   return { shown, total: parsed.count };
 }
 
-window.RFScan = { parsePly, measureCloud, renderPoints, disposeScan };
+window.RFScan = {
+  parsePly, measureCloud, measureReconstruction, renderPoints,
+  disposeScan,
+};
