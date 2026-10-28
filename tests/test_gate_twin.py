@@ -2,16 +2,19 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from robotforge import twin
+from robotforge import cli, twin
 from robotforge.gate import (DEFAULT_THRESHOLDS, FAIL, MARGINAL, PASS,
                              evaluate_drive, evaluate_odometry_distance,
                              evaluate_odometry_heading, evaluate_run,
                              evaluate_turn, suspect_fields)
 from robotforge.schema import RobotSpec
-from robotforge.twin import (extract_named_poses, generate_sdf, generate_world,
-                             iter_odom_poses, parse_last_odom)
+from robotforge.twin import (TwinError, extract_named_poses, generate_sdf,
+                             generate_world, iter_odom_poses,
+                             parse_last_odom)
 
 EXAMPLE = Path(__file__).parent.parent / "examples" / "pathfinder.json"
 
@@ -175,3 +178,26 @@ def test_differential_twin_has_driven_axle_and_casters():
     assert 'name="caster_front"' in sdf and 'name="caster_rear"' in sdf
     assert "front_left" not in sdf  # no skid-steer corners on a diff drive
     assert sdf.count("gz-sim-diff-drive-system") == 1
+
+
+def test_missing_gz_fails_with_twin_error_not_traceback(tmp_path,
+                                                        monkeypatch):
+    # A PATH holding nothing makes shutil.which("gz") come back empty on
+    # any host, with or without Gazebo installed: the run must refuse
+    # with a TwinError before anything spawns, not die inside Popen
+    # with a raw FileNotFoundError.
+    monkeypatch.setenv("PATH", str(tmp_path))
+    spec = RobotSpec.from_json(EXAMPLE.read_text())
+    with pytest.raises(TwinError, match=r"Gazebo \(gz\) not found"):
+        twin.run_motion_check(spec, tmp_path / "work")
+
+
+def test_cli_run_gate_without_gz_is_a_clean_error(tmp_path, monkeypatch,
+                                                  capsys):
+    monkeypatch.setenv("PATH", str(tmp_path))
+    rc = cli.main(["run-gate", str(EXAMPLE), "--workdir",
+                   str(tmp_path / "work")])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "spec error: Gazebo (gz) not found" in err
+    assert "Traceback" not in err
