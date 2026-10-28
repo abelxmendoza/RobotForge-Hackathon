@@ -53,6 +53,33 @@ is absent, describe falls back to a direct OpenAI-compatible call using
 `examples/pathfinder-live.json` — spec generated from a plain-language
 request, passed validation with no findings, and generated a URDF.
 
+#### Optional Fireworks transport (2026-10-27)
+
+Fireworks AI was integrated as an additional, explicitly opt-in
+describe transport for Abel's $100 hackathon credit award. The design
+keeps Muse Spark on the Meta Model API and Muse Spark Open on Baseten
+as the core paths; Fireworks does not become a default when
+`FIREWORKS_API_KEY` is present. It joins the chain only under
+`RF_DESCRIBE_TRANSPORT=fireworks` (forced) or
+`RF_FIREWORKS_ENABLED=1` (an extra fallback after Meta and Baseten).
+
+The choice follows Fireworks' current official model page and docs:
+Muse Spark Open is listed there as Provider **Meta**, State **Ready**,
+and **Serverless Supported**, with model ID
+`accounts/fireworks/models/muse-spark-open`; its serverless example
+calls `https://api.fireworks.ai/inference/v1/chat/completions` with
+`Authorization: Bearer $FIREWORKS_API_KEY`. Sources:
+<https://app.fireworks.ai/models/fireworks/muse-spark-open>,
+<https://docs.fireworks.ai/serverless/pricing>, and
+<https://docs.fireworks.ai/guides/querying-text-models>. This keeps
+the Fireworks path on a Meta model rather than substituting an
+unrelated model family. The implementation is Python-only (stdlib
+`urllib`) so the repo's zero-runtime-dependency rule holds and the
+Cloudflare Worker's Baseten/Meta routes are unchanged. Mocked tests
+cover the request shape, explicit opt-in, fallback ordering, missing
+key, and HTTP error handling; no live Fireworks call was made during
+integration.
+
 ## Motion gate thresholds — DECIDED (Abel, 2026-10-26)
 
 Position error ≤5% of commanded distance = PASS, >10% = FAIL, between = MARGINAL.

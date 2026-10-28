@@ -25,6 +25,12 @@ and the site falls back to its recorded photo sample — that is the
 designed behavior, not an error. Malformed model output is a 502
 with a plain error; raw model junk never reaches the page.
 
+Fireworks AI is deliberately **not** a Worker provider in this
+deployment. Its optional Muse Spark Open transport belongs to the
+Python CLI's describe chain (see the top-level README, "Optional
+Fireworks transport"), so there is no Fireworks Worker secret to set
+and `/health` does not report a Fireworks route.
+
 ## Document mode (`/photo` with `mode: "document"`)
 
 For a photo of a spec sheet, datasheet or blueprint, the same route
