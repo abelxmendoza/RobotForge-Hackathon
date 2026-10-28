@@ -10,7 +10,7 @@ import json
 from contextlib import redirect_stderr, redirect_stdout
 
 from robotforge.catalog import (GATE_STATUSES, CatalogError, GateStatus,
-                                Robodex, gate_badge)
+                                Robodex)
 from robotforge.cli import main
 
 dex = Robodex.load()

@@ -605,7 +605,6 @@ def has_errors(report: HarnessReport) -> bool:
 
 
 def format_harness_report(rep: HarnessReport) -> str:
-    s = rep.summary()
     lines = [
         f"Harness checks — {rep.robot}",
         "Electrical checks over the spec's documented wiring graph. "

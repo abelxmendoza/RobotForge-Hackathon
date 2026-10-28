@@ -48,7 +48,6 @@ def test_sdf_well_formed_with_diffdrive():
     sdf = generate_sdf(spec)
     root = ET.fromstring(sdf)
     assert root.tag == "sdf"
-    text = "".join(root.itertext()) + sdf
     assert "gz-sim-diff-drive-system" in sdf
     assert sdf.count("<left_joint>") == 2 and sdf.count("<right_joint>") == 2
     world = generate_world(spec, "/tmp/model.sdf")

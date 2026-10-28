@@ -295,8 +295,6 @@ def check_spec(spec: RobotSpec) -> StabilityReport:
 
 
 def format_stability_report(rep: StabilityReport) -> str:
-    d = rep.to_dict()
-    r = d["results"]
     lines = [
         f"Static stability check — {rep.robot} ({rep.drivetrain})",
         "Computed from the spec's declared dimensions. This is a "

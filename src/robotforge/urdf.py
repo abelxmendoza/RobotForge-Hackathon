@@ -28,15 +28,15 @@ def generate_urdf(spec: RobotSpec) -> str:
     wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0
     wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
 
-    parts = [f'<?xml version="1.0"?>',
+    parts = ['<?xml version="1.0"?>',
              f'<robot name="{name}">',
-             f'  <link name="base_link">',
+             '  <link name="base_link">',
              f'    <visual><geometry><box size="{spec.length_m} {spec.width_m} '
              f'{spec.height_m}"/></geometry></visual>',
              f'    <collision><geometry><box size="{spec.length_m} {spec.width_m} '
              f'{spec.height_m}"/></geometry></collision>',
              f'    {_box_inertial(spec.mass_kg, spec.length_m, spec.width_m, spec.height_m)}',
-             f'  </link>']
+             '  </link>']
 
     # Wheel placement: front/rear pairs; a 2-wheel differential layout gets
     # the pair at the chassis centre plus the caller adds casters later.
@@ -57,12 +57,12 @@ def generate_urdf(spec: RobotSpec) -> str:
             f'    <collision><origin rpy="1.5708 0 0"/><geometry>'
             f'<cylinder radius="{r}" length="{spec.wheel.width_m}"/></geometry></collision>',
             f'    {_box_inertial(wheel_mass, r * 2, spec.wheel.width_m, r * 2)}',
-            f'  </link>',
+            '  </link>',
             f'  <joint name="{wname}_joint" type="continuous">',
             f'    <parent link="base_link"/><child link="{wname}"/>',
             f'    <origin xyz="{x} {y} {r - chassis_z}"/>',
-            f'    <axis xyz="0 1 0"/>',
-            f'  </joint>',
+            '    <axis xyz="0 1 0"/>',
+            '  </joint>',
         ]
     parts.append('</robot>')
     return "\n".join(parts) + "\n"
