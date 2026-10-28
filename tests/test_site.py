@@ -114,7 +114,7 @@ def test_app_pages_carry_the_docked_chat_rail_landing_keeps_the_widget():
         assert 'id="fc-panel"' in page and 'id="fc-form"' in page
     # The landing page keeps the floating widget between its markers.
     landing = (REPO / "index.html").read_text()
-    block = landing.split(CHAT_START := "<!-- chat:start -->")[1] \
+    block = landing.split("<!-- chat:start -->")[1] \
         .split("<!-- chat:end -->")[0]
     assert 'class="forge-chat"' in block and "docked" not in block
 
