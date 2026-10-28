@@ -371,3 +371,16 @@ class RobotSpec:
         if self.wiring is not None:
             d["wiring"] = self.wiring.to_dict()
         return d
+
+
+def spec_is_estimated(spec: RobotSpec) -> bool:
+    """True when the spec is a photo draft: every dimension ESTIMATED.
+
+    Photo drafts carry their provenance in the spec description
+    (photo.py stamps it with "Photo draft (all dimensions ESTIMATED):"
+    in parse_photo_payload — enforced in code, not left to the prompt).
+    Estimated dimensions may build a draft, never a verdict, so every
+    path that judges a spec (validate, the gate) checks this first.
+    """
+    d = spec.description or ""
+    return d.startswith("Photo draft") or "ESTIMATED" in d

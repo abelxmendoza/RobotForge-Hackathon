@@ -1,0 +1,157 @@
+// Generate the Forge's sample scan: public/sample-scan.ply.
+//
+// A synthetic point cloud of a small differential-drive rover at TRUE
+// metre scale — a box body, two wheel cylinders and a lidar puck —
+// sampled on the surfaces with a fixed seed and a whisper of noise, so
+// it behaves like a small depth-camera capture rather than a CAD
+// render. It exists so a visitor without a scanner can run the
+// Forge's scan flow end to end; the UI labels it SAMPLE everywhere it
+// appears, and it is NOT a capture of a real robot.
+//
+// Geometry (metres, axes as the scan flow reads them: x = length,
+// y = width, z = height, ground at z = 0):
+// - wheels: radius 0.050, width 0.030, axle along y at x = 0,
+//   z = 0.050, outer faces at y = +/-0.125
+// - body: 0.300 x 0.220 x 0.100 box, bottom at wheel-axle height
+//   (z from 0.050 to 0.150)
+// - lidar puck: radius 0.035, z from 0.150 to 0.190, centred
+// Nominal bounding box: 0.300 x 0.250 x 0.190 m; the surface noise
+// widens the measured box by a few millimetres, like a real capture —
+// the Forge reports what it measures, not these nominal numbers.
+//
+// The file is a build artifact (generated at prebuild/predev, listed
+// in .gitignore): this script is the source of truth, the same
+// convention as the synced catalog data. Node stdlib only.
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+// mulberry32: tiny deterministic PRNG so every build emits the
+// identical cloud (no Math.random anywhere below).
+let state = 20261028;
+function rand() {
+  state |= 0;
+  state = (state + 0x6d2b79f5) | 0;
+  let t = Math.imul(state ^ (state >>> 15), 1 | state);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+const uniform = (a, b) => a + rand() * (b - a);
+
+const NOISE = 0.0015; // +/-1.5 mm surface noise, like a depth camera
+const jitter = (v) => v + uniform(-NOISE, NOISE);
+
+function boxSurface(cx, cy, cz, dx, dy, dz, n) {
+  const hx = dx / 2, hy = dy / 2, hz = dz / 2;
+  const faces = [
+    [0, cx - hx, [cy - hy, cy + hy], [cz - hz, cz + hz], dy * dz],
+    [0, cx + hx, [cy - hy, cy + hy], [cz - hz, cz + hz], dy * dz],
+    [1, cy - hy, [cx - hx, cx + hx], [cz - hz, cz + hz], dx * dz],
+    [1, cy + hy, [cx - hx, cx + hx], [cz - hz, cz + hz], dx * dz],
+    [2, cz - hz, [cx - hx, cx + hx], [cy - hy, cy + hy], dx * dy],
+    [2, cz + hz, [cx - hx, cx + hx], [cy - hy, cy + hy], dx * dy],
+  ];
+  const total = faces.reduce((s, f) => s + f[4], 0);
+  const pts = [];
+  for (const [axis, fixed, [u0, u1], [v0, v1], area] of faces) {
+    const k = Math.max(1, Math.round((n * area) / total));
+    for (let i = 0; i < k; i++) {
+      const p = [0, 0, 0];
+      p[axis] = fixed;
+      p[(axis + 1) % 3] = uniform(u0, u1);
+      p[(axis + 2) % 3] = uniform(v0, v1);
+      pts.push(p);
+    }
+  }
+  return pts;
+}
+
+function cylinderSurface(cy, radius, width, zAxis, n) {
+  // A wheel: axis along y at (x = 0, z = zAxis).
+  const pts = [];
+  const rim = Math.floor(n * 0.7);
+  for (let i = 0; i < rim; i++) {
+    const t = uniform(0, 2 * Math.PI);
+    pts.push([
+      radius * Math.cos(t),
+      cy + uniform(-width / 2, width / 2),
+      zAxis + radius * Math.sin(t),
+    ]);
+  }
+  for (let i = rim; i < n; i++) {
+    const t = uniform(0, 2 * Math.PI);
+    const r = radius * Math.sqrt(rand());
+    const side = rand() < 0.5 ? 1 : -1;
+    pts.push([
+      r * Math.cos(t),
+      cy + (side * width) / 2,
+      zAxis + r * Math.sin(t),
+    ]);
+  }
+  return pts;
+}
+
+function puckSurface(radius, z0, z1, n) {
+  // The lidar puck: axis along z at (0, 0).
+  const pts = [];
+  const rim = Math.floor(n * 0.6);
+  for (let i = 0; i < rim; i++) {
+    const t = uniform(0, 2 * Math.PI);
+    pts.push([radius * Math.cos(t), radius * Math.sin(t), uniform(z0, z1)]);
+  }
+  for (let i = rim; i < n; i++) {
+    const t = uniform(0, 2 * Math.PI);
+    const r = radius * Math.sqrt(rand());
+    pts.push([r * Math.cos(t), r * Math.sin(t), rand() < 0.5 ? z1 : z0]);
+  }
+  return pts;
+}
+
+let pts = [
+  ...boxSurface(0, 0, 0.1, 0.3, 0.22, 0.1, 12000),
+  ...cylinderSurface(-0.11, 0.05, 0.03, 0.05, 5000),
+  ...cylinderSurface(0.11, 0.05, 0.03, 0.05, 5000),
+  ...puckSurface(0.035, 0.15, 0.19, 2500),
+];
+pts = pts.map(([x, y, z]) => [
+  jitter(x),
+  jitter(y),
+  Math.max(0, jitter(z)),
+]);
+// Fisher-Yates shuffle with the same seeded stream.
+for (let i = pts.length - 1; i > 0; i--) {
+  const j = Math.floor(rand() * (i + 1));
+  [pts[i], pts[j]] = [pts[j], pts[i]];
+}
+
+const header = Buffer.from(
+  "ply\n" +
+    "format binary_little_endian 1.0\n" +
+    "comment RobotForge SAMPLE scan - synthetic point cloud of a small\n" +
+    "comment differential rover at true metre scale (0.300 x 0.250 x\n" +
+    "comment 0.190 m nominal). Generated by scripts/make-sample-scan.mjs;\n" +
+    "comment NOT a capture of a real robot.\n" +
+    `element vertex ${pts.length}\n` +
+    "property float x\nproperty float y\nproperty float z\n" +
+    "end_header\n",
+  "ascii",
+);
+const body = Buffer.alloc(pts.length * 12);
+pts.forEach(([x, y, z], i) => {
+  body.writeFloatLE(x, i * 12);
+  body.writeFloatLE(y, i * 12 + 4);
+  body.writeFloatLE(z, i * 12 + 8);
+});
+
+const out = join(root, "public", "sample-scan.ply");
+mkdirSync(dirname(out), { recursive: true });
+writeFileSync(out, Buffer.concat([header, body]));
+
+const ext = (k) =>
+  Math.max(...pts.map((p) => p[k])) - Math.min(...pts.map((p) => p[k]));
+console.log(
+  `make-sample-scan: wrote public/sample-scan.ply — ${pts.length} points, ` +
+    `extents ${ext(0).toFixed(3)} x ${ext(1).toFixed(3)} x ${ext(2).toFixed(3)} m`,
+);

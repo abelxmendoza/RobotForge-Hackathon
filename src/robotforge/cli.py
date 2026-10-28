@@ -595,6 +595,19 @@ def main(argv: list[str] | None = None) -> int:
                 print("refusing to run the gate on an invalid spec",
                       file=sys.stderr)
                 return rc
+            if is_estimated(spec):
+                # The gate issues verdicts (GATE: PASS/FAIL) against the
+                # spec's dimensions. A photo draft's dimensions are all
+                # ESTIMATED, and estimates may build a draft — never a
+                # verdict — so the gate refuses the draft outright
+                # rather than stamping one.
+                print("refusing to run the gate on a photo draft: every "
+                      "dimension in the spec is ESTIMATED, and the gate "
+                      "issues verdicts — confirm the dimensions against "
+                      "the real robot and update the spec first (the "
+                      "photo-draft banner in its description is what "
+                      "marks it as a draft)", file=sys.stderr)
+                return 1
             res = run_motion_check(spec, Path(args.workdir),
                                    drive_m=args.drive_m, turn_deg=args.turn_deg,
                                    wheel_radius_scale=args.inject_wheel_scale)

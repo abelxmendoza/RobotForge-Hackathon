@@ -55,7 +55,16 @@ def _spec(name):
 GROUND_BASELINE = {
     "andino": ["[INFO] all: spec passed all engineering checks"],
     "turtlebot3-burger": ["[INFO] all: spec passed all engineering checks"],
-    "photo-turtlebot": ["[INFO] all: spec passed all engineering checks"],
+    # photo-turtlebot is a photo draft (all dimensions ESTIMATED): it
+    # used to sit here with the clean-pass line, which encoded a bug —
+    # an estimated spec must never collect a verdict. It now earns the
+    # provenance WARN instead (see test_photo.py's honesty tests).
+    "photo-turtlebot": [
+        "[WARN] provenance.estimated_dimensions: every dimension in "
+        "this spec is ESTIMATED from a photo, not measured — the "
+        "checks ran against estimates, so this is not a verdict on "
+        "the real robot; confirm the dimensions before trusting "
+        "the spec"],
     "pathfinder": ["[INFO] all: spec passed all engineering checks"],
     "indoor-delivery-rover": ["[INFO] all: spec passed all engineering checks"],
     "broken-indoor-rover": [

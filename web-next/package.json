@@ -7,8 +7,9 @@
     "build": "next build",
     "sync-data": "node scripts/sync-data.mjs",
     "parity": "node scripts/parity.mjs",
-    "prebuild": "node scripts/sync-data.mjs",
-    "predev": "node scripts/sync-data.mjs"
+    "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
+    "predev": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
+    "sample-scan": "node scripts/make-sample-scan.mjs"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.5.0",

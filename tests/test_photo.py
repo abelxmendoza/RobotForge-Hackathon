@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from robotforge import cli
 from robotforge.photo import (DOCUMENT_INSTRUCTIONS, DOCUMENT_PREFIX,
+                              PHOTO_PREFIX,
                               DocumentDraft, PhotoDraft, SamRegion,
                               parse_document_payload, parse_photo_payload,
                               parse_sam_text, sam_text_from_stream)
@@ -241,3 +242,77 @@ def test_cli_describe_still_requires_text_or_photo():
         raise AssertionError("expected SystemExit from argparse")
     except SystemExit as exc:
         assert exc.code == 2
+
+
+# ------------------------------------------------------------------
+# honesty end-to-end: ESTIMATED may build a draft, never a verdict
+# ------------------------------------------------------------------
+
+PHOTO_EXAMPLE = Path(__file__).parent.parent / "examples" / \
+    "photo-turtlebot.json"
+BURGER_EXAMPLE = Path(__file__).parent.parent / "examples" / \
+    "turtlebot3-burger.json"
+
+
+def test_parse_photo_payload_stamps_estimated_prefix():
+    payload = _vision_payload()  # the pathfinder spec has no banner
+    draft = parse_photo_payload(payload)
+    assert draft.spec.description.startswith(PHOTO_PREFIX)
+    # and the shared predicate every consumer uses sees it as estimated
+    from robotforge.schema import spec_is_estimated
+    assert spec_is_estimated(draft.spec)
+
+
+def test_parse_photo_payload_rejects_nondict_spec():
+    bad = {"choices": [{"message": {"content": '{"spec": 4}'}}]}
+    try:
+        parse_photo_payload(bad)
+        raise AssertionError("expected SpecError for non-dict spec")
+    except SpecError:
+        pass
+
+
+def test_validate_estimated_spec_gets_no_clean_pass():
+    from robotforge.validate import validate
+    spec = RobotSpec.from_json(PHOTO_EXAMPLE.read_text())
+    lines = [f"[{f.severity}] {f.check}: {f.message}"
+             for f in validate(spec)]
+    assert any("provenance.estimated_dimensions" in ln for ln in lines)
+    assert not any("spec passed all engineering checks" in ln
+                   for ln in lines), lines
+
+
+def test_validate_measured_spec_still_passes_clean():
+    from robotforge.validate import validate
+    spec = RobotSpec.from_json(BURGER_EXAMPLE.read_text())
+    lines = [f"[{f.severity}] {f.check}: {f.message}"
+             for f in validate(spec)]
+    assert lines == ["[INFO] all: spec passed all engineering checks"]
+
+
+def test_cli_run_gate_refuses_photo_draft(tmp_path=None):
+    """The gate must refuse an ESTIMATED spec before the twin is even
+    spawned: no verdict, no gate report."""
+    import tempfile
+    workdir = Path(tempfile.mkdtemp()) / "gate"
+    called = {}
+    orig = cli.run_motion_check
+
+    def sentinel(*a, **k):
+        called["twin"] = True
+        raise AssertionError("twin must not run for a photo draft")
+
+    cli.run_motion_check = sentinel
+    try:
+        out, err = io.StringIO(), io.StringIO()
+        from contextlib import redirect_stderr
+        with redirect_stdout(out), redirect_stderr(err):
+            rc = cli.main(["run-gate", str(PHOTO_EXAMPLE),
+                           "--workdir", str(workdir)])
+    finally:
+        cli.run_motion_check = orig
+    assert rc == 1
+    assert "refusing to run the gate on a photo draft" in err.getvalue()
+    assert "ESTIMATED" in out.getvalue()  # the provenance WARN surfaced
+    assert "twin" not in called
+    assert not (workdir / "gate-report.json").exists()
