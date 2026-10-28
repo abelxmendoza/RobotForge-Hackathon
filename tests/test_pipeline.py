@@ -309,6 +309,10 @@ def _chain_env():
         "META_API_KEY": None,
         "RF_MODEL": None,
         "RF_BASETEN_MODEL": None,
+        "FIREWORKS_API_KEY": None,
+        "RF_FIREWORKS_ENABLED": None,
+        "RF_FIREWORKS_MODEL": None,
+        "RF_FIREWORKS_API_BASE": None,
     }
 
 
@@ -419,3 +423,199 @@ def test_describe_all_transports_fail_names_both_errors():
                 msg = str(exc)
     assert "meta-connector" in msg and "401" in msg
     assert "baseten" in msg and "boom-baseten" in msg
+
+
+# ---------------------------------------------------------------------------
+# Fireworks transport (all mocked — no live calls, no real key)
+# ---------------------------------------------------------------------------
+
+import io
+import urllib.error
+
+
+class _FakeFireworksResponse:
+    def __init__(self, payload):
+        self._body = json.dumps(payload).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        return self._body
+
+
+def _fireworks_env(**updates):
+    env = _chain_env()
+    env.update({
+        "FIREWORKS_API_KEY": "test-fireworks-key",
+        "RF_FIREWORKS_ENABLED": None,
+        "RF_FIREWORKS_MODEL": None,
+        "RF_FIREWORKS_API_BASE": None,
+    })
+    env.update(updates)
+    return env
+
+
+def _fireworks_payload(spec_dict=None):
+    return {"choices": [{"message": {
+        "content": json.dumps(spec_dict or _MOCK_LIVE_SPEC)}}]}
+
+
+def test_describe_forced_fireworks_uses_openai_compatible_api():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _fireworks_env(RF_DESCRIBE_TRANSPORT="fireworks")
+    requests = []
+
+    def fake_urlopen(req, timeout=None):
+        requests.append((req, timeout))
+        return _FakeFireworksResponse(_fireworks_payload())
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.subprocess, "run",
+                          side_effect=AssertionError(
+                              "connector helpers must not run")):
+            with patch.object(describe_mod.urllib.request, "urlopen",
+                              side_effect=fake_urlopen):
+                spec = describe_mod.describe_live("a small rover")
+
+    assert spec.name == "pathfinder-live"
+    assert not has_errors(validate(spec))
+    assert len(requests) == 1
+    req, timeout = requests[0]
+    assert timeout == 180
+    assert req.full_url == \
+        "https://api.fireworks.ai/inference/v1/chat/completions"
+    assert req.get_header("Authorization") == "Bearer test-fireworks-key"
+    sent = json.loads(req.data)
+    assert sent["model"] == "accounts/fireworks/models/muse-spark-open"
+    assert sent["temperature"] == 0.2
+    assert sent["max_tokens"] == 4000
+    assert sent["messages"][0]["role"] == "system"
+    assert sent["messages"][1] == {
+        "role": "user", "content": "a small rover"}
+
+
+def test_describe_fireworks_key_alone_is_not_a_silent_default():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _fireworks_env(
+        RF_META_API_HELPER=str(Path(__file__).with_name("does-not-exist.py")),
+        RF_BASETEN_HELPER=str(Path(__file__).with_name("also-missing.py")))
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.urllib.request, "urlopen",
+                          side_effect=AssertionError(
+                              "Fireworks must not be called")):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                msg = str(exc)
+    assert "Fireworks is opt-in" in msg
+    assert "RF_FIREWORKS_ENABLED=1" in msg
+
+
+def test_describe_fireworks_fallback_only_when_enabled():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _fireworks_env(
+        RF_FIREWORKS_ENABLED="1",
+        RF_BASETEN_HELPER=str(Path(__file__).with_name("does-not-exist.py")))
+    subprocess_calls = []
+
+    def fake_run(cmd, **kwargs):
+        subprocess_calls.append(cmd)
+        return type("P", (), {
+            "returncode": 0,
+            "stdout": json.dumps({"status": 401,
+                                  "payload": {"error": "invalid_api_key"}}),
+            "stderr": ""})()
+
+    def fake_urlopen(req, timeout=None):
+        return _FakeFireworksResponse(_fireworks_payload())
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.subprocess, "run",
+                          side_effect=fake_run):
+            with patch.object(describe_mod.urllib.request, "urlopen",
+                              side_effect=fake_urlopen):
+                spec = describe_mod.describe_live("a small rover")
+
+    assert spec.name == "pathfinder-live"
+    assert len(subprocess_calls) == 1  # Meta failed; Fireworks was next
+    assert subprocess_calls[0][1] == env["RF_META_API_HELPER"]
+
+
+def test_describe_forced_fireworks_missing_key_is_a_clean_error():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _fireworks_env(RF_DESCRIBE_TRANSPORT="fireworks",
+                         FIREWORKS_API_KEY=None)
+    with _describe_env(**env):
+        with patch.object(describe_mod.urllib.request, "urlopen",
+                          side_effect=AssertionError(
+                              "no HTTP call without a key")):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                msg = str(exc)
+    assert "fireworks" in msg
+    assert "FIREWORKS_API_KEY is not set" in msg
+
+
+def test_describe_fireworks_http_error_is_a_clean_spec_error():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _fireworks_env(RF_DESCRIBE_TRANSPORT="fireworks")
+
+    def fake_urlopen(req, timeout=None):
+        raise urllib.error.HTTPError(
+            req.full_url, 429, "Too Many Requests", {},
+            io.BytesIO(b'{"error":"rate limited"}'))
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.urllib.request, "urlopen",
+                          side_effect=fake_urlopen):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                msg = str(exc)
+    assert "Fireworks API returned HTTP 429" in msg
+    assert "rate limited" in msg
+
+
+def test_describe_fireworks_unexpected_payload_is_a_clean_spec_error():
+    from unittest.mock import patch
+
+    from robotforge import describe as describe_mod
+
+    env = _fireworks_env(RF_DESCRIBE_TRANSPORT="fireworks")
+
+    def fake_urlopen(req, timeout=None):
+        return _FakeFireworksResponse({"choices": []})
+
+    with _describe_env(**env):
+        with patch.object(describe_mod.urllib.request, "urlopen",
+                          side_effect=fake_urlopen):
+            try:
+                describe_mod.describe_live("a small rover")
+                raise AssertionError("expected SpecError")
+            except SpecError as exc:
+                msg = str(exc)
+    assert "Fireworks API returned an unexpected response" in msg
