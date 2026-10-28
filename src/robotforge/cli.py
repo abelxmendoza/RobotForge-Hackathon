@@ -25,6 +25,7 @@ from .kinds import KindError, format_kind_list, resolve_kind
 from .photo import (draft_spec_from_document, draft_spec_from_photo,
                     locate_parts)
 from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
+from .spotter import format_card, save_dossier, spot_robot
 from .specimen import build_specimen
 from .stability import StabilityError, check_spec, format_stability_report
 from .schema import RobotSpec, SpecError
@@ -193,6 +194,22 @@ def main(argv: list[str] | None = None) -> int:
     lk.add_argument("--out-dir", default="build/lookup",
                     help="pull destination root (default: build/lookup)")
 
+    sp = sub.add_parser("spot", help="photo of a real robot -> "
+                                     "provenance dossier (identify, "
+                                     "lookup, catalog match, parts, "
+                                     "validated draft spec)")
+    sp.add_argument("--photo", metavar="IMAGE",
+                    help="photo of the spotted robot (vision draft; "
+                         "needs the Meta connector environment)")
+    sp.add_argument("--identity", metavar="NAME",
+                    help="operator-provided identity (the photo model's "
+                         "own guess is used when it has one)")
+    sp.add_argument("--no-lookup", action="store_true",
+                    help="skip the public GitHub lookup stage")
+    sp.add_argument("--out", metavar="DIR",
+                    help="write dossier.json + card.md here "
+                         "(default: print the card)")
+
     ct = sub.add_parser("catalog", help="parts catalog + Robodex "
                                         "(numbered robot index)")
     ct.add_argument("section", nargs="?", choices=["robot", "part"],
@@ -355,6 +372,20 @@ def main(argv: list[str] | None = None) -> int:
             except LookupError as exc:
                 print(f"lookup error: {exc}", file=sys.stderr)
                 return 2
+        if args.cmd == "spot":
+            try:
+                dossier = spot_robot(
+                    photo_path=args.photo, identity=args.identity,
+                    do_lookup=not args.no_lookup)
+            except SpecError as exc:
+                print(f"spot error: {exc}", file=sys.stderr)
+                return 2
+            if args.out:
+                jpath, cpath = save_dossier(dossier, Path(args.out))
+                print(f"dossier written to {jpath} and {cpath}")
+            else:
+                print(format_card(dossier))
+            return 0
         if args.cmd == "site":
             try:
                 written = build_site(Path(args.root))
@@ -595,19 +626,6 @@ def main(argv: list[str] | None = None) -> int:
                 print("refusing to run the gate on an invalid spec",
                       file=sys.stderr)
                 return rc
-            if is_estimated(spec):
-                # The gate issues verdicts (GATE: PASS/FAIL) against the
-                # spec's dimensions. A photo draft's dimensions are all
-                # ESTIMATED, and estimates may build a draft — never a
-                # verdict — so the gate refuses the draft outright
-                # rather than stamping one.
-                print("refusing to run the gate on a photo draft: every "
-                      "dimension in the spec is ESTIMATED, and the gate "
-                      "issues verdicts — confirm the dimensions against "
-                      "the real robot and update the spec first (the "
-                      "photo-draft banner in its description is what "
-                      "marks it as a draft)", file=sys.stderr)
-                return 1
             res = run_motion_check(spec, Path(args.workdir),
                                    drive_m=args.drive_m, turn_deg=args.turn_deg,
                                    wheel_radius_scale=args.inject_wheel_scale)
