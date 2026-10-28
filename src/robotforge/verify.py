@@ -101,6 +101,25 @@ def _first(items, slot):
     return next((i for i in items if i.slot == slot), None)
 
 
+def _bec_source(items):
+    """First item that actually evidences a regulated (BEC) rail.
+
+    Mirrors suggest_wiring() in listimport.py: a PDB rail counts only
+    when a BEC is named (the bec_5v spec identify() parses from the
+    title, or a BEC named in a power module / ESC title). A title that
+    negates the BEC ("without BEC", "no BEC") is not evidence."""
+    for it in items:
+        if it.slot in ("pdb", "power_module") and it.specs.get("bec_5v"):
+            return it, "its named 5V BEC"
+    for it in items:
+        if it.slot not in ("pdb", "power_module", "esc"):
+            continue
+        low = re.sub(r"\b(without|no|not an?|non)-?\s*bec\b", "", it.title.lower())
+        if "bec" in low:
+            return it, "a BEC named in its listing title"
+    return None, None
+
+
 def _cells_range(text: str):
     m = re.search(r"(\d)\s?-\s?(\d)\s?s", text.lower())
     return (int(m.group(1)), int(m.group(2))) if m else None
@@ -114,6 +133,10 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
                        "flags": flags or []})
 
     motor = _first(items, "motor")
+    # Motors may be listed as separate entries (one line per motor)
+    # rather than a single multi-pack line; quantities aggregate
+    # across every motor-slot entry so equivalent lists score alike.
+    motor_qty = sum(i.qty for i in items if i.slot == "motor")
     esc = _first(items, "esc")
     batt = _first(items, "battery")
     frame = _first(items, "frame")
@@ -126,14 +149,15 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
     # 1. voltage chain ------------------------------------------------
     if motor and batt and batt.specs.get("cells"):
         cells_field = _dossier_field(verified, "motor", "cells")
+        motor_range = _range(cells_field["values"][0]["value"]) \
+            if cells_field else None
         esc_range = _cells_range(esc.title) if esc else None
         b = batt.specs["cells"]
         problems = []
-        if cells_field:
-            rng = _range(cells_field["values"][0]["value"])
-            if rng and not (rng[0] <= b <= rng[1]):
-                problems.append(f"battery {b}S is outside the motor's "
-                                f"sourced cell range {rng[0]:.0f}-{rng[1]:.0f}S")
+        if motor_range and not (motor_range[0] <= b <= motor_range[1]):
+            problems.append(f"battery {b}S is outside the motor's "
+                            f"sourced cell range {motor_range[0]:.0f}-"
+                            f"{motor_range[1]:.0f}S")
         if esc_range and not (esc_range[0] <= b <= esc_range[1]):
             problems.append(f"battery {b}S is outside the ESC's "
                             f"{esc_range[0]}-{esc_range[1]}S range")
@@ -144,11 +168,19 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
                          "(kept visible in the dossier)")
         if problems:
             add("voltage_chain", FAIL, "; ".join(problems), flags)
-        elif cells_field or esc_range:
+        elif motor_range and esc_range:
             add("voltage_chain", PASS,
                 f"battery {b}S sits inside the motor and ESC ranges", flags)
         else:
-            add("voltage_chain", MISSING_DATA, "no cell ranges sourced")
+            unknown = []
+            if not motor_range:
+                unknown.append("motor cell range")
+            if not esc_range:
+                unknown.append("ESC cell range")
+            add("voltage_chain", MISSING_DATA,
+                f"battery {b}S shows no demonstrated mismatch, but the "
+                f"{' and '.join(unknown)} is unknown — the chain cannot "
+                f"be certified on partial data", flags)
     else:
         add("voltage_chain", MISSING_DATA, "motor or battery not identified")
 
@@ -180,7 +212,7 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
         tc = _dossier_field(verified, "motor", "max_current_test_a")
         if tc:
             peak = max(v["value"] for v in tc["values"])
-            est_draw = 4 * peak * 1.24  # 3S test data scaled to a 4S pack
+            est_draw = (motor_qty or 4) * peak * 1.24  # 3S -> 4S scale
             add("battery_discharge",
                 PASS if avail >= est_draw * 1.5 else
                 (MARGINAL if avail >= est_draw else FAIL),
@@ -237,18 +269,29 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
 
     # 6. power rails ----------------------------------------------------
     if esc:
-        if "opto" in esc.title.lower():
+        bec_item, bec_how = _bec_source(items)
+        if bec_item:
+            add("power_rails", PASS,
+                f"a regulated 5V rail is evidenced by the "
+                f"{bec_item.slot.replace('_', ' ')} ({bec_how}: "
+                f"{bec_item.title[:50]})")
+        elif "opto" in esc.title.lower():
             if pdb or pm:
-                add("power_rails", PASS,
-                    "ESCs are OPTO (no BEC); the PDB/power module "
-                    "provides the FC's regulated rail")
+                add("power_rails", MARGINAL,
+                    "ESCs are OPTO (no BEC) and a PDB/power module is "
+                    "present, but neither names a BEC — the FC's 5V "
+                    "rail is UNVERIFIED; confirm one has a 5V BEC "
+                    "before powering the flight controller")
             else:
                 add("power_rails", FAIL,
                     "ESCs are OPTO (no BEC) and no PDB or power module "
                     "is present to power the flight controller")
         else:
-            add("power_rails", PASS,
-                "ESCs are not OPTO-only; a BEC source exists in the set")
+            add("power_rails", MARGINAL,
+                "the ESCs are not OPTO-only, but no BEC is named "
+                "anywhere in the set — a BEC is not established by "
+                "the absence of OPTO, so the FC's 5V rail is "
+                "UNVERIFIED")
     else:
         add("power_rails", MISSING_DATA, "ESC not identified")
 
@@ -288,7 +331,7 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
     if frame and fw and motor and batt:
         hi = _range(fw["values"][0]["value"])[1]
         frame_w = 282
-        motor_w = 55 * motor.qty
+        motor_w = 55 * motor_qty
         esc_w = 25 * (esc.qty if esc else 4)
         batt_w = 350  # ESTIMATED class figure for a 4S 3300 pack
         misc_w = 240  # ESTIMATED: PDB, module, FC, wiring, props
@@ -304,18 +347,23 @@ def check_compatibility(items, verified: list[dict]) -> list[dict]:
         th = _dossier_field(verified, "motor", "max_thrust_g")
         if th:
             low = min(v["value"] for v in th["values"])
-            total = low * motor.qty
+            total = low * motor_qty
             ratio = total / auw
             verdict = PASS if ratio >= 1.5 else \
                 (MARGINAL if ratio >= 1.15 else FAIL)
-            if th["tier"] == CONFLICT and ratio >= 1.0 and \
+            if th["tier"] == CONFLICT and verdict == PASS:
+                # The sources disagree on thrust, so even a strong
+                # ratio cannot be certified — MARGINAL is the cap
+                # until the conflict is resolved.
+                verdict = MARGINAL
+            elif th["tier"] == CONFLICT and ratio >= 1.0 and \
                     verdict == FAIL:
                 # The floor figure says it lifts, but the sources
                 # disagree too much to call the margin a failure —
                 # MARGINAL is the honest verdict until better data.
                 verdict = MARGINAL
             add("thrust_margin", verdict,
-                f"most pessimistic sourced thrust {low:.0f}g x{motor.qty} "
+                f"most pessimistic sourced thrust {low:.0f}g x{motor_qty} "
                 f"= {total:.0f}g vs AUW ~{auw:.0f}g (ratio {ratio:.2f}); "
                 f"thrust figures are CONFLICT-tier across sources and "
                 f"were measured at 3S voltages, so this is a floor, "
