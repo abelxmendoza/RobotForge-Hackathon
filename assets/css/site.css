@@ -7,7 +7,7 @@ section{scroll-margin-top:80px}
 /* ---------- header ---------- */
 .site-header{
   position:sticky;top:0;z-index:40;
-  background:rgba(15,17,21,.82);backdrop-filter:saturate(1.4) blur(10px);
+  background:rgba(11,20,32,.85);backdrop-filter:saturate(1.4) blur(10px);
   border-bottom:1px solid transparent;transition:border-color .2s var(--ease);
 }
 .site-header.scrolled{border-bottom-color:var(--border)}
@@ -20,12 +20,14 @@ section{scroll-margin-top:80px}
 .site-nav a{color:var(--text-muted);font-size:var(--fs-sm);font-weight:500;padding:8px 12px;border-radius:8px}
 .site-nav a:hover{color:var(--text);text-decoration:none;background:var(--surface)}
 .site-header .btn-primary{padding:10px 16px}
+.site-header .btn-app{padding:10px 16px}
+@media (max-width:900px){.site-header .btn-app{display:none}}
 
 /* ---------- hero ---------- */
 .hero{padding:var(--s9) 0 var(--s8);text-align:center}
 .hero .eyebrow{color:var(--accent)}
 .hero h1{font-size:clamp(40px,7vw,var(--fs-3xl));letter-spacing:-.035em;line-height:1.04;margin:var(--s4) auto 0;max-width:15ch}
-.hero .lede{font-size:var(--fs-lg);color:var(--text-muted);max-width:56ch;margin:var(--s5) auto 0;line-height:1.55}
+.hero .lede{font-size:var(--fs-lg);color:var(--text);max-width:56ch;margin:var(--s5) auto 0;line-height:1.55}
 .hero .ctas{display:flex;gap:var(--s3);justify-content:center;flex-wrap:wrap;margin-top:var(--s6)}
 .hero .ctas .btn{padding:14px 22px;font-size:var(--fs-md)}
 .hero .powered{margin-top:var(--s5);color:var(--text-faint);font-size:var(--fs-xs)}
@@ -61,7 +63,7 @@ section{scroll-margin-top:80px}
 .pipeline{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:var(--s7)}
 .pipeline .node{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font:600 var(--fs-sm)/1.2 var(--font)}
 .pipeline .node small{display:block;color:var(--text-faint);font:500 12px/1.4 var(--mono);margin-top:3px}
-.pipeline .node.ai{border-color:rgba(245,158,11,.5);background:var(--accent-soft)}
+.pipeline .node.ai{border-color:rgba(66,214,196,.5);background:var(--accent-soft)}
 .pipeline .node.gate{border-color:rgba(52,211,153,.5);background:var(--pass-soft)}
 .pipeline .arrow{color:var(--text-faint);padding:0 10px;font-family:var(--mono)}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}

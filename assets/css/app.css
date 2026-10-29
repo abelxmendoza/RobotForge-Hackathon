@@ -43,7 +43,7 @@ body.app{min-height:100vh}
 .topbar{
   position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:var(--s3);
   height:56px;padding:0 var(--s6);border-bottom:1px solid var(--border);
-  background:rgba(15,17,21,.85);backdrop-filter:blur(10px);
+  background:rgba(11,20,32,.87);backdrop-filter:blur(10px);
 }
 .crumbs{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--text-faint);min-width:0}
 .crumbs a{color:var(--text-muted)}
@@ -217,7 +217,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .wire-badtag{fill:var(--fail);font-size:10.5px;font-weight:700;pointer-events:none}
 @keyframes wireflow{to{stroke-dashoffset:-24}}
 .node-chip{cursor:pointer}
-.node-chip rect{fill:#1e222a;stroke:#454c59;stroke-width:1.2}
+.node-chip rect{fill:#1b2e42;stroke:#4a6a86;stroke-width:1.2}
 .node-chip text.nl{fill:#eceef2;font-size:10.5px}
 .node-chip text.req{fill:#9aa3ae;font-size:9px;font-family:var(--mono)}
 .node-chip.on rect{stroke:var(--accent)}
@@ -247,13 +247,13 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .wv-cable.dead,.wv-node.dead{opacity:.22}
 .wv-node.dead rect{stroke-dasharray:4 3}
 .wv-chip{opacity:0;pointer-events:none}
-.wv-chip rect{fill:#1e222a;stroke:#454c59}
+.wv-chip rect{fill:#1b2e42;stroke:#4a6a86}
 .wv-chip text{fill:#eceef2;font-size:10px;font-family:var(--mono)}
 .wv[data-mode="full"] .wv-chip{opacity:1}
 .wv-cable:hover .wv-chip,.wv-cable.sel .wv-chip{opacity:1}
 .wv-badtag{fill:var(--fail);font-size:10.5px;font-weight:700;pointer-events:none}
 .wv-node{cursor:pointer}
-.wv-node rect{fill:#1e222a;stroke:#454c59;stroke-width:1.2}
+.wv-node rect{fill:#1b2e42;stroke:#4a6a86;stroke-width:1.2}
 .wv-node text.wv-nl{fill:#eceef2;font-size:11px}
 .wv-node text.wv-req{fill:#9aa3ae;font-size:9px;font-family:var(--mono)}
 .wv-node.on rect{stroke:var(--accent)}

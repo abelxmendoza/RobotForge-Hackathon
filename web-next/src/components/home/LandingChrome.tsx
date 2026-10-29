@@ -43,6 +43,7 @@ export function LandingHeader() {
           <a href={RESEARCH_URL}>Research</a>
           <a href={REPO_URL}>GitHub</a>
         </nav>
+        <Link className="btn btn-app" href="/forge/">Open the app</Link>
         <Link className="btn btn-primary" href="/demo/">Run the demo &rarr;</Link>
         <details className="site-menu">
           <summary aria-label="Menu">

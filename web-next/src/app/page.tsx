@@ -47,22 +47,25 @@ export default function HomePage() {
             holds, and a simulated twin has to pass a measured motion test.
           </p>
           <div className="ctas">
-            <Link className="btn btn-primary" href="/demo/">
-              Run the demo →
+            <Link className="btn btn-primary" href="/forge/">
+              Open the app →
             </Link>
-            <Link className="btn" href="/forge/">
-              Open the app
+            <Link className="btn" href="/demo/">
+              Run the demo
             </Link>
           </div>
-          <figure className="hero-art hero-shot">
+          <figure className="hero-art">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={assetPath("assets/img/demo-shot.jpg")}
-              width={872}
-              height={640}
-              alt="The one-click demo: the engineering checks flag a voltage mismatch and a clearance error, and the Forge loop fixes both in one round"
+              src={assetPath("assets/img/hero.jpg")}
+              width={900}
+              height={386}
+              alt="Illustration of a rugged four-wheel rover on a workbench"
             />
-            <figcaption>The one-click demo, mid-run.</figcaption>
+            <figcaption>
+              AI illustration (muse-image-1.0). The real robots in the app
+              carry real, credited photos.
+            </figcaption>
           </figure>
         </div>
       </section>
@@ -287,13 +290,39 @@ export default function HomePage() {
             The demo runs the whole story: the checks catch the mistakes,
             Muse Spark proposes the fix, and the checks decide.
           </p>
-          <Link
-            className="btn btn-primary"
-            href="/demo/"
-            style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--s3)",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
           >
-            Run the demo →
-          </Link>
+            <Link
+              className="btn btn-primary"
+              href="/demo/"
+              style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
+            >
+              Run the demo →
+            </Link>
+            <Link
+              className="btn"
+              href="/forge/"
+              style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
+            >
+              Open the app →
+            </Link>
+          </div>
+          <figure className="hero-art hero-shot" style={{ marginTop: "var(--s7)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetPath("assets/img/demo-shot.jpg")}
+              width={872}
+              height={640}
+              alt="The one-click demo: the engineering checks flag a voltage mismatch and a clearance error, and the Forge loop fixes both in one round"
+            />
+            <figcaption>The one-click demo, mid-run.</figcaption>
+          </figure>
         </div>
       </section>
     </main>

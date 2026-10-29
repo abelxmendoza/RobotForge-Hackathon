@@ -23,7 +23,7 @@
 
 /* --- placeholders shimmer --- */
 @keyframes rf-shimmer{from{background-position:-400px 0}to{background-position:400px 0}}
-.ph.ai:empty{background:linear-gradient(100deg,var(--surface-2) 40%,rgba(245,158,11,.10) 50%,var(--surface-2) 60%);
+.ph.ai:empty{background:linear-gradient(100deg,var(--surface-2) 40%,rgba(66,214,196,.10) 50%,var(--surface-2) 60%);
   background-size:800px 100%;animation:rf-shimmer 2.4s linear infinite}
 
 /* --- hero float (landing) --- */
