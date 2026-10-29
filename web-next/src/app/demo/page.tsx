@@ -3,6 +3,7 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import Demo from "@/components/demo/Demo";
+import AiInside from "@/components/home/AiInside";
 
 export const metadata: Metadata = {
   title: "Demo",
@@ -24,6 +25,10 @@ export default function DemoPage() {
         </div>
       </div>
       <Demo />
+      <section className="demo-ai" aria-labelledby="demo-ai-h">
+        <h2 id="demo-ai-h">AI inside RobotForge</h2>
+        <AiInside />
+      </section>
     </AppShell>
   );
 }

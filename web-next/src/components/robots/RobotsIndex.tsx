@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Term from "@/components/shell/Term";
 import { useDispatch, useSelector } from "react-redux";
 import { families, parts, robotSlug, robots } from "@/lib/data";
 import { describeSignature } from "@/lib/grouping";
@@ -49,7 +50,7 @@ export default function RobotsIndex() {
       <div className="page-head">
         <div>
           <div className="eyebrow">Robots</div>
-          <h1>Robodex</h1>
+          <h1><Term k="robodex">Robodex</Term></h1>
           <p className="lede">
             Every robot the forge knows, numbered in the order it learned them.
             Badges come only from recorded gate runs. A robot with no run says

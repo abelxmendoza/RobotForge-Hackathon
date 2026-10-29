@@ -674,3 +674,23 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .demo-kv{margin-top:var(--s2)}
 .demo-ev{list-style:none;padding:0;display:grid;gap:6px;font-size:var(--fs-sm)}
 .demo-end{display:flex;flex-wrap:wrap;gap:var(--s3);align-items:center;margin:var(--s5) 0}
+
+/* AI inside panel (components/home/AiInside.tsx) */
+.ai-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:var(--s5);align-items:start}
+.ai-table td{vertical-align:top}
+.ai-not{border:1px solid var(--border);border-radius:var(--r);padding:var(--s4);background:var(--surface)}
+.ai-not h3{margin:0 0 var(--s2);font-size:var(--fs-md)}
+.ai-not ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:var(--fs-sm)}
+.demo-ai{margin:var(--s7) 0 var(--s5)}
+.demo-ai h2{font-size:var(--fs-lg);margin-bottom:var(--s3)}
+@media (max-width:860px){.ai-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Plain-English terms (components/shell/Term.tsx) */
+.term{position:relative;border-bottom:1px dotted currentColor;cursor:help;outline:none}
+.term-tip{display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:30;width:max-content;max-width:300px;padding:8px 10px;border-radius:8px;background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text);font:400 13px/1.45 var(--font);letter-spacing:0;text-transform:none;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.term:hover .term-tip,.term:focus .term-tip,.term:focus-within .term-tip{display:block}
+@media (max-width:700px){.term-tip{position:fixed;left:16px;right:16px;top:auto;bottom:16px;width:auto;max-width:none}}
+.glossary{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--s3);margin:0}
+.glossary>div{border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--s3) var(--s4);background:var(--surface)}
+.glossary dt{font-weight:600;color:var(--text);margin-bottom:4px}
+.glossary dd{margin:0;color:var(--text-muted);font-size:var(--fs-sm)}

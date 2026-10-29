@@ -20,6 +20,7 @@ import { checkRover, type RoverCheck } from '@/lib/rover';
 import { diffSpecs, fmtValue, GARAGE_KEY, type GarageRobot, type Spec } from '@/lib/garage';
 import { readStore, uid, writeStore } from '@/lib/store';
 import { gateReports } from '@/lib/data';
+import Term from '@/components/shell/Term';
 
 /* The robot the demo runs. Omega1 takes this slot once its measured
  * spec is in the repo; until then a repo rover with two real-world
@@ -139,7 +140,7 @@ export default function Demo() {
         </li>
 
         <li className={before.length ? 'on' : ''}>
-          <h2><span className="n">2</span> Engineering checks catch it</h2>
+          <h2><span className="n">2</span> <Term k="checks">Engineering checks</Term> catch it</h2>
           {before.length ? (
             <>
               <p>{errorsBefore} error{errorsBefore === 1 ? '' : 's'} and {warnsBefore} warning{warnsBefore === 1 ? '' : 's'}, found by deterministic checks in your browser. No AI involved yet.</p>
@@ -149,7 +150,7 @@ export default function Demo() {
         </li>
 
         <li className={rounds.length || stage === 'running' ? 'on' : ''}>
-          <h2><span className="n">3</span> Muse Spark proposes a fix</h2>
+          <h2><span className="n">3</span> Muse Spark proposes a fix (<Term k="forge_loop">Forge loop</Term>)</h2>
           <p className="faint g-small">The model may only change an allow-listed set of fields, at most three rounds. It proposes; it never decides.</p>
           {(stage === 'running' || loop) ? <LoopView res={loop} rounds={rounds} running={stage === 'running'} live={lm.mode === 'live'} /> : <p className="faint">Waiting for step 2.</p>}
         </li>
@@ -178,7 +179,7 @@ export default function Demo() {
         </li>
 
         <li className={loop ? 'on' : ''}>
-          <h2><span className="n">6</span> Simulation evidence <span className="fbadge recorded">RECORDED</span></h2>
+          <h2><span className="n">6</span> <Term k="gate">Simulation evidence</Term> <span className="fbadge recorded">RECORDED</span></h2>
           {loop && evDoc ? (
             <>
               <p>{DEMO.evidenceNote}</p>

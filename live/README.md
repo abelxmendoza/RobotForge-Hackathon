@@ -77,7 +77,7 @@ badged MEASURED (scan)).
   inputs are length-capped (describe 4000 chars, chat 2000, list
   8000).
 - **Daily budget:** a Workers KV counter caps total live calls per
-  UTC day (`DAILY_LIMIT`, default 200) across *all* routes, plus a
+  UTC day (`DAILY_LIMIT`; 450 in `wrangler.toml` for judging week, 200 when unset) across *all* routes, plus a
   per-visitor cap (`PER_IP_DAILY_LIMIT`, default 30). Over budget →
   `503`, and the site falls back to recorded/local modes and says
   so. Counters increment *before* the model call (slow/failed calls
@@ -127,13 +127,16 @@ never paste it into chat, a file, or a commit).
 
 - Cloudflare's free tier includes 100,000 Worker requests/day and
   KV's 100,000 reads / 1,000 writes per day. The defaults here
-  (200 live calls/day, 30/visitor) sit far below both; long model
+  (450 live calls/day during judging, 30/visitor) stay below both:
+  each live call writes two KV counters, so 450 calls is 900 of the
+  1,000 free daily writes. Do not raise `DAILY_LIMIT` past ~480 on
+  the free KV tier. Long model
   waits are network time, not Worker CPU, so they don't threaten
   the CPU limits either. If limits ever bite, Workers Paid is
   $5/month — you would see it coming in `/health`'s budget numbers
   long before.
 - The real spend is Baseten (and Meta, if photo is on) credits:
-  at the default cap, at most 200 model calls a day can ever be
+  at the current cap, at most 450 model calls a day can ever be
   made through this endpoint, whoever asks. A typical describe
   call is a few thousand tokens.
 - Strangers *can* call the endpoint directly (CORS stops other
