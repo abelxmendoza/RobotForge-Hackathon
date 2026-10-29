@@ -40,3 +40,8 @@ for (const [folder, out] of [["harness-reports", "harness-reports.json"],
   writeFileSync(join(root, "src", "data", out), JSON.stringify(map));
 }
 console.log("sync-data: catalog JSON, assets/ and stylesheets synced");
+
+const robotRecords = JSON.parse(readFileSync(join(repo,"catalog","robots.json"),"utf8")).robots;
+const specs = Object.fromEntries(robotRecords.filter(r=>r.spec_file).map(r=>[r.spec_file,JSON.parse(readFileSync(join(repo,r.spec_file),"utf8"))]));
+writeFileSync(join(root,"src","data","robot-specs.json"),JSON.stringify(specs));
+copyFileSync(join(repo,"catalog","suppliers.json"),join(root,"src","data","suppliers.json"));

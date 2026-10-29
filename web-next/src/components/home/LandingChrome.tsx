@@ -1,7 +1,6 @@
 "use client";
 import { useEffect } from "react";
 import Link from "next/link";
-import ChatLauncher from "@/components/chat/ChatLauncher";
 import RevealInit from "@/components/shell/RevealInit";
 import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
 import { BASE_PATH } from "./asset";
@@ -49,5 +48,5 @@ export function LandingFooter() {
 }
 
 export default function LandingChrome() {
-  return (<><ChatLauncher /><RevealInit /></>);
+  return (<><RevealInit /></>);
 }

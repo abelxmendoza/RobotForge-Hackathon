@@ -27,18 +27,12 @@ export default function ForgePage() {
       <div className="page-head">
         <div>
           <div className="eyebrow">Forge</div>
-          <h1>Talk to the forge</h1>
-          <p className="lede">
-            One conversation: describe a robot in words, or attach a photo, a
-            parts list, a spec file, or a 3D scan. A photo of a spec sheet or
-            blueprint is read as a document — printed values transcribed, never
-            inferred from drawing scale — and a scan (.ply) is measured right
-            in your browser. Every stage of every run wears the badge it
-            earned — <strong>LIVE</strong> (a real model call through the live
-            endpoint), <strong>LOCAL</strong> (real computation in your
-            browser) or <strong>RECORDED</strong> (a replayed run, labeled with
-            its date). Nothing wears a badge it didn’t earn.
-          </p>
+          <h1>One chat. Every part of your build.</h1>
+          <p className="lede">Describe an idea, ask about parts, or explore your data. Your robot work comes together in one conversation.</p>
+          <details className="workshop-help"><summary>How your robot moves through the forge</summary>
+            <p>Describe → Draft a spec → Check the numbers → Review simulation evidence → Explore outputs.</p>
+            <p>Each result is labeled LIVE, LOCAL, or RECORDED. Photos use estimated dimensions; document photos use printed values. Simulation verdicts come from recorded runs.</p>
+          </details>
         </div>
       </div>
       <ForgeThread />

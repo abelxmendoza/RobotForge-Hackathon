@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build && node scripts/copy-vanilla.mjs",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack && node scripts/copy-vanilla.mjs",
     "sync-data": "node scripts/sync-data.mjs",
     "parity": "node scripts/parity.mjs",
     "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
@@ -17,6 +17,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-redux": "^9.2.0",
+    "read-excel-file": "9.3.12",
     "three": "^0.160.0"
   },
   "devDependencies": {

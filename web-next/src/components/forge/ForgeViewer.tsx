@@ -5,6 +5,7 @@
  * slider starting at 20 mm), click a part for its detail. The
  * electrical overlay stays off in the thread, exactly as vanilla. */
 import { useMemo, useState } from 'react';
+import Robot3D from '../kit/Robot3D';
 import type { MouseEvent } from 'react';
 import { ROOT } from './model';
 import type { RobotSpec } from './model';
@@ -18,6 +19,8 @@ import {
 import type { TaPart } from '../kit/takeapart';
 
 export function ForgeViewer({ spec }: { spec: RobotSpec }) {
+  const [show3D, setShow3D] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
   const [explode, setExplode] = useState(20);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [detail, setDetail] = useState<TaPart | null>(null);
@@ -56,7 +59,23 @@ export function ForgeViewer({ spec }: { spec: RobotSpec }) {
         />
         <output>{explode} mm</output>
       </div>
-      <div onClick={onViewsClick}>
+      <div className="ta-controls">
+        <button type="button" aria-pressed={show3D} disabled={unavailable}
+          onClick={() => setShow3D((value) => !value)}>
+          {show3D ? 'Show side / top views' : 'Show interactive 3D'}
+        </button>
+        <span className="muted">Spec-based geometry · sensor sizes are assumptions · physics requires a gate run</span>
+      </div>
+      {unavailable && <p role="status">3D unavailable here. Side and top views remain available.</p>}
+      {show3D && !unavailable && (
+        <Robot3D spec={spec} explode={explode} selected={highlight}
+          onSelect={(id) => {
+            setHighlight(id);
+            setDetail(built.parts.find((part) => part.id === id) ?? null);
+          }}
+          onFail={() => { setUnavailable(true); setShow3D(false); }} />
+      )}
+      <div onClick={onViewsClick} hidden={show3D && !unavailable}>
         <div
           className="fv-side"
           dangerouslySetInnerHTML={{ __html: side }}

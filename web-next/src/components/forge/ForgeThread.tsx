@@ -27,14 +27,21 @@
  * contract. */
 import {
   useCallback,
+  useMemo,
   useEffect,
   useRef,
   useState,
 } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { useDispatch } from 'react-redux';
-import { setStep, setTab } from '@/store/forgeSlice';
+import Link from 'next/link';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
+import { useTables } from '../workspace/useTables';
+import { groundedAnswer, makeContext } from '../chat/grounded';
+import { buildCatalogEngine } from '../chat/catalogEngine';
+import PhotoCapture from "../photo/PhotoCapture";
+import { setStep, setTab, setActiveRobot } from '@/store/forgeSlice';
 import { BADGE_LABEL, downloadJSON } from './model';
 import type {
   Badge,
@@ -59,7 +66,7 @@ import GroupingCard from './GroupingCard';
 
 const ScanView = dynamic(() => import('./ScanView'), { ssr: false });
 
-type AttachKind = 'photo' | 'doc' | 'spec' | 'scan';
+type AttachKind = 'photo' | 'robotPhoto' | 'documentPhoto' | 'doc' | 'spec' | 'scan';
 
 interface Entry {
   id: number;
@@ -281,7 +288,15 @@ function downscale(dataUrl: string, maxDim: number): Promise<string> {
 
 export default function ForgeThread() {
   const dispatch = useDispatch();
+  const engine = useMemo(buildCatalogEngine, []);
+  const tables = useTables();
+  const activeSpec = useSelector((s: RootState) => s.forge.activeSpec);
+  const selectedTable = useSelector((s: RootState) => s.workspace.selectedTable);
+  const table = tables.find(t => t.id === selectedTable) ?? tables[0];
+  const [intent, setIntent] = useState<'build' | 'ask'>('build');
+  const [answering, setAnswering] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [captureOpen,setCaptureOpen]=useState(false);
   const [status, setStatus] = useState('Checking what this deployment can do…');
   const [text, setText] = useState('');
   const [attach, setAttach] = useState<{ kind: AttachKind; file: File } | null>(
@@ -467,13 +482,14 @@ export default function ForgeThread() {
   );
   const specPipeline = useCallback(
     (spec: RobotSpec, filename: string): ValidateResult => {
+      dispatch(setActiveRobot({spec,source:filename}));
       const res = checksStage(spec);
       if (!res.schemaErrors) viewerStage(spec);
       gateNote();
       outputsStage(spec, filename);
       return res;
     },
-    [checksStage, viewerStage, gateNote, outputsStage],
+    [dispatch,checksStage, viewerStage, gateNote, outputsStage],
   );
 
   /* ---------------- recorded sample replay ---------------- */
@@ -777,6 +793,7 @@ export default function ForgeThread() {
         const secs = Math.round(
           (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
         );
+        dispatch(setActiveRobot({spec:body.draft.spec,source:"DOCUMENT-READ: printed values only"}));
         renderDocDraft(cardId, body.draft, secs);
       } catch (e) {
         setStageBody(
@@ -800,7 +817,7 @@ export default function ForgeThread() {
   );
 
   const runPhoto = useCallback(
-    async (file: File, noteText: string) => {
+    async (file: File, noteText: string, robotMode=false) => {
       beginRun('Photo');
       let dataUrl: string;
       try {
@@ -818,7 +835,7 @@ export default function ForgeThread() {
           {noteText ? <p>{noteText}</p> : null}
         </>,
       );
-      const mode = await choosePhotoMode();
+      const mode = robotMode ? 'robot' : await choosePhotoMode();
       if (mode === 'document') {
         await runPhotoDocument(noteText, dataUrl);
         return;
@@ -854,6 +871,7 @@ export default function ForgeThread() {
           (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
         );
         const draft = body.draft;
+        dispatch(setActiveRobot({spec:draft.spec,source:'Photo/document intake'}));
         setStageBody(
           cardId,
           <>
@@ -1186,9 +1204,9 @@ export default function ForgeThread() {
 
   /* ---------------- composer + init ---------------- */
   const attachLabel = (kind: AttachKind) =>
-    kind === 'photo'
+    (kind === 'photo'||kind==='robotPhoto')
       ? 'Photo'
-      : kind === 'doc'
+      : kind === 'documentPhoto' ? 'Document photo' : kind === 'doc'
         ? 'Parts list'
         : kind === 'scan'
           ? 'Scan (.ply)'
@@ -1202,13 +1220,33 @@ export default function ForgeThread() {
     if (!a && !value) return;
     busyRef.current = true;
     try {
-      if (a && a.kind === 'spec') await runSpec(a.file);
-      else if (a && a.kind === 'photo') await runPhoto(a.file, value);
+      if (!a && intent === 'ask') {
+        setAnswering(true);
+        pushUser(<p>{value}</p>);
+        const answer = groundedAnswer(value, table, activeSpec) ?? engine.answer(value);
+        if (!answer.fallback) {
+          pushNote(<div className="unified-answer" dangerouslySetInnerHTML={{ __html: answer.html }} />);
+        } else {
+          try {
+            const health = await liveHealth();
+            if (!health || !routeOn(health, 'chat')) throw new Error('Live chat is unavailable.');
+            const reply = await postJSON<{ answer: string }>('/chat', {message:value,context:makeContext(value,null,table)});
+            if (typeof reply.answer !== 'string') throw new Error('No answer returned.');
+            pushNote(<div className="unified-answer"><span className="fbadge live">LIVE MODEL</span><p>{reply.answer}</p></div>);
+          } catch {
+            pushNote(<div className="unified-answer"><div dangerouslySetInnerHTML={{ __html: answer.html }} /><p className="muted">Live chat is unavailable right now. You can still ask about the recorded catalogue or selected data.</p></div>);
+          }
+        }
+      }
+      else if (a && a.kind === 'spec') await runSpec(a.file);
+      else if (a && (a.kind === 'photo'||a.kind==='robotPhoto')) await runPhoto(a.file, value,a.kind==='robotPhoto');
+      else if(a && a.kind==='documentPhoto'){const dataUrl=await readAsDataURL(a.file);beginRun('Document photo');await runPhotoDocument(value,dataUrl);}
       else if (a && a.kind === 'doc') await runDoc(a.file, value);
       else if (a && a.kind === 'scan') await runScan(a.file);
       else await runText(value);
     } finally {
       busyRef.current = false;
+      setAnswering(false);
       setAttach(null);
       setText('');
       if (inputRef.current) inputRef.current.focus();
@@ -1221,11 +1259,7 @@ export default function ForgeThread() {
     initedRef.current = true;
     pushNote(
       <p>
-        <strong>Welcome to the Forge.</strong> Type a robot description, or
-        attach a photo, a parts list, a spec file, or a .ply scan. Spec files
-        are checked and drawn entirely in your browser, and scans are measured
-        right here; photo and list imports need the live endpoint; the recorded
-        sample runs below always work.
+        <strong>Your workshop is ready.</strong> Try an example below, or describe your own robot. Spec checks and scan measurements work locally; descriptions and photo analysis need the live service.
       </p>,
     );
     (async () => {
@@ -1267,22 +1301,33 @@ export default function ForgeThread() {
     })();
     /* Old step-walk deep links (#words, #photo, #list, #document)
      * play the matching recorded sample. */
+    if (window.location.hash === '#ask') { setIntent('ask'); inputRef.current?.focus(); }
     const hm = /^#(words|photo|list|document)/.exec(window.location.hash);
     if (hm) void playSampleRef.current(hm[1]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <>
+    <div className="workbench-layout">
+      <div className="workbench-main">
+      <div className="workbench-section-head"><span className="eyebrow">Your conversation</span><span className="workbench-local">Build · Ask · Explore</span></div>
+      <details className="workbench-connection"><summary>Service availability &amp; processing modes</summary>
       <div className="forge-status" role="status">
         {status}
-      </div>
+      </div></details>
+      {!entries.some(e => e.kind === 'user' || e.kind === 'stage') && <section className="workbench-welcome">
+        <span className="workbench-spark" aria-hidden="true">✳</span>
+        <h2>Big ideas start with a few words.</h2>
+        <p>Tell us what your robot should do, where it will work, and any parts you already have.</p>
+        <button className="workbench-prompt" type="button" onClick={() => { setIntent('build'); setText('I want to build a small indoor delivery rover that carries 2 kg, uses differential drive, and avoids obstacles. Help me choose the dimensions and parts.'); inputRef.current?.focus(); }}>“A small rover that delivers things around my workshop…” <span aria-hidden="true">↗</span></button>
+      </section>}
       <div className="forge-thread" aria-live="polite">
         {entries.map((e) => {
           if (e.kind === 'stage') {
             return (
               <article
                 className="fstage"
+                id={`forge-stage-${e.id}`}
                 key={e.id}
                 ref={(el) => {
                   if (el) elRefs.current.set(e.id, el);
@@ -1317,7 +1362,7 @@ export default function ForgeThread() {
         })}
       </div>
       <div className="forge-samples">
-        <span className="faint">Recorded sample runs:</span>{' '}
+        <span className="faint">Explore a recorded example:</span>{' '}
         <button
           className="btn btn-sm"
           type="button"
@@ -1359,7 +1404,10 @@ export default function ForgeThread() {
           Document — TurtleBot3 spec sheet
         </button>
       </div>
+      {captureOpen&&<PhotoCapture onClose={()=>setCaptureOpen(false)} onSelect={(file,mode,note)=>{setAttach({kind:mode==='document'?'documentPhoto':'robotPhoto',file});if(note)setText(note);setCaptureOpen(false)}}/>}
       <form className="forge-composer" onSubmit={onSubmit}>
+        <fieldset className="unified-intent"><legend className="sr-only">Conversation mode</legend>{(['build','ask'] as const).map(mode => <label key={mode}><input type="radio" name="chat-intent" value={mode} checked={intent === mode} onChange={() => setIntent(mode)} />{mode === 'build' ? 'Build a robot' : 'Ask anything'}</label>)}</fieldset>
+        {intent === 'ask' && <p className="unified-context">Using your active robot and “{table.name}” locally. Questions sent to the live service exclude your active spec and table rows. Attachments use the build workflow.</p>}
         <div className="attach-row" hidden={!attach}>
           <span className="attach-chip">
             {attach ? (
@@ -1381,7 +1429,7 @@ export default function ForgeThread() {
           htmlFor="forge-input"
           style={{ fontSize: 'var(--fs-xs)' }}
         >
-          Message the forge
+          {intent === 'build' ? 'Describe your robot' : 'Ask about robots, parts, or your data'}
         </label>
         <textarea
           id="forge-input"
@@ -1395,7 +1443,7 @@ export default function ForgeThread() {
               (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
             }
           }}
-          placeholder="Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below."
+          placeholder={intent === 'build' ? "Describe your idea, or attach a photo, parts list, spec, or scan…" : "Which robots passed? What parts fit my robot? Summarize my selected table…"}
         />
         <div className="composer-row">
           <div className="attach-btns">
@@ -1407,12 +1455,12 @@ export default function ForgeThread() {
               type="button"
               onClick={() => fileRefs.photo.current?.click()}
             >
-              Photo
+              Upload photo
             </button>{' '}
             <button
               className="btn btn-sm"
               type="button"
-              onClick={() => fileRefs.camera.current?.click()}
+              onClick={() => setCaptureOpen(true)}
             >
               Take photo
             </button>{' '}
@@ -1446,8 +1494,8 @@ export default function ForgeThread() {
               Try a sample scan (SAMPLE)
             </button>
           </div>
-          <button className="btn btn-primary" type="submit">
-            Send
+          <button className="btn btn-primary" type="submit" disabled={answering}>
+            {answering ? 'Thinking…' : intent === 'ask' && !attach ? 'Ask Forge ↗' : 'Build with Forge ↗'}
           </button>
         </div>
         <p className="faint composer-note">
@@ -1511,6 +1559,26 @@ export default function ForgeThread() {
           }}
         />
       </form>
-    </>
+      </div>
+      <aside className="workbench-inspector" aria-label="Build companion">
+        <section className="workbench-preview">
+          <div className="workbench-section-head"><span className="eyebrow">Your next creation</span><span className="workbench-preview-tag">CONCEPT</span></div>
+          <svg className="workbench-rover" viewBox="0 0 360 260" role="img" aria-label="Illustration of a small amber rover, an example concept rather than your generated robot">
+            <defs><pattern id="bench-grid" width="24" height="14" patternUnits="userSpaceOnUse"><path d="M24 0H0V14" fill="none" stroke="currentColor" strokeWidth=".5"/></pattern></defs>
+            <path d="M20 155 180 65 340 155 180 247Z" fill="url(#bench-grid)" opacity=".25"/>
+            <ellipse cx="180" cy="205" rx="105" ry="23" fill="#000" opacity=".25"/>
+            <g stroke="#687078" strokeWidth="2"><path d="m92 147 89-50 90 48-89 53Z" fill="#e5ae53"/><path d="M92 147v26l90 49v-24Z" fill="#9d692c"/><path d="m182 198 89-53v27l-89 50Z" fill="#c88e3f"/></g>
+            <g fill="#23282e" stroke="#88909a" strokeWidth="3"><ellipse cx="116" cy="185" rx="18" ry="26" transform="rotate(-25 116 185)"/><ellipse cx="166" cy="212" rx="18" ry="26" transform="rotate(-25 166 212)"/><ellipse cx="251" cy="182" rx="18" ry="26" transform="rotate(25 251 182)"/></g>
+            <g fill="#adb7bc" stroke="#505962" strokeWidth="2"><path d="m145 123 37-21 39 21-38 22Z"/><path d="M145 123v24l38 20v-22Zm38 22 38-22v24l-38 20Z"/></g>
+            <path d="M183 112V78" stroke="#9da8ae" strokeWidth="4"/><ellipse cx="183" cy="78" rx="19" ry="9" fill="#303840" stroke="#c8d1d4" strokeWidth="2"/><circle cx="198" cy="149" r="4" fill="#80d8bb"/>
+          </svg>
+          <h2>Meet your possibility.</h2><p>An idea becomes a spec, then a robot you can inspect. This rover is just inspiration.</p>
+        </section>
+        <section className="workbench-guide"><span className="eyebrow">Build activity</span>
+          {entries.some(e => e.kind === 'stage') ? <ol className="workbench-activity">{entries.filter(e => e.kind === 'stage').map(e => <li key={e.id}><a href={`#forge-stage-${e.id}`}>{e.title}</a><small>{BADGE_LABEL[e.badge as Badge]}</small></li>)}</ol> : <><h3>From “what if” to “what’s next.”</h3><p>Start with a description or an example. Your generated stages will appear here as the run progresses.</p><ol className="workbench-roadmap"><li>Shape your idea</li><li>Inspect the spec &amp; checks</li><li>Explore available outputs</li></ol></>}
+        </section>
+        <Link className="workbench-library" href="/robots/"><span>Need a little inspiration?<strong>Explore the robot library →</strong></span></Link>
+      </aside>
+    </div>
   );
 }

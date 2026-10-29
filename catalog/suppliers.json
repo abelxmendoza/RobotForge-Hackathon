@@ -1,0 +1,7 @@
+{
+  "note": "Curated retailer references, checked 2026-10-29. Stock, price, shipping and mechanical/electrical compatibility are not verified live. A product family is not an exact substitute.",
+  "listings": [
+    {"part_id":"rplidar_a1","store":"Adafruit","url":"https://www.adafruit.com/product/4010","match":"RPLIDAR A1 listing","checked":"2026-10-29"},
+    {"part_id":"gearmotor_12v","store":"Pololu","url":"https://www.pololu.com/category/271/12v-37d-metal-gearmotors","match":"12 V 37D family; choose ratio, shaft, torque and encoder variant","checked":"2026-10-29"}
+  ]
+}

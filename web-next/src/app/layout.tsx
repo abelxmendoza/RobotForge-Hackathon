@@ -1,3 +1,4 @@
+import "./workspace.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import Providers from "@/store/Providers";
@@ -6,6 +7,7 @@ import "@/styles/app.css";
 import "@/styles/site.css";
 import "@/styles/chat.css";
 import "@/styles/anim.css";
+import "./workshop.css";
 
 export const metadata: Metadata = {
   title: { default: "RobotForge", template: "%s · RobotForge" },
