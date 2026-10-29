@@ -325,6 +325,7 @@ class _OdomStream:
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             start_new_session=True)
         self._tail = ""
+        self.trajectory: list[tuple[float, float, float]] = []
         self.latest: tuple[float, float, float] | None = None
 
     def poll(self) -> tuple[float, float, float] | None:
@@ -343,6 +344,7 @@ class _OdomStream:
         if self._tail:
             poses, self._tail = extract_odom_poses(self._tail)
             if poses:
+                self.trajectory.extend(poses)
                 self.latest = poses[-1]
         return self.latest
 
@@ -395,6 +397,17 @@ class _CmdVelStream:
 
 
 # ------------------------------------------------------------- transports
+_SYSTEM_DIST_PACKAGES = ("/usr/lib/python3/dist-packages",)
+
+
+def _ensure_system_dist_packages() -> None:
+    """Make distro-installed Gazebo Python bindings findable when running
+    inside an isolated virtualenv created without --system-site-packages."""
+    for p in _SYSTEM_DIST_PACKAGES:
+        if p not in sys.path and os.path.isdir(p):
+            sys.path.append(p)
+
+
 def _import_bindings():
     """Import the gz-transport Python bindings (gz.transport13 +
     gz.msgs10), returning (Node, Twist, Odometry) — or None when they are
@@ -413,7 +426,11 @@ def _import_bindings():
     try:
         from gz.transport13 import Node
     except Exception:
-        return None
+        _ensure_system_dist_packages()
+        try:
+            from gz.transport13 import Node
+        except Exception:
+            return None
     if "google.protobuf" not in sys.modules:
         os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION",
                               "python")
@@ -454,6 +471,7 @@ class _BindingsTransport:
         self._closed = False
         self._node.subscribe(Odometry, "/odom", self._on_odom)
         self._model_name = model_name
+        self.trajectory: list[tuple[float, float, float]] = []
         self.truth_latest: tuple[float, float, float] | None = None
         self._node.subscribe(Pose_V, "/world/robotforge_world/dynamic_pose/info",
                              self._on_pose_v)
@@ -481,6 +499,7 @@ class _BindingsTransport:
                 with self._lock:
                     self.truth_latest = (p.x, p.y, _yaw_from_quat(
                         q.x, q.y, q.z, q.w))
+                    self.trajectory.append(self.truth_latest)
 
     def _publish_loop(self) -> None:
         period = 1.0 / self._RATE_HZ
@@ -527,10 +546,15 @@ class _CliTransport:
         self._cmd.set(linear, angular)
 
     def poll(self) -> tuple[float, float, float] | None:
+        self._truth.poll()
         return self._odom.poll()
 
     def poll_truth(self) -> tuple[float, float, float] | None:
         return self._truth.poll()
+
+    @property
+    def trajectory(self) -> list[tuple[float, float, float]]:
+        return self._truth.trajectory
 
     def close(self) -> None:
         self._cmd.stop()
@@ -553,6 +577,7 @@ class _TruthStream:
             start_new_session=True)
         self._tail = ""
         self._model_name = model_name
+        self.trajectory: list[tuple[float, float, float]] = []
         self.latest: tuple[float, float, float] | None = None
 
     def poll(self) -> tuple[float, float, float] | None:
@@ -571,6 +596,7 @@ class _TruthStream:
             poses, self._tail = extract_named_poses(self._tail,
                                                     self._model_name)
             if poses:
+                self.trajectory.extend(poses)
                 self.latest = poses[-1]
         return self.latest
 
@@ -619,7 +645,11 @@ def _import_sim_bindings():
     try:
         from gz.sim8 import Server, ServerConfig
     except Exception:
-        return None
+        _ensure_system_dist_packages()
+        try:
+            from gz.sim8 import Server, ServerConfig
+        except Exception:
+            return None
     return Server, ServerConfig
 
 
@@ -811,10 +841,15 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
                           "measured_m": measured_drive,
                           "truth_m": truth_drive},
                 "turn": {"commanded_deg": turn_deg,
-                         "measured_deg": final_pose[2],
+                         "measured_deg": abs(heading_change_deg(
+                             mid_pose[2], final_pose[2])),
                          "truth_deg": abs(heading_change_deg(
                              truth_mid[2], truth_final[2]))},
-                "injected_wheel_radius_scale": wheel_radius_scale}
+                "injected_wheel_radius_scale": wheel_radius_scale,
+                "trajectory": {"source": "Gazebo ground truth",
+                               "units": "m, m, deg",
+                               "timing": "sample order; playback is not real-time",
+                               "poses": list(getattr(transport, "trajectory", ()))}}
     finally:
         if transport is not None:
             transport.close()

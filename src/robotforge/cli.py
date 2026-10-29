@@ -701,14 +701,29 @@ def main(argv: list[str] | None = None) -> int:
                 print("refusing to run the gate on an invalid spec",
                       file=sys.stderr)
                 return rc
+            def _require_truth_motion(run_res: dict) -> None:
+                drive_truth = run_res["drive"]["truth_m"]
+                turn_truth = run_res["turn"]["truth_deg"]
+                if drive_truth <= 0 and turn_truth <= 0:
+                    raise TwinError(
+                        "ground-truth stream captured no motion — the run is "
+                        "invalid, refusing to judge odometry against nothing")
+                if drive_truth <= 0:
+                    raise TwinError(
+                        "ground-truth stream captured no drive motion — the "
+                        "run is invalid, refusing to judge odometry distance "
+                        "against zero")
+                if args.turn_deg > 0 and turn_truth <= 0:
+                    raise TwinError(
+                        "ground-truth stream captured no turn motion — the "
+                        "run is invalid, refusing to judge odometry heading "
+                        "against zero")
+
             res = run_motion_check(spec, Path(args.workdir),
                                    drive_m=args.drive_m, turn_deg=args.turn_deg,
                                    wheel_radius_scale=args.inject_wheel_scale,
                                    embedded=True if args.in_process else None)
-            if res["drive"]["truth_m"] <= 0 and res["turn"]["truth_deg"] <= 0:
-                raise TwinError(
-                    "ground-truth stream captured no motion — the run is "
-                    "invalid, refusing to judge odometry against nothing")
+            _require_truth_motion(res)
             # Primary acceptance is against ground truth (what actually
             # happened); odometry checks judge what the robot believed.
             report = evaluate_run([
@@ -759,6 +774,7 @@ def main(argv: list[str] | None = None) -> int:
                                         Path(args.workdir) / "repaired",
                                         drive_m=args.drive_m,
                                         turn_deg=args.turn_deg)
+                _require_truth_motion(res2)
                 report2 = evaluate_run([
                     evaluate_drive(res2["drive"]["commanded_m"],
                                    res2["drive"]["truth_m"]),
