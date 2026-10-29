@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import ChatDock from "@/components/chat/ChatDock";
 import RevealInit from "./RevealInit";
 
 export const REPO_URL = "https://github.com/abelxmendoza/RobotForge-Hackathon";
@@ -29,7 +28,6 @@ export default function AppShell({ active, crumbs = [], children }:
   { active: string; crumbs?: Crumb[]; children: ReactNode }) {
   return (
     <div className="shell">
-      <ChatDock />
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span>RobotForge<small>App</small></span>

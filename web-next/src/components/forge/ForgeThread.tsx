@@ -24,7 +24,16 @@
  * The thread itself is component state (the vanilla thread is an
  * imperative DOM log); the Redux forge slice tracks the current
  * run's stage position (step) and input kind (tab), per the store
- * contract. */
+ * contract.
+ *
+ * One Forge (plan §1): this thread is also the Forge Guide's home
+ * on app routes. Plain text is answered by the Guide engine first
+ * (../chat/useGuide, engine unchanged) and rendered as a 'guide'
+ * entry in this thread — recorded answers in the Guide's own
+ * markup, live fallbacks badged LIVE MODEL by the hook. Only a
+ * fallback that reads as a build request runs the describe
+ * pipeline; attachments and the recorded sample runs always run
+ * the pipeline. There is no second composer or docked rail. */
 import {
   useCallback,
   useEffect,
@@ -51,6 +60,12 @@ import type { ValidateResult } from './validate';
 import { measureCloud, parsePly } from './scan';
 import type { Measure, ParsedPly } from './scan';
 import { LiveOffReason, liveBase, liveHealth, postJSON, routeOn } from './live';
+import {
+  LIVE_PENDING_HTML,
+  PENDING_HTML,
+  useGuide,
+} from '../chat/useGuide';
+import type { Hit } from '../chat/engine';
 import { assetPath } from '../home/asset';
 import { RUNS, STEP_NAMES } from './samples';
 import type { SampleRun } from './samples';
@@ -63,12 +78,41 @@ type AttachKind = 'photo' | 'doc' | 'spec' | 'scan';
 
 interface Entry {
   id: number;
-  kind: 'user' | 'note' | 'stage';
+  kind: 'user' | 'note' | 'stage' | 'guide';
   node?: ReactNode;
   badge?: Badge;
   badgeNote?: string;
   title?: string;
   body?: ReactNode;
+  /* kind === 'guide': a Forge Guide answer rendered in-thread
+   * (the One Forge merge) — the engine's HTML plus its hit
+   * buttons, exactly as the Guide widget renders them. */
+  guideHtml?: string;
+  guideHits?: Hit[];
+}
+
+/* Deterministic Guide/build routing for plain text (plan §1): the
+ * Guide engine answers first; only its honest fallback is routed
+ * further, and the route is decided by the shape of the text — no
+ * extra model call. A fallback that reads as a build request goes
+ * to the describe pipeline; a fallback question goes to /chat. */
+function looksLikeBuildRequest(q: string): boolean {
+  const t = q.trim().toLowerCase();
+  return (
+    /^(build|make|create|design|plan|describe|assemble|construct)\b/.test(t) ||
+    /^i (want|need|would like)\b/.test(t) ||
+    /\b(build|make|create|design) me (a|an|the)\b/.test(t)
+  );
+}
+
+function readsAsQuestion(q: string): boolean {
+  const t = q.trim().toLowerCase();
+  return (
+    /\?\s*$/.test(t) ||
+    /^(what|why|how|is|are|can|could|does|do|did|which|who|whom|when|where|tell|show|list|find|search|explain)\b/.test(
+      t,
+    )
+  );
 }
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -305,6 +349,21 @@ export default function ForgeThread() {
   };
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  /* The Forge Guide, merged into this thread (plan §1): the same
+   * engine + live routing the Guide widget runs, consumed through
+   * the useGuide hook. Plain text is answered by the Guide first;
+   * the pipeline below runs attachments, sample chips and the
+   * build requests the Guide honestly falls back on. */
+  const {
+    engine: guideEngine,
+    resolveFallback,
+    autoAction,
+    handleHit,
+  } = useGuide();
+  const [guideChips, setGuideChips] = useState<string[]>(
+    guideEngine.suggestions,
+  );
+
   /* ---------------- thread primitives ---------------- */
   const push = useCallback((e: Omit<Entry, 'id'>): number => {
     const id = ++idRef.current;
@@ -337,6 +396,18 @@ export default function ForgeThread() {
       prev.map((e) => (e.id === id ? { ...e, body } : e)),
     );
   }, []);
+  const setGuideEntry = useCallback(
+    (id: number, guideHtml: string, guideHits?: Hit[]) => {
+      setEntries((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, guideHtml, guideHits } : e)),
+      );
+    },
+    [],
+  );
+  const noteText = useCallback(
+    (t: string) => pushNote(t),
+    [pushNote],
+  );
   const beginRun = useCallback(
     (tab: string) => {
       stepRef.current = 0;
@@ -583,6 +654,59 @@ export default function ForgeThread() {
     },
     [beginRun, pushUser, pushStage, setStageBody, specPipeline, sampleOffer, pushNote, playSample],
   );
+
+  /* Plain text (no attachment): the Guide answers first, in this
+   * thread (plan §1). A non-fallback engine result IS the answer.
+   * A fallback that reads as a build request — an imperative
+   * build, or a bare robot description rather than a question —
+   * runs the describe pipeline above; a fallback question goes
+   * through the Guide's live routing (/chat, badged LIVE MODEL). */
+  const routePlainText = useCallback(
+    async (value: string) => {
+      const ans = guideEngine.answer(value);
+      if (
+        ans.fallback &&
+        (looksLikeBuildRequest(value) || !readsAsQuestion(value))
+      ) {
+        await runText(value);
+        return;
+      }
+      pushUser(value);
+      if (!ans.fallback) {
+        push({ kind: 'guide', guideHtml: ans.html, guideHits: ans.hits });
+        setGuideChips(
+          ans.chips && ans.chips.length ? ans.chips : guideEngine.suggestions,
+        );
+        autoAction(value, ans, noteText);
+        return;
+      }
+      const gid = push({ kind: 'guide', guideHtml: PENDING_HTML });
+      await resolveFallback(value, ans, {
+        onLivePending: () => setGuideEntry(gid, LIVE_PENDING_HTML),
+        onAnswer: (view) => {
+          setGuideEntry(gid, view.html, view.hits);
+          setGuideChips(
+            view.chips && view.chips.length
+              ? view.chips
+              : guideEngine.suggestions,
+          );
+        },
+        onNote: noteText,
+      });
+    },
+    [
+      guideEngine,
+      runText,
+      pushUser,
+      push,
+      autoAction,
+      noteText,
+      resolveFallback,
+      setGuideEntry,
+    ],
+  );
+  const routePlainTextRef = useRef(routePlainText);
+  routePlainTextRef.current = routePlainText;
 
   const runSpec = useCallback(
     async (file: File) => {
@@ -1206,7 +1330,7 @@ export default function ForgeThread() {
       else if (a && a.kind === 'photo') await runPhoto(a.file, value);
       else if (a && a.kind === 'doc') await runDoc(a.file, value);
       else if (a && a.kind === 'scan') await runScan(a.file);
-      else await runText(value);
+      else await routePlainText(value);
     } finally {
       busyRef.current = false;
       setAttach(null);
@@ -1302,6 +1426,39 @@ export default function ForgeThread() {
               </article>
             );
           }
+          if (e.kind === 'guide') {
+            return (
+              <div
+                className="fmsg guide"
+                key={e.id}
+                ref={(el) => {
+                  if (el) elRefs.current.set(e.id, el);
+                  else elRefs.current.delete(e.id);
+                }}
+              >
+                <div className="fc-msg bot">
+                  <div
+                    dangerouslySetInnerHTML={{ __html: e.guideHtml || '' }}
+                  />
+                  {e.guideHits && e.guideHits.length ? (
+                    <div className="fc-hits">
+                      {e.guideHits.slice(0, 6).map((h, i) => (
+                        <button
+                          type="button"
+                          className="fc-hit"
+                          data-kind={h.kind || ''}
+                          key={i}
+                          onClick={() => handleHit(h, noteText)}
+                        >
+                          {h.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          }
           return (
             <div
               className={'fmsg ' + e.kind}
@@ -1317,6 +1474,23 @@ export default function ForgeThread() {
         })}
       </div>
       <div className="forge-samples">
+        <span className="faint">Guide:</span>{' '}
+        {guideChips.map((q, i) => (
+          <button
+            className="chip"
+            type="button"
+            key={'guide-' + i}
+            onClick={() => {
+              if (busyRef.current) return;
+              busyRef.current = true;
+              routePlainTextRef.current(q).finally(() => {
+                busyRef.current = false;
+              });
+            }}
+          >
+            {q}
+          </button>
+        ))}
         <span className="faint">Recorded sample runs:</span>{' '}
         <button
           className="btn btn-sm"
@@ -1326,7 +1500,7 @@ export default function ForgeThread() {
             if (!busyRef.current) void playSample('words');
           }}
         >
-          Words — indoor rover
+          Words — indoor rover (SAMPLE)
         </button>{' '}
         <button
           className="btn btn-sm"
@@ -1346,7 +1520,7 @@ export default function ForgeThread() {
             if (!busyRef.current) void playSample('list');
           }}
         >
-          Parts list — quadcopter
+          Parts list — quadcopter (SAMPLE)
         </button>{' '}
         <button
           className="btn btn-sm"
@@ -1356,7 +1530,7 @@ export default function ForgeThread() {
             if (!busyRef.current) void playSample('document');
           }}
         >
-          Document — TurtleBot3 spec sheet
+          Document — TurtleBot3 spec sheet (SAMPLE)
         </button>
       </div>
       <form className="forge-composer" onSubmit={onSubmit}>

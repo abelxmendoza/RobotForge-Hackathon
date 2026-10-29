@@ -12,6 +12,12 @@ import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
 import type { RobotSpec } from '../forge/model';
 import { taBuildParts, taGeom3d } from './takeapart';
+import {
+  downloadBinarySTL,
+  groupsToBinarySTL,
+  stlFileName,
+  type STLExporterClass,
+} from './stl';
 
 type ThreeModule = typeof THREE_NS;
 
@@ -44,6 +50,23 @@ interface Session {
   explode: number;
   refresh?: () => void;
   applyExplode?: () => void;
+  exportSTL?: (partId: string | null) => boolean;
+}
+
+/* The mounted scene's STL export, registered while a Robot3D
+ * session is live — the same singleton shape the vanilla viewer
+ * exposed as RF3D.exportSTL, so the take-apart part panel can ask
+ * for a part (or the whole robot) as a binary STL in millimetres
+ * from the geometry on screen. Most-recently-mounted scene wins,
+ * exactly as the vanilla page's single scene did. */
+let activeSTLExport: ((partId: string | null) => boolean) | null = null;
+
+export function sceneSTLAvailable(): boolean {
+  return !!activeSTLExport;
+}
+
+export function exportSceneSTL(partId: string | null): boolean {
+  return activeSTLExport ? activeSTLExport(partId) : false;
 }
 
 export default function Robot3D({
@@ -76,6 +99,9 @@ export default function Robot3D({
         const THREE = (await import('three')) as unknown as ThreeModule;
         const { OrbitControls } = await import(
           'three/addons/controls/OrbitControls.js'
+        );
+        const { STLExporter } = await import(
+          'three/addons/exporters/STLExporter.js'
         );
         if (disposed) return;
         const built = taBuildParts(spec);
@@ -226,6 +252,22 @@ export default function Robot3D({
         applyExplode();
         refresh();
 
+        /* STL export of this scene (./stl.ts, the RF3D.exportSTL
+         * port): the shown geometry, assembled pose, millimetres. */
+        const exportSTL = (partId: string | null): boolean => {
+          const data = groupsToBinarySTL(
+            THREE,
+            STLExporter as unknown as STLExporterClass,
+            st.groups,
+            partId,
+          );
+          if (!data) return false;
+          downloadBinarySTL(data, stlFileName(spec.name, partId));
+          return true;
+        };
+        st.exportSTL = exportSTL;
+        activeSTLExport = exportSTL;
+
         const ray = new THREE.Raycaster();
         const ptr = new THREE.Vector2();
         const pick = (ev: PointerEvent): string | null => {
@@ -308,6 +350,7 @@ export default function Robot3D({
         });
 
         cleanup = () => {
+          if (activeSTLExport === exportSTL) activeSTLExport = null;
           renderer.setAnimationLoop(null);
           if (ro) ro.disconnect();
           window.removeEventListener('resize', resize);

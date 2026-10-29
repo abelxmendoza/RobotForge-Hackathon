@@ -1,98 +1,38 @@
 "use client";
 /* Forge Guide widget — the chat UI (React port of assets/js/chat.js).
  *
- * Answering is done by ./engine.ts (the chat-engine.js port) from the
- * site's recorded data, and the local recorded answer is ALWAYS the
- * default: instant, and the only answer whenever no live endpoint is
- * configured.
+ * The ask/live/health logic lives in ./useGuide.ts (extracted for
+ * the One Forge merge, plan §1): the engine in ./engine.ts answers
+ * from the site's recorded data, and the local recorded answer is
+ * ALWAYS the default — instant, and the only answer whenever no
+ * live endpoint is configured. A question the local engine
+ * honestly cannot answer (its `fallback: true` result) is offered
+ * to the live model; the reply is rendered escaped and badged
+ * "LIVE MODEL — not from recorded RobotForge data". If the
+ * endpoint errors or is over budget, the Guide says so plainly
+ * and keeps the local answer. No API keys ever live in this file
+ * or any page: the endpoint holds them server-side.
  *
- * Live-model hook: when a deployment configures the live endpoint
- * (LIVE_ENDPOINT below — empty in the committed site, mirroring
- * assets/js/live-config.js) and /health answers, a question the local
- * engine honestly cannot answer (its `fallback: true` result) is
- * offered to the live model at POST /chat. The reply is rendered
- * escaped and badged "LIVE MODEL — not from recorded RobotForge
- * data". If the endpoint errors or is over budget, the Guide says
- * so plainly and keeps the local answer. No API keys ever live in
- * this file or any page: the endpoint holds them server-side.
- *
- * Data: the vanilla widget fetched catalog/*.json at runtime; here
- * the same JSON is statically imported (see @/lib/data and @/data),
- * so the engine is built synchronously and no fetching happens.
- *
- * Routes: the engine already returns Next routes (/robots/<slug>/,
- * /evidence/, /forge/). Robot/kind/route hits navigate with the Next
- * router; part hits dispatch a window CustomEvent "rf-focus-part"
- * (detail {id}) and land on /robots/?part=<id>#parts.
+ * This file is now the widget shell: message list, chips, panel
+ * open/close behaviour for the floating (landing) and docked
+ * frames. On app routes the shell no longer mounts the docked
+ * rail — the Forge thread consumes the same hook instead.
  */
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import type { Hit } from "./engine";
 import {
-  createEngine,
-  esc,
-  type AnswerResult,
-  type Engine,
-  type Hit,
-  type IntentsData,
-  type KindData,
-  type PartData,
-  type ReportsData,
-  type RobotData,
-  type TemplateData,
-} from "./engine";
-import { gateReports, parts, robots } from "@/lib/data";
-import partsDoc from "@/data/parts.json";
-import kindsDoc from "@/data/kinds.json";
-import intentsDoc from "@/data/chat-intents.json";
-
-/* Deployment live-endpoint config (assets/js/live-config.js in the
- * vanilla site): EMPTY in the committed site — recorded answers
- * only, no network calls, no badges. */
-const LIVE_ENDPOINT = "https://robotforge-live.abelxmendoza.workers.dev";
-
-const DEFAULT_CHIPS = [
-  "Which robots passed the gate?",
-  "What are the gate thresholds?",
-  "Tell me about Andino",
-  "How does RobotForge work?",
-];
-
-const SUB_RECORDED =
-  "Answers from RobotForge's recorded data (not a live AI) — the Robodex, the parts catalogue and the recorded gate reports.";
-const SUB_LIVE =
-  "Recorded data first — the Robodex, the parts catalogue and the recorded gate reports. Questions they can’t answer go to a live model, badged LIVE MODEL.";
-
-const LIVE_BADGE =
-  "LIVE MODEL — not from recorded RobotForge data; check numbers on the Evidence page";
-
-function buildEngine(): Engine {
-  const templates =
-    (partsDoc as unknown as { templates?: TemplateData[] }).templates || [];
-  return createEngine({
-    robots: robots as unknown as RobotData[],
-    parts: parts as unknown as PartData[],
-    templates: templates.length,
-    templateList: templates,
-    kinds: (kindsDoc as { kinds?: KindData[] }).kinds || [],
-    reports: { runs: gateReports } as unknown as ReportsData,
-    intents: intentsDoc as unknown as IntentsData,
-    root: "",
-  });
-}
-
-interface LiveHealth {
-  ok?: boolean;
-  mode?: string;
-  routes?: { chat?: boolean };
-  budget?: { exhausted?: boolean };
-  [key: string]: unknown;
-}
+  DEFAULT_CHIPS,
+  LIVE_PENDING_HTML,
+  PENDING_HTML,
+  SUB_LIVE,
+  SUB_RECORDED,
+  useGuide,
+} from "./useGuide";
 
 interface Msg {
   id: number;
@@ -105,9 +45,12 @@ interface Msg {
 let nextId = 1;
 
 export function ChatWidget({ docked }: { docked: boolean }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const engine = useMemo(buildEngine, []);
+  const {
+    engine,
+    ask: guideAsk,
+    checkLive,
+    handleHit,
+  } = useGuide();
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [chips, setChipsState] = useState<string[]>(DEFAULT_CHIPS);
@@ -119,7 +62,6 @@ export function ChatWidget({ docked }: { docked: boolean }) {
   const msgsRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const greetedRef = useRef(false);
-  const healthRef = useRef<Promise<LiveHealth | null> | null>(null);
 
   /* Docked mode (app pages, wide screens): the panel is a fixed
    * left rail and is simply open — there is nothing to toggle. The
@@ -160,67 +102,6 @@ export function ChatWidget({ docked }: { docked: boolean }) {
     [appendMsg]
   );
 
-  /* ---------------- live model (deployment-configured) ------------ */
-
-  const liveBase = useCallback((): string => {
-    const base = LIVE_ENDPOINT || "";
-    return String(base).replace(/\/+$/, "");
-  }, []);
-
-  const checkLive = useCallback((): Promise<LiveHealth | null> => {
-    /* Cached /health probe: resolves to the health JSON when the
-     * endpoint is configured AND answering AND able to run chat;
-     * resolves to null otherwise. With no endpoint configured (the
-     * shipped site) it resolves null immediately — no network call. */
-    if (!liveBase()) return Promise.resolve(null);
-    if (!healthRef.current) {
-      healthRef.current = fetch(liveBase() + "/health", { cache: "no-cache" })
-        .then((r) => (r.ok ? (r.json() as Promise<LiveHealth>) : null))
-        .then((h) => {
-          if (h && h.ok && h.mode === "live" && h.routes && h.routes.chat) {
-            setSubText(SUB_LIVE);
-          }
-          return h;
-        })
-        .catch(() => null);
-    }
-    return healthRef.current;
-  }, [liveBase]);
-
-  const liveUsable = (h: LiveHealth | null): boolean =>
-    Boolean(
-      h && h.ok && h.mode === "live" && h.routes && h.routes.chat &&
-        !(h.budget && h.budget.exhausted)
-    );
-
-  const liveChat = useCallback(
-    (q: string): Promise<string> =>
-      fetch(liveBase() + "/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: q }),
-      }).then((r) =>
-        r
-          .json()
-          .catch(() => null)
-          .then((body: { answer?: unknown; error?: string; code?: string } | null) => {
-            if (!r.ok) {
-              const e = new Error(
-                (body && body.error) || "endpoint -> " + r.status
-              ) as Error & { code?: string; status?: number };
-              e.code = body ? body.code : undefined;
-              e.status = r.status;
-              throw e;
-            }
-            if (!body || typeof body.answer !== "string") {
-              throw new Error("endpoint returned no answer");
-            }
-            return body.answer;
-          })
-      ),
-    [liveBase]
-  );
-
   /* ---------------- greeting ---------------- */
 
   const greet = useCallback(() => {
@@ -241,7 +122,12 @@ export function ChatWidget({ docked }: { docked: boolean }) {
   useEffect(() => {
     if (!open) return;
     greet();
-    void checkLive(); // updates the header disclosure when live is on
+    /* Updates the header disclosure when live is on. */
+    void checkLive().then((h) => {
+      if (h && h.ok && h.mode === "live" && h.routes && h.routes.chat) {
+        setSubText(SUB_LIVE);
+      }
+    });
     /* Auto-focus only with a fine pointer: on touch devices the
      * keyboard would immediately cover the panel the user just
      * opened. */
@@ -258,82 +144,6 @@ export function ChatWidget({ docked }: { docked: boolean }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open, dockedWide]);
 
-  /* ---------------- part focus + in-page actions ---------------- */
-
-  const onRobotsPage = Boolean(pathname && pathname.startsWith("/robots"));
-
-  const dispatchFocusPart = useCallback((id: string) => {
-    window.dispatchEvent(
-      new CustomEvent("rf-focus-part", { detail: { id } })
-    );
-  }, []);
-
-  /* A part hit: on the Robots page, focus the part there (event +
-   * the ?part= deep link the page understands); from anywhere else,
-   * navigate to that deep link. */
-  const focusPartHit = useCallback(
-    (hit: Hit) => {
-      if (!hit.id) return;
-      dispatchFocusPart(hit.id);
-      const url = "/robots/?part=" + encodeURIComponent(hit.id) + "#parts";
-      if (onRobotsPage) {
-        noteBubble(
-          "I highlighted “" + hit.label + "” in the parts catalogue on this page."
-        );
-        router.replace(url, { scroll: false });
-      } else {
-        router.push(url);
-      }
-    },
-    [dispatchFocusPart, noteBubble, onRobotsPage, router]
-  );
-
-  /* A real in-page action, not just an answer: on a page with the
-   * catalogue's own search box, "find lidar" / "show servos" drives
-   * that box, so the page itself responds to the conversation. */
-  const filterPartsHere = useCallback(
-    (q: string) => {
-      const ps = document.getElementById("part-search") as HTMLInputElement | null;
-      if (!ps) return;
-      const m = q.match(/^(?:find|search|show(?: me)?|filter)\s+(.+)$/i);
-      if (!m) return;
-      ps.value = m[1].trim();
-      ps.dispatchEvent(new Event("input", { bubbles: true }));
-      noteBubble(
-        "I filtered the parts catalogue on this page for “" +
-          m[1].trim() +
-          "” — it is just below."
-      );
-      const sec = document.getElementById("parts");
-      if (sec) sec.scrollIntoView({ behavior: "smooth" });
-    },
-    [noteBubble]
-  );
-
-  /* After an answer, act on a find/show question: highlight the
-   * first part hit in the catalogue when this page has one. Falls
-   * back to the original search-box behaviour when there are no
-   * structured hits to act on. */
-  const autoAction = useCallback(
-    (q: string, ans: AnswerResult) => {
-      if (/^(find|search|show|filter)\b/i.test(q) && ans.hits) {
-        const partHits = ans.hits.filter((h) => h.kind === "part");
-        if (partHits.length && onRobotsPage && partHits[0].id) {
-          dispatchFocusPart(partHits[0].id);
-          noteBubble(
-            "I highlighted the first match, “" +
-              partHits[0].label +
-              "”, in the catalogue on this page — tap any result " +
-              "button to pop another one up."
-          );
-          return;
-        }
-      }
-      filterPartsHere(q);
-    },
-    [dispatchFocusPart, filterPartsHere, noteBubble, onRobotsPage]
-  );
-
   /* ---------------- asking ---------------- */
 
   const ask = useCallback(
@@ -342,97 +152,34 @@ export function ChatWidget({ docked }: { docked: boolean }) {
       if (!q) return;
       appendMsg({ who: "user", text: q });
       setInputValue("");
-      const waitId = appendMsg({
-        who: "bot",
-        html: '<p class="fc-dim">Checking the recorded data&hellip;</p>',
-      });
-      const done = (ans: AnswerResult) => {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits } : m
-          )
-        );
-        setChips(ans.chips || engine.suggestions);
-        autoAction(q, ans);
-      };
-      /* The vanilla widget answers inside its data-load promise, so
-       * the "Checking…" bubble paints first; the data here is a
-       * static import, so defer one tick to keep the same rhythm. */
-      window.setTimeout(() => {
-        const ans = engine.answer(q);
-        /* Recorded answers stay the default and stay instant: only
-         * the engine's honest fallback may go live. */
-        if (!ans.fallback || !liveBase()) {
-          done(ans);
-          return;
-        }
-        void checkLive().then((h) => {
-          if (!liveUsable(h)) {
-            /* Endpoint configured but not usable: say so only when
-             * the reason is budget/kill-switch (a plain note under
-             * the local answer); a silent endpoint keeps the plain
-             * local behavior. */
-            if (h && h.ok && (h.mode === "off" || (h.budget && h.budget.exhausted))) {
-              done({
-                html:
-                  ans.html +
-                  '<p class="fc-live-note">The live model is ' +
-                  (h.mode === "off"
-                    ? "switched off at the endpoint"
-                    : "out of budget for today") +
-                  ", so this answer is from the recorded data only.</p>",
-                chips: ans.chips,
-              });
-            } else {
-              done(ans);
-            }
-            return;
-          }
+      let waitId = -1;
+      guideAsk(q, {
+        onPending: () => {
+          waitId = appendMsg({ who: "bot", html: PENDING_HTML });
+        },
+        onLivePending: () => {
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === waitId
-                ? {
-                    ...m,
-                    html:
-                      '<p class="fc-dim">The recorded data ' +
-                      "doesn&rsquo;t have that &mdash; asking the live model&hellip;</p>",
-                  }
-                : m
+              m.id === waitId ? { ...m, html: LIVE_PENDING_HTML } : m
             )
           );
-          liveChat(q)
-            .then((answer) => {
-              done({
-                html:
-                  '<p><span class="fc-live-badge">' +
-                  LIVE_BADGE +
-                  "</span></p><p>" +
-                  esc(answer).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>") +
-                  "</p>",
-                chips: ans.chips,
-              });
-            })
-            .catch((e: Error & { code?: string }) => {
-              const note =
-                e && e.code === "budget_exhausted"
-                  ? "The live model&rsquo;s budget for today is used up, so " +
-                    "this answer is from the recorded data only."
-                  : "The live endpoint isn&rsquo;t answering, so this answer " +
-                    "is from the recorded data only.";
-              done({
-                html: ans.html + '<p class="fc-live-note">' + note + "</p>",
-                chips: ans.chips,
-              });
-            });
-        });
-      }, 0);
+        },
+        onAnswer: (view) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === waitId ? { ...m, html: view.html, hits: view.hits } : m
+            )
+          );
+          setChips(view.chips || engine.suggestions);
+        },
+        onNote: noteBubble,
+      });
     },
-    [appendMsg, autoAction, checkLive, engine, liveBase, liveChat, setChips]
+    [appendMsg, engine, guideAsk, noteBubble, setChips]
   );
 
   const onHitClick = (h: Hit) => {
-    if (h.kind === "part") focusPartHit(h);
-    else if (h.route) router.push(h.route);
+    handleHit(h, noteBubble);
   };
 
   const toggle = () => {
@@ -559,7 +306,9 @@ export function ChatWidget({ docked }: { docked: boolean }) {
 /* Docked variant: the same chat as a persistent left rail inside
  * the app shell (site.py chat_widget(docked=True)). At min-width
  * 1280px the panel is simply open; below that it behaves as the
- * toggleable panel, mirroring the vanilla media query. */
+ * toggleable panel, mirroring the vanilla media query. No app
+ * route mounts it since the One Forge merge — the Forge thread
+ * hosts the Guide there; this stays for the shell's record. */
 export default function ChatDock() {
   return <ChatWidget docked />;
 }

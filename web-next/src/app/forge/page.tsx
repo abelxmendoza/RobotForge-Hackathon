@@ -1,13 +1,12 @@
 /* Forge — port of the generated app/forge/index.html.
  *
- * The page head is verbatim; the conversation (status line, thread,
- * recorded sample runs, composer) is components/forge/ForgeThread,
- * the React port of assets/js/forge.js. The Forge Guide widget is
- * NOT rendered here: the app shell mounts it globally as the docked
- * chat (components/chat/ChatDock in AppShell), exactly as the
- * vanilla app pages all carry the same docked widget.
- * components/forge/ForgeGuide + chatEngine are this scope's own
- * port of chat.js/chat-engine.js, kept for the parent's pick. */
+ * The conversation (status line, thread, recorded sample runs,
+ * composer) is components/forge/ForgeThread, the React port of
+ * assets/js/forge.js. Since the One Forge merge (2026-10-28), the
+ * Forge Guide lives IN this thread: ForgeThread consumes the
+ * useGuide hook (components/chat/useGuide over the unchanged chat
+ * engine), and the app shell no longer mounts a docked Guide on
+ * app routes. The floating Guide widget remains on the landing. */
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import ForgeThread from "@/components/forge/ForgeThread";

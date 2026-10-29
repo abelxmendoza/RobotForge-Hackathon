@@ -6,6 +6,10 @@ import dynamic from "next/dynamic";
 import type { RobotSpec as ForgeSpec } from "@/components/forge/model";
 
 const Robot3D = dynamic(() => import("@/components/kit/Robot3D"), { ssr: false });
+import {
+  exportSceneSTL,
+  sceneSTLAvailable,
+} from "@/components/kit/Robot3D";
 import { assetPath } from "@/components/home/asset";
 import {
   TA_SPOTS, elecBad, elecConnLabel, elecDepths, elecNodeMap, elecNodeStatus,
@@ -60,6 +64,8 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
   const [spec, setSpec] = useState<RobotSpec | null>(null);
   const [failed, setFailed] = useState(false);
   const [threeFailed, setThreeFailed] = useState(false);
+  const threeFailedRef = useRef(false);
+  const [stlNote, setStlNote] = useState<string | null>(null);
   const [explode, setExplode] = useState(0);
   const [mode, setMode] = useState<"2d" | "3d">("2d");
   const [elec, setElec] = useState(false);
@@ -190,6 +196,33 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
     }
   };
 
+  /* CAD export (the vanilla taEnsure3D/taExportRun pair): the STL
+   * comes from the live 3D scene, so exporting from the 2D views
+   * first switches to the 3D tab and waits for the scene, exactly
+   * as the vanilla panel did. If the scene cannot start, the panel
+   * says so under the buttons instead of failing silently. */
+  const ensure3D = async (): Promise<boolean> => {
+    if (sceneSTLAvailable()) return true;
+    if (threeFailedRef.current) return false;
+    setMode("3d");
+    for (let i = 0; i < 50; i++) {
+      await new Promise((r) => setTimeout(r, 150));
+      if (sceneSTLAvailable()) return true;
+      if (threeFailedRef.current) return false;
+    }
+    return sceneSTLAvailable();
+  };
+
+  const exportRun = async (partId: string | null) => {
+    if (await ensure3D()) {
+      if (exportSceneSTL(partId)) setStlNote(null);
+    } else {
+      setStlNote(
+        "The 3D view could not start here, so STL export is unavailable in this browser. The 2D views and the OpenSCAD kit still work.",
+      );
+    }
+  };
+
   const detailBody = (): ReactNode => {
     if (detail.kind === "node" && wiring) {
       const node = elecNodeMap(wiring)[detail.id];
@@ -285,6 +318,36 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
               <dd>{p.print}</dd>
               {elecSection}
             </dl>
+            <div className="ta-cad" style={{ marginTop: 14 }}>
+              <button
+                className="btn btn-sm"
+                type="button"
+                onClick={() => void exportRun(p.id)}
+              >
+                ⭳ This part (.stl)
+              </button>{" "}
+              <button
+                className="btn btn-sm"
+                type="button"
+                onClick={() => void exportRun(null)}
+              >
+                ⭳ Whole robot (.stl)
+              </button>
+              <p
+                className="faint"
+                style={{ fontSize: "var(--fs-xs)", marginTop: 8 }}
+              >
+                STL files are in millimetres and open in FreeCAD, Fusion 360,
+                PrusaSlicer and most CAD tools. They carry the 3D view’s
+                simplified geometry — the parametric, buildable kit is the
+                OpenSCAD set from <code>robotforge cad</code>.
+              </p>
+              {stlNote ? (
+                <p className="faint" style={{ fontSize: "var(--fs-xs)" }}>
+                  {stlNote}
+                </p>
+              ) : null}
+            </div>
             {p.file ? (
               <p className="faint" style={{ marginTop: 14, fontSize: "var(--fs-xs)" }}>
                 This part is one file in the take-apart kit. Open{" "}
@@ -430,7 +493,10 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
                     setSelWire(null);
                     setDetail({ kind: "part", id });
                   }}
-                  onFail={() => setThreeFailed(true)}
+                  onFail={() => {
+                    threeFailedRef.current = true;
+                    setThreeFailed(true);
+                  }}
                 />
               ) : null}
             </div>
