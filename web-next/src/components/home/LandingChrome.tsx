@@ -4,6 +4,7 @@ import Link from "next/link";
 import ChatLauncher from "@/components/chat/ChatLauncher";
 import RevealInit from "@/components/shell/RevealInit";
 import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
+import { BASE_PATH } from "./asset";
 
 // The vanilla landing's chrome (index.html): site header with the
 // scrolled shadow toggle, footer, floating Forge Guide, motion pack.
@@ -24,7 +25,7 @@ export function LandingHeader() {
           RobotForge
         </Link>
         <nav className="site-nav" aria-label="Page sections">
-          <a href="/RobotForge-Hackathon/problem-space.html#odometry">Problem space</a>
+          <a href={`${BASE_PATH}/problem-space.html#odometry`}>Problem space</a>
           <a href="#workflow">How it works</a>
           <a href="#proof">Evidence</a>
           <a href="#robots">Robots</a>

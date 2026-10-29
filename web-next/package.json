@@ -4,13 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/copy-vanilla.mjs",
     "sync-data": "node scripts/sync-data.mjs",
     "parity": "node scripts/parity.mjs",
     "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
     "predev": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
-    "sample-scan": "node scripts/make-sample-scan.mjs",
-    "postbuild": "node scripts/copy-vanilla.mjs"
+    "sample-scan": "node scripts/make-sample-scan.mjs"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.5.0",
