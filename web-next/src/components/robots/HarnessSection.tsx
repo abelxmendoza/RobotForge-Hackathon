@@ -1,4 +1,5 @@
 import { REPO_URL } from "@/components/shell/AppShell";
+import Term from "@/components/shell/Term";
 
 /* site.py harness_badge + _harness_section: a third evidence kind,
    kept apart from gate verdicts and static checks. The badge and the
@@ -54,7 +55,7 @@ export default function HarnessSection({ rep, slug, specFile }:
   const missing = s.missing_inputs;
   return (
     <section className="section" id="harness">
-      <h2>Harness checks</h2>
+      <h2><Term k="harness">Harness</Term> checks</h2>
       <p className="sub">
         Electrical computations over this robot&apos;s documented wiring
         graph — voltage drop, ampacity, logic levels, rail budgets,

@@ -51,6 +51,8 @@ import type { ValidateResult } from './validate';
 import { measureCloud, parsePly } from './scan';
 import type { Measure, ParsedPly } from './scan';
 import { LiveOffReason, liveBase, liveHealth, postJSON, routeOn } from './live';
+import { LiveProgress, ModeBanner, offReason } from '@/components/shell/LiveStatus';
+import type { LiveMode } from '@/components/shell/LiveStatus';
 import { assetPath } from '../home/asset';
 import { RUNS, STEP_NAMES } from './samples';
 import type { SampleRun } from './samples';
@@ -84,23 +86,13 @@ function FileChip({ label, file }: { label: string; file: File }) {
 }
 
 function WorkingBody({ what }: { what: string }) {
-  const [secs, setSecs] = useState(0);
-  useEffect(() => {
-    const t0 = performance.now();
-    const iv = setInterval(
-      () => setSecs(Math.round((performance.now() - t0) / 1000)),
-      250,
-    );
-    return () => clearInterval(iv);
-  }, []);
   return (
     <>
       <p className="intro">{what}</p>
-      <p className="faint">
-        Working — <span className="elapsed">{secs} s</span> elapsed. Live model
-        calls typically take ~20 s and can take ~95 s. This timer is the real
-        elapsed time; there is no progress bar to fake.
-      </p>
+      <LiveProgress
+        what="Muse Spark is working on it"
+        next="Engineering checks run in your browser"
+      />
     </>
   );
 }
@@ -283,6 +275,14 @@ export default function ForgeThread() {
   const dispatch = useDispatch();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('Checking what this deployment can do…');
+  const [mode, setMode] = useState<{ mode: LiveMode; why: string }>({
+    mode: 'checking',
+    why: '',
+  });
+  const liveFailed = useCallback((e: unknown) => {
+    setMode({ mode: 'recorded', why: 'the last live call failed (' + errMsg(e) + ')' });
+  }, []);
+  const liveWorked = useCallback(() => setMode({ mode: 'live', why: '' }), []);
   const [text, setText] = useState('');
   const [attach, setAttach] = useState<{ kind: AttachKind; file: File } | null>(
     null,
@@ -535,6 +535,7 @@ export default function ForgeThread() {
           const body = await postJSON<{ spec: RobotSpec }>('/describe', {
             description: value,
           });
+          liveWorked();
           const secs = Math.round(
             (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
           );
@@ -553,6 +554,7 @@ export default function ForgeThread() {
           );
           specPipeline(body.spec, 'described-robot.json');
         } catch (e) {
+          liveFailed(e);
           setStageBody(
             cardId,
             <>
@@ -774,11 +776,13 @@ export default function ForgeThread() {
           mode: 'document',
           note: noteText || undefined,
         });
+        liveWorked();
         const secs = Math.round(
           (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
         );
         renderDocDraft(cardId, body.draft, secs);
       } catch (e) {
+          liveFailed(e);
         setStageBody(
           cardId,
           <>
@@ -850,6 +854,7 @@ export default function ForgeThread() {
           image_data_url: small,
           note: noteText || undefined,
         });
+        liveWorked();
         const secs = Math.round(
           (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
         );
@@ -890,6 +895,7 @@ export default function ForgeThread() {
         );
         specPipeline(draft.spec, 'photo-draft.json');
       } catch (e) {
+          liveFailed(e);
         setStageBody(
           cardId,
           <>
@@ -953,6 +959,7 @@ export default function ForgeThread() {
           import: ListImportResult;
           draft_note?: string;
         }>('/list', { text });
+        liveWorked();
         const secs = Math.round(
           (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
         );
@@ -1028,6 +1035,7 @@ export default function ForgeThread() {
           specPipeline(imp.draft_spec, 'list-draft.json');
         }
       } catch (e) {
+          liveFailed(e);
         setStageBody(
           cardId,
           <>
@@ -1230,22 +1238,17 @@ export default function ForgeThread() {
     );
     (async () => {
       if (!liveBase) {
+        setMode({ mode: 'recorded', why: offReason(null, 'describe') });
         setStatus(
-          'Recorded + local mode — no live endpoint is configured in this deployment, so nothing you attach leaves your browser. Spec uploads are checked and drawn right here, and scans are measured right here.',
+          'Nothing you attach leaves your browser. Spec uploads are checked and drawn right here, and scans are measured right here.',
         );
         return;
       }
-      setStatus('Checking the live endpoint…');
       const h: LiveHealth | null = await liveHealth();
-      if (!h || !h.ok) {
+      if (!h || !h.ok || h.mode === 'off' || (h.budget && h.budget.exhausted)) {
+        setMode({ mode: 'recorded', why: offReason(h, 'describe') });
         setStatus(
-          'The live endpoint isn’t answering — local spec checks and the recorded samples still work, and live steps will say so plainly if you try one.',
-        );
-        return;
-      }
-      if (h.mode === 'off') {
-        setStatus(
-          'Live mode is switched off at the endpoint — local spec checks and the recorded samples still work.',
+          'Local spec checks and the recorded samples still work, and a live step will say plainly if it can’t run.',
         );
         return;
       }
@@ -1256,13 +1259,15 @@ export default function ForgeThread() {
         'photo + document ' +
           (routeOn(h, 'photo') ? 'live' : 'not configured'),
       );
+      if (routeOn(h, 'describe') || routeOn(h, 'list') || routeOn(h, 'photo')) {
+        setMode({ mode: 'live', why: '' });
+      } else {
+        setMode({ mode: 'recorded', why: offReason(h, 'describe') });
+      }
       setStatus(
-        'Live endpoint connected — ' +
+        'Routes: ' +
           bits.join(' · ') +
-          ', plus local spec checks and the recorded samples.' +
-          (h.budget && h.budget.exhausted
-            ? ' Today’s live budget is used up, so live steps will fall back until tomorrow.'
-            : ''),
+          '. Spec checks always run in your browser, and the recorded samples below always work.',
       );
     })();
     /* Old step-walk deep links (#words, #photo, #list, #document)
@@ -1274,9 +1279,9 @@ export default function ForgeThread() {
 
   return (
     <>
-      <div className="forge-status" role="status">
-        {status}
-      </div>
+      <ModeBanner mode={mode.mode} reason={mode.why}>
+        {mode.mode === 'checking' ? null : status}
+      </ModeBanner>
       <div className="forge-thread" aria-live="polite">
         {entries.map((e) => {
           if (e.kind === 'stage') {

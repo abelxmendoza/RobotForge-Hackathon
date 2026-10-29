@@ -3,6 +3,8 @@ import Link from "next/link";
 import { robots } from "@/lib/data";
 import RobotCard from "@/components/home/RobotCard";
 import HowItWorks from "@/components/home/HowItWorks";
+import AiInside from "@/components/home/AiInside";
+import Term, { Glossary } from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 
@@ -21,9 +23,9 @@ import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/L
 export const metadata: Metadata = {
   // Absolute: the vanilla landing's <title>, bypassing the layout's
   // "%s · RobotForge" template.
-  title: { absolute: "RobotForge — check a robot before you build it" },
+  title: { absolute: "RobotForge — fix your robot before you spend a dollar" },
   description:
-    "Describe a robot or paste its parts list. Muse Spark drafts the spec, RobotForge catches the numbers that don't add up, and a simulated twin has to pass a measured motion test.",
+    "Bring in a broken robot, an idea or a pile of parts. Muse Spark proposes the spec and the fixes, engineering checks decide what holds, and a simulated twin has to pass a measured motion test.",
 };
 
 export default function HomePage() {
@@ -37,17 +39,21 @@ export default function HomePage() {
           <div className="eyebrow">
             Meta Global AI Developer Hackathon · Indie track
           </div>
-          <h1>Check a robot before you build it.</h1>
+          <h1>Fix your robot before you spend a dollar.</h1>
           <p className="lede">
-            Describe a robot or paste its parts list. Muse Spark drafts the
-            spec, RobotForge catches the numbers that don&apos;t add up,
-            and a simulated twin has to pass a measured motion test.
+            Bring in a broken robot, an idea, or a pile of parts. Muse Spark
+            proposes the spec and the fixes, engineering checks decide what
+            holds, and a simulated twin has to pass a measured motion test,
+            all before you buy a single part.
           </p>
           <div className="ctas">
-            <Link className="btn btn-primary" href="/forge/">
-              Open the app →
+            <Link className="btn btn-primary" href="/demo/">
+              Run the one-click demo →
             </Link>
-            <a className="btn" href="#proof">
+            <Link className="btn" href="/forge/">
+              Open the app
+            </Link>
+            <a className="btn btn-ghost" href="#proof">
               See the evidence
             </a>
           </div>
@@ -92,12 +98,12 @@ export default function HomePage() {
             </li>
             <li>
               <span className="n">02</span>
-              <h3>Spec</h3>
+              <h3><Term k="spec">Spec</Term></h3>
               <p>Muse Spark drafts a strict, structured hardware spec.</p>
             </li>
             <li>
               <span className="n">03</span>
-              <h3>Checks</h3>
+              <h3><Term k="checks">Checks</Term></h3>
               <p>
                 Engineering checks catch impossible or inconsistent
                 numbers.
@@ -105,21 +111,49 @@ export default function HomePage() {
             </li>
             <li>
               <span className="n">04</span>
-              <h3>Twin &amp; gate</h3>
+              <h3><Term k="twin">Twin</Term> &amp; <Term k="gate">gate</Term></h3>
               <p>
-                The twin drives 1 m and turns 90° in Gazebo, graded on
-                ground truth.
+                The twin drives 1 m and turns 90° in <Term k="gazebo">Gazebo</Term>, graded on{" "}
+                <Term k="ground_truth">ground truth</Term>.
               </p>
             </li>
             <li>
               <span className="n">05</span>
               <h3>Outputs</h3>
               <p>
-                URDF, a printable take-apart kit, and what&apos;s missing
+                <Term k="urdf">URDF</Term>, a printable <Term k="takeapart">take-apart</Term> kit, and what&apos;s missing
                 to buy.
               </p>
             </li>
           </ol>
+        </div>
+      </section>
+
+      {/* ============ AI INSIDE ============ */}
+      <section className="band" id="ai-inside">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">AI inside</div>
+            <h2>Where Muse Spark works, and where it doesn&apos;t.</h2>
+            <p>
+              Meta&apos;s Muse Spark reads, drafts and proposes. Deterministic
+              checks decide. Every model output on the site is labelled LIVE,
+              RECORDED or MOCK, so you always know which one you are looking at.
+            </p>
+          </div>
+          <AiInside />
+        </div>
+      </section>
+
+      {/* ============ PLAIN ENGLISH ============ */}
+      <section className="band" id="glossary">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">Plain English</div>
+            <h2>The words on this site, without the jargon.</h2>
+            <p>Hover or tap a dotted word anywhere on the site for the same meaning.</p>
+          </div>
+          <Glossary />
         </div>
       </section>
 

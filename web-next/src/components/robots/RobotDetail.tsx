@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Robot } from "@/lib/types";
 import { harnessOf, robotSlug, stabilityOf } from "@/lib/data";
 import { REPO_URL } from "@/components/shell/AppShell";
+import Term from "@/components/shell/Term";
 import {
   classPath, dexId, gateStatusOf, gradeOf, imgSrc, robotImage, specLabel,
   staticCheckOf, type GateRunFull,
@@ -235,7 +236,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
       </section>
 
       <section className="section" id="gate">
-        <h2>Gate runs</h2>
+        <h2><Term k="gate">Gate</Term> runs</h2>
         <p className="sub">{gateSub}</p>
         <div className="card">
           {gs.runs.length ? (

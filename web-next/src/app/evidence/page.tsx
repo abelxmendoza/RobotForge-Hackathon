@@ -21,6 +21,7 @@ import AppShell, { REPO_URL } from "@/components/shell/AppShell";
 import ReportCard from "@/components/evidence/ReportCard";
 import ReportStrip from "@/components/evidence/ReportStrip";
 import HashScroller from "@/components/evidence/HashScroller";
+import Term from "@/components/shell/Term";
 
 export const metadata: Metadata = {
   title: "Evidence",
@@ -121,7 +122,7 @@ export default function EvidencePage() {
       </div>
 
       <section className="section" id="reports">
-        <h2>Gate reports</h2>
+        <h2><Term k="gate">Gate</Term> reports</h2>
         <p className="sub">
           Two clean passes and two failures the gate caught. Each report shows
           every check, the raw measurements, the ground-truth path, and any
@@ -254,7 +255,7 @@ export default function EvidencePage() {
       </section>
 
       <section className="section" id="harness-checks">
-        <h2>Harness checks</h2>
+        <h2><Term k="harness">Harness</Term> checks</h2>
         <p className="sub">
           A third kind of evidence, kept separate from gate runs and static
           checks: electrical computations over each robot&apos;s documented

@@ -11,7 +11,11 @@ workers_dev = true
 # lower them here and redeploy. The Worker reads them per request.
 [vars]
 LIVE_ENABLED = "1"          # kill switch: "0" turns every live call away
-DAILY_LIMIT = "200"         # global live calls per UTC day (KV counter)
+DAILY_LIMIT = "450"         # global live calls per UTC day (KV counter).
+                            # Raised from 200 for judging, Nov 4-9 2026
+                            # (one demo click is 1-3 calls). Each call
+                            # writes 2 KV keys, so 450 stays under KV's
+                            # free 1,000 writes/day. Back to 200 after Nov 9.
 PER_IP_DAILY_LIMIT = "30"   # live calls per visitor IP per UTC day
 
 # Budget + rate-limit counters. Bound and live as of the 2026-10-28

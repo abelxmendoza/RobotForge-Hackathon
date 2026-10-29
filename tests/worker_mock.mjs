@@ -81,8 +81,34 @@ const DOC_BAD = {
   spec: { name: 'Bad', length_m: 'one-seven-eight' },
 };
 
-let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft
-let metaMode = 'photo';   // photo | junk | document | document-bad
+const FIX_REPLY = {
+  changes: [
+    { path: 'ground_clearance_m', value: 0.04, reason: 'below the wheel radius' },
+    { path: 'sensors', value: [], reason: 'not an allowed field' },
+    { path: 'battery.voltage_v', value: -3, reason: 'not a real voltage' },
+    { path: 'wheel.count', value: 2.5, reason: 'not an integer' },
+  ],
+  summary: 'Lower the clearance under the wheel radius.',
+};
+
+const PART_REPLY = {
+  name: '4S LiPo 5200 mAh', category: 'battery', quantity: 1,
+  catalog_part_id: 'lipo_4s_5200',
+  specs: { voltage_v: 14.8, capacity_mah: 5200, secret_field: 'drop me' },
+  read_from_label: ['voltage_v', 'capacity_mah', 'secret_field'],
+  condition: 'used', confidence: 'high',
+  question: 'Is the balance lead a 5-pin JST-XH?',
+};
+
+const PART_CHAT_REPLY = {
+  reply: 'Got it, a 37 mm 12 V gearmotor.',
+  update: { name: '37 mm 12 V gearmotor', category: 'motor',
+            specs: { voltage_v: 12 }, category_bogus: 'x' },
+  confirmed: true,
+};
+
+let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft | fix | part-chat
+let metaMode = 'photo';   // photo | junk | document | document-bad | part
 const upstreamCalls = [];
 globalThis.fetch = async (url, opts) => {
   upstreamCalls.push({ url: String(url), opts });
@@ -92,6 +118,7 @@ globalThis.fetch = async (url, opts) => {
     const content = metaMode === 'photo' ? JSON.stringify(PHOTO_DRAFT)
       : metaMode === 'document' ? JSON.stringify(DOC_DRAFT)
       : metaMode === 'document-bad' ? JSON.stringify(DOC_BAD)
+      : metaMode === 'part' ? JSON.stringify(PART_REPLY)
       : 'this is not json at all';
     return new Response(JSON.stringify({
       choices: [{ message: { content } }],
@@ -104,6 +131,8 @@ globalThis.fetch = async (url, opts) => {
     : basetenMode === 'fenced' ? '```json\n' + JSON.stringify(GOOD_SPEC) + '\n```'
     : basetenMode === 'chat' ? 'A concise live answer.'
     : basetenMode === 'list' ? JSON.stringify(LIST_REPLY)
+    : basetenMode === 'fix' ? JSON.stringify(FIX_REPLY)
+    : basetenMode === 'part-chat' ? JSON.stringify(PART_CHAT_REPLY)
     : basetenMode === 'list-bad-draft'
       ? JSON.stringify({ ...LIST_REPLY, draft_spec: { name: 'half a spec' } })
     : 'this is not json at all';
@@ -286,7 +315,8 @@ await scenario('unknown route is a 404', async () => {
 await scenario('health reports which routes are configured', async () => {
   const plain = await call(makeEnv(), '/health');
   assert.deepStrictEqual(plain.body.routes,
-    { describe: true, chat: true, list: true, photo: false });
+    { describe: true, chat: true, list: true, fix: true, part_chat: true,
+      photo: false, part: false });
   const withMeta = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/health');
   assert.strictEqual(withMeta.body.routes.photo, true);
 });
@@ -420,6 +450,75 @@ await scenario('list malformed model output is a 502', async () => {
   });
   assert.strictEqual(r.status, 502);
   assert.strictEqual(r.body.code, 'bad_model_output');
+});
+
+await scenario('the Vercel site origin is allowed', async () => {
+  const origin = 'https://robot-forge-hackathon.vercel.app';
+  const r = await call(makeEnv(), '/health', { origin });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.headers.get('Access-Control-Allow-Origin'), origin);
+});
+
+await scenario('fix keeps only allowed, well-typed changes', async () => {
+  basetenMode = 'fix';
+  const r = await call(makeEnv(), '/fix', { method: 'POST', body: {
+    spec: GOOD_SPEC, findings: ['[ERROR] geometry.clearance_vs_wheel: too high'] } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.deepStrictEqual(r.body.changes.map(c => c.path), ['ground_clearance_m']);
+  assert.strictEqual(r.body.changes[0].before, 0.03);
+  assert.strictEqual(r.body.changes[0].value, 0.04);
+  assert.ok(r.body.summary);
+});
+
+await scenario('fix without findings is a 400', async () => {
+  const r = await call(makeEnv(), '/fix', { method: 'POST', body: { spec: GOOD_SPEC, findings: [] } });
+  assert.strictEqual(r.status, 400);
+  assert.strictEqual(r.body.code, 'missing_findings');
+});
+
+await scenario('fix malformed model output is a 502', async () => {
+  basetenMode = 'junk';
+  const r = await call(makeEnv(), '/fix', { method: 'POST', body: {
+    spec: GOOD_SPEC, findings: ['[ERROR] x: y'] } });
+  assert.strictEqual(r.status, 502);
+  assert.strictEqual(r.body.code, 'bad_model_output');
+});
+
+await scenario('part without the Meta key is a 501', async () => {
+  const r = await call(makeEnv(), '/part', { method: 'POST',
+    body: { image_data_url: 'data:image/jpeg;base64,AAAA' } });
+  assert.strictEqual(r.status, 501);
+});
+
+await scenario('part identifies and sanitizes', async () => {
+  metaMode = 'part';
+  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/part', { method: 'POST',
+    body: { image_data_url: 'data:image/jpeg;base64,AAAA', note: 'from my shelf' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.part.catalog_part_id, 'lipo_4s_5200');
+  assert.ok(!('secret_field' in r.body.part.specs));
+  assert.deepStrictEqual(r.body.part.read_from_label, ['voltage_v', 'capacity_mah']);
+  assert.strictEqual(r.body.part.confidence, 'high');
+});
+
+await scenario('part-chat returns a sanitized update', async () => {
+  basetenMode = 'part-chat';
+  const r = await call(makeEnv(), '/part-chat', { method: 'POST', body: {
+    part: { name: 'motor?' }, message: 'it is a 37mm 12V gearmotor',
+    history: [{ role: 'assistant', text: 'What voltage is it?' }] } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.confirmed, true);
+  assert.strictEqual(r.body.update.category, 'motor');
+  assert.ok(!('category_bogus' in r.body.update));
+});
+
+await scenario('part-chat plain-text reply changes nothing', async () => {
+  basetenMode = 'chat';
+  const r = await call(makeEnv(), '/part-chat', { method: 'POST', body: {
+    part: {}, message: 'what is this?' } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.update, null);
+  assert.strictEqual(r.body.confirmed, false);
 });
 
 const failed = results.filter(r => r.startsWith('FAIL'));

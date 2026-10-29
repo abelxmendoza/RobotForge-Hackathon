@@ -38,3 +38,10 @@ def test_buck_or_driver_might_resolve_nominal_overvoltage():
 def test_matching_nominal_voltages_do_not_trigger_mismatch_warning():
     findings = validate(spec(12, 12))
     assert not any(f.check == "electrical.voltage_match" for f in findings)
+
+
+def test_voltage_warning_is_labelled_a_direct_supply_heuristic():
+    for battery_v, motor_v in ((6, 12), (24, 6)):
+        [match] = [f for f in validate(spec(battery_v, motor_v))
+                   if f.check == "electrical.voltage_match"]
+        assert match.message.startswith("direct-supply heuristic: ")
