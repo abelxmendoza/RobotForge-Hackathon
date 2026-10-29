@@ -1,8 +1,11 @@
 name: Deploy landing page to GitHub Pages
 
+# Retired as the live deploy: the site is served from Vercel at the
+# domain root (robot-forge-hackathon.vercel.app), and the Next build no
+# longer carries the /RobotForge-Hackathon base path, so a Pages copy
+# would load without its styles and images. Manual runs only, so one
+# canonical URL is all a visitor (or a judge) can find.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

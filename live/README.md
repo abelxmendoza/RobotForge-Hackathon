@@ -18,6 +18,9 @@ one constant lights the live steps up.
 | `POST /describe` | `{description}` → validated spec JSON (Baseten, `meta-models/muse-spark-open`, RobotForge's describe prompt) | `BASETEN_API_KEY` |
 | `POST /chat` | `{message}` → Forge Guide live-model answer (Baseten) | `BASETEN_API_KEY` |
 | `POST /list` | `{text}` → model-generated parts-list import matched against the site catalogue (Baseten) | `BASETEN_API_KEY` |
+| `POST /fix` | `{spec, findings}` → `{changes, summary}`: Muse Spark **proposes** bounded spec edits for the validator's findings (only allow-listed fields, typed and positive); the page re-validates — the model never sets a verdict | `BASETEN_API_KEY` |
+| `POST /part` | `{image_data_url, note?}` → one inventory part identified from a photo (name, category, label-read specs, a confirming question; catalogue ids sanitized) | `META_API_KEY` (**optional**) |
+| `POST /part-chat` | `{part, message, history?}` → `{reply, update, confirmed}`: talk a part through until its owner confirms it | `BASETEN_API_KEY` |
 | `POST /photo` | `{image_data_url, note?, mode?}` → photo draft spec (Meta Model API vision, `muse-spark-1.3`). `mode` omitted/`"photo"`: an ESTIMATED draft from a robot photo. `mode: "document"`: a TRANSCRIBED draft from a spec-sheet/blueprint photo (below) | `META_API_KEY` (**optional**) |
 
 `/photo` without the Meta key answers `501 photo_not_configured`
@@ -65,8 +68,8 @@ badged MEASURED (scan)).
 
 ## Guardrails (this spends real credits)
 
-- **CORS locked** to `https://abelxmendoza.github.io` (+ localhost
-  for development). Any other browser Origin is rejected.
+- **CORS locked** to the Vercel site (`https://robot-forge-hackathon.vercel.app`),
+  the legacy `https://abelxmendoza.github.io`, and localhost for development. Any other browser Origin is rejected.
 - **Model, temperature and max_tokens are fixed in the Worker.**
   Nothing a client sends can change them.
 - **Body caps:** ~16 KB for text routes; ~3 MB for `/photo` (the

@@ -331,3 +331,102 @@ def describe_live(description: str, model: str | None = None) -> RobotSpec:
     raise SpecError(
         "all live describe transports failed: "
         + "; ".join(f"{label}: {exc}" for label, exc in errors))
+
+
+def _helper_text(system: str, user: str, model: str, helper: Path,
+                 label: str, extra_args: tuple = (),
+                 timeout: int = 180) -> str:
+    """One raw chat call through a connector helper; returns the text."""
+    with tempfile.NamedTemporaryFile("w", suffix=".txt",
+                                     delete=False) as tmp:
+        tmp.write(system)
+        system_file = tmp.name
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(helper), "chat", "--model", model,
+             "--user", user, "--system-file", system_file,
+             "--temperature", "0.2", *extra_args],
+            capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise SpecError(f"{label} helper timed out after {timeout} s")
+    finally:
+        Path(system_file).unlink(missing_ok=True)
+    if proc.returncode != 0:
+        tail = proc.stderr.strip().splitlines()[-3:]
+        raise SpecError(f"{label} helper failed: " + " | ".join(tail))
+    try:
+        result = json.loads(proc.stdout)
+        if result.get("status") != 200:
+            raise SpecError(f"{label} API returned HTTP {result.get('status')}")
+        return result["payload"]["choices"][0]["message"]["content"]
+    except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
+        raise SpecError(f"{label} helper returned an unexpected reply: {exc}")
+
+
+def _http_text(system: str, user: str, model: str, base: str, key: str,
+               label: str, timeout: int = 180) -> str:
+    """One raw OpenAI-compatible chat call over HTTPS; returns the text."""
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "system", "content": system},
+                     {"role": "user", "content": user}],
+        "temperature": 0.2, "max_tokens": 3000,
+    }).encode()
+    req = urllib.request.Request(
+        f"{base.rstrip('/')}/chat/completions", data=body,
+        headers={"Authorization": f"Bearer {key}",
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            payload = json.loads(resp.read())
+        return payload["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as exc:
+        raise SpecError(f"{label} returned HTTP {exc.code}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise SpecError(f"{label} call failed: {exc}") from exc
+    except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
+        raise SpecError(f"{label} returned an unexpected reply: {exc}") \
+            from exc
+
+
+def chat_live(system: str, user: str) -> tuple[str, str]:
+    """Muse Spark text call over the same transport chain as describe.
+
+    Returns (reply text, transport label). Used by the Forge loop's
+    proposer, which needs free-form JSON back rather than a spec.
+    """
+    model = os.environ.get("RF_MODEL") or DEFAULT_MODEL
+    meta_helper = Path(os.environ.get(
+        "RF_META_API_HELPER", str(DEFAULT_HELPER))).expanduser()
+    baseten_helper = Path(os.environ.get(
+        "RF_BASETEN_HELPER", str(DEFAULT_BASETEN_HELPER))).expanduser()
+    baseten_model = os.environ.get("RF_BASETEN_MODEL") or BASETEN_MODEL
+    fireworks_model = os.environ.get("RF_FIREWORKS_MODEL") or FIREWORKS_MODEL
+    attempts = []
+    if meta_helper.is_file():
+        attempts.append((f"meta-connector ({model})", lambda: _helper_text(
+            system, user, model, meta_helper, "Meta connector")))
+    if baseten_helper.is_file():
+        attempts.append((f"baseten ({baseten_model})", lambda: _helper_text(
+            system, user, baseten_model, baseten_helper, "Baseten",
+            extra_args=("--timeout", "240"), timeout=300)))
+    if _fireworks_opted_in() and os.environ.get("FIREWORKS_API_KEY"):
+        attempts.append((f"fireworks ({fireworks_model})", lambda: _http_text(
+            system, user, fireworks_model,
+            os.environ.get("RF_FIREWORKS_API_BASE", FIREWORKS_API_BASE),
+            os.environ["FIREWORKS_API_KEY"], "Fireworks API")))
+    if os.environ.get("META_API_KEY"):
+        attempts.append((f"direct ({model})", lambda: _http_text(
+            system, user, model, API_BASE, os.environ["META_API_KEY"],
+            "Meta Model API", timeout=60)))
+    if not attempts:
+        raise SpecError("no live transport available (see `robotforge "
+                        "describe` setup in the README); use --mock to run "
+                        "the loop offline")
+    errors = []
+    for label, attempt in attempts:
+        try:
+            return attempt(), label
+        except SpecError as exc:
+            errors.append(f"{label}: {exc}")
+    raise SpecError("all live transports failed: " + "; ".join(errors))

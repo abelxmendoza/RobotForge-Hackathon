@@ -13,7 +13,9 @@ from .cad import (is_estimated, kit_slug, render_stls, write_kit)
 from .catalog import (Catalog, CatalogError, Robodex, format_catalog_summary,
                       format_part, format_robot)
 from .site import build_site
-from .describe import describe_live, describe_mock
+from .describe import chat_live, describe_live, describe_mock
+from .fixloop import format_loop, live_proposer, rules_proposer, run_loop
+from .rover import check_rover, format_rover_report, rover_failed
 from .gate import (evaluate_drive, evaluate_odometry_distance,
                    evaluate_odometry_heading, evaluate_run, evaluate_turn)
 from .harness import (HarnessError, check_spec_data,
@@ -223,6 +225,29 @@ def main(argv: list[str] | None = None) -> int:
     v = sub.add_parser("validate", help="engineering checks on a spec file")
     v.add_argument("spec")
 
+    rv = sub.add_parser("rover", help="rover field checks: slope climb, step "
+                        "climb, battery runtime (estimates with named "
+                        "assumptions)")
+    rv.add_argument("spec")
+    rv.add_argument("--slope-deg", type=float, default=15.0)
+    rv.add_argument("--step-m", type=float, default=0.05)
+    rv.add_argument("--terrain", default="outdoor",
+                    choices=("indoor", "outdoor", "rough"))
+    rv.add_argument("--speed", type=float, default=0.5, help="m/s")
+    rv.add_argument("--electronics-w", type=float, default=5.0)
+    rv.add_argument("--target-min", type=float, default=30.0)
+    rv.add_argument("--json", action="store_true")
+
+    fx = sub.add_parser("fix", help="Forge loop: Muse Spark proposes spec "
+                        "fixes, the validator re-checks (max 3 rounds)")
+    fx.add_argument("spec")
+    fx.add_argument("--mock", action="store_true",
+                    help="offline rules proposer instead of Muse Spark")
+    fx.add_argument("--warnings", action="store_true",
+                    help="also try to clear WARN findings")
+    fx.add_argument("--out", help="write the final spec JSON here")
+    fx.add_argument("--json", action="store_true")
+
     sb = sub.add_parser("stability", help="static stability check for a "
                                           "legged robot spec (support-"
                                           "polygon computation from the "
@@ -349,6 +374,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.photo:
                 spec = _describe_photo(args)
             elif args.text is not None:
+                if args.mock:
+                    print("describe: OFFLINE SAMPLE (--mock) — this is the "
+                          "canned Pathfinder spec, NOT generated from your "
+                          "words; drop --mock to call Muse Spark",
+                          file=sys.stderr)
                 spec = describe_mock(args.text) if args.mock \
                     else describe_live(args.text)
             else:
@@ -555,6 +585,34 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.cmd == "validate":
             return _print_findings(spec)
+        if args.cmd == "rover":
+            try:
+                rep = check_rover(spec, slope_deg=args.slope_deg,
+                                  step_m=args.step_m, terrain=args.terrain,
+                                  speed_mps=args.speed,
+                                  electronics_w=args.electronics_w,
+                                  target_min=args.target_min)
+            except ValueError as exc:
+                print(f"rover error: {exc}", file=sys.stderr)
+                return 2
+            print(json.dumps(rep.to_dict(), indent=2) if args.json
+                  else format_rover_report(rep))
+            return 1 if rover_failed(rep) else 0
+        if args.cmd == "fix":
+            if args.mock:
+                proposer, label = rules_proposer, "offline rules"
+            else:
+                proposer, label = live_proposer(chat_live), "muse spark"
+            res = run_loop(spec, proposer, label=label,
+                           include_warnings=args.warnings)
+            if args.out and res.final_spec is not None:
+                Path(args.out).write_text(
+                    json.dumps(res.final_spec, indent=2) + "\n")
+            print(json.dumps(res.to_dict(), indent=2) if args.json
+                  else format_loop(res))
+            if args.out:
+                print(f"final spec written to {args.out}")
+            return 0 if res.resolved else 1
         if args.cmd == "urdf":
             rc = _print_findings(spec)
             if rc:

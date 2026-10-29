@@ -15,6 +15,16 @@
  *                     mode "photo" (default): ESTIMATED robot-photo
  *                     draft. mode "document": TRANSCRIBED draft from a
  *                     spec sheet / blueprint photo — document_read.
+ *   POST /fix      -> { spec, findings }   => { changes, summary, model }
+ *                     Muse Spark PROPOSES bounded spec edits for the
+ *                     validator's findings; the client re-validates —
+ *                     the model never assigns a verdict.
+ *   POST /part     -> { image_data_url, note? }  => { part, model }
+ *                     one inventory part identified from a photo
+ *                     (Meta vision; needs the optional Meta key).
+ *   POST /part-chat-> { part, message, history? } => { reply, update,
+ *                     confirmed, model } — talk a part through until
+ *                     the owner confirms what it is.
  *
  * /describe, /chat and /list proxy Baseten (key: BASETEN_API_KEY
  * secret), with Fireworks as an optional fallback provider for the
@@ -25,7 +35,8 @@
  * the site falls back to its recorded photo sample, by design).
  *
  * Guardrails (these spend the owner's API credits):
- *   - CORS locked to the Pages origin (+ localhost for development);
+ *   - CORS locked to the site's origins (Vercel production, the
+ *     legacy Pages origin, and localhost for development);
  *     any other Origin is rejected.
  *   - Model, temperature and max_tokens are fixed here; nothing the
  *     client sends can change them.
@@ -47,6 +58,8 @@ const META_URL = 'https://api.meta.ai/v1/chat/completions';
 const FIREWORKS_MODEL = 'accounts/fireworks/models/muse-spark-open';
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 const ALLOWED_ORIGINS = [
+  'https://robot-forge-hackathon.vercel.app',
+  'https://robot-forge-hackathon-abel-mendozas-projects.vercel.app',
   'https://abelxmendoza.github.io',
   'http://localhost:8000',
   'http://127.0.0.1:8000',
@@ -895,6 +908,285 @@ async function handleList(request, env) {
   });
 }
 
+/* ---------------- /fix: the Forge loop's proposer ---------------- */
+
+/* Spec fields the proposer may change. Anything else in a model reply
+ * is dropped: the model can tune a design, never restructure it. */
+const FIX_FIELDS = {
+  'length_m': 'number', 'width_m': 'number', 'height_m': 'number',
+  'mass_kg': 'number', 'ground_clearance_m': 'number',
+  'wheel.diameter_m': 'number', 'wheel.width_m': 'number',
+  'wheel.count': 'integer',
+  'motor.voltage_v': 'number', 'motor.count': 'integer',
+  'motor.stall_torque_nm': 'number', 'motor.kind': 'string',
+  'battery.voltage_v': 'number', 'battery.capacity_mah': 'integer',
+  'battery.chemistry': 'string',
+};
+const FIX_MAX_CHANGES = 6;
+const FIX_MAX_FINDINGS = 20;
+
+const FIX_SYSTEM_PROMPT = `You repair a robot specification for RobotForge. You are given the spec as JSON and the engineering validator's findings ("[ERROR] check: message" or "[WARN] ...").
+
+Propose the SMALLEST set of field changes that would resolve the findings while keeping the robot recognisably the same robot. Prefer changing the one field the finding names. Never invent sensors or new parts. Keep values physically realistic.
+
+You may only change these fields: ${Object.keys(FIX_FIELDS).join(', ')}.
+
+Output ONLY a JSON object, no prose, no markdown fences:
+{"changes": [{"path": "<field>", "value": <new value>, "reason": "<one short sentence>"}], "summary": "<one or two plain sentences for the robot's owner>"}
+
+You only PROPOSE. The validator re-checks every proposal; you never decide whether the robot passes.`;
+
+function sanitizeChanges(raw, spec) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const c of raw) {
+    if (out.length >= FIX_MAX_CHANGES) break;
+    if (!c || typeof c !== 'object') continue;
+    const path = String(c.path || '');
+    const kind = FIX_FIELDS[path];
+    if (!kind || seen.has(path)) continue;
+    let value = c.value;
+    if (kind === 'string') {
+      if (typeof value !== 'string' || !value.trim()) continue;
+      value = value.trim().slice(0, 60);
+    } else {
+      value = typeof value === 'string' ? Number(value) : value;
+      if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) continue;
+      if (kind === 'integer') {
+        if (!Number.isInteger(value)) continue;
+      }
+    }
+    const [a, b] = path.split('.');
+    const before = b === undefined ? spec[a]
+      : (spec[a] && typeof spec[a] === 'object' ? spec[a][b] : undefined);
+    if (before === value) continue;
+    seen.add(path);
+    out.push({
+      path, value,
+      before: before === undefined ? null : before,
+      reason: String(c.reason || '').slice(0, 300),
+    });
+  }
+  return out;
+}
+
+async function handleFix(request, env) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+    return err(request, 500, 'not_configured',
+      'The endpoint has no model provider key configured (see live/README.md).');
+  }
+  const { data, error } = await readJsonBody(request);
+  if (error) return err(request, 413, 'too_large', error);
+  const spec = data && data.spec;
+  const findings = data && data.findings;
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+    return err(request, 400, 'missing_spec', 'Send { "spec": {...}, "findings": [...] }.');
+  }
+  if (!Array.isArray(findings) || !findings.length) {
+    return err(request, 400, 'missing_findings',
+      'Send the validator findings to fix as { "findings": ["[ERROR] ..."] }.');
+  }
+  const lines = findings.slice(0, FIX_MAX_FINDINGS)
+    .map(f => String(f).slice(0, 400));
+  const gate = await gateBudget(env, request);
+  if (gate) return gate;
+  let content;
+  try {
+    content = await callModel(env, [
+      { role: 'system', content: FIX_SYSTEM_PROMPT },
+      { role: 'user', content: 'Spec:\n' + JSON.stringify(spec) +
+        '\n\nFindings:\n' + lines.join('\n') },
+    ], 0.2, 3000);
+  } catch (e) {
+    return err(request, 502, 'upstream_error',
+      'The model call failed (' + e.message + '). Your spec was not changed.');
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(stripFences(content));
+  } catch (e) {
+    return err(request, 502, 'bad_model_output',
+      'The model returned something that is not a fix proposal. Your spec was not changed.');
+  }
+  const changes = sanitizeChanges(parsed && parsed.changes, spec);
+  return json(request, 200, {
+    changes,
+    summary: String((parsed && parsed.summary) || '').slice(0, 600),
+    model: MODEL,
+  });
+}
+
+/* ---------------- /part + /part-chat: the parts inventory ---------------- */
+
+const PART_CATEGORIES = ['battery', 'motor', 'motor_driver', 'controller',
+  'computer', 'sensor', 'wheel', 'servo', 'power', 'radio', 'frame',
+  'cable', 'tool', 'other'];
+const PART_SPEC_KEYS = ['voltage_v', 'capacity_mah', 'current_a',
+  'stall_torque_nm', 'rpm', 'diameter_mm', 'width_mm', 'mass_g',
+  'cells', 'chemistry', 'interface', 'range_m', 'model_number'];
+
+const PART_SYSTEM_PROMPT = `You identify ONE robot part from a photo for a maker's parts inventory. Read printed labels first (model numbers, voltages, capacities); estimate only what you cannot read and say so.
+
+You are given the site's parts catalogue as lines of "id — name". Use a catalogue id only when the part clearly IS that part; otherwise null.
+
+Output ONLY a JSON object, no prose, no markdown fences:
+{"name": "<short part name>", "category": one of ${PART_CATEGORIES.join('|')},
+ "quantity": <integer, how many identical parts are in the photo>,
+ "catalog_part_id": "<id or null>",
+ "specs": {<only keys from: ${PART_SPEC_KEYS.join(', ')}>},
+ "read_from_label": [<spec keys you READ from printed text>],
+ "condition": "<new|used|damaged|unknown>",
+ "confidence": "<low|medium|high>",
+ "question": "<one short question that would confirm the identification>"}
+
+Catalogue parts:
+` + CATALOG_PARTS.map(p => p.id + ' — ' + p.name).join('\n');
+
+const PART_CHAT_SYSTEM_PROMPT = `You help a maker confirm one part in their robot parts inventory. You get the part record as JSON, the conversation so far, and the owner's new message. The owner has the part in their hands, so their statements about it win over the photo-based guess.
+
+Reply briefly and plainly (one to three sentences). If the owner's message corrects or adds facts, include them in "update". Set "confirmed" to true only when the owner has clearly confirmed what the part is.
+
+Output ONLY a JSON object, no prose, no markdown fences:
+{"reply": "<your answer>", "update": {<any of: name, category, quantity, condition, specs>} or null, "confirmed": true|false}
+
+Allowed categories: ${PART_CATEGORIES.join('|')}. Allowed spec keys: ${PART_SPEC_KEYS.join(', ')}.`;
+
+function sanitizePartSpecs(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const k of PART_SPEC_KEYS) {
+    const v = raw[k];
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 80);
+  }
+  return out;
+}
+
+function sanitizePart(raw) {
+  const ids = new Set(CATALOG_PARTS.map(p => p.id));
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const specs = sanitizePartSpecs(r.specs);
+  const qty = Number(r.quantity);
+  return {
+    name: String(r.name || 'Unidentified part').slice(0, 120),
+    category: PART_CATEGORIES.includes(r.category) ? r.category : 'other',
+    quantity: Number.isInteger(qty) && qty > 0 && qty < 1000 ? qty : 1,
+    catalog_part_id: ids.has(r.catalog_part_id) ? r.catalog_part_id : null,
+    specs,
+    read_from_label: Array.isArray(r.read_from_label)
+      ? r.read_from_label.filter(k => k in specs) : [],
+    condition: ['new', 'used', 'damaged'].includes(r.condition) ? r.condition : 'unknown',
+    confidence: ['low', 'medium', 'high'].includes(r.confidence) ? r.confidence : 'low',
+    question: String(r.question || '').slice(0, 300),
+  };
+}
+
+function sanitizePartUpdate(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const u = {};
+  if (typeof raw.name === 'string' && raw.name.trim()) u.name = raw.name.trim().slice(0, 120);
+  if (PART_CATEGORIES.includes(raw.category)) u.category = raw.category;
+  const qty = Number(raw.quantity);
+  if (Number.isInteger(qty) && qty > 0 && qty < 1000) u.quantity = qty;
+  if (['new', 'used', 'damaged', 'unknown'].includes(raw.condition)) u.condition = raw.condition;
+  const specs = sanitizePartSpecs(raw.specs);
+  if (Object.keys(specs).length) u.specs = specs;
+  return Object.keys(u).length ? u : null;
+}
+
+async function handlePart(request, env) {
+  if (!env.META_API_KEY) {
+    return err(request, 501, 'photo_not_configured',
+      'Part photos need the optional Meta key on the endpoint. You can still add the part by hand.');
+  }
+  const { data, error } = await readJsonBody(request, PHOTO_MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  const image = data && data.image_data_url;
+  if (typeof image !== 'string' || !image.startsWith('data:image/')) {
+    return err(request, 400, 'missing_image', 'Send { "image_data_url": "data:image/..." }.');
+  }
+  const note = typeof data.note === 'string' ? data.note.slice(0, 500) : '';
+  const gate = await gateBudget(env, request);
+  if (gate) return gate;
+  let content;
+  try {
+    const payload = await postChatCompletions(META_URL, env.META_API_KEY, {
+      model: PHOTO_MODEL,
+      messages: [
+        { role: 'system', content: PART_SYSTEM_PROMPT },
+        { role: 'user', content: [
+          { type: 'text', text: 'Identify this part.' +
+            (note ? ' The owner adds: ' + note : '') },
+          { type: 'image_url', image_url: { url: image } },
+        ] },
+      ],
+      temperature: 0.2,
+      max_tokens: 1500,
+    }, 'The Meta Model API');
+    content = messageContent(payload);
+  } catch (e) {
+    return err(request, 502, 'upstream_error',
+      'The photo model call failed (' + e.message + '). Your photo was not stored anywhere.');
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(stripFences(content));
+  } catch (e) {
+    return err(request, 502, 'bad_model_output',
+      'The photo model returned something that is not JSON. Try another photo or add the part by hand.');
+  }
+  return json(request, 200, { part: sanitizePart(parsed), model: PHOTO_MODEL });
+}
+
+async function handlePartChat(request, env) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+    return err(request, 500, 'not_configured',
+      'The endpoint has no model provider key configured (see live/README.md).');
+  }
+  const { data, error } = await readJsonBody(request);
+  if (error) return err(request, 413, 'too_large', error);
+  const message = data && data.message;
+  if (typeof message !== 'string' || !message.trim()) {
+    return err(request, 400, 'missing_message', 'Send { "part": {...}, "message": "..." }.');
+  }
+  if (message.length > CHAT_MAX_CHARS) {
+    return err(request, 413, 'too_large', 'Message is over ' + CHAT_MAX_CHARS + ' characters.');
+  }
+  const part = data.part && typeof data.part === 'object' ? data.part : {};
+  const history = Array.isArray(data.history) ? data.history.slice(-8)
+    .filter(h => h && (h.role === 'user' || h.role === 'assistant') && typeof h.text === 'string')
+    .map(h => ({ role: h.role, content: h.text.slice(0, 600) })) : [];
+  const gate = await gateBudget(env, request);
+  if (gate) return gate;
+  let content;
+  try {
+    content = await callModel(env, [
+      { role: 'system', content: PART_CHAT_SYSTEM_PROMPT },
+      { role: 'user', content: 'Part record:\n' + JSON.stringify(sanitizePart(part)) },
+      ...history,
+      { role: 'user', content: message },
+    ], 0.3, 1500);
+  } catch (e) {
+    return err(request, 502, 'upstream_error',
+      'The model call failed (' + e.message + '). Your inventory was not changed.');
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(stripFences(content));
+  } catch (e) {
+    /* A plain-text answer is still an answer; it just changes nothing. */
+    return json(request, 200, { reply: content.trim().slice(0, 1200), update: null,
+      confirmed: false, model: MODEL });
+  }
+  return json(request, 200, {
+    reply: String(parsed.reply || '').slice(0, 1200),
+    update: sanitizePartUpdate(parsed.update),
+    confirmed: parsed.confirmed === true,
+    model: MODEL,
+  });
+}
+
 async function handle(request, env) {
   if (originRejected(request)) {
     return err(request, 403, 'origin_rejected',
@@ -934,7 +1226,8 @@ async function handle(request, env) {
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY) },
       routes: {
         describe: textProvider, chat: textProvider, list: textProvider,
-        photo: Boolean(env.META_API_KEY),
+        fix: textProvider, part_chat: textProvider,
+        photo: Boolean(env.META_API_KEY), part: Boolean(env.META_API_KEY),
       },
     });
   }
@@ -950,7 +1243,16 @@ async function handle(request, env) {
   if (url.pathname === '/photo' && request.method === 'POST') {
     return handlePhoto(request, env);
   }
-  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list or /photo.');
+  if (url.pathname === '/fix' && request.method === 'POST') {
+    return handleFix(request, env);
+  }
+  if (url.pathname === '/part' && request.method === 'POST') {
+    return handlePart(request, env);
+  }
+  if (url.pathname === '/part-chat' && request.method === 'POST') {
+    return handlePartChat(request, env);
+  }
+  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part or /part-chat.');
 }
 
 export default { fetch: handle };

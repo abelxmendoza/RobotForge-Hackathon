@@ -1,13 +1,44 @@
 # RobotForge
 
-**Describe a robot in plain words — RobotForge builds its validated digital twin in simulation.**
+**Fix your robot before you spend a dollar.** Describe a robot, photograph it, or
+paste its parts list. **Muse Spark** turns it into an engineering spec, RobotForge
+checks it the way an engineer would, and its digital twin drives in Gazebo against
+ground truth. If the design doesn't add up, you find out before you buy parts.
 
-You describe a robot (or paste a parts list). **Muse Spark**, via the Meta Model API,
-turns the description into a structured hardware specification. RobotForge then checks
-that specification the way an engineer would — wheel size vs. ground clearance, mass
-budget, motor/battery voltage match — generates a URDF model, spawns the twin in
-Gazebo, and runs motion acceptance checks. If the description doesn't add up, you find
-out *before* anything is built.
+**Try it:** https://robot-forge-hackathon.vercel.app ·
+**Demo video:** _(link added at submission)_
+
+## Why I built this
+
+My robot, Omega1, is broken, and right now I can't afford to fix it *and* buy new
+parts to keep learning. RobotForge is the tool I needed: bring the robot you have
+into a Garage, plan each hardware upgrade, and check it in simulation first. It is
+for anyone getting started in robotics without a lab budget, for professionals who
+want a fast sanity pass with every number's source shown, and for rover teams
+deciding on motors and batteries before a competition.
+
+## What you can do
+
+| | |
+|---|---|
+| **Forge** | Words, a robot photo, a spec-sheet photo, a parts list or a 3D scan → a spec, checked. |
+| **Garage** | Bring in your robot (photo, spec file, or a Robodex robot), edit it, save every upgrade as a version, and compare any two: field diff, engineering checks and rover checks before and after. |
+| **Forge loop** | When the checks find a problem, Muse Spark proposes a fix, the validator re-checks it, up to three rounds. The model proposes; the checks decide; you approve. |
+| **Parts inventory** | Photograph the parts on your shelf. Muse Spark reads the labels and asks one question; you confirm each part in chat. Confirmed batteries, motors and wheels fit into a Garage robot with one click. |
+| **Rover field checks** | Slope climb, step climb and battery runtime, each with its assumptions listed (`robotforge rover`). |
+| **Evidence** | The Gazebo motion gate's recorded runs: drive, turn and stop measured against ground truth. |
+
+## Meta models inside
+
+| Model | Where | What it does |
+|---|---|---|
+| Muse Spark (`muse-spark-1.3`, Meta Model API) | CLI describe, photo, document | Words → spec; robot photo → ESTIMATED draft; spec-sheet photo → transcribed values |
+| Muse Spark vision (Meta Model API) | Garage photo intake, Parts inventory | Robot photo → draft spec; part photo → identified part with label-read specs |
+| Muse Spark Open (Baseten, Fireworks failover) | Live site: describe, parts lists, Forge Guide, Forge loop, part chat | Spec drafting, list import, guide answers, fix proposals, part confirmation chat |
+| SAM 3.1 (Meta Model API) | `robotforge describe --photo` | Cross-checks what Muse Spark saw in a photo against segmented regions |
+
+Every model output is labelled with where it came from (LIVE, LOCAL, RECORDED,
+ESTIMATED, DOCUMENT-READ), and no model ever assigns a pass/fail verdict.
 
 ## Provenance (read this first)
 
@@ -56,7 +87,12 @@ robotforge urdf examples/pathfinder.json --out build/pathfinder.urdf
 robotforge describe "a four-wheel rover, 30 cm long, with a front ultrasonic sensor" --mock
 robotforge describe --photo robot.jpg        # draft a spec from a photo (every dimension ESTIMATED)
 robotforge run-gate examples/pathfinder.json # spawn the twin in headless Gazebo and grade drive / turn (needs Gazebo Sim)
+robotforge fix examples/broken-indoor-rover.json --mock --warnings   # Forge loop (drop --mock for Muse Spark)
+robotforge rover examples/pathfinder.json --terrain rough --slope-deg 20   # rover field checks
 ```
+
+`--mock` runs are offline samples and say so on stderr: `describe --mock` always
+returns the canned Pathfinder spec, whatever you type.
 
 Live describe mode runs through the registered Meta Model API connector
 helper in this workspace (no key in the repo or environment; see
@@ -125,6 +161,8 @@ The two `pathfinder` specs in `examples/` are a pair, made two different ways:
 - `src/robotforge/stability.py` — static stability check for legged robots (support-polygon computation from the spec; `robotforge stability <spec>`) — a check, never a gate verdict
 - `src/robotforge/harness.py` — electrical harness checks over a spec's wiring graph (`robotforge harness <spec>`): voltage drop, ampacity, logic levels, rail budgets, connector match — every check CHECKED, PARTIAL or NOT_CHECKED with missing data named, never a blanket pass
 - `src/robotforge/describe.py` — Muse Spark client (OpenAI-compatible endpoint)
+- `src/robotforge/fixloop.py` — the Forge loop: model proposes bounded spec changes, the validator decides (`robotforge fix <spec>`)
+- `src/robotforge/rover.py` — rover field checks: slope climb, step climb, battery runtime (`robotforge rover <spec>`)
 - `src/robotforge/urdf.py` — URDF generation from a spec
 - `src/robotforge/cli.py` — `robotforge` command line
 - `examples/` — sample specs (the demo robot is `pathfinder`, built for this event)
@@ -132,7 +170,13 @@ The two `pathfinder` specs in `examples/` are a pair, made two different ways:
 
 ## Website
 
-The site has two separate parts that share one set of design tokens
+The live site is the Next.js app in `web-next/`, deployed on Vercel at the
+domain root. It adds the **Garage** (`/garage/`) and the **Parts inventory**
+(`/inventory/`); both keep a visitor's robots and parts in that browser's
+local storage, with Export / Import JSON to move them. The original static
+site is kept alongside it under `/vanilla/`, and is described below.
+
+The static site has two separate parts that share one set of design tokens
 (`assets/css/tokens.css`):
 
 - **Landing page** — `index.html`: the promise, the workflow, the evidence,
