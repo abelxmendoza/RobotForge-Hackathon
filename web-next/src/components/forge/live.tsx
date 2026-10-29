@@ -10,7 +10,7 @@
  * live/README.md) to light up live describe / photo / list steps. */
 import type { LiveHealth } from './model';
 
-export const LIVE_ENDPOINT = '';
+export const LIVE_ENDPOINT = 'https://robotforge-live.abelxmendoza.workers.dev';
 
 export const liveBase = LIVE_ENDPOINT.replace(/\/+$/, '');
 

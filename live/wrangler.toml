@@ -14,11 +14,10 @@ LIVE_ENABLED = "1"          # kill switch: "0" turns every live call away
 DAILY_LIMIT = "200"         # global live calls per UTC day (KV counter)
 PER_IP_DAILY_LIMIT = "30"   # live calls per visitor IP per UTC day
 
-# Budget + rate-limit counters. Create the namespace first (README
-# step 3), then uncomment this block with the id Cloudflare gives you.
-# Until a KV namespace is bound, the Worker runs without counters and
-# /health reports "kv": false — bind KV before lighting up the site.
-#
-# [[kv_namespaces]]
-# binding = "RF_LIVE_KV"
-# id = "PASTE_THE_KV_NAMESPACE_ID_HERE"
+# Budget + rate-limit counters. Bound and live as of the 2026-10-28
+# deploy (namespace created via the Cloudflare API; /health reports
+# "kv": true). Keep this block in sync with the deployed binding —
+# a wrangler deploy without it would unbind the counters.
+[[kv_namespaces]]
+binding = "RF_LIVE_KV"
+id = "e998ad4b0f7f4f91b070ca79d640a348"

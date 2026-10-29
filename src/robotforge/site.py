@@ -127,7 +127,7 @@ CHAT_END = "<!-- chat:end -->"
 # chat; the key itself only ever lives in the Worker (live/README.md).
 # --------------------------------------------------------------------------
 
-LIVE_ENDPOINT = ""
+LIVE_ENDPOINT = "https://robotforge-live.abelxmendoza.workers.dev"
 
 
 def render_live_config() -> str:

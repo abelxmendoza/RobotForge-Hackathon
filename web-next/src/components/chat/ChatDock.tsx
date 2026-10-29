@@ -54,7 +54,7 @@ import intentsDoc from "@/data/chat-intents.json";
 /* Deployment live-endpoint config (assets/js/live-config.js in the
  * vanilla site): EMPTY in the committed site — recorded answers
  * only, no network calls, no badges. */
-const LIVE_ENDPOINT = "";
+const LIVE_ENDPOINT = "https://robotforge-live.abelxmendoza.workers.dev";
 
 const DEFAULT_CHIPS = [
   "Which robots passed the gate?",
