@@ -28,7 +28,7 @@ from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
 from .spotter import format_card, save_dossier, spot_robot
 from .specimen import build_specimen
 from .stability import StabilityError, check_spec, format_stability_report
-from .schema import RobotSpec, SpecError
+from .schema import RobotSpec, SpecError, spec_is_estimated
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
 from .validate import has_errors, validate
