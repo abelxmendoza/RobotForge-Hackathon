@@ -11,6 +11,8 @@ it judges measured results; it does not move the robot (see twin.py).
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 
 PASS, MARGINAL, FAIL = "PASS", "MARGINAL", "FAIL"
@@ -140,3 +142,28 @@ def suspect_fields(checks: list[CheckResult]) -> list[dict]:
 def evaluate_run(results: list[CheckResult]) -> GateReport:
     checks = list(results)
     return GateReport(checks=checks, suspects=suspect_fields(checks))
+
+
+SIM_SCOPE = ("simulated result: the generated model met these motion "
+             "thresholds in Gazebo; it is not a hardware test, and torque, "
+             "traction and inertia are only as good as the spec's numbers")
+
+
+def spec_sha256(spec_dict: dict) -> str:
+    """Hash of the spec the run judged (canonical JSON), so a report can
+    be tied to its exact input."""
+    canon = json.dumps(spec_dict, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canon.encode()).hexdigest()
+
+
+def run_provenance(spec_dict: dict, *, gazebo_version: str,
+                   max_step_s: float, robotforge_version: str) -> dict:
+    """What every gate report carries besides its verdict: which
+    simulator and version produced it, at what physics step, from which
+    exact input, and what a PASS does and does not mean."""
+    return {"simulator": "Gazebo Sim",
+            "gazebo_version": gazebo_version,
+            "physics_max_step_s": max_step_s,
+            "robotforge_version": robotforge_version,
+            "spec_sha256": spec_sha256(spec_dict),
+            "scope": SIM_SCOPE}

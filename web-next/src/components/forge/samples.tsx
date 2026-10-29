@@ -34,7 +34,7 @@ export const STEP_NAMES = ['Input', 'Spec', 'Checks', 'Twin & gate', 'Outputs'];
 
 const BROKEN_LINES = [
   '[ERROR] geometry.clearance_vs_wheel: ground clearance 0.060 m exceeds wheel radius 0.050 m — impossible without a lifted chassis design',
-  '[WARN] electrical.voltage_match: motor voltage 11.1 V is far below battery 24 V — a regulator is required and was not declared',
+  '[WARN] electrical.voltage_match: direct-supply heuristic: motor nominal voltage 11.1 V is far below battery nominal voltage 24 V; verify motor-driver output, regulation, and component voltage limits before approval',
 ];
 
 interface WordsData {

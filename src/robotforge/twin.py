@@ -56,6 +56,34 @@ class TwinError(RuntimeError):
     pass
 
 
+PHYSICS_MAX_STEP_S = 0.001
+_SEMVER = re.compile(r"\b(\d+\.\d+\.\d+)\b")
+
+
+def gazebo_version() -> str:
+    """The Gazebo Sim version this host would run the gate on.
+
+    Asks `gz sim --versions` first; when the CLI does not answer, falls
+    back to the gz.sim8 bindings (major version only). Never guesses: an
+    unanswerable host records "unknown" rather than a hoped-for version.
+    """
+    if shutil.which("gz") is not None:
+        try:
+            out = subprocess.run(["gz", "sim", "--versions"],
+                                 capture_output=True, text=True,
+                                 timeout=20).stdout
+        except (OSError, subprocess.SubprocessError):
+            out = ""
+        found = _SEMVER.findall(out)
+        if found:
+            return found[-1]
+    try:
+        import gz.sim8  # noqa: F401
+    except Exception:
+        return "unknown"
+    return "8.x (gz.sim8 bindings)"
+
+
 # ---------------------------------------------------------------- SDF model
 def generate_sdf(spec: RobotSpec, *,
                  geometry_wheel_radius_m: float | None = None) -> str:
@@ -159,7 +187,7 @@ def generate_world(spec: RobotSpec, model_sdf_path: str) -> str:
 <sdf version="1.9">
   <world name="robotforge_world">
     <physics name="default_physics" type="ignored">
-      <max_step_size>0.001</max_step_size>
+      <max_step_size>{PHYSICS_MAX_STEP_S:g}</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>

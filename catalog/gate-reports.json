@@ -55,7 +55,15 @@
       "verdict": "PASS"
      }
     ],
-    "suspects": []
+    "suspects": [],
+    "provenance": {
+     "simulator": "Gazebo Sim",
+     "gazebo_version": "Harmonic (gz-sim 8); patch version not recorded for this run",
+     "physics_max_step_s": 0.001,
+     "robotforge_version": "0.1.0",
+     "spec_sha256": null,
+     "scope": "simulated result: the generated model met these motion thresholds in Gazebo; it is not a hardware test, and torque, traction and inertia are only as good as the spec's numbers"
+    }
    },
    "traj": [
     [
@@ -782,7 +790,15 @@
       "verdict": "PASS"
      }
     ],
-    "suspects": []
+    "suspects": [],
+    "provenance": {
+     "simulator": "Gazebo Sim",
+     "gazebo_version": "Harmonic (gz-sim 8); patch version not recorded for this run",
+     "physics_max_step_s": 0.001,
+     "robotforge_version": "0.1.0",
+     "spec_sha256": null,
+     "scope": "simulated result: the generated model met these motion thresholds in Gazebo; it is not a hardware test, and torque, traction and inertia are only as good as the spec's numbers"
+    }
    },
    "traj": [
     [
@@ -1510,7 +1526,15 @@
       "field": "wheel_separation (robot width / wheel track)",
       "reason": "odometry heading disagrees with ground truth \u2014 the track width odometry integrates over does not match the physical robot (or the wheels scrub/slip in turns)"
      }
-    ]
+    ],
+    "provenance": {
+     "simulator": "Gazebo Sim",
+     "gazebo_version": "Harmonic (gz-sim 8); patch version not recorded for this run",
+     "physics_max_step_s": 0.001,
+     "robotforge_version": "0.1.0",
+     "spec_sha256": null,
+     "scope": "simulated result: the generated model met these motion thresholds in Gazebo; it is not a hardware test, and torque, traction and inertia are only as good as the spec's numbers"
+    }
    },
    "traj": [
     [
@@ -2250,7 +2274,15 @@
       "field": "wheel_separation (robot width / wheel track)",
       "reason": "odometry heading disagrees with ground truth \u2014 the track width odometry integrates over does not match the physical robot (or the wheels scrub/slip in turns)"
      }
-    ]
+    ],
+    "provenance": {
+     "simulator": "Gazebo Sim",
+     "gazebo_version": "Harmonic (gz-sim 8); patch version not recorded for this run",
+     "physics_max_step_s": 0.001,
+     "robotforge_version": "0.1.0",
+     "spec_sha256": null,
+     "scope": "simulated result: the generated model met these motion thresholds in Gazebo; it is not a hardware test, and torque, traction and inertia are only as good as the spec's numbers"
+    }
    },
    "traj": [
     [

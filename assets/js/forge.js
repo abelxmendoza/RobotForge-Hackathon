@@ -47,6 +47,7 @@ const FV_SENSOR_KINDS = ['ultrasonic', 'lidar_2d', 'depth_camera',
 
 function fvFmt3(v) { return v.toFixed(3); }
 function fvFmtG(v) { return String(parseFloat(v.toPrecision(6))); }
+const FV_HEURISTIC = 'direct-supply heuristic: ';
 function fvIsNum(v) { return typeof v === 'number' && Number.isFinite(v); }
 function fvIsInt(v) { return fvIsNum(v) && Number.isInteger(v); }
 
@@ -260,12 +261,12 @@ function forgeValidateSpec(spec) {
   }
   if (spec.motor.voltage_v > spec.battery.voltage_v * 1.05) {
     f('WARN', 'electrical.voltage_match',
-      'motor nominal voltage ' + fvFmtG(spec.motor.voltage_v) +
+      FV_HEURISTIC + 'motor nominal voltage ' + fvFmtG(spec.motor.voltage_v) +
       ' V exceeds battery nominal voltage ' + fvFmtG(spec.battery.voltage_v) +
       ' V; verify motor-driver output, battery operating range, and any boost converter before approval');
   } else if (spec.motor.voltage_v < spec.battery.voltage_v * 0.5) {
     f('WARN', 'electrical.voltage_match',
-      'motor nominal voltage ' + fvFmtG(spec.motor.voltage_v) +
+      FV_HEURISTIC + 'motor nominal voltage ' + fvFmtG(spec.motor.voltage_v) +
       ' V is far below battery nominal voltage ' + fvFmtG(spec.battery.voltage_v) +
       ' V; verify motor-driver output, regulation, and component voltage limits before approval');
   }
@@ -476,7 +477,7 @@ function forgeValidateSpec(spec) {
     if (f.report) d.report = await fetchJSON(f.report);
     if (f.broken) d.broken = [
       '[ERROR] geometry.clearance_vs_wheel: ground clearance 0.060 m exceeds wheel radius 0.050 m — impossible without a lifted chassis design',
-      '[WARN] electrical.voltage_match: motor voltage 11.1 V is far below battery 24 V — a regulator is required and was not declared'
+      '[WARN] electrical.voltage_match: ' + FV_HEURISTIC + 'motor nominal voltage 11.1 V is far below battery nominal voltage 24 V; verify motor-driver output, regulation, and component voltage limits before approval'
     ];
     runData[run.id] = d;
     return d;

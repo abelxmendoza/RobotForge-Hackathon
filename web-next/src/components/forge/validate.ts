@@ -23,6 +23,8 @@ function fvFmt3(v: number): string {
 function fvFmtG(v: number): string {
   return String(parseFloat(v.toPrecision(6)));
 }
+
+export const FV_HEURISTIC = 'direct-supply heuristic: ';
 function fvIsNum(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
 }
@@ -283,25 +285,30 @@ export function forgeValidateSpec(specIn: unknown): ValidateResult {
       }
     }
   }
+  // Direct-supply heuristic, worded like validate.py: nominal battery
+  // vs motor voltage with no driver or converter modelled, so a
+  // mismatch is a review warning, never a verdict.
   if (num(motor.voltage_v) > num(battery.voltage_v) * 1.05) {
     f(
-      'ERROR',
+      'WARN',
       'electrical.voltage_match',
-      'motor voltage ' +
+      FV_HEURISTIC +
+        'motor nominal voltage ' +
         fvFmtG(num(motor.voltage_v)) +
-        ' V exceeds battery ' +
+        ' V exceeds battery nominal voltage ' +
         fvFmtG(num(battery.voltage_v)) +
-        ' V — motors would be undervolted or need a boost converter',
+        ' V; verify motor-driver output, battery operating range, and any boost converter before approval',
     );
   } else if (num(motor.voltage_v) < num(battery.voltage_v) * 0.5) {
     f(
       'WARN',
       'electrical.voltage_match',
-      'motor voltage ' +
+      FV_HEURISTIC +
+        'motor nominal voltage ' +
         fvFmtG(num(motor.voltage_v)) +
-        ' V is far below battery ' +
+        ' V is far below battery nominal voltage ' +
         fvFmtG(num(battery.voltage_v)) +
-        ' V — a regulator is required and was not declared',
+        ' V; verify motor-driver output, regulation, and component voltage limits before approval',
     );
   }
   const cm = spec.component_mass_kg as Record<string, number> | undefined;

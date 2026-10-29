@@ -21,6 +21,11 @@ class Finding:
     message: str
 
 
+# Prefix for the voltage check: it compares nominal battery and motor
+# voltages as if the battery fed the motors directly.
+VOLTAGE_HEURISTIC = "direct-supply heuristic: "
+
+
 def validate(spec: RobotSpec) -> list[Finding]:
     f: list[Finding] = []
 
@@ -104,15 +109,17 @@ def validate(spec: RobotSpec) -> list[Finding]:
     # battery -> regulator -> motor-driver -> motor power path. A mismatch
     # is therefore a review warning, not proof of an impossible design.
     # Do not silently claim that a regulator exists (or is absent).
+    # The message says so up front: this compares nominal voltages as if
+    # the battery fed the motors directly.
     if spec.motor.voltage_v > spec.battery.voltage_v * 1.05:
         f.append(Finding(WARN, "electrical.voltage_match",
-                         f"motor nominal voltage {spec.motor.voltage_v:g} V exceeds "
+                         f"{VOLTAGE_HEURISTIC}motor nominal voltage {spec.motor.voltage_v:g} V exceeds "
                          f"battery nominal voltage {spec.battery.voltage_v:g} V; "
                          "verify motor-driver output, battery operating range, "
                          "and any boost converter before approval"))
     elif spec.motor.voltage_v < spec.battery.voltage_v * 0.5:
         f.append(Finding(WARN, "electrical.voltage_match",
-                         f"motor nominal voltage {spec.motor.voltage_v:g} V is far "
+                         f"{VOLTAGE_HEURISTIC}motor nominal voltage {spec.motor.voltage_v:g} V is far "
                          f"below battery nominal voltage {spec.battery.voltage_v:g} V; "
                          "verify motor-driver output, regulation, and component "
                          "voltage limits before approval"))

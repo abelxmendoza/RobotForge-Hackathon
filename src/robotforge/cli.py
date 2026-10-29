@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 from datetime import date
 from pathlib import Path
 
+from . import __version__
 from .cad import (is_estimated, kit_slug, render_stls, write_kit)
 from .catalog import (Catalog, CatalogError, Robodex, format_catalog_summary,
                       format_part, format_robot)
@@ -17,7 +18,8 @@ from .describe import chat_live, describe_live, describe_mock
 from .fixloop import format_loop, live_proposer, rules_proposer, run_loop
 from .rover import check_rover, format_rover_report, rover_failed
 from .gate import (evaluate_drive, evaluate_odometry_distance,
-                   evaluate_odometry_heading, evaluate_run, evaluate_turn)
+                   evaluate_odometry_heading, evaluate_run, evaluate_turn,
+                   run_provenance)
 from .harness import (HarnessError, check_spec_data,
                       format_harness_report, has_errors as harness_errors)
 from .listimport import import_list, render_text
@@ -31,7 +33,8 @@ from .spotter import format_card, save_dossier, spot_robot
 from .specimen import build_specimen
 from .stability import StabilityError, check_spec, format_stability_report
 from .schema import RobotSpec, SpecError, spec_is_estimated
-from .twin import TwinError, run_motion_check
+from .twin import (PHYSICS_MAX_STEP_S, TwinError, gazebo_version,
+                   run_motion_check)
 from .urdf import generate_urdf
 from .validate import has_errors, validate
 
@@ -725,10 +728,17 @@ def main(argv: list[str] | None = None) -> int:
             for s_ in report.suspects:
                 print(f"SUSPECT {s_['field']}: {s_['reason']}")
             print(f"GATE: {report.verdict}")
+            gz_version = gazebo_version()
+            print(f"gazebo: {gz_version} (simulated result, not a "
+                  f"hardware test)")
             report_path = Path(args.workdir) / "gate-report.json"
             report_doc = {"spec": spec.name,
                           "measurements": res,
-                          **report.to_dict()}
+                          **report.to_dict(),
+                          "provenance": run_provenance(
+                              spec.to_dict(), gazebo_version=gz_version,
+                              max_step_s=PHYSICS_MAX_STEP_S,
+                              robotforge_version=__version__)}
             report_path.write_text(json.dumps(report_doc, indent=2) + "\n")
             print(f"report written to {report_path}")
             if args.repair and report.verdict == "FAIL":
@@ -766,7 +776,11 @@ def main(argv: list[str] | None = None) -> int:
                           f"error {c.error} {c.unit}")
                 print(f"GATE AFTER REPAIR: {report2.verdict}")
                 doc2 = {"spec": repaired.name, "measurements": res2,
-                        "repair_of": str(report_path), **report2.to_dict()}
+                        "repair_of": str(report_path), **report2.to_dict(),
+                        "provenance": run_provenance(
+                            repaired.to_dict(), gazebo_version=gz_version,
+                            max_step_s=PHYSICS_MAX_STEP_S,
+                            robotforge_version=__version__)}
                 (Path(args.workdir) / "repaired"
                  / "gate-report.json").write_text(
                     json.dumps(doc2, indent=2) + "\n")

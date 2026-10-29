@@ -23,8 +23,16 @@ interface GateSuspect {
   field: string;
   reason: string;
 }
+interface GateProvenance {
+  simulator: string;
+  gazebo_version: string;
+  physics_max_step_s: number;
+  spec_sha256: string | null;
+  scope: string;
+}
 interface GateDoc {
   verdict: string;
+  provenance?: GateProvenance;
   checks: GateCheck[];
   suspects?: GateSuspect[];
   measurements: {
@@ -137,8 +145,34 @@ export default function ReportCard({
                 </td>
               </tr>
               {injected}
+              {d.provenance ? (
+                <>
+                  <tr>
+                    <th>Simulator</th>
+                    <td>
+                      {d.provenance.simulator} {d.provenance.gazebo_version}, physics
+                      step {d.provenance.physics_max_step_s * 1000} ms
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Input spec hash</th>
+                    <td>
+                      {d.provenance.spec_sha256 ? (
+                        <code title={d.provenance.spec_sha256}>
+                          {d.provenance.spec_sha256.slice(0, 12)}…
+                        </code>
+                      ) : (
+                        "not recorded for this run"
+                      )}
+                    </td>
+                  </tr>
+                </>
+              ) : null}
             </tbody>
           </table>
+          {d.provenance ? (
+            <p className="legend">Scope: {d.provenance.scope}.</p>
+          ) : null}
         </div>
         <div>
           <TrajectoryChart
