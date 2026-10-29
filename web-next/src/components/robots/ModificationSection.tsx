@@ -112,19 +112,32 @@ export default function ModificationSection({
         />
       </div>
 
-      <div className="callout bad" style={{ marginTop: 12 }}>
+      <div className="callout" style={{ marginTop: 12 }}>
         <span>
-          <strong>Read this before the counts:</strong> the
-          catalogue&apos;s 5 V buck (<code>buck_converter_5v</code>) is
-          rated <strong>24 V maximum</strong> on its input, and
-          Spot&apos;s pack rail is 50.4 V nominal / 58.8 V max. As
-          drawn, the feed runs the converter far past its rating —
-          the viewer above flags it red — so this build as specified
-          needs a wider-input regulator. The five graded checks below
-          do not include an input-rating check; the flag is the
-          viewer&apos;s comparison of the spec&apos;s recorded{" "}
-          <code>rated_max_v</code> against the feed voltage, from the
-          same recorded data.
+          <strong>Power, re-based on the official interface — read
+          this before the counts:</strong> the first recorded version
+          of this build fed the catalogue&apos;s 5 V buck
+          (<code>buck_converter_5v</code>, rated <strong>24 V
+          maximum</strong> on its input) straight from Spot&apos;s
+          pack rail at 50.4 V — the viewer flagged it red, and it
+          would have run the converter far past its rating. The
+          retrieval pass filed under{" "}
+          <a href="#sources">Sources &amp; models</a> found how Boston
+          Dynamics actually powers payloads, and this version is
+          wired that way: a Spot GXP expansion payload sits on one of
+          the robot&apos;s DB25 payload ports — unregulated bus,
+          35–58.8 V, 150 W per port — and provides regulated rails.
+          The Jetson cannot run from the GXP&apos;s 5 V rail: that
+          rail is <strong>10 W at most</strong>, against the
+          Jetson&apos;s 7 / 15 / 25 W modes. So the Jetson is fed
+          from the GXP&apos;s 24 V rail through the same catalogue
+          buck — inside its rating now, but exactly at it: 24 V in
+          against a 24 V maximum, no margin. The lidar rides the
+          GXP&apos;s 5 V rail instead. The remaining alternative — a
+          wide-input regulator straight on the port bus, with
+          components rated for at least 80 V input as Boston Dynamics
+          advises — cannot be graded here: the catalogue stocks no
+          such regulator.
         </span>
       </div>
 
@@ -149,7 +162,26 @@ export default function ModificationSection({
                   <strong>+ UNKNOWN.</strong> The Jetson module, its
                   carrier board, the lidar and the mount have no mass
                   in the parts catalogue — no part records one — so
-                  the modified total is not stated.
+                  the modified total is not stated. The one published
+                  figure, the GXP&apos;s 430 g, cannot complete a
+                  total on its own; it is counted in the payload row
+                  below.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Payload capacity</strong></td>
+                <td>
+                  14 kg total — published limit for everything on the
+                  robot&apos;s top (Boston Dynamics, SDK Configuration
+                  Requirements)
+                </td>
+                <td>
+                  The photographed unit&apos;s own arm is published
+                  at 8 kg against that limit, and this build adds the
+                  GXP (430 g, published) plus parts whose masses are
+                  UNKNOWN — so the remaining margin is honestly
+                  stated as: 14 kg limit, 8 kg already spoken for,
+                  this build&apos;s share UNKNOWN.
                 </td>
               </tr>
               <tr>
@@ -170,22 +202,28 @@ export default function ModificationSection({
                 </td>
               </tr>
               <tr>
-                <td><strong>5 V payload rail</strong></td>
+                <td><strong>Payload power</strong></td>
                 <td>— (no payload circuit)</td>
                 <td>
-                  New rail, graded PARTIAL in the recorded report:
-                  5 A rated, 5.0 A of known load (the Jetson at its
-                  25 W mode), the lidar&apos;s draw uncounted —
-                  0 A of <em>known</em> headroom.
+                  Re-based on the official interface and re-graded in
+                  the recorded report above: the GXP&apos;s 24 V rail
+                  budget and the buck&apos;s 5 V rail both grade
+                  CHECKED — the 5 V rail at exactly its 5 A rating
+                  under the Jetson&apos;s 25 W mode, so 0 A of
+                  headroom there — and the GXP&apos;s 5 V rail grades
+                  PARTIAL, feeding the lidar with its draw uncounted.
+                  On the GXP&apos;s 5 V rail alone (10 W max), the
+                  Jetson could only run its 7 W mode.
                 </td>
               </tr>
               <tr>
                 <td><strong>Harness</strong></td>
                 <td>Not documented — no wiring block, nothing drawn</td>
                 <td>
-                  The payload circuit only, graded in the recorded
-                  report above: counts as printed there, never a
-                  blanket pass.
+                  The payload circuit only — now including the
+                  payload port and the GXP&apos;s regulated rails —
+                  graded in the recorded report above: counts as
+                  printed there, never a blanket pass.
                 </td>
               </tr>
             </tbody>

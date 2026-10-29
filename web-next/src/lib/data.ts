@@ -4,7 +4,8 @@ import familiesDoc from "@/data/families.json";
 import gateDoc from "@/data/gate-reports.json";
 import harnessDoc from "@/data/harness-reports.json";
 import stabilityDoc from "@/data/stability-reports.json";
-import type { Family, GateReportRun, Part, Robot } from "./types";
+import sourcesDoc from "@/data/sources.json";
+import type { Family, GateReportRun, Part, Robot, SourceRecord } from "./types";
 
 export const robots = (robotsDoc as unknown as { robots: Robot[] }).robots;
 export const parts = (partsDoc as unknown as { parts: Part[] }).parts;
@@ -17,6 +18,14 @@ export const harnessReports = harnessDoc as unknown as Record<string, Record<str
 export const stabilityReports = stabilityDoc as unknown as Record<string, Record<string, unknown>>;
 export const harnessOf = (slug: string) => harnessReports[slug];
 export const stabilityOf = (slug: string) => stabilityReports[slug];
+
+/* Per-robot web-source records (catalog/sources/<slug>.json, schema
+ * robotforge-sources/1): what the retrieval pass verified about where
+ * a robot's models and interface data live. Filed as data by an
+ * operator-side retrieval; the app displays the record, it does not
+ * fetch pages live, and a source is never auto-merged into a spec. */
+export const sourcesRecords = sourcesDoc as unknown as Record<string, SourceRecord>;
+export const sourcesOf = (slug: string): SourceRecord | undefined => sourcesRecords[slug];
 
 export function robotSlug(r: Robot): string {
   if (r.slug) return r.slug;

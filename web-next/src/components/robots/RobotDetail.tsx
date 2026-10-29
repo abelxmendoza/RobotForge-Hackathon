@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Robot } from "@/lib/types";
-import { harnessOf, robotSlug, stabilityOf } from "@/lib/data";
+import { harnessOf, robotSlug, sourcesOf, stabilityOf } from "@/lib/data";
 import { buildOf } from "@/lib/builds";
 import { REPO_URL } from "@/components/shell/AppShell";
 import {
@@ -12,6 +12,7 @@ import CopyButton from "./CopyButton";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
 import ModificationSection from "./ModificationSection";
 import SimulateSection from "./SimulateSection";
+import SourcesSection from "./SourcesSection";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
 
 /* render_robot_page (site.py): hero, spec + provenance, gate runs,
@@ -93,6 +94,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   const check = staticCheckOf(robot);
   const harnessRep = asHarnessReport(harnessOf(slug));
   const build = buildOf(slug);
+  const sources = sourcesOf(slug);
   const stabRep = check ? asStabilityReport(stabilityOf(slug)) : null;
   const ground = (robot.mobility_class ?? "").startsWith("Ground");
   const specFile = robot.spec_file;
@@ -115,6 +117,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   if (harnessRep) jump.push({ href: "#harness", label: "Harness checks" });
   if (specFile) {
     jump.push({ href: "#take-apart", label: "Take it apart" });
+    if (sources) jump.push({ href: "#sources", label: "Sources & models" });
     if (build) {
       jump.push({ href: "#modification", label: "Modify it" });
       jump.push({ href: "#simulate", label: "Simulate it" });
@@ -429,6 +432,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           </div>
         </section>
       ) : null}
+
+      {sources ? <SourcesSection record={sources} slug={slug} /> : null}
 
       {build ? (
         <ModificationSection

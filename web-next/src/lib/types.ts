@@ -83,3 +83,29 @@ export interface Family {
   variants: DexVariant[];
   [key: string]: unknown;
 }
+/* Web-source records (catalog/sources/<slug>.json, schema
+ * robotforge-sources/1): the retrieval layer's per-robot dossier of
+ * where models and interface data live on the web — every entry
+ * verified on its page by an operator-side retrieval, with the
+ * source's own license/terms and gate recorded, never smoothed. */
+export interface SourceEntry {
+  kind: "official-docs" | "official-cad" | "official-support" |
+        "community-model" | "sim-model" | "spec-sheet";
+  title: string;
+  url: string;
+  provenance: "OFFICIAL" | "COMMUNITY";
+  license_or_terms: string;
+  gated: boolean;
+  retrieved: string;
+  notes: string;
+}
+export interface SourceRecord {
+  robot: string;
+  slug: string;
+  schema?: string;
+  retrieved: string;
+  headline: string;
+  notes?: string;
+  entries: SourceEntry[];
+  [key: string]: unknown;
+}

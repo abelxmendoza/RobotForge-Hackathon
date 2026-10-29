@@ -31,7 +31,8 @@ cpSync(join(repo, "catalog", "specimens"), join(root, "public", "catalog", "spec
 // Per-slug report folders merged into single maps for static import.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 for (const [folder, out] of [["harness-reports", "harness-reports.json"],
-                             ["stability-reports", "stability-reports.json"]]) {
+                             ["stability-reports", "stability-reports.json"],
+                             ["sources", "sources.json"]]) {
   const dir = join(repo, "catalog", folder);
   const map = {};
   for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) {
