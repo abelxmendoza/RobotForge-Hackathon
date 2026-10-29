@@ -17,21 +17,30 @@ export function BrandMark() {
   );
 }
 
+export const RESEARCH_URL = "/problem-space";
+
+/* App navigation. `more` items fold into the phone bar's More menu;
+ * every item shows in the desktop sidebar. */
 const NAV = [
+  { id: "home", label: "Home", href: "/", icon: (<><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></>) },
   { id: "demo", label: "Demo", href: "/demo/", icon: (<><circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" /></>) },
   { id: "forge", label: "Forge", href: "/forge/", icon: (<><path d="M4 6h16M4 12h10M4 18h7" /><circle cx="18" cy="16" r="3" /></>) },
   { id: "garage", label: "Garage", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
-  { id: "inventory", label: "Parts", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
-  { id: "robots", label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
-  { id: "evidence", label: "Evidence", href: "/evidence/", icon: (<><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>) },
+  { id: "inventory", more: true, label: "Parts", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
+  { id: "robots", more: true, label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
+  { id: "evidence", more: true, label: "Evidence", href: "/evidence/", icon: (<><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>) },
 ];
 
 export interface Crumb { label: string; href?: string }
 
 export default function AppShell({ active, crumbs = [], children }:
   { active: string; crumbs?: Crumb[]; children: ReactNode }) {
+  /* Every trail starts at Home; pages still passing the old "App"
+   * root crumb get it replaced. */
+  const trail: Crumb[] = [{ label: "Home", href: "/" }, ...crumbs.filter((c) => c.label !== "App")];
   return (
     <div className="shell">
+      <a className="skip-link" href="#content">Skip to content</a>
       <ChatDock />
       <aside className="sidebar">
         <Link className="brand" href="/">
@@ -39,24 +48,41 @@ export default function AppShell({ active, crumbs = [], children }:
         </Link>
         <nav className="side-nav" aria-label="App">
           {NAV.map((n) => (
-            <Link key={n.id} href={n.href} aria-current={n.id === active ? "page" : undefined}>
+            <Link key={n.id} href={n.href} className={n.more ? "nav-more-item" : undefined}
+              aria-current={n.id === active ? "page" : undefined}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{n.icon}</svg>
               <span>{n.label}</span>
             </Link>
           ))}
+          <details className="nav-more">
+            <summary aria-label="More pages">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></svg>
+              <span>More</span>
+            </summary>
+            <div className="nav-more-menu">
+              {NAV.filter((n) => n.more).map((n) => (
+                <Link key={n.id} href={n.href} aria-current={n.id === active ? "page" : undefined}>{n.label}</Link>
+              ))}
+              <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
+              <a href={RESEARCH_URL}>Research</a>
+              <a href={REPO_URL}>GitHub</a>
+            </div>
+          </details>
         </nav>
         <div className="side-foot">
-          <Link href="/">&larr; RobotForge site</Link>
+          <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
+          <a href={RESEARCH_URL}>Research</a>
           <a href={REPO_URL}>GitHub</a>
         </div>
       </aside>
       <div className="main">
         <header className="topbar">
-          <Link className="mobile-brand" href="/" aria-label="RobotForge site"><BrandMark /></Link>
+          <Link className="mobile-brand" href="/" aria-label="RobotForge home"><BrandMark /></Link>
           <nav className="crumbs" aria-label="Breadcrumb">
-            {crumbs.map((c, i) => {
-              const last = i === crumbs.length - 1;
+            {trail.map((c, i) => {
+              const last = i === trail.length - 1;
               return last || !c.href ? (
                 <span key={i} className="here" aria-current="page">{c.label}</span>
               ) : (

@@ -29,13 +29,51 @@ const NOT_AI = [
   'The Gazebo motion gate verdict, measured against ground truth',
 ];
 
-export default function AiInside() {
+function useHealth() {
   const [h, setH] = useState<LiveHealth | null | undefined>(undefined);
   useEffect(() => {
     let alive = true;
     liveHealth().then((x) => { if (alive) setH(x); });
     return () => { alive = false; };
   }, []);
+  return h;
+}
+
+/* The landing page's short version: three jobs, one card each. */
+const JOBS: { title: string; body: string; routes: string[] }[] = [
+  { title: 'Reads', body: 'Robot photos, spec sheets and part labels become numbers, each marked ESTIMATED or DOCUMENT-READ.', routes: ['photo', 'part'] },
+  { title: 'Drafts', body: 'Plain words or a parts list become a full engineering spec.', routes: ['describe', 'list'] },
+  { title: 'Proposes fixes', body: 'When a check fails, it suggests a change. The checks accept or reject it, up to three rounds.', routes: ['fix', 'part_chat'] },
+];
+
+export function AiInsideCards() {
+  const h = useHealth();
+  return (
+    <div className="ai-cards">
+      {JOBS.map((j) => {
+        const live = h ? j.routes.some((r) => routeOn(h, r)) : false;
+        return (
+          <article className="card ai-card" key={j.title}>
+            <div className="ai-card-head">
+              <h3>{j.title}</h3>
+              {h === undefined ? null : live
+                ? <span className="fbadge live">LIVE</span>
+                : <span className="fbadge recorded" title="Falls back to recorded runs or offline rules, and says so">FALLBACK</span>}
+            </div>
+            <p>{j.body}</p>
+          </article>
+        );
+      })}
+      <article className="card ai-card ai-card-not">
+        <h3>Not AI, on purpose</h3>
+        <p>The engineering checks, the rover estimates, the URDF and twin, and the Gazebo verdict. Same answer every time.</p>
+      </article>
+    </div>
+  );
+}
+
+export default function AiInside() {
+  const h = useHealth();
   return (
     <div className="ai-inside">
       <div className="ai-grid">

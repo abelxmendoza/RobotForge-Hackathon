@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { robots } from "@/lib/data";
 import RobotCard from "@/components/home/RobotCard";
-import HowItWorks from "@/components/home/HowItWorks";
-import AiInside from "@/components/home/AiInside";
-import Term, { Glossary } from "@/components/shell/Term";
+import { AiInsideCards } from "@/components/home/AiInside";
+import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 
@@ -29,131 +28,77 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  /* The first four catalogue robots; the rest are on /robots/. */
+  const featured = robots.slice(0, 4);
   return (
     <>
     <LandingHeader />
-    <main>
+    <main id="main">
       {/* ============ HERO ============ */}
       <section className="hero">
         <div className="wrap">
           <div className="eyebrow">
-            Meta Global AI Developer Hackathon · Indie track
+            Built with Meta&apos;s Muse Spark · Meta Global AI Developer Hackathon
           </div>
           <h1>Fix your robot before you spend a dollar.</h1>
           <p className="lede">
-            Bring in a broken robot, an idea, or a pile of parts. Muse Spark
+            Bring in a broken robot, an idea or a pile of parts. Muse Spark
             proposes the spec and the fixes, engineering checks decide what
-            holds, and a simulated twin has to pass a measured motion test,
-            all before you buy a single part.
+            holds, and a simulated twin has to pass a measured motion test.
           </p>
           <div className="ctas">
             <Link className="btn btn-primary" href="/demo/">
-              Run the one-click demo →
+              Run the demo →
             </Link>
             <Link className="btn" href="/forge/">
               Open the app
             </Link>
-            <a className="btn btn-ghost" href="#proof">
-              See the evidence
-            </a>
           </div>
-          <p className="powered">
-            Spec drafting by Muse Spark via the Meta Model API · twin and
-            gate in Gazebo Sim
-          </p>
-          <figure className="hero-art">
-            {/* Vanilla markup uses a plain <img>; next/image would alter it. */}
+          <figure className="hero-art hero-shot">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={assetPath("assets/img/hero.jpg")}
-              width={900}
-              height={386}
-              alt="Illustration of a rugged four-wheel rover on a workbench, lit in amber"
+              src={assetPath("assets/img/demo-shot.jpg")}
+              width={872}
+              height={640}
+              alt="The one-click demo: the engineering checks flag a voltage mismatch and a clearance error, and the Forge loop fixes both in one round"
             />
-            <figcaption>
-              AI illustration (muse-image-1.0). The real robots in the app
-              carry real, credited photos.
-            </figcaption>
+            <figcaption>The one-click demo, mid-run.</figcaption>
           </figure>
         </div>
       </section>
 
-      {/* ============ WORKFLOW ============ */}
+      {/* ============ HOW IT WORKS ============ */}
       <section className="band" id="workflow">
         <div className="wrap">
           <div className="section-head">
-            <div className="eyebrow">The workflow</div>
-            <h2>Five steps from an idea to a verdict.</h2>
-            <p>
-              Every robot goes through the same path. Nothing downstream
-              trusts the step before it: the model&apos;s spec is checked,
-              and the twin is measured.
-            </p>
+            <div className="eyebrow">How it works</div>
+            <h2>Four steps, and the AI never grades itself.</h2>
           </div>
-          <ol className="flow">
+          <ol className="flow flow-4">
             <li>
               <span className="n">01</span>
-              <h3>Input</h3>
-              <p>Plain words, a pasted parts list, or a photo.</p>
+              <h3>Bring your robot</h3>
+              <p>Plain words, a photo, a parts list or a <Term k="spec">spec</Term> file.</p>
             </li>
             <li>
               <span className="n">02</span>
-              <h3><Term k="spec">Spec</Term></h3>
-              <p>Muse Spark drafts a strict, structured hardware spec.</p>
+              <h3>Muse Spark drafts and fixes</h3>
+              <p>It writes the spec and proposes repairs when a check fails.</p>
             </li>
             <li>
               <span className="n">03</span>
-              <h3><Term k="checks">Checks</Term></h3>
-              <p>
-                Engineering checks catch impossible or inconsistent
-                numbers.
-              </p>
+              <h3><Term k="checks">Checks</Term> decide</h3>
+              <p>Fixed engineering rules accept or reject every number and every fix.</p>
             </li>
             <li>
               <span className="n">04</span>
-              <h3><Term k="twin">Twin</Term> &amp; <Term k="gate">gate</Term></h3>
-              <p>
-                The twin drives 1 m and turns 90° in <Term k="gazebo">Gazebo</Term>, graded on{" "}
-                <Term k="ground_truth">ground truth</Term>.
-              </p>
-            </li>
-            <li>
-              <span className="n">05</span>
-              <h3>Outputs</h3>
-              <p>
-                <Term k="urdf">URDF</Term>, a printable <Term k="takeapart">take-apart</Term> kit, and what&apos;s missing
-                to buy.
-              </p>
+              <h3><Term k="gazebo">Gazebo</Term> proves it</h3>
+              <p>A <Term k="twin">twin</Term> drives 1 m and turns 90°, graded on <Term k="ground_truth">ground truth</Term>.</p>
             </li>
           </ol>
-        </div>
-      </section>
-
-      {/* ============ AI INSIDE ============ */}
-      <section className="band" id="ai-inside">
-        <div className="wrap">
-          <div className="section-head">
-            <div className="eyebrow">AI inside</div>
-            <h2>Where Muse Spark works, and where it doesn&apos;t.</h2>
-            <p>
-              Meta&apos;s Muse Spark reads, drafts and proposes. Deterministic
-              checks decide. Every model output on the site is labelled LIVE,
-              RECORDED or MOCK, so you always know which one you are looking at.
-            </p>
-          </div>
-          <AiInside />
-        </div>
-      </section>
-
-      {/* ============ PLAIN ENGLISH ============ */}
-      <section className="band" id="glossary">
-        <div className="wrap">
-          <div className="section-head">
-            <div className="eyebrow">Plain English</div>
-            <h2>The words on this site, without the jargon.</h2>
-            <p>Hover or tap a dotted word anywhere on the site for the same meaning.</p>
-          </div>
-          <Glossary />
+          <p className="section-more">
+            <Link href="/how-it-works/">How RobotForge decides, in detail →</Link>
+          </p>
         </div>
       </section>
 
@@ -161,13 +106,11 @@ export default function HomePage() {
       <section className="band" id="proof">
         <div className="wrap">
           <div className="section-head">
-            <div className="eyebrow">Evidence</div>
-            <h2>The gate is not a rubber stamp.</h2>
+            <div className="eyebrow">Proof</div>
+            <h2>The simulation test is not a rubber stamp.</h2>
             <p>
-              Thresholds are locked: distance error 5% passes and over 10%
-              fails, heading error 5° passes and over 10° fails. Here is
-              one robot that earned a PASS, and one that was rigged to
-              fail.
+              One robot that earned a PASS in Gazebo, and one rigged to fail.
+              The limits are fixed: 5% passes, over 10% fails.
             </p>
           </div>
           <div className="proof">
@@ -304,48 +247,52 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ============ AI INSIDE ============ */}
+      <section className="band" id="ai-inside">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">AI inside</div>
+            <h2>Muse Spark reads, drafts and proposes. It never decides.</h2>
+          </div>
+          <AiInsideCards />
+          <p className="section-more">
+            <Link href="/how-it-works/#ai-inside">Every place Muse Spark works, and whether it is live now →</Link>
+          </p>
+        </div>
+      </section>
+
       {/* ============ ROBOTS ============ */}
       <section className="band" id="robots">
         <div className="wrap">
           <div className="section-head">
-            <div className="eyebrow">Robodex</div>
-            <h2>Robots the forge knows.</h2>
-            <p>
-              Each badge comes only from recorded gate runs. A robot that
-              hasn&apos;t been gated says so in grey instead of borrowing a
-              green it hasn&apos;t earned.
-            </p>
+            <div className="eyebrow"><Term k="robodex">Robodex</Term></div>
+            <h2>Real robots, checked the same way.</h2>
           </div>
-          <div className="robot-row">
-            {robots.map((robot) => (
+          <div className="robot-row robot-row-4">
+            {featured.map((robot) => (
               <RobotCard key={robot.number} robot={robot} />
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ============ HOW IT WORKS ============ */}
-      <section className="band" id="how">
-        <div className="wrap">
-          <HowItWorks />
+          <p className="section-more">
+            <Link href="/robots/">See all {robots.length} robots →</Link>
+          </p>
         </div>
       </section>
 
       {/* ============ FINAL CTA ============ */}
       <section className="band cta-band">
         <div className="wrap">
-          <h2>Watch a robot go through the forge.</h2>
+          <h2>See a broken robot get fixed in one click.</h2>
           <p>
-            Step through a real recorded run: the paragraph, the spec Muse
-            Spark returned, the checks, and the gate&apos;s measured
-            verdict.
+            The demo runs the whole story: the checks catch the mistakes,
+            Muse Spark proposes the fix, and the checks decide.
           </p>
           <Link
             className="btn btn-primary"
-            href="/forge/"
+            href="/demo/"
             style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
           >
-            Open the app →
+            Run the demo →
           </Link>
         </div>
       </section>

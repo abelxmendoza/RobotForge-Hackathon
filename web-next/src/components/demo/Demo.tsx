@@ -126,7 +126,7 @@ export default function Demo() {
 
       <ol className="demo-steps">
         <li className={broken ? 'on' : ''}>
-          <h2><span className="n">1</span> The broken robot</h2>
+          <h2><span className="n">1</span> <span>The broken robot</span></h2>
           <p>{DEMO.story}</p>
           <p className="faint g-small">Stand-in: this slot is for {DEMO.standInFor}. It switches to {DEMO.standInFor}’s real measured spec once that is in the repo.</p>
           {broken && (
@@ -140,7 +140,7 @@ export default function Demo() {
         </li>
 
         <li className={before.length ? 'on' : ''}>
-          <h2><span className="n">2</span> <Term k="checks">Engineering checks</Term> catch it</h2>
+          <h2><span className="n">2</span> <span><Term k="checks">Engineering checks</Term> catch it</span></h2>
           {before.length ? (
             <>
               <p>{errorsBefore} error{errorsBefore === 1 ? '' : 's'} and {warnsBefore} warning{warnsBefore === 1 ? '' : 's'}, found by deterministic checks in your browser. No AI involved yet.</p>
@@ -150,13 +150,13 @@ export default function Demo() {
         </li>
 
         <li className={rounds.length || stage === 'running' ? 'on' : ''}>
-          <h2><span className="n">3</span> Muse Spark proposes a fix (<Term k="forge_loop">Forge loop</Term>)</h2>
+          <h2><span className="n">3</span> <span>Muse Spark proposes a fix (<Term k="forge_loop">Forge loop</Term>)</span></h2>
           <p className="faint g-small">The model may only change an allow-listed set of fields, at most three rounds. It proposes; it never decides.</p>
           {(stage === 'running' || loop) ? <LoopView res={loop} rounds={rounds} running={stage === 'running'} live={lm.mode === 'live'} /> : <p className="faint">Waiting for step 2.</p>}
         </li>
 
         <li className={loop ? 'on' : ''}>
-          <h2><span className="n">4</span> The checks decide</h2>
+          <h2><span className="n">4</span> <span>The checks decide</span></h2>
           {loop ? (
             <>
               <ul className="g-changes">
@@ -169,7 +169,7 @@ export default function Demo() {
         </li>
 
         <li className={loop ? 'on' : ''}>
-          <h2><span className="n">5</span> Rover field checks</h2>
+          <h2><span className="n">5</span> <span>Rover field checks</span></h2>
           {loop ? (
             <>
               <p className="faint g-small">Indoor floor, 10° ramp, 10 mm threshold, 60-minute shift. First-order estimates; each names its assumptions in the Garage.</p>
@@ -179,7 +179,7 @@ export default function Demo() {
         </li>
 
         <li className={loop ? 'on' : ''}>
-          <h2><span className="n">6</span> <Term k="gate">Simulation evidence</Term> <span className="fbadge recorded">RECORDED</span></h2>
+          <h2><span className="n">6</span> <span><Term k="gate">Simulation evidence</Term> <span className="fbadge recorded">RECORDED</span></span></h2>
           {loop && evDoc ? (
             <>
               <p>{DEMO.evidenceNote}</p>

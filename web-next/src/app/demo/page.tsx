@@ -3,7 +3,8 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import Demo from "@/components/demo/Demo";
-import AiInside from "@/components/home/AiInside";
+import Link from "next/link";
+import { AiInsideCards } from "@/components/home/AiInside";
 
 export const metadata: Metadata = {
   title: "Demo",
@@ -27,7 +28,8 @@ export default function DemoPage() {
       <Demo />
       <section className="demo-ai" aria-labelledby="demo-ai-h">
         <h2 id="demo-ai-h">AI inside RobotForge</h2>
-        <AiInside />
+        <AiInsideCards />
+        <p className="section-more"><Link href="/how-it-works/#ai-inside">Every place Muse Spark works, and whether it is live now →</Link></p>
       </section>
     </AppShell>
   );
