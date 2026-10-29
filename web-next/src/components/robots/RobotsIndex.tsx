@@ -118,6 +118,42 @@ export default function RobotsIndex() {
       </div>
 
       <section id="robodex" className="seg">
+      <article className="card sample-card" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={assetPath("examples/spotter/spot-cpp/spotted-photo.jpg")}
+            alt="Boston Dynamics Spot photographed at the Cal Poly Pomona IRLab"
+            loading="lazy"
+            style={{ width: 220, maxWidth: "60vw", borderRadius: 8, display: "block" }}
+          />
+          <div style={{ flex: "1 1 320px" }}>
+            <div className="eyebrow">The sample workflow</div>
+            <h3 style={{ marginTop: 6 }}>
+              Boston Dynamics Spot — the Robodex sample
+            </h3>
+            <p className="muted" style={{ fontSize: "var(--fs-sm)" }}>
+              Spotted by Abel at the Cal Poly Pomona IRLab on
+              2026-10-28 and filed as sighting <strong>spot-cpp</strong>{" "}
+              (in the family below). This is the worked example the
+              whole pipeline is demonstrated on — follow it end to end:
+              the raw sighting and its photo-estimated dossier, a
+              curated spec built from published figures, a take-apart
+              with All / Model-only / Harness-only focus, a guided
+              Jetson + LiDAR modification whose validation is a
+              recorded engine report, and an honestly-labelled ROADMAP
+              where its simulation would go.
+            </p>
+            <nav className="jump" aria-label="The Spot sample path" style={{ marginTop: 10 }}>
+              <a className="chip" href="#families">1 · Spotted</a>
+              <Link className="chip" href="/robots/boston-dynamics-spot/#spec">2 · Curated spec</Link>
+              <Link className="chip" href="/robots/boston-dynamics-spot/#take-apart">3 · Take it apart</Link>
+              <Link className="chip" href="/robots/boston-dynamics-spot/#modification">4 · Modify it</Link>
+              <Link className="chip" href="/robots/boston-dynamics-spot/#simulate">5 · Simulate — roadmap</Link>
+            </nav>
+          </div>
+        </div>
+      </article>
       <div className="toolbar" role="group" aria-label="Filter by verdict">
         <button
           className="chip" type="button" data-filter="all"

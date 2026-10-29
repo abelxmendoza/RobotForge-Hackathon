@@ -33,6 +33,7 @@ NEW_FILES = {
     "px4-x500": ("multirotor", "Aerial"),
     "crazyflie-2-1": ("multirotor", "Aerial"),
     "unitree-go2": ("quadruped", "Legged"),
+    "boston-dynamics-spot": ("quadruped", "Legged"),
     "mini-pupper": ("quadruped", "Legged"),
     "unitree-g1": ("humanoid", "Legged"),
     "robotis-op3": ("humanoid", "Legged"),
@@ -170,7 +171,7 @@ def test_unknown_drivetrain_still_rejected():
 
 def test_new_entries_are_not_gated_with_class_reasons():
     by_name = {r.name: r for r in dex.robots}
-    assert len(dex.robots) == 11
+    assert len(dex.robots) == 12
     for slug, (_dt, mobility) in NEW_FILES.items():
         entry = next(r for r in dex.robots if r.spec_file == f"examples/{slug}.json")
         assert entry.mobility_class == mobility, entry.name

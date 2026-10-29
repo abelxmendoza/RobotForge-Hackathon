@@ -139,6 +139,11 @@ function taIsEstimated(spec) {
 function taClass(spec) {
   if (spec.rotors) return 'aerial';
   if (spec.drivetrain === 'robotic_arm') return 'arm';
+  // A quadruped stays a quadruped when it carries a manipulator —
+  // the arm is part of the robot, not a change of class (Spot with
+  // Arm). Only a legs+arms spec that is not declared a quadruped
+  // reads as a humanoid.
+  if (spec.drivetrain === 'quadruped') return 'quadruped';
   if (spec.legs && spec.arms) return 'humanoid';
   if (spec.legs) return 'quadruped';
   return 'ground';

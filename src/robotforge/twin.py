@@ -154,8 +154,62 @@ def generate_sdf(spec: RobotSpec, *,
     return "\n".join(out) + "\n"
 
 
-def generate_world(spec: RobotSpec, model_sdf_path: str) -> str:
-    return f'''<?xml version="1.0"?>
+# Simulation environments for the wheeled twins. "flat" is the world
+# every recorded gate run used: one 100 x 100 plane, mu = 1.0. "ramp"
+# and "rough" are generated presets (Wave 3 environment registry —
+# the web picker's entries describe these by id); they add static
+# geometry only, and no gate run is recorded in them yet, so no
+# verdict anywhere cites them.
+WORLD_ENVIRONMENTS = ("flat", "ramp", "rough")
+
+
+def _ramp_model() -> str:
+    """One inclined slab ahead of the spawn point: a 4 m run rising
+    ~0.48 m (a ~7 degree pitch), wide enough for any Robodex rover."""
+    return '''    <model name="ramp">
+      <static>true</static>
+      <pose>5.5 0 0.36 0 -0.12 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>4 3 0.25</size></box></geometry>
+          <surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface></collision>
+        <visual name="v"><geometry><box><size>4 3 0.25</size></box></geometry></visual>
+      </link>
+    </model>
+'''
+
+
+def _rough_model() -> str:
+    """A deterministic field of low blocks (30-60 mm) either side of
+    the drive line: rough ground a wheeled twin must clatter over."""
+    boxes = []
+    for i, x in enumerate((3.0, 4.5, 6.0, 7.5, 9.0)):
+        for j, y in enumerate((-2.25, -0.75, 0.75, 2.25)):
+            h = 0.03 if (i + j) % 2 == 0 else 0.06
+            boxes.append(
+                f'        <collision name="c{i}{j}"><pose>{x} {y} '
+                f'{h / 2} 0 0 0</pose><geometry><box><size>1.2 1.2 '
+                f'{h}</size></box></geometry></collision>\n'
+                f'        <visual name="v{i}{j}"><pose>{x} {y} '
+                f'{h / 2} 0 0 0</pose><geometry><box><size>1.2 1.2 '
+                f'{h}</size></box></geometry></visual>')
+    body = "\n".join(boxes)
+    return f'''    <model name="rough_field">
+      <static>true</static>
+      <link name="link">
+{body}
+      </link>
+    </model>
+'''
+
+
+def generate_world(spec: RobotSpec, model_sdf_path: str,
+                   environment: str = "flat") -> str:
+    if environment not in WORLD_ENVIRONMENTS:
+        raise ValueError(
+            f"unknown environment {environment!r}; generated presets "
+            f"are {', '.join(WORLD_ENVIRONMENTS)}")
+    world = f'''<?xml version="1.0"?>
 <sdf version="1.9">
   <world name="robotforge_world">
     <physics name="default_physics" type="ignored">
@@ -182,6 +236,13 @@ def generate_world(spec: RobotSpec, model_sdf_path: str) -> str:
   </world>
 </sdf>
 '''
+    if environment == "ramp":
+        return world.replace("    <include>", _ramp_model() +
+                             "    <include>", 1)
+    if environment == "rough":
+        return world.replace("    <include>", _rough_model() +
+                             "    <include>", 1)
+    return world
 
 
 # ------------------------------------------------------------- motion runner

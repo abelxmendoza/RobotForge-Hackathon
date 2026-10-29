@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Robot } from "@/lib/types";
 import { harnessOf, robotSlug, stabilityOf } from "@/lib/data";
+import { buildOf } from "@/lib/builds";
 import { REPO_URL } from "@/components/shell/AppShell";
 import {
   classPath, dexId, gateStatusOf, gradeOf, imgSrc, robotImage, specLabel,
@@ -9,6 +10,8 @@ import {
 import { StaticBadge, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
+import ModificationSection from "./ModificationSection";
+import SimulateSection from "./SimulateSection";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
 
 /* render_robot_page (site.py): hero, spec + provenance, gate runs,
@@ -89,6 +92,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   const gs = gateStatusOf(robot);
   const check = staticCheckOf(robot);
   const harnessRep = asHarnessReport(harnessOf(slug));
+  const build = buildOf(slug);
   const stabRep = check ? asStabilityReport(stabilityOf(slug)) : null;
   const ground = (robot.mobility_class ?? "").startsWith("Ground");
   const specFile = robot.spec_file;
@@ -111,6 +115,10 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   if (harnessRep) jump.push({ href: "#harness", label: "Harness checks" });
   if (specFile) {
     jump.push({ href: "#take-apart", label: "Take it apart" });
+    if (build) {
+      jump.push({ href: "#modification", label: "Modify it" });
+      jump.push({ href: "#simulate", label: "Simulate it" });
+    }
     jump.push({ href: "#commands", label: "Reproduce" });
   }
 
@@ -158,6 +166,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
       );
     }
     if (harnessRep) cmdLines += `\nrobotforge harness ${specFile}`;
+    if (build) cmdLines += `\nrobotforge harness ${build.specFile}`;
   }
 
   return (
@@ -407,10 +416,29 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           <h2>Take it apart</h2>
           <p className="sub">{taSub}</p>
           <div id="ta">
-            <TakeApartViewer specFile={specFile} />
+            <TakeApartViewer
+              specFile={specFile}
+              harnessExtra={build ? (
+                <>
+                  {" "}The circuit this page can grade is the
+                  modification&apos;s payload circuit —{" "}
+                  <a href="#modification">jump to the build ↓</a>
+                </>
+              ) : undefined}
+            />
           </div>
         </section>
       ) : null}
+
+      {build ? (
+        <ModificationSection
+          robot={robot}
+          build={build}
+          reportDoc={harnessOf(build.reportSlug)}
+        />
+      ) : null}
+
+      {build ? <SimulateSection /> : null}
 
       {specFile ? (
         <section className="section" id="commands">

@@ -117,12 +117,18 @@ export function taIsEstimated(spec: RobotSpec): boolean {
 
 /* Which take-apart family a spec belongs to. Derived from the
  * spec's own class fields, the same way schema.py branches: rotors
- * make an aerial, legs+arms a humanoid, legs alone a quadruped, the
- * robotic_arm drivetrain a stationary arm, anything else the ground
- * kit the viewer has always drawn. */
+ * make an aerial, a declared quadruped stays a quadruped even with
+ * a manipulator fitted, legs+arms on anything else a humanoid, legs
+ * alone a quadruped, the robotic_arm drivetrain a stationary arm,
+ * anything else the ground kit the viewer has always drawn. */
 export function taClass(spec: RobotSpec): 'aerial' | 'arm' | 'humanoid' | 'quadruped' | 'ground' {
   if (spec.rotors) return 'aerial';
   if (spec.drivetrain === 'robotic_arm') return 'arm';
+  /* A quadruped stays a quadruped when it carries a manipulator —
+   * the arm is part of the robot, not a change of class (Spot with
+   * Arm). Only a legs+arms spec that is not declared a quadruped
+   * reads as a humanoid. */
+  if (spec.drivetrain === 'quadruped') return 'quadruped';
   if (spec.legs && spec.arms) return 'humanoid';
   if (spec.legs) return 'quadruped';
   return 'ground';

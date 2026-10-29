@@ -420,6 +420,46 @@
       },
       "spec_file": "examples/openmanipulator-x.json",
       "subtype": "Robotic arm"
+    },
+    {
+      "class": "Legged quadruped, with manipulator",
+      "description": "Boston Dynamics' robot dog in its arm configuration — the Robodex's sample robot. Abel photographed this unit at the Cal Poly Pomona IRLab on 2026-10-28 (sighting spot-cpp in the family below); its curated spec is built from Boston Dynamics' published figures, and the page walks the whole sample path: sighting -> curated spec -> take-apart with focus modes -> a guided Jetson + LiDAR modification with recorded validation. It walks, so the wheeled motion gate has nothing to grade it with yet.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict — its spec is validated, and that is all that is claimed."
+      },
+      "image_credit": "Photo: Abel Mendoza — the actual unit, Cal Poly Pomona IRLab, 2026-10-28 (sighting spot-cpp)",
+      "image_url": "examples/spotter/spot-cpp/spotted-photo.jpg",
+      "key_specs": {
+        "Dimensions (standing)": "1100 × 500 × 840 mm (Boston Dynamics published figures)",
+        "Mass": "32.5 kg — published base weight without the arm; the arm's mass is not in the published set, so no with-arm total is stated",
+        "Motors": "18 actuators — 12 published leg DoF plus the arm's joints (arm count carried from the photo draft)",
+        "Battery": "605 Wh pack; 58.8 V max published, 50.4 V nominal (14S) — the photo draft independently read 50.4 V / 12000 mAh",
+        "Sensors": "Depth cameras front/rear/left/right (4 m published depth range), gripper camera, IMU, joint encoders",
+        "Wiring": "Not documented publicly — no wiring block is shown for this robot; the harness this app grades is the modification's payload circuit, below"
+      },
+      "mobility_class": "Legged",
+      "name": "Boston Dynamics Spot",
+      "number": 12,
+      "provenance": {
+        "license": "Specification data: Boston Dynamics published figures (About Spot), cross-checked 2026-10-28; photo: Abel Mendoza",
+        "note": "Curated 2026-10-28 from Boston Dynamics' published figures (1100 × 500 mm, 840 mm standing / 191 mm sitting, 32.5 kg base without arm, 12 leg DoF, 605 Wh / 58.8 V max battery, 4 m depth range) — where the Spotter photo draft disagreed (0.55 m sitting height, flat 40 kg), the published figures won and the draft stays untouched in its dossier. The arm is modelled as one 3-segment manipulator for the take-apart's schematic derivation; its segment geometry is a schematic choice, not a published figure. The internal wiring harness is proprietary and not publicly documented, so this spec carries no wiring block.",
+        "source_name": "Boston Dynamics — About Spot (published specifications) + RobotForge sighting spot-cpp",
+        "source_url": "https://bostondynamics.com/products/spot/"
+      },
+      "spec_file": "examples/boston-dynamics-spot.json",
+      "subtype": "Quadruped",
+      "checks": [
+        {
+          "type": "static_stability",
+          "date": "2026-10-28",
+          "report": "catalog/stability-reports/boston-dynamics-spot.json",
+          "grade": "STABLE",
+          "tip_angle_deg": 25.463,
+          "weakest_margin_mm": 220.0,
+          "weakest_direction": "to the right"
+        }
+      ]
     }
   ],
   "title": "Robodex"

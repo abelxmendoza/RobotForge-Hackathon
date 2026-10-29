@@ -40,12 +40,14 @@ def _overvolt(spec):
             and c.volts > nodes[c.dst].rated_max_v]
 
 
-# Wiring is drawn ONLY where a source documents the harness. Two
+# Wiring is drawn ONLY where a source documents the harness. Three
 # Robodex robots have no publicly documented internal wiring, so
 # their specs honestly carry none — the unwired set is exactly
 # these, and it is asserted so an accidental omission (or an
-# invented harness) both fail loudly.
-UNWIRED = {"Unitree Go2", "Unitree G1"}
+# invented harness) both fail loudly. (Spot's graded wiring lives
+# on its separate Jetson + LiDAR build spec, which is not a Robodex
+# entry — the base robot's factory harness stays undocumented.)
+UNWIRED = {"Unitree Go2", "Unitree G1", "Boston Dynamics Spot"}
 
 
 def test_every_robodex_robot_spec_carries_valid_wiring():

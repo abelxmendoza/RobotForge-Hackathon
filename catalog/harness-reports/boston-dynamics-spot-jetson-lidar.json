@@ -1,0 +1,316 @@
+{
+  "check": "harness_checks",
+  "robot": "Boston Dynamics Spot \u2014 Jetson Orin + LiDAR build",
+  "method": "Electrical checks over the spec's documented wiring graph: voltage drop (copper loop resistance), ampacity (published table), logic-level agreement, rail budgets (downstream load sums vs rated output) and connector matching. Every evaluation is CHECKED, PARTIAL or NOT_CHECKED with its missing inputs named; no blanket harness pass is ever claimed.",
+  "thresholds": {
+    "voltage_drop_warn_pct": 5.0,
+    "voltage_drop_rule": "WARN when the computed drop exceeds this share of the connection's voltage (v1 threshold)",
+    "ampacity_source": "PowerStream, 'American Wire Gauge Chart and AWG Electrical Current Load Limits' (powerstream.com/Wire_Size.htm), following the Handbook of Electronic Tables and Formulas \u2014 the table's conservative power-transmission column (700 circular mils per amp, for bundled runs), not its free-air chassis-wiring column",
+    "copper_rho_ohm_m": 1.68e-08
+  },
+  "summary": {
+    "evaluations": 13,
+    "checked_clean": 4,
+    "evaluations_with_warnings": 0,
+    "evaluations_with_errors": 0,
+    "states": {
+      "CHECKED": 4,
+      "PARTIAL": 1,
+      "NOT_CHECKED": 8
+    },
+    "findings": {
+      "ERROR": 0,
+      "WARN": 0,
+      "INFO": 0
+    },
+    "by_check": {
+      "voltage_drop": {
+        "CHECKED": 2,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 1
+      },
+      "ampacity": {
+        "CHECKED": 2,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 1
+      },
+      "logic_levels": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 1
+      },
+      "rail_budget": {
+        "CHECKED": 0,
+        "PARTIAL": 1,
+        "NOT_CHECKED": 1
+      },
+      "connector_match": {
+        "CHECKED": 0,
+        "PARTIAL": 0,
+        "NOT_CHECKED": 4
+      }
+    },
+    "missing_inputs": [
+      {
+        "input": "connector at both ends (connector_from / connector_to)",
+        "count": 4,
+        "subjects": [
+          "battery -> buck_5v",
+          "buck_5v -> jetson",
+          "buck_5v -> lidar",
+          "jetson -> lidar"
+        ]
+      },
+      {
+        "input": "current_a for lidar",
+        "count": 3,
+        "subjects": [
+          "buck_5v -> lidar",
+          "buck_5v rail"
+        ]
+      },
+      {
+        "input": "logic_v for jetson",
+        "count": 1,
+        "subjects": [
+          "jetson -> lidar"
+        ]
+      },
+      {
+        "input": "logic_v for lidar",
+        "count": 1,
+        "subjects": [
+          "jetson -> lidar"
+        ]
+      },
+      {
+        "input": "rated output current for battery",
+        "count": 1,
+        "subjects": [
+          "battery rail"
+        ]
+      }
+    ]
+  },
+  "headline": "4 checked clean \u00b7 0 with warnings \u00b7 0 with errors \u00b7 1 partial \u00b7 8 not checked \u00b7 missing data: connector at both ends (connector_from / connector_to) \u00d74, current_a for lidar \u00d73, logic_v for jetson \u00d71",
+  "evaluations": [
+    {
+      "check": "voltage_drop",
+      "subject": "battery -> buck_5v",
+      "state": "CHECKED",
+      "missing": [],
+      "inputs": {
+        "gauge_awg": 18.0,
+        "length_mm": 250.0,
+        "volts": 50.4,
+        "current_a": 0.5
+      },
+      "results": {
+        "area_mm2": 0.8231,
+        "loop_resistance_ohm": 0.0102,
+        "drop_v": 0.0051,
+        "drop_pct": 0.01
+      },
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "battery -> buck_5v",
+      "state": "CHECKED",
+      "missing": [],
+      "inputs": {
+        "gauge_awg": 18.0,
+        "current_a": 0.5,
+        "ampacity_a": 2.3
+      },
+      "results": {
+        "ampacity_a": 2.3
+      },
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "battery -> buck_5v",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "voltage_drop",
+      "subject": "buck_5v -> jetson",
+      "state": "CHECKED",
+      "missing": [],
+      "inputs": {
+        "gauge_awg": 14.0,
+        "length_mm": 150.0,
+        "volts": 5.0,
+        "current_a": 5.0
+      },
+      "results": {
+        "area_mm2": 2.081,
+        "loop_resistance_ohm": 0.0024,
+        "drop_v": 0.0121,
+        "drop_pct": 0.24
+      },
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "buck_5v -> jetson",
+      "state": "CHECKED",
+      "missing": [],
+      "inputs": {
+        "gauge_awg": 14.0,
+        "current_a": 5.0,
+        "ampacity_a": 5.9
+      },
+      "results": {
+        "ampacity_a": 5.9
+      },
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "buck_5v -> jetson",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "voltage_drop",
+      "subject": "buck_5v -> lidar",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "current_a for lidar"
+      ],
+      "inputs": {
+        "gauge_awg": 24.0,
+        "length_mm": 200.0,
+        "volts": 5.0,
+        "current_a": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "ampacity",
+      "subject": "buck_5v -> lidar",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "current_a for lidar"
+      ],
+      "inputs": {
+        "gauge_awg": 24.0,
+        "current_a": null,
+        "ampacity_a": 0.577
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "buck_5v -> lidar",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "logic_levels",
+      "subject": "jetson -> lidar",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "logic_v for jetson",
+        "logic_v for lidar"
+      ],
+      "inputs": {
+        "logic_v_from": [],
+        "logic_v_to": []
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "connector_match",
+      "subject": "jetson -> lidar",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "connector at both ends (connector_from / connector_to)"
+      ],
+      "inputs": {
+        "connector_from": null,
+        "connector_to": null
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "battery rail",
+      "state": "NOT_CHECKED",
+      "missing": [
+        "rated output current for battery"
+      ],
+      "inputs": {
+        "rated_output_a": null,
+        "known_load_a": 0.5,
+        "branches": [
+          {
+            "to": "buck_5v",
+            "current_a": 0.5
+          }
+        ]
+      },
+      "results": {},
+      "findings": []
+    },
+    {
+      "check": "rail_budget",
+      "subject": "buck_5v rail",
+      "state": "PARTIAL",
+      "missing": [
+        "current_a for lidar"
+      ],
+      "inputs": {
+        "rated_output_a": 5.0,
+        "known_load_a": 5.0,
+        "branches": [
+          {
+            "to": "jetson",
+            "current_a": 5.0
+          },
+          {
+            "to": "lidar",
+            "current_a": null
+          }
+        ]
+      },
+      "results": {
+        "over_budget": false
+      },
+      "findings": []
+    }
+  ],
+  "findings": [],
+  "date": "2026-10-28"
+}

@@ -125,6 +125,15 @@ h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
   color:var(--text-muted);border:1px solid var(--border-strong);border-radius:999px;padding:6px 10px;
 }
 .recorded::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--fail)}
+/* a roadmap marker — names a capability that does not exist yet, so
+   its absence reads as a plan, never as a silent gap: dashed and
+   hollow, the opposite of an earned badge */
+.roadmap{
+  display:inline-flex;align-items:center;gap:6px;
+  font:700 11px/1 var(--font);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-faint);border:1px dashed var(--border-strong);border-radius:999px;padding:6px 10px;
+}
+.roadmap::before{content:"";width:6px;height:6px;border-radius:50%;border:1.5px solid var(--text-faint)}
 .chip{
   display:inline-flex;align-items:center;font:600 var(--fs-xs)/1 var(--font);
   padding:7px 12px;border-radius:999px;border:1px solid var(--border);color:var(--text-muted);

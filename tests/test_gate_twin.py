@@ -109,6 +109,26 @@ def test_world_carries_truth_broadcaster():
     assert 'name="robotforge_world"' in world
 
 
+def test_world_environment_presets():
+    spec = RobotSpec.from_json(EXAMPLE.read_text())
+    flat = generate_world(spec, "/tmp/model.sdf")
+    # The default world is the one every recorded gate run used:
+    # a bare ground plane, no preset geometry.
+    assert 'name="ramp"' not in flat and "rough_field" not in flat
+    ramp = generate_world(spec, "/tmp/model.sdf", environment="ramp")
+    ET.fromstring(ramp)
+    assert 'name="ramp"' in ramp and "ground_plane" in ramp
+    rough = generate_world(spec, "/tmp/model.sdf", environment="rough")
+    ET.fromstring(rough)
+    assert "rough_field" in rough and "ground_plane" in rough
+    try:
+        generate_world(spec, "/tmp/model.sdf", environment="moon")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unknown environment accepted")
+
+
 def test_geometry_scale_changes_only_physical_wheels():
     spec = RobotSpec.from_json(EXAMPLE.read_text())
     r = spec.wheel.diameter_m / 2.0

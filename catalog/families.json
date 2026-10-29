@@ -1068,7 +1068,7 @@
       "id": "boston-dynamics-spot",
       "name": "Boston Dynamics Spot",
       "aliases": [],
-      "catalog_dex_id": null,
+      "catalog_dex_id": "#012",
       "credit": "Not identified against the Robodex. Its public footprint starts at bostonrb/bostonrb (owner bostonrb); credit belongs to that project's authors, whoever they are.",
       "variants": [
         {

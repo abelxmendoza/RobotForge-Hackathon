@@ -60,7 +60,29 @@ function elecFacts(w: Wiring, nodeId: string) {
   return { feed: feedJoined, hasFeed: feed.length > 0, status };
 }
 
-export default function TakeApartViewer({ specFile }: { specFile: string }) {
+export type TaFocus = "all" | "model" | "harness";
+
+export default function TakeApartViewer({
+  specFile,
+  initialFocus = "all",
+  no3D = false,
+  harnessExtra,
+}: {
+  specFile: string;
+  /* Focus modes (Wave 3): "all" is the classic viewer; "model"
+   * hides the electrical layer entirely; "harness" turns the
+   * electrical overlay on and ghosts the model back so the circuit
+   * is the subject. A spec with no wiring block gets an honest
+   * "not documented" panel in harness focus instead of a drawing. */
+  initialFocus?: TaFocus;
+  /* A second, embedded instance (a modification build) leaves the
+   * 3D scene and STL export to the page's main viewer — the STL
+   * registry holds one scene. */
+  no3D?: boolean;
+  /* Extra content for the harness-focus empty state (e.g. a link
+   * to the modification whose circuit CAN be shown). */
+  harnessExtra?: ReactNode;
+}) {
   const [spec, setSpec] = useState<RobotSpec | null>(null);
   const [failed, setFailed] = useState(false);
   const [threeFailed, setThreeFailed] = useState(false);
@@ -68,6 +90,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
   const [stlNote, setStlNote] = useState<string | null>(null);
   const [explode, setExplode] = useState(0);
   const [mode, setMode] = useState<"2d" | "3d">("2d");
+  const [focus, setFocus] = useState<TaFocus>(initialFocus);
   const [elec, setElec] = useState(false);
   const [power, setPower] = useState(false);
   const [elecStageNow, setElecStageNow] = useState(0);
@@ -122,6 +145,17 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
 
   const parts = built.parts;
 
+  /* The electrical layer's effective state: harness focus forces it
+   * on, model focus forces it off, "all" leaves it to the toggle. */
+  const effElec = focus === "harness" ? true : focus === "model" ? false : elec;
+  const harnessMissing = focus === "harness" && !wiring;
+
+  const pickFocus = (f: TaFocus) => {
+    setFocus(f);
+    if (f === "harness" && wiring) setWireInfo(WIRE_INFO_DEFAULT);
+    if (f === "model") setPowerTo(false);
+  };
+
   const wireInfoFor = (i: number) => {
     if (!wiring || !wiring.connections[i]) return;
     setWireInfo(
@@ -137,7 +171,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
     parts,
     pos: built.pos,
     explodeMm: explode,
-    elec,
+    elec: effElec,
     power,
     elecStage: elecStageNow,
     selected,
@@ -318,6 +352,12 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
               <dd>{p.print}</dd>
               {elecSection}
             </dl>
+            {no3D ? (
+              <p className="faint" style={{ marginTop: 14, fontSize: "var(--fs-xs)" }}>
+                STL export for this robot lives in the main take-apart
+                viewer on this page — one 3D scene per page.
+              </p>
+            ) : (
             <div className="ta-cad" style={{ marginTop: 14 }}>
               <button
                 className="btn btn-sm"
@@ -348,6 +388,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
                 </p>
               ) : null}
             </div>
+            )}
             {p.file ? (
               <p className="faint" style={{ marginTop: 14, fontSize: "var(--fs-xs)" }}>
                 This part is one file in the take-apart kit. Open{" "}
@@ -392,6 +433,37 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
           <span className="est">Estimated — drafted from a photo, not measured</span>
         ) : null}
       </div>
+      <div className="ta-controls" id="ta-focus-controls">
+        <div className="tabs" role="tablist" aria-label="Take-apart focus">
+          <button
+            className="tab" type="button" role="tab"
+            aria-selected={focus === "all"} onClick={() => pickFocus("all")}
+          >
+            All
+          </button>
+          <button
+            className="tab" type="button" role="tab"
+            aria-selected={focus === "model"} onClick={() => pickFocus("model")}
+          >
+            Model only
+          </button>
+          <button
+            className="tab" type="button" role="tab"
+            aria-selected={focus === "harness"} onClick={() => pickFocus("harness")}
+          >
+            Harness only
+          </button>
+        </div>
+        <span className="faint" style={{ fontSize: 12 }}>
+          {focus === "model"
+            ? "The mechanical model alone — the electrical layer is hidden."
+            : focus === "harness"
+              ? wiring
+                ? "The wiring is the subject; the model ghosts back behind it. The overlay is drawn in the 2D views."
+                : "This spec carries no wiring block — the panel below says what that means."
+              : "Model and wiring together; the Electrical toggle lights the circuit."}
+        </span>
+      </div>
       <div className="ta-controls">
         <label htmlFor="ta-explode">Explode</label>
         <input
@@ -405,17 +477,17 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
         />
         <output id="ta-explode-val" htmlFor="ta-explode">{explode} mm</output>
       </div>
-      {wiring ? (
+      {wiring && focus !== "model" ? (
         <div className="ta-controls" id="ta-elec-controls">
           <button
             className="btn btn-sm ta-toggle" id="ta-elec" type="button"
-            aria-pressed={elec} onClick={toggleElec}
+            aria-pressed={effElec} disabled={focus === "harness"} onClick={toggleElec}
           >
             Electrical
           </button>
           <button
             className="btn btn-sm ta-toggle" id="ta-power" type="button"
-            aria-pressed={power} disabled={!elec} onClick={() => setPowerTo(!power)}
+            aria-pressed={power} disabled={!effElec} onClick={() => setPowerTo(!power)}
           >
             {power ? "Power off" : "Power on"}
           </button>
@@ -426,10 +498,10 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
           </span>
         </div>
       ) : null}
-      <p id="ta-wire-info" className="ta-wire-info" hidden={!elec}>
+      <p id="ta-wire-info" className="ta-wire-info" hidden={!effElec}>
         {wireInfo ?? ""}
       </p>
-      <p id="ta-elec-note" className="faint" style={{ fontSize: "var(--fs-xs)", marginTop: 8 }} hidden={!elec}>
+      <p id="ta-elec-note" className="faint" style={{ fontSize: "var(--fs-xs)", marginTop: 8 }} hidden={!effElec}>
         {wiring?.note ?? ""}
       </p>
       <div className="ta-controls" id="ta-view-controls">
@@ -440,15 +512,19 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
           >
             2D views
           </button>
-          <button
-            className="tab" type="button" id="ta-view-3d" role="tab"
-            aria-selected={mode === "3d"} onClick={() => setMode("3d")}
-          >
-            3D
-          </button>
+          {no3D ? null : (
+            <button
+              className="tab" type="button" id="ta-view-3d" role="tab"
+              aria-selected={mode === "3d"} onClick={() => setMode("3d")}
+            >
+              3D
+            </button>
+          )}
         </div>
         <span className="faint" style={{ fontSize: 12 }}>
-          Same kit, same explode slider, same click-a-part panel.
+          {no3D
+            ? "2D views — this build's 3D scene is the main viewer on this page."
+            : "Same kit, same explode slider, same click-a-part panel."}
         </span>
       </div>
       <p id="ta-3d-note" className="callout" style={{ marginBottom: 12 }} hidden={mode !== "3d"}>
@@ -458,8 +534,28 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
           switch back to 2D views for those.
         </span>
       </p>
-      <div className="ta-stage">
+      {focus === "harness" && mode === "3d" ? (
+        <p className="callout" style={{ marginBottom: 12 }}>
+          <span>
+            Harness focus is drawn in the 2D views — the 3D scene carries
+            no wiring, so the circuit cannot be the subject here.
+          </span>
+        </p>
+      ) : null}
+      <div className="ta-stage" data-focus={focus}>
         <div>
+          {harnessMissing ? (
+            <div className="state-box">
+              <strong>Harness not documented.</strong> This spec carries
+              no wiring block, so there is no circuit to draw — the
+              robot&apos;s internal harness is not publicly documented,
+              and an undocumented harness is not invented here. The
+              harness this app can show is a documented one: a build
+              whose wiring is declared in its spec.
+              {harnessExtra}
+            </div>
+          ) : (
+          <>
           <div id="ta-2d" hidden={mode === "3d"}>
             <div className="ta-view">
               <div id="ta-side">{renderSide(view, cls)}</div>
@@ -511,6 +607,8 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
               </p>
             ) : null}
           </div>
+          </>
+          )}
         </div>
         <aside className="card ta-detail" id="ta-detail">
           {detailBody()}
