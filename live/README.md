@@ -25,11 +25,17 @@ and the site falls back to its recorded photo sample — that is the
 designed behavior, not an error. Malformed model output is a 502
 with a plain error; raw model junk never reaches the page.
 
-Fireworks AI is deliberately **not** a Worker provider in this
-deployment. Its optional Muse Spark Open transport belongs to the
-Python CLI's describe chain (see the top-level README, "Optional
-Fireworks transport"), so there is no Fireworks Worker secret to set
-and `/health` does not report a Fireworks route.
+Fireworks AI is not a Worker *primary* provider in this deployment —
+since 2026-10-28 it serves as the Worker's optional **fallback**:
+when the `FIREWORKS_API_KEY`
+secret is set, a failed Baseten attempt (HTTP error, network
+failure, empty reply) retries once against Fireworks' hosted Muse
+Spark Open before the route answers 502. Same Meta model, different
+host — resilience for the live demo, not a model swap. `/health`
+reports it under `providers.fireworks`; either provider key lights
+the text routes. Its transport also remains in the Python CLI's
+describe chain (see the top-level README, "Optional Fireworks
+transport").
 
 ## Document mode (`/photo` with `mode: "document"`)
 
@@ -97,6 +103,8 @@ never paste it into chat, a file, or a commit).
    - `wrangler secret put BASETEN_API_KEY` — paste your Baseten key.
    - Optional, for live photo drafts:
      `wrangler secret put META_API_KEY` — your Meta Model API key.
+   - Optional, for the text-route fallback:
+     `wrangler secret put FIREWORKS_API_KEY` — your Fireworks key.
 5. **Deploy:** from this folder, `wrangler deploy`.
    Note the URL it prints, e.g.
    `https://robotforge-live.<your-subdomain>.workers.dev`.

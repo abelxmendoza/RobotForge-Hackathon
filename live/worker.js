@@ -17,7 +17,10 @@
  *                     spec sheet / blueprint photo — document_read.
  *
  * /describe, /chat and /list proxy Baseten (key: BASETEN_API_KEY
- * secret). /photo proxies the Meta Model API vision model (key:
+ * secret), with Fireworks as an optional fallback provider for the
+ * same Muse Spark Open model (key: FIREWORKS_API_KEY secret — used
+ * only when the Baseten attempt fails; either key lights the text
+ * routes). /photo proxies the Meta Model API vision model (key:
  * META_API_KEY secret — OPTIONAL: without it /photo answers 501 and
  * the site falls back to its recorded photo sample, by design).
  *
@@ -41,6 +44,8 @@ const MODEL = 'meta-models/muse-spark-open';
 const BASETEN_URL = 'https://inference.baseten.co/v1/chat/completions';
 const PHOTO_MODEL = 'muse-spark-1.3';
 const META_URL = 'https://api.meta.ai/v1/chat/completions';
+const FIREWORKS_MODEL = 'accounts/fireworks/models/muse-spark-open';
+const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 const ALLOWED_ORIGINS = [
   'https://abelxmendoza.github.io',
   'http://localhost:8000',
@@ -379,14 +384,44 @@ function messageContent(payload) {
   return content;
 }
 
-async function callModel(env, messages, temperature, maxTokens) {
-  const payload = await postChatCompletions(BASETEN_URL, env.BASETEN_API_KEY, {
-    model: MODEL,
+async function callModelOn(url, apiKey, model, label, messages, temperature, maxTokens) {
+  const payload = await postChatCompletions(url, apiKey, {
+    model,
     messages,
     temperature,
     max_tokens: maxTokens,
-  }, 'Baseten');
+  }, label);
   return messageContent(payload);
+}
+
+/* Text routes (describe/chat/list) run on Muse Spark Open with a
+ * two-provider chain: Baseten is primary; Fireworks is the fallback,
+ * used only when its FIREWORKS_API_KEY secret is set AND the Baseten
+ * attempt fails (HTTP error, network failure, empty reply). Both
+ * providers serve the same Meta model, so a fallback answer is the
+ * same product behavior on a different host — resilience for the
+ * live demo, not a model swap. Worst case is two slow upstreams in
+ * sequence (each bounded by UPSTREAM_TIMEOUT_MS); the common outage
+ * mode (fast 5xx / refused) fails over in seconds. */
+async function callModel(env, messages, temperature, maxTokens) {
+  const attempts = [];
+  if (env.BASETEN_API_KEY) {
+    attempts.push(() => callModelOn(BASETEN_URL, env.BASETEN_API_KEY,
+      MODEL, 'Baseten', messages, temperature, maxTokens));
+  }
+  if (env.FIREWORKS_API_KEY) {
+    attempts.push(() => callModelOn(FIREWORKS_URL, env.FIREWORKS_API_KEY,
+      FIREWORKS_MODEL, 'Fireworks', messages, temperature, maxTokens));
+  }
+  let lastError = new Error('no model provider is configured');
+  for (const attempt of attempts) {
+    try {
+      return await attempt();
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
 }
 
 /* One Meta Model API vision call. mode 'photo' mirrors photo.py's
@@ -547,9 +582,9 @@ async function readJsonBody(request, maxBytes) {
 }
 
 async function handleDescribe(request, env) {
-  if (!env.BASETEN_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
     return err(request, 500, 'not_configured',
-      'The endpoint has no Baseten key configured (see live/README.md).');
+      'The endpoint has no model provider key configured (see live/README.md).');
   }
   const { data, error } = await readJsonBody(request);
   if (error) return err(request, 413, 'too_large', error);
@@ -590,9 +625,9 @@ async function handleDescribe(request, env) {
 }
 
 async function handleChat(request, env) {
-  if (!env.BASETEN_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
     return err(request, 500, 'not_configured',
-      'The endpoint has no Baseten key configured (see live/README.md).');
+      'The endpoint has no model provider key configured (see live/README.md).');
   }
   const { data, error } = await readJsonBody(request);
   if (error) return err(request, 413, 'too_large', error);
@@ -778,9 +813,9 @@ async function handlePhoto(request, env) {
 }
 
 async function handleList(request, env) {
-  if (!env.BASETEN_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
     return err(request, 500, 'not_configured',
-      'The endpoint has no Baseten key configured (see live/README.md).');
+      'The endpoint has no model provider key configured (see live/README.md).');
   }
   const { data, error } = await readJsonBody(request);
   if (error) return err(request, 413, 'too_large', error);
@@ -885,16 +920,20 @@ async function handle(request, env) {
       budget = null;
     }
     const baseten = Boolean(env.BASETEN_API_KEY);
+    const fireworks = Boolean(env.FIREWORKS_API_KEY);
+    const textProvider = baseten || fireworks;
     return json(request, 200, {
       ok: true,
       mode: String(env.LIVE_ENABLED ?? '1') === '0' ? 'off' : 'live',
-      configured: baseten,
+      configured: textProvider,
       kv: Boolean(env.RF_LIVE_KV),
       budget,
-      /* Which routes can actually run: describe/chat/list need the
-       * Baseten key; photo needs the optional Meta key. */
+      /* Which providers hold keys: describe/chat/list run on Baseten
+       * with Fireworks as fallback (either key lights them); photo
+       * needs the optional Meta key. */
+      providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY) },
       routes: {
-        describe: baseten, chat: baseten, list: baseten,
+        describe: textProvider, chat: textProvider, list: textProvider,
         photo: Boolean(env.META_API_KEY),
       },
     });
