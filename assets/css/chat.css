@@ -99,12 +99,14 @@
 
 /* ---------- docked rail (app pages) ----------
    Same chat, framed as Muse frames it: a persistent conversation
-   column on the left with the composer at its foot. Under 1280px the
-   docked wrapper keeps the floating launcher + panel behaviour above,
-   so narrow screens lose nothing. */
+   column with the composer at its foot. It docks immediately RIGHT
+   of the 232px nav sidebar (the sidebar takes the far left; app.css
+   reserves this rail's 320px out of the content column). Under
+   1280px the docked wrapper keeps the floating launcher + panel
+   behaviour above, so narrow screens lose nothing. */
 @media (min-width:1280px){
   .forge-chat.docked{
-    position:fixed;left:0;top:0;bottom:0;width:320px;z-index:60;
+    position:fixed;left:232px;top:0;bottom:0;width:320px;z-index:60;
   }
   .forge-chat.docked .fc-launcher{display:none}
   .forge-chat.docked .fc-panel{
