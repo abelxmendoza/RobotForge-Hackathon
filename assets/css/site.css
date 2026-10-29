@@ -152,12 +152,14 @@ footer.site-footer p{max-width:60ch}
   .flow-4{grid-template-columns:1fr 1fr}
 }
 @media (max-width:860px){
-  .site-header .wrap{flex-wrap:nowrap;height:64px;padding-top:0;padding-bottom:0}
-  .site-header .site-nav{display:none}
+  /* Only headers that carry the menu swap their nav for it; the
+   * vanilla landing page keeps its wrapping nav. */
+  .site-header:has(.site-menu) .wrap{flex-wrap:nowrap;height:64px;padding-top:0;padding-bottom:0}
+  .site-header:has(.site-menu) .site-nav{display:none}
   .site-menu{display:block}
-  .site-header .btn-primary{margin-left:auto;min-height:44px}
+  .site-header:has(.site-menu) .btn-primary{margin-left:auto;min-height:44px}
 }
 @media (max-width:560px){
   .flow-4{grid-template-columns:1fr}
-  .site-header .btn-primary{padding:10px 12px;font-size:var(--fs-xs)}
+  .site-header:has(.site-menu) .btn-primary{padding:10px 12px;font-size:var(--fs-xs)}
 }
