@@ -249,8 +249,47 @@
         table.pa td.tool::before { content: none; }
       }
     </style>
+    <style>
+      /* RobotForge site bar: this research page sits inside the site,
+         with Home and the main pages one click away. */
+      .rf-sitebar { background: #0f1115; color: #eceef2; border-bottom: 1px solid #2a2f38; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+      .rf-sitebar .wrap { display: flex; align-items: center; gap: 6px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+      .rf-sitebar .rf-home { display: inline-flex; align-items: center; gap: 8px; color: #eceef2; font-weight: 700; text-decoration: none; margin-right: auto; padding: 6px 4px; }
+      .rf-sitebar .rf-mark { width: 24px; height: 24px; border-radius: 6px; background: #f59e0b; display: inline-grid; place-items: center; }
+      .rf-sitebar nav { display: flex; gap: 2px; flex-wrap: wrap; }
+      .rf-sitebar nav a { color: #9aa3ae; text-decoration: none; font-size: 14px; padding: 8px 10px; border-radius: 8px; }
+      .rf-sitebar nav a:hover, .rf-sitebar nav a:focus-visible { color: #eceef2; background: #1e222a; }
+      .rf-sitebar nav a[aria-current="page"] { color: #eceef2; background: #1e222a; }
+      .rf-sitebar .rf-cta { background: #f59e0b; color: #1a1204; font-weight: 700; }
+      .rf-sitebar .rf-cta:hover { background: #f59e0b; color: #1a1204; }
+      .rf-short { margin: 0 0 22px; padding: 16px 18px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--panel); }
+      .rf-short h2 { font-size: 15px; margin: 0 0 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+      .rf-short ul { margin: 0; padding-left: 20px; }
+      .rf-short li { margin: 4px 0; }
+      details.rf-sec > summary { list-style: none; cursor: pointer; }
+      details.rf-sec > summary::-webkit-details-marker { display: none; }
+      details.rf-sec > summary .sec-head::after { content: "Show"; margin-left: auto; font: 600 12px/1 "IBM Plex Mono", monospace; color: var(--accent); }
+      details.rf-sec[open] > summary .sec-head::after { content: "Hide"; }
+      details.rf-sec > summary .sec-head { display: flex; align-items: baseline; }
+      @media (max-width: 700px) { .rf-sitebar nav a { padding: 8px 8px; font-size: 13px; } }
+    </style>
   </head>
   <body>
+    <div class="rf-sitebar">
+      <div class="wrap">
+        <a class="rf-home" href="/"><span class="rf-mark" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1a1204" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="9" rx="2"/><circle cx="8" cy="17.5" r="2"/><circle cx="16" cy="17.5" r="2"/></svg></span>RobotForge</a>
+        <nav aria-label="Site">
+          <a href="/">Home</a>
+          <a href="/demo/">Demo</a>
+          <a href="/forge/">App</a>
+          <a href="/evidence/">Evidence</a>
+          <a href="/robots/">Robots</a>
+          <a href="/how-it-works/">How it works</a>
+          <a href="/problem-space" aria-current="page">Research</a>
+          <a class="rf-cta" href="/demo/">Run the demo &rarr;</a>
+        </nav>
+      </div>
+    </div>
     <div class="topbar">
       <div class="wrap">
         <span class="brand">RobotForge <b>/</b> Problem-Space Research</span>
@@ -269,6 +308,14 @@
 
     <header class="hero">
       <div class="wrap">
+        <div class="rf-short">
+          <h2>In short</h2>
+          <ul>
+            <li><strong>The problem:</strong> robot models are trusted before anyone checks that they move the way they claim; modeling errors stay silent until hardware.</li>
+            <li><strong>Who has it:</strong> university rover teams, ROS 2 hobbyists and small startups, with no test team and no test budget.</li>
+            <li><strong>Why a gate:</strong> no free tool gives a pass/fail verdict with evidence. RobotForge drives the twin in Gazebo and grades it on ground truth.</li>
+          </ul>
+        </div>
         <p class="dateline">Research brief · Compiled October 25–26, 2026 · America/Los_Angeles · <b>For the RobotForge scope lock</b></p>
         <h1>A robot model should have to <span class="hl">pass</span> before anyone trusts it.</h1>
         <p class="lede">RobotForge is a proposed open-source <strong>acceptance gate</strong> for robot models: describe a wheeled robot, generate its URDF/SDF, run it headlessly in Gazebo, compare the odometry it reports against the simulator's ground truth on simple maneuvers — drive straight about a meter, turn about 90° — and emit a <strong>PASS/FAIL evidence report</strong>. This brief documents whether the problem is real, who already solves pieces of it, and what to build first. Short answer: the problem is documented by the field's own research, and the verdict-shaped hole in the tooling is still empty.</p>
@@ -329,8 +376,7 @@
     <main class="wrap">
 
       <!-- ============ 1. THE PAIN ============ -->
-      <section id="pain">
-        <div class="sec-head"><span class="no">01</span><h2>The pain is documented — by the field itself</h2></div>
+      <section id="pain"><details class="rf-sec"><summary><div class="sec-head"><span class="no">01</span><h2>The pain is documented — by the field itself</h2></div></summary>
         <p class="sec-intro">The strongest evidence isn't forum complaints. It's a peer-reviewed-style survey of 82 robotics developers — Afzal, Katz, Le Goues &amp; Timperley, <a href="https://arxiv.org/abs/2004.07368?context=cs.SE">"A Study on the Challenges of Using Robotics Simulators for Testing"</a> (2020) — plus the ROS ecosystem's own quality-assurance reporting. Their findings read like a requirements document for this tool.</p>
 
         <blockquote>
@@ -347,11 +393,10 @@
           <li><strong>Reproducibility is still an open research problem.</strong> A 2026 paper on deterministic ROS 2 execution (RSLCPP) notes ROS 2's asynchronous multiprocess design complicates reproducibility across hardware, "complicating benchmarking and CI." <a href="https://arxiv.org/html/2601.07052v1">arXiv 2601.07052</a><span class="tag">Via index</span></li>
         </ul>
         <p class="small">Design consequence, stated up front: because bit-exact determinism isn't on offer, the gate reports <strong>spread</strong> — run each maneuver k times and publish the distribution — instead of pretending one run is proof. See §7, item 8.</p>
-      </section>
+      </details></section>
 
       <!-- ============ 2. SILENT ERRORS ============ -->
-      <section id="silent">
-        <div class="sec-head"><span class="no">02</span><h2>Modeling errors are silent, and found late</h2></div>
+      <section id="silent"><details class="rf-sec"><summary><div class="sec-head"><span class="no">02</span><h2>Modeling errors are silent, and found late</h2></div></summary>
         <p class="sec-intro">URDFs are written by hand, checked by tools that only verify the file <em>parses</em>, and converted to SDF by a pipeline that can drop parts of the model without a word. The failures surface later — as a robot that shakes, explodes, or quietly drives wrong.</p>
 
         <blockquote>
@@ -395,11 +440,10 @@
           <figcaption>The DiffBot in the Gazebo GUI. This is what "validation" looks like today: Gazebo's official inertia-checking procedure is to spawn the model, open <em>View → Inertia</em>, and compare each link's purple inertia box against its bounding box by eye, with all masses temporarily set to 1.0. The official tutorial also notes a wrongly rotated inertia matrix "happens often." Screenshot from the ros-mobile-robots DiffBot project.<span class="tag">Via index</span></figcaption>
         </figure>
         <p class="small">The inertia rules themselves are well specified — the matrix must be symmetric positive-definite and satisfy the triangle inequalities (<code class="mono">ixx + iyy ≥ izz</code>, etc.), and every link needs physically plausible mass, center of mass, and inertia. What's missing is any tool that <em>enforces</em> them automatically. <a href="https://classic.gazebosim.org/tutorials?tut=inertia">Gazebo inertia tutorial</a><span class="tag">Via index</span></p>
-      </section>
+      </details></section>
 
       <!-- ============ 3. ODOMETRY ============ -->
-      <section id="odometry">
-        <div class="sec-head"><span class="no">03</span><h2>Odometry is not ground truth — and users keep rediscovering it</h2></div>
+      <section id="odometry"><details class="rf-sec"><summary><div class="sec-head"><span class="no">03</span><h2>Odometry is not ground truth — and users keep rediscovering it</h2></div></summary>
         <p class="sec-intro">The conceptual core of the gate — comparing what the robot <em>reports</em> against what <em>actually happened</em> — is a live, open source of confusion inside Gazebo itself. Two open gz-sim bugs are users hand-building exactly the comparison RobotForge automates.</p>
 
         <blockquote>
@@ -455,11 +499,10 @@
         <h3>The same numbers live in two files that must agree</h3>
         <p>Wheel radius and separation appear in the URDF geometry, again in the DiffDrive plugin's SDF tags (<code class="mono">&lt;wheel_separation&gt;</code>, <code class="mono">&lt;wheel_radius&gt;</code>, <code class="mono">&lt;left_joint&gt;</code>, <code class="mono">&lt;right_joint&gt;</code>), and again in the ros2_control controller YAML. Project documentation warns that URDF-vs-YAML disagreement produces odometry error or controller startup failure — a cross-file consistency hazard no single-file linter catches. Vendors confirm real robots never match CAD: PAL Robotics' PMB-2 calibration docs cite wheel diameter tolerances of ±1–2&nbsp;mm, tire wear, assembly tolerances, tire pressure, and floor interaction, corrected with empirically determined multipliers.<span class="tag">Via index</span></p>
         <p class="small">Scope honesty: a gate comparing odometry to <em>simulator</em> ground truth catches model self-inconsistency — wrong radius, separation, or axes in the description versus what the simulated physics does. It does not close the sim-to-real gap, and the pitch shouldn't claim it does.</p>
-      </section>
+      </details></section>
 
       <!-- ============ 4. AUDIENCE ============ -->
-      <section id="audience">
-        <div class="sec-head"><span class="no">04</span><h2>The audience under-tests — that's the survey's headline</h2></div>
+      <section id="audience"><details class="rf-sec"><summary><div class="sec-head"><span class="no">04</span><h2>The audience under-tests — that's the survey's headline</h2></div></summary>
         <p class="sec-intro">The primary audience source is Snider et al., <a href="https://github.com/danielsnider/ros-rover/raw/728ce1a00e3bda2a9abcd59c64e6433513e9f950/Book%20Chapter%20-%20University%20Rover%20Challenge%20Tutorials%20and%20Control%20System%20Survey.pdf">"University Rover Challenge: Tutorials and Team Survey"</a> — a book chapter surveying URC teams — plus current competition reporting. URC draws hundreds of students across 80+ teams (in 2017: 35 rovers, 500+ students) who spend a year building a rover from scratch under a $15,000 spending cap, which makes ROS's free ecosystem "a natural fit… to cut costs." This is precisely the segment that cannot buy test infrastructure.<span class="tag">Via index</span></p>
 
         <blockquote>
@@ -480,11 +523,10 @@
           <p>This is the founding story for a headless, run-it-from-home gate — and this research <strong>did not find a source that directly documents it</strong>. No team write-up or forum thread located states that members cannot test because the robot sits in a lab/shop while they are remote. The demand is supported only indirectly: developers want headless, scriptable, CI-deployable simulation (Afzal et al.); one needed a physical display attached to a CI server; Gazebo's docs call remote/cloud execution "often desirable"; URC teams are budget-capped and under-test.</p>
           <p>Until a team states it directly, present the remote-testing story as a hypothesis consistent with the survey data — not as a documented fact. Same discipline for competition failures: none found was traced specifically to an unvalidated URDF or odometry parameter error. See §8.</p>
         </div>
-      </section>
+      </details></section>
 
       <!-- ============ 5. PRIOR ART ============ -->
-      <section id="priorart">
-        <div class="sec-head"><span class="no">05</span><h2>Prior art: every neighbor is one layer away</h2></div>
+      <section id="priorart"><details class="rf-sec"><summary><div class="sec-head"><span class="no">05</span><h2>Prior art: every neighbor is one layer away</h2></div></summary>
         <p class="sec-intro">The headline question — does anything already produce a pass/fail verdict with evidence, for a small team, headlessly, for free? — answers <strong>no</strong>. Each tool below covers a slice. Static validators sit below the gate (no execution), Nav2's tests beside it (wrong scope), Isaac Sim above it (a platform, GPU-gated), and RoboMaker is gone.</p>
 
         <div class="tablewrap">
@@ -601,11 +643,10 @@
           </table>
         </div>
         <p class="small">Beyond syntax validation and the GUI inertia procedure, Gazebo itself ships headless server mode with the EGL <code class="mono">--headless-rendering</code> option for GPU sensors, and CI packaging via the <code class="mono">setup-gazebo</code> GitHub Action — the sanctioned building blocks for the gate's harness. No shipped "run maneuvers and grade the model" tool appears in the documentation reviewed.<span class="tag">Via index</span></p>
-      </section>
+      </details></section>
 
       <!-- ============ 6. OPEN ISSUES ============ -->
-      <section id="issues">
-        <div class="sec-head"><span class="no">06</span><h2>Open upstream issues the gate speaks to</h2></div>
+      <section id="issues"><details class="rf-sec"><summary><div class="sec-head"><span class="no">06</span><h2>Open upstream issues the gate speaks to</h2></div></summary>
         <p class="sec-intro">Every issue below was opened and read live during this research (October 25–26, 2026) and was open at read time, unless flagged. These are not decoration: two of them are users hand-building the gate's core comparison, and three define constraints its harness must be designed around.</p>
 
         <div class="filters" role="group" aria-label="Filter issues by repository">
@@ -680,11 +721,10 @@
             <p class="meta"><span>Status: closed 2024-09-06</span><span><a href="https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/issues/186">github.com/UniversalRobots#186</a></span></p>
           </article>
         </div>
-      </section>
+      </details></section>
 
       <!-- ============ 7. BUILD LIST ============ -->
-      <section id="build">
-        <div class="sec-head"><span class="no">07</span><h2>The build list, ranked by evidence</h2></div>
+      <section id="build"><details class="rf-sec"><summary><div class="sec-head"><span class="no">07</span><h2>The build list, ranked by evidence</h2></div></summary>
         <p class="sec-intro">Eight candidate tests for a 10-day MVP, ranked by strength of documented evidence × cheapness to implement in a headless Gazebo harness × directness of fit to the odometry-vs-ground-truth concept. Each item names the evidence it answers.</p>
 
         <ol class="ranks">
@@ -761,11 +801,10 @@
           <li><strong>Ship the harness as a container / GitHub Action from day one.</strong> Gazebo's own CI doc calls setup "complex and time-consuming," and Afzal's respondents failed at exactly this step; the <code class="mono">setup-gazebo</code> action is the sanctioned building block.</li>
           <li><strong>Phrase determinism honestly:</strong> fixed scenario + stated tolerances + repeatability statistics (§1/§3) — never bit-exactness.</li>
         </ul>
-      </section>
+      </details></section>
 
       <!-- ============ 8. UNKNOWNS ============ -->
-      <section id="unknowns">
-        <div class="sec-head"><span class="no">08</span><h2>What this research could not verify</h2></div>
+      <section id="unknowns"><details class="rf-sec"><summary><div class="sec-head"><span class="no">08</span><h2>What this research could not verify</h2></div></summary>
         <p class="sec-intro">Open questions, stated plainly. Anything on this list should not appear in a pitch as established fact.</p>
         <ol class="ranks">
           <li><span class="r">?</span><div><h3>"Teams can't test because the robot is in a lab while members are remote"</h3><p>No direct source found. Supported only indirectly (headless/CI demand in Afzal et al.; Gazebo's remote-execution rationale). Do not present as documented.</p></div></li>
@@ -777,11 +816,10 @@
           <li><span class="r">?</span><div><h3>Formant and The Construct characterizations</h3><p>Light-touch, from vendor/roundup material at search level; neither was deep-read. Neither affects the §5 conclusion.</p></div></li>
           <li><span class="r">?</span><div><h3>LinkForge / fieldpilot-urdf</h3><p>Physics-linting claims seen in search results were not opened and are excluded from this brief entirely.</p></div></li>
         </ol>
-      </section>
+      </details></section>
 
       <!-- ============ SOURCES ============ -->
-      <section id="sources">
-        <div class="sec-head"><span class="no">§</span><h2>Sources</h2></div>
+      <section id="sources"><details class="rf-sec"><summary><div class="sec-head"><span class="no">§</span><h2>Sources</h2></div></summary>
         <div class="sources">
           <h3>Surveys &amp; papers</h3>
           <ul>
@@ -829,7 +867,7 @@
             <li><a href="https://github-wiki-see.page/m/umrover/mrover-ros/wiki/Autonomy-Starter-Project">MRover autonomy starter project (wiki mirror)</a> · <a href="https://aero.engin.umich.edu/2026/10/01/mrover-earns-third-place-at-canadian-international-rover-challenge/">MRover at CIRC 2026 (Univ. of Michigan)</a></li>
           </ul>
         </div>
-      </section>
+      </details></section>
     </main>
 
     <footer>
@@ -897,6 +935,16 @@
           });
         });
       })();
+    </script>
+    <script>
+      // Section anchors (#odometry etc.) open their collapsed section.
+      function rfOpen() {
+        var el = location.hash && document.getElementById(location.hash.slice(1));
+        var d = el && el.querySelector("details.rf-sec");
+        if (d) { d.open = true; el.scrollIntoView(); }
+      }
+      addEventListener("hashchange", rfOpen);
+      rfOpen();
     </script>
   </body>
 </html>

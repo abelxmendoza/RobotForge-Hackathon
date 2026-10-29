@@ -694,3 +694,35 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .glossary>div{border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--s3) var(--s4);background:var(--surface)}
 .glossary dt{font-weight:600;color:var(--text);margin-bottom:4px}
 .glossary dd{margin:0;color:var(--text-muted);font-size:var(--fs-sm)}
+
+/* ---------- Navigation: Home, More menu, skip link (2026-10-29) ---------- */
+.skip-link{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 14px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.skip-link:focus{top:12px;text-decoration:none}
+.side-nav a:focus-visible,.side-foot a:focus-visible,.nav-more summary:focus-visible,.site-nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.side-foot a[aria-current="page"]{color:var(--text)}
+.nav-more{display:none}
+@media (max-width:900px){
+  .side-nav .nav-more-item{display:none}
+  .nav-more{display:block;position:relative}
+  .nav-more summary{list-style:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;min-height:100%}
+  .nav-more summary::-webkit-details-marker{display:none}
+  .nav-more summary svg{width:18px;height:18px}
+  .nav-more[open] summary{color:var(--accent)}
+  .nav-more:has(.nav-more-menu a[aria-current="page"]) summary{color:var(--accent)}
+  .nav-more-menu{position:absolute;right:0;bottom:calc(100% + 10px);min-width:200px;display:grid;padding:6px;border:1px solid var(--border-strong);border-radius:12px;background:var(--surface-2);box-shadow:0 12px 32px rgba(0,0,0,.5)}
+  .nav-more-menu a{flex-direction:row;justify-content:flex-start;font-size:var(--fs-sm);padding:12px 14px;border-radius:8px;color:var(--text)}
+  .nav-more-menu a[aria-current="page"]{color:var(--accent)}
+}
+
+/* AI inside, short version (landing page) */
+.ai-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s3)}
+.ai-card{padding:var(--s4)}
+.ai-card-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin-bottom:var(--s2)}
+.ai-card h3{font-size:var(--fs-md);margin:0}
+.ai-card p{color:var(--text-muted);font-size:var(--fs-sm);margin:0}
+.ai-card-not{background:transparent;border-style:dashed}
+.ai-card-not h3{margin-bottom:var(--s2)}
+@media (max-width:960px){.ai-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.ai-cards{grid-template-columns:minmax(0,1fr)}}
+/* An open More menu sits where the floating chat button is. */
+.shell:has(.nav-more[open]) .forge-chat{display:none}
