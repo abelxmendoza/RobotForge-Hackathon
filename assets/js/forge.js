@@ -259,15 +259,15 @@ function forgeValidateSpec(spec) {
     }
   }
   if (spec.motor.voltage_v > spec.battery.voltage_v * 1.05) {
-    f('ERROR', 'electrical.voltage_match',
-      'motor voltage ' + fvFmtG(spec.motor.voltage_v) +
-      ' V exceeds battery ' + fvFmtG(spec.battery.voltage_v) +
-      ' V — motors would be undervolted or need a boost converter');
+    f('WARN', 'electrical.voltage_match',
+      'motor nominal voltage ' + fvFmtG(spec.motor.voltage_v) +
+      ' V exceeds battery nominal voltage ' + fvFmtG(spec.battery.voltage_v) +
+      ' V; verify motor-driver output, battery operating range, and any boost converter before approval');
   } else if (spec.motor.voltage_v < spec.battery.voltage_v * 0.5) {
     f('WARN', 'electrical.voltage_match',
       'motor voltage ' + fvFmtG(spec.motor.voltage_v) +
-      ' V is far below battery ' + fvFmtG(spec.battery.voltage_v) +
-      ' V — a regulator is required and was not declared');
+      ' V is far below battery nominal voltage ' + fvFmtG(spec.battery.voltage_v) +
+      ' V; verify motor-driver output, regulation, and component voltage limits before approval');
   }
   const cm = spec.component_mass_kg;
   if (cm && typeof cm === 'object' && Object.keys(cm).length) {
