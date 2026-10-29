@@ -1,10 +1,11 @@
 # Hardening sweep — RobotForge-Hackathon — 2026-10-27
 
-Branch: `hardening/sweep-2026-10-27` (local only — nothing pushed,
-no PR opened, live site untouched). Base: `main` @ `abe9521`.
+Branch: `hardening/sweep-2026-10-27` (merged to `main` via PR #12;
+live site untouched by the sweep itself). Base: `main` @ `abe9521`.
 
 **Suite counts: 245 passed (baseline) → 255 (error handling) →
-278 passed (final). Source coverage: 81% → 84%.**
+278 passed (sweep final) → 286 passed (current `main`, verified
+2026-10-28). Source coverage: 81% → 84% (at sweep time).**
 
 Commits on this branch:
 
@@ -275,9 +276,9 @@ run history via the public GitHub API.
 
 ## What happens next (for Abel)
 
-- Review this branch; if it looks good, push it and open a PR —
-  the new "Tests" workflow will run on the PR and again on
-  merge to `main` (Pages deploy unchanged).
+- Done: this branch was pushed, opened as PR #12, and merged to
+  `main` — the "Tests" workflow runs on PRs and on merge to
+  `main` (Pages deploy unchanged).
 - Nothing here touches the live site, the worker deployment, or
   `twin.py` (the other agent's `gz` fix merges independently;
   expected conflict surface: none — this branch does not modify

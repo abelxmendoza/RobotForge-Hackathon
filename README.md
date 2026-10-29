@@ -32,8 +32,9 @@ describe ──► spec ──► validate ──► urdf ──► gazebo twin 
 2. **validate** — engineering sanity checks beyond schema shape: geometry, mass
    budget, electrical consistency. Findings carry severity; errors fail the spec.
 3. **urdf** — generates a URDF model from a valid spec.
-4. **twin + gate** — spawns the model in headless Gazebo and runs motion acceptance
-   checks (drive / turn / stop) with explicit pass/fail thresholds.
+4. **twin + gate** (`robotforge run-gate <spec>`) — spawns the model in headless
+   Gazebo and runs motion acceptance checks (drive / turn / stop) with explicit
+   pass/fail thresholds.
 
 Two more intakes feed step 1, with opposite contracts. A **photo of a
 robot** (`robotforge describe --photo robot.jpg`) drafts a spec from
@@ -53,6 +54,8 @@ pip install -e .            # zero required dependencies for the core
 robotforge validate examples/pathfinder.json
 robotforge urdf examples/pathfinder.json --out build/pathfinder.urdf
 robotforge describe "a four-wheel rover, 30 cm long, with a front ultrasonic sensor" --mock
+robotforge describe --photo robot.jpg        # draft a spec from a photo (every dimension ESTIMATED)
+robotforge run-gate examples/pathfinder.json # spawn the twin in headless Gazebo and grade drive / turn (needs Gazebo Sim)
 ```
 
 Live describe mode runs through the registered Meta Model API connector
@@ -102,6 +105,18 @@ key. Override it with `RF_FIREWORKS_MODEL` or the endpoint base with
 Fireworks model. The stderr line names the transport that actually
 produced the spec, e.g. `describe transport: fireworks
 (accounts/fireworks/models/muse-spark-open), forced`.
+
+## Examples
+
+The two `pathfinder` specs in `examples/` are a pair, made two different ways:
+
+- `examples/pathfinder.json` — **hand-written**: the demo robot's spec, written
+  by hand for this event. This is the reference spec the quickstart commands use.
+- `examples/pathfinder-live.json` — **live-generated**: produced by
+  `robotforge describe` (Muse Spark, live transport) from a plain-language
+  request on 2026-10-26 — the first live end-to-end pass. It passed validation
+  with no findings and generated a URDF; it is kept as the record of that run,
+  not as a hand-tuned reference.
 
 ## Layout
 

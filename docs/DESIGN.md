@@ -31,11 +31,11 @@ digital twin in simulation.
 | NL → spec | `describe.py` (Muse Spark via Meta Model API) | day 1: client + mock mode; live transport wired and verified 2026-10-26 |
 | Spec schema | `schema.py` | day 1: done, tested |
 | Engineering validation | `validate.py` | day 1: core checks, tested |
-| URDF generation | `urdf.py` | day 1: box-chassis differential rover |
-| Gazebo twin (headless) | `twin.py` | day 2–3 |
-| Motion gate | `gate.py` | day 2–3 |
-| Web demo | `web/` | day 4–6 |
-| SAM 3.1 photo → parts (stretch) | — | only if core is green |
+| URDF generation | `urdf.py` | done, tested — box chassis, differential / skid-steer wheels |
+| Gazebo twin (headless) | `twin.py` | done, tested — SDF twin in headless Gazebo; bindings transport with CLI fallback |
+| Motion gate | `gate.py` | done, tested — thresholds locked (see below); recorded PASS / FAIL runs on the landing page |
+| Web demo | `web-next/` (Next.js) + `site.py` → root `index.html` + `app/` | shipped — since 2026-10-28 the Next.js build in `web-next/` serves the site root, and the vanilla landing page (root `index.html`, hand-written; robot row generated) plus the `app/` pages are kept alongside it under `/vanilla/`, generated/refreshed by `robotforge site`; there is no `web/` directory |
+| SAM 3.1 photo → parts (stretch) | `photo.py` | shipped — Muse Spark vision draft plus SAM 3.1 part-location cross-check (`describe --photo`), verified live 2026-10-26; document transcription mode (`--document`) shipped alongside it |
 
 ### Describe transport (live mode)
 

@@ -37,6 +37,7 @@ import time
 from pathlib import Path
 
 from .schema import RobotSpec
+from .urdf import box_inertia
 
 
 class TwinError(RuntimeError):
@@ -58,16 +59,19 @@ def generate_sdf(spec: RobotSpec, *,
     wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
     wheel_mass = spec.component_mass_kg.get("wheels", 0.4) / 4.0
 
-    def box_inertia(m, x, y, z):
+    def sdf_inertial(m, x, y, z):
+        # The inertia math itself is shared with urdf.py: see
+        # box_inertia there. Only the SDF wrapping lives here.
+        ixx, iyy, izz = box_inertia(m, x, y, z)
         return (f"<inertial><mass>{m:.4f}</mass>"
-                f"<inertia><ixx>{m*(y*y+z*z)/12:.6f}</ixx><ixy>0</ixy><ixz>0</ixz>"
-                f"<iyy>{m*(x*x+z*z)/12:.6f}</iyy><iyz>0</iyz>"
-                f"<izz>{m*(x*x+y*y)/12:.6f}</izz></inertia></inertial>")
+                f"<inertia><ixx>{ixx:.6f}</ixx><ixy>0</ixy><ixz>0</ixz>"
+                f"<iyy>{iyy:.6f}</iyy><iyz>0</iyz>"
+                f"<izz>{izz:.6f}</izz></inertia></inertial>")
 
     out = ['<?xml version="1.0"?>', '<sdf version="1.9">',
            f'<model name="{spec.name}">',
            f'  <link name="base_link"><pose>0 0 {chassis_z:.4f} 0 0 0</pose>',
-           f'    {box_inertia(spec.mass_kg, spec.length_m, spec.width_m, spec.height_m)}',
+           f'    {sdf_inertial(spec.mass_kg, spec.length_m, spec.width_m, spec.height_m)}',
            f'    <collision name="c"><geometry><box><size>{spec.length_m} '
            f'{spec.width_m} {spec.height_m}</size></box></geometry></collision>',
            f'    <visual name="v"><geometry><box><size>{spec.length_m} '
@@ -85,7 +89,7 @@ def generate_sdf(spec: RobotSpec, *,
                           ("rear", -spec.length_m / 2.0 + caster_r)):
             out += [
                 f'  <link name="caster_{label}"><pose>{cx:.4f} 0 {caster_r:.4f} 0 0 0</pose>',
-                f'    {box_inertia(0.02, caster_r*2, caster_r*2, caster_r*2)}',
+                f'    {sdf_inertial(0.02, caster_r*2, caster_r*2, caster_r*2)}',
                 '    <collision name="c"><geometry>'
                 f'<sphere><radius>{caster_r}</radius></sphere></geometry>'
                 '<surface><friction><ode><mu>0.05</mu><mu2>0.05</mu2></ode>'
@@ -105,7 +109,7 @@ def generate_sdf(spec: RobotSpec, *,
     for label, x, y in wheel_positions:
         out += [
             f'  <link name="wheel_{label}"><pose>{x:.4f} {y:.4f} {gr:.4f} 0 0 0</pose>',
-            f'    {box_inertia(wheel_mass, gr*2, spec.wheel.width_m, gr*2)}',
+            f'    {sdf_inertial(wheel_mass, gr*2, spec.wheel.width_m, gr*2)}',
             f'    <collision name="c"><pose>0 0 0 1.5708 0 0</pose><geometry>'
             f'<cylinder><radius>{gr}</radius><length>{spec.wheel.width_m}</length>'
             f'</cylinder></geometry></collision>',

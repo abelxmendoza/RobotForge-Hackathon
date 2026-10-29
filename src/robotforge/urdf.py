@@ -12,10 +12,22 @@ from xml.sax.saxutils import escape
 from .schema import RobotSpec
 
 
+def box_inertia(mass: float, x: float, y: float, z: float) \
+        -> tuple[float, float, float]:
+    """Principal moments of inertia of a solid box: (ixx, iyy, izz).
+
+    The one place this formula lives. URDF generation below and the
+    Gazebo twin's SDF generation (`twin.py`) both call it — the two
+    file formats wrap the same numbers differently, the math must not
+    drift between them.
+    """
+    return (mass * (y * y + z * z) / 12.0,
+            mass * (x * x + z * z) / 12.0,
+            mass * (x * x + y * y) / 12.0)
+
+
 def _box_inertial(mass: float, x: float, y: float, z: float) -> str:
-    ixx = mass * (y * y + z * z) / 12.0
-    iyy = mass * (x * x + z * z) / 12.0
-    izz = mass * (x * x + y * y) / 12.0
+    ixx, iyy, izz = box_inertia(mass, x, y, z)
     return (f'<inertial><mass value="{mass:.4f}"/>'
             f'<inertia ixx="{ixx:.6f}" ixy="0" ixz="0" iyy="{iyy:.6f}" '
             f'iyz="0" izz="{izz:.6f}"/></inertial>')
