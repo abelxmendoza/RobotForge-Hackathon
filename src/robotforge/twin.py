@@ -21,9 +21,21 @@ make_transport): the in-process gz-transport Python bindings when they are
 importable — one persistent publisher/subscriber, no per-command process
 spawns — with the streamed `gz topic` CLI pair kept as an automatic
 fallback. The transport used is printed at the start of every run.
+
+Server placement: by default the runner spawns `gz sim` as a subprocess
+and talks to it across processes. gz-transport discovery is UDP
+multicast, so on hosts where UDP is unavailable (this sandbox: sendto
+returns EPERM even on loopback) cross-process nodes never discover each
+other and no odometry arrives. For those hosts run_motion_check falls
+back to an in-process server (gz.sim8 Python bindings): the simulator
+runs in the runner's own process, where gz-transport discovery/delivery
+is process-local and needs no UDP. Same world, same plugins, same
+measurements — only where the server process sits changes.
 """
 from __future__ import annotations
 
+import gc
+import glob
 import math
 import os
 import re
@@ -573,30 +585,71 @@ def _pose_stable(a: tuple[float, float, float],
             and abs(heading_change_deg(a[2], b[2])) < 0.1)
 
 
-def run_motion_check(spec: RobotSpec, workdir: Path, *,
-                     drive_m: float = 1.0, speed_mps: float = 0.25,
-                     turn_deg: float = 90.0, turn_rate_dps: float = 45.0,
-                     wheel_radius_scale: float = 1.0) -> dict:
-    """Run drive + turn in headless Gazebo; return measured results.
+def _import_sim_bindings():
+    """Import the gz-sim Python bindings (gz.sim8), returning
+    (Server, ServerConfig) — or None when they are not importable."""
+    try:
+        from gz.sim8 import Server, ServerConfig
+    except Exception:
+        return None
+    return Server, ServerConfig
 
-    Closed-loop stop: each phase streams a constant velocity command and
-    watches the odometry stream, switching to a streamed stop as soon as
-    the measured distance / heading change reaches the commanded target
-    (no fixed-duration timing and no anticipatory offset). Commands and
-    odometry flow through make_transport() — the gz-transport bindings
-    when importable, else the streamed gz CLI — and the chosen transport
-    is printed as `transport: ...` before the run. Measurements
-    are read from odometry once the pose has settled — stability detected
-    from the stream, minimum 1 s — the same post-settle measurement the
-    earlier open-loop runs took; any residual overshoot is the honest
-    result. Each phase has a hard timeout at 3x its nominal duration: on
-    timeout the stop is streamed, the robot is given a moment, and
-    TwinError is raised instead of returning a number.
 
-    Raises TwinError on any step that fails — the caller must surface that,
-    never a fabricated measurement.
+def _ensure_physics_engine_path(workdir: Path) -> None:
+    """Make the DART physics engine plugin findable for an in-process
+    server (sets GZ_SIM_PHYSICS_ENGINE_PATH when it is unset).
+
+    The Physics system asks the gz-plugin loader for
+    "gz-physics-dartsim-plugin", but distro runtime packages ship only
+    the versioned library (libgz-physics7-dartsim-plugin.so.7.x) in the
+    engine-plugins directory and the loader does not match it — a stock
+    headless install then steps iterations with no dynamics and the
+    robot never moves. When a versioned plugin is found without an
+    unversioned name beside it, link both names into
+    <workdir>/engine-plugins and point the loader there. Pure search
+    plumbing: the engine itself and every physics parameter are the
+    distro's, untouched.
     """
-    _require_gz()
+    if os.environ.get("GZ_SIM_PHYSICS_ENGINE_PATH"):
+        return
+    versioned = None
+    for pattern in ("/usr/lib/*/gz-physics-*/engine-plugins",
+                    "/usr/lib/gz-physics-*/engine-plugins",
+                    "/usr/local/lib/*/gz-physics-*/engine-plugins"):
+        for engine_dir in sorted(glob.glob(pattern)):
+            names = os.listdir(engine_dir)
+            if "libgz-physics-dartsim-plugin.so" in names:
+                os.environ["GZ_SIM_PHYSICS_ENGINE_PATH"] = engine_dir
+                return
+            for name in sorted(names):
+                if name.startswith("libgz-physics") \
+                        and "dartsim-plugin.so" in name:
+                    versioned = Path(engine_dir) / name
+    if versioned is None:
+        return  # nothing found: leave the loader's defaults to decide
+    link_dir = workdir / "engine-plugins"
+    link_dir.mkdir(parents=True, exist_ok=True)
+    for link_name in ("libgz-physics-dartsim-plugin.so",
+                      versioned.name.rsplit(".so", 1)[0] + ".so"):
+        link = link_dir / link_name
+        try:
+            if not link.exists():
+                link.symlink_to(versioned)
+        except OSError:
+            pass
+    os.environ["GZ_SIM_PHYSICS_ENGINE_PATH"] = str(link_dir)
+
+
+def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
+                           drive_m: float = 1.0, speed_mps: float = 0.25,
+                           turn_deg: float = 90.0, turn_rate_dps: float = 45.0,
+                           wheel_radius_scale: float = 1.0,
+                           embedded_server: bool = False) -> dict:
+    """One motion run. With embedded_server=False the twin runs in a
+    `gz sim` subprocess (the canonical stack); with True the gz-sim
+    server runs in this process via the gz.sim8 bindings and commands /
+    odometry flow through the bindings transport in the same process.
+    The phases, measurements and failure behaviour are identical."""
     workdir.mkdir(parents=True, exist_ok=True)
     model = workdir / "model.sdf"
     world = workdir / "world.sdf"
@@ -605,16 +658,47 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
         spec.wheel.diameter_m / 2.0 * wheel_radius_scale))
     world.write_text(generate_world(spec, str(model.resolve())))
 
-    gz = subprocess.Popen(["gz", "sim", "-s", "-r", str(world)],
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                          start_new_session=True)
+    gz = None
+    server = None
+    if embedded_server:
+        sim = _import_sim_bindings()
+        if sim is None:
+            raise TwinError(
+                "in-process twin requested but the gz-sim Python "
+                "bindings (gz.sim8) are not importable")
+        _ensure_physics_engine_path(workdir)
+        Server, ServerConfig = sim
+        config = ServerConfig()
+        config.set_sdf_file(str(world.resolve()))
+        server = Server(config)
+        if not server.run(False, 0, False):
+            raise TwinError("in-process gz-sim server failed to start")
+    else:
+        gz = subprocess.Popen(["gz", "sim", "-s", "-r", str(world)],
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL,
+                              start_new_session=True)
     transport = None
     try:
         time.sleep(4.0)  # world load
-        if gz.poll() is not None:
-            raise TwinError("gz sim exited during startup")
-        transport, transport_name = make_transport(workdir / "odom.txt",
-                                                   spec.name)
+        if embedded_server:
+            if not server.is_running():
+                raise TwinError(
+                    "in-process gz-sim server exited during startup")
+            bindings = _import_bindings()
+            if bindings is None:
+                raise TwinError(
+                    "in-process twin requires the gz-transport Python "
+                    "bindings (gz.transport13) for same-process delivery")
+            transport = _BindingsTransport(workdir / "odom.txt", bindings,
+                                           spec.name)
+            transport_name = ("gz-transport bindings (gz.transport13) "
+                              "[in-process gz-sim server]")
+        else:
+            if gz.poll() is not None:
+                raise TwinError("gz sim exited during startup")
+            transport, transport_name = make_transport(workdir / "odom.txt",
+                                                       spec.name)
         print(f"transport: {transport_name}")
 
         def await_pose(timeout_s: float) -> tuple[float, float, float]:
@@ -706,4 +790,62 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
     finally:
         if transport is not None:
             transport.close()
-        _kill_group(gz)
+        if gz is not None:
+            _kill_group(gz)
+        if server is not None:
+            # The Python bindings expose no stop(): destroying the
+            # Server stops its simulation threads.
+            del server
+            gc.collect()
+
+
+def run_motion_check(spec: RobotSpec, workdir: Path, *,
+                     drive_m: float = 1.0, speed_mps: float = 0.25,
+                     turn_deg: float = 90.0, turn_rate_dps: float = 45.0,
+                     wheel_radius_scale: float = 1.0,
+                     embedded: bool | None = None) -> dict:
+    """Run drive + turn in headless Gazebo; return measured results.
+
+    Closed-loop stop: each phase streams a constant velocity command and
+    watches the odometry stream, switching to a streamed stop as soon as
+    the measured distance / heading change reaches the commanded target
+    (no fixed-duration timing and no anticipatory offset). Commands and
+    odometry flow through make_transport() — the gz-transport bindings
+    when importable, else the streamed gz CLI — and the chosen transport
+    is printed as `transport: ...` before the run. Measurements
+    are read from odometry once the pose has settled — stability detected
+    from the stream, minimum 1 s — the same post-settle measurement the
+    earlier open-loop runs took; any residual overshoot is the honest
+    result. Each phase has a hard timeout at 3x its nominal duration: on
+    timeout the stop is streamed, the robot is given a moment, and
+    TwinError is raised instead of returning a number.
+
+    Server placement (`embedded`): False forces the canonical `gz sim`
+    subprocess, True forces the in-process gz.sim8 server, and None
+    (default) tries the subprocess first and — on hosts where
+    cross-process gz-transport discovery cannot work (no UDP) — retries
+    once in-process when the bindings for that are importable. The retry
+    is a fresh run of the identical phases; a failed run never
+    contributes measurements to a later one.
+
+    Raises TwinError on any step that fails — the caller must surface that,
+    never a fabricated measurement.
+    """
+    _require_gz()
+    kwargs = dict(drive_m=drive_m, speed_mps=speed_mps, turn_deg=turn_deg,
+                  turn_rate_dps=turn_rate_dps,
+                  wheel_radius_scale=wheel_radius_scale)
+    if embedded is not None:
+        return _run_motion_check_once(spec, workdir,
+                                      embedded_server=embedded, **kwargs)
+    try:
+        return _run_motion_check_once(spec, workdir,
+                                      embedded_server=False, **kwargs)
+    except TwinError as exc:
+        if _import_sim_bindings() is None or _import_bindings() is None:
+            raise
+        print(f"subprocess twin failed ({exc}); retrying with the "
+              "in-process gz-sim server (gz.sim8) — cross-process "
+              "gz-transport discovery is unavailable on some hosts")
+        return _run_motion_check_once(spec, workdir,
+                                      embedded_server=True, **kwargs)

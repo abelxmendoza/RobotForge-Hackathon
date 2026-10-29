@@ -200,3 +200,30 @@ def test_cli_run_gate_without_gz_is_a_clean_error(tmp_path, monkeypatch,
     err = capsys.readouterr().err
     assert "spec error: Gazebo (gz) not found" in err
     assert "Traceback" not in err
+
+
+def test_physics_engine_path_respects_operator_setting(tmp_path,
+                                                       monkeypatch):
+    monkeypatch.setenv("GZ_SIM_PHYSICS_ENGINE_PATH", "/operator/set")
+    twin._ensure_physics_engine_path(tmp_path)
+    import os
+    assert os.environ["GZ_SIM_PHYSICS_ENGINE_PATH"] == "/operator/set"
+
+
+def test_physics_engine_path_links_versioned_plugin(tmp_path, monkeypatch):
+    # A distro engine dir holding only the versioned plugin library:
+    # the in-process loader needs an unversioned name, provided as a
+    # symlink inside the workdir (never a modified system library).
+    import os
+    monkeypatch.delenv("GZ_SIM_PHYSICS_ENGINE_PATH", raising=False)
+    engine_dir = tmp_path / "engine-plugins"
+    engine_dir.mkdir()
+    plugin = engine_dir / "libgz-physics7-dartsim-plugin.so.7.9.9"
+    plugin.write_bytes(b"fake")
+    monkeypatch.setattr(twin.glob, "glob",
+                        lambda pattern: [str(engine_dir)])
+    twin._ensure_physics_engine_path(tmp_path / "work")
+    link_dir = tmp_path / "work" / "engine-plugins"
+    assert os.environ["GZ_SIM_PHYSICS_ENGINE_PATH"] == str(link_dir)
+    assert (link_dir / "libgz-physics-dartsim-plugin.so").is_symlink()
+    assert (link_dir / "libgz-physics7-dartsim-plugin.so").is_symlink()
