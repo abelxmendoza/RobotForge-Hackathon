@@ -37,3 +37,38 @@ What the run honestly shows (2026-10-28, live photo + live lookup):
   for Ekumen-OS/andino (no root LICENSE file), so sources say
   "not stated"; the catalog's own provenance record (per-package
   BSD-3-Clause) is what the credit line cites, tagged CATALOG.
+
+## First real field catch — `spot-cpp/`
+
+`spot-cpp/` is Spotter's first run on a robot actually spotted in the
+wild — a Boston Dynamics Spot (with Spot Arm) at Cal Poly Pomona's
+Intelligent Robotics Lab, run 2026-10-29:
+
+    robotforge spot --photo examples/spotter/spot-cpp/spotted-photo.jpg \
+        --identity "Boston Dynamics Spot" --out examples/spotter/spot-cpp
+
+- `spotted-photo.jpg` — the spotting evidence: the wide lab shot that
+  was the pipeline's input (Spot lying folded in front of its dock).
+  Photographed by **Abel Mendoza, 2026-10-28, Cal Poly Pomona IRLab**,
+  during an in-person visit; included so the example is reproducible.
+- `spotted-photo-2.jpg` — a supporting closer shot of the same unit,
+  same visit, same credit.
+- `dossier.json` / `card.md` — the dossier, as generated. This time the
+  vision model **did** identify the robot ("Boston Dynamics Spot with
+  Spot Arm"); the working identity was still operator-provided, and the
+  dossier's identity field says so. Catalog verdict: **NEW** — Spot is
+  not one of the 11 Robodex entries. Draft validation: **PASS** (the
+  estimate is self-consistent; it is not a verdict on the real robot).
+- `field-notes.md` — operator context the pipeline cannot know: the
+  Spot Arm is fitted; the lab's Spot team reported the unit has not
+  yet moved or been outside (labelled SELF-REPORTED-HEARSAY); two
+  lookup wrinkles (the credit heuristic names a Boston Ruby repo, and
+  the "twin candidate" URDF belongs to a different robot); Boston
+  Dynamics' published specs as a WEB-SOURCED cross-reference; and
+  first-pass notes — explicitly **not** dossiers — for two other
+  catches from the same visit (a Hokuyo URG lidar and an unidentified
+  3D-printed mechanism).
+- **No sim verdict is claimed.** The Forge drive gate is a wheeled
+  odometry check; Spot is a quadruped and this project has no
+  quadruped model. This entry is a Robodex record, nothing more —
+  see `field-notes.md`.

@@ -1,0 +1,900 @@
+{
+  "schema": "robotforge-spotter/1",
+  "generated_at": "2026-10-29T01:44:37.347526+00:00",
+  "honesty_note": "Every value in this dossier carries its provenance. PHOTO-ESTIMATED values were read off a photograph and are not measurements; WEB-SOURCED values come from the public pages named beside them; CATALOG values are RobotForge's own recorded data, shown as a cross-check and never merged into the photo draft.",
+  "identity": {
+    "value": "Boston Dynamics Spot",
+    "provenance": "UNKNOWN",
+    "source": "operator-provided identity; the photo model itself guessed 'Boston Dynamics Spot with Spot Arm' and did not confirm it \u2014 the catalog match below is the corroboration, not the photo"
+  },
+  "credit": {
+    "value": "Not identified against the Robodex. Its public footprint starts at bostonrb/bostonrb (owner bostonrb); credit belongs to that project's authors, whoever they are.",
+    "provenance": "WEB-SOURCED",
+    "source": "https://github.com/bostonrb/bostonrb"
+  },
+  "catalog_match": {
+    "verdict": "NEW",
+    "robot": null,
+    "dex_id": null,
+    "score": 0,
+    "evidence": [
+      "no Robodex entry name-matches 'Boston Dynamics Spot' (11 entries checked)"
+    ]
+  },
+  "photo": {
+    "path": "examples/spotter/spot-cpp/spotted-photo.jpg",
+    "sha256": "07c80a3780cb61989d94650f0315569759345fd5e9ae2a8c3f294b396de2d960",
+    "identity_guess": "Boston Dynamics Spot with Spot Arm",
+    "visible_parts": [
+      {
+        "kind": "quadruped leg",
+        "count": 4,
+        "position": "body corners",
+        "notes": "yellow legs with grey feet folded in sitting pose on carpet",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "robot arm",
+        "count": 1,
+        "position": "front top",
+        "notes": "yellow and black Spot Arm with gripper folded over body",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "robot body",
+        "count": 1,
+        "position": "center foreground",
+        "notes": "yellow rectangular body with BostonDynamics logo on side",
+        "provenance": "PHOTO-ESTIMATED"
+      }
+    ]
+  },
+  "fields": [
+    {
+      "field": "name",
+      "draft": {
+        "value": "Spot with Arm - photo draft",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "drivetrain",
+      "draft": {
+        "value": "skid_steer",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "length_m",
+      "draft": {
+        "value": 1.1,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "width_m",
+      "draft": {
+        "value": 0.5,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "height_m",
+      "draft": {
+        "value": 0.55,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "mass_kg",
+      "draft": {
+        "value": 40.0,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "ground_clearance_m",
+      "draft": {
+        "value": 0.05,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "wheel.diameter_m",
+      "draft": {
+        "value": 0.12,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "wheel.width_m",
+      "draft": {
+        "value": 0.08,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "wheel.count",
+      "draft": {
+        "value": 0,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "motor.kind",
+      "draft": {
+        "value": "brushless_electric",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "motor.voltage_v",
+      "draft": {
+        "value": 48.0,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "motor.count",
+      "draft": {
+        "value": 18,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "battery.chemistry",
+      "draft": {
+        "value": "li-ion",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "battery.voltage_v",
+      "draft": {
+        "value": 50.4,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "battery.capacity_mah",
+      "draft": {
+        "value": 12000,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+      }
+    },
+    {
+      "field": "sensors",
+      "draft": {
+        "value": [
+          {
+            "kind": "depth_camera",
+            "position": "front",
+            "range_m": 4,
+            "provenance": "PHOTO-ESTIMATED"
+          },
+          {
+            "kind": "depth_camera",
+            "position": "rear",
+            "range_m": 4,
+            "provenance": "PHOTO-ESTIMATED"
+          },
+          {
+            "kind": "depth_camera",
+            "position": "left",
+            "range_m": 4,
+            "provenance": "PHOTO-ESTIMATED"
+          },
+          {
+            "kind": "depth_camera",
+            "position": "right",
+            "range_m": 4,
+            "provenance": "PHOTO-ESTIMATED"
+          },
+          {
+            "kind": "rgb_camera",
+            "position": "arm gripper",
+            "range_m": 2,
+            "provenance": "PHOTO-ESTIMATED"
+          },
+          {
+            "kind": "imu",
+            "position": "body center",
+            "range_m": null,
+            "provenance": "PHOTO-ESTIMATED"
+          },
+          {
+            "kind": "encoder",
+            "position": "leg joints",
+            "range_m": null,
+            "provenance": "PHOTO-ESTIMATED"
+          }
+        ],
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "photo vision draft"
+      }
+    }
+  ],
+  "parts": [
+    {
+      "label": "battery (li-ion 50.4 V, 12000 mAh)",
+      "basis": "draft spec battery block",
+      "provenance": "PHOTO-ESTIMATED",
+      "catalog_id": null,
+      "catalog_name": null,
+      "match_basis": "",
+      "free_text": "no catalog part scored above threshold (best 3); needs a human pick"
+    },
+    {
+      "label": "motor x18 (brushless_electric, 48 V)",
+      "basis": "draft spec motor block",
+      "provenance": "CATALOG",
+      "catalog_id": "brushless_2207_1960kv",
+      "catalog_name": "Brushless motor 2207 1960 KV",
+      "match_basis": "score 3: kind tokens ['brushless'] shared by catalog brushless_outrunner and draft brushless_electric",
+      "free_text": ""
+    },
+    {
+      "label": "wheel x0 (0.12 m diameter)",
+      "basis": "draft spec wheel block",
+      "provenance": "CATALOG",
+      "catalog_id": "wheel_100mm",
+      "catalog_name": "Wheel 100 mm diameter",
+      "match_basis": "score 4: diameter 0.1 m vs draft 0.12 m",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: depth_camera (front)",
+      "basis": "draft spec sensors list",
+      "provenance": "CATALOG",
+      "catalog_id": "realsense_d435",
+      "catalog_name": "Intel RealSense D435 depth camera",
+      "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: depth_camera (rear)",
+      "basis": "draft spec sensors list",
+      "provenance": "CATALOG",
+      "catalog_id": "realsense_d435",
+      "catalog_name": "Intel RealSense D435 depth camera",
+      "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: depth_camera (left)",
+      "basis": "draft spec sensors list",
+      "provenance": "CATALOG",
+      "catalog_id": "realsense_d435",
+      "catalog_name": "Intel RealSense D435 depth camera",
+      "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: depth_camera (right)",
+      "basis": "draft spec sensors list",
+      "provenance": "CATALOG",
+      "catalog_id": "realsense_d435",
+      "catalog_name": "Intel RealSense D435 depth camera",
+      "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: rgb_camera (arm gripper)",
+      "basis": "draft spec sensors list",
+      "provenance": "CATALOG",
+      "catalog_id": "camera_rpi_v2",
+      "catalog_name": "Raspberry Pi Camera Module V2 (8 MP)",
+      "match_basis": "score 5: catalog kind rgb_camera matches",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: imu (body center)",
+      "basis": "draft spec sensors list",
+      "provenance": "CATALOG",
+      "catalog_id": "imu_bno055",
+      "catalog_name": "BNO055 9-DOF IMU breakout",
+      "match_basis": "score 5: catalog kind imu matches",
+      "free_text": ""
+    },
+    {
+      "label": "sensor: encoder (leg joints)",
+      "basis": "draft spec sensors list",
+      "provenance": "PHOTO-ESTIMATED",
+      "catalog_id": null,
+      "catalog_name": null,
+      "match_basis": "",
+      "free_text": "no catalog part scored above threshold (best 0); needs a human pick"
+    },
+    {
+      "label": "visible part: quadruped leg x4",
+      "basis": "seen in the photo by the vision draft",
+      "provenance": "PHOTO-ESTIMATED",
+      "catalog_id": null,
+      "catalog_name": null,
+      "match_basis": "",
+      "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+    },
+    {
+      "label": "visible part: robot arm x1",
+      "basis": "seen in the photo by the vision draft",
+      "provenance": "PHOTO-ESTIMATED",
+      "catalog_id": null,
+      "catalog_name": null,
+      "match_basis": "",
+      "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+    },
+    {
+      "label": "visible part: robot body x1",
+      "basis": "seen in the photo by the vision draft",
+      "provenance": "PHOTO-ESTIMATED",
+      "catalog_id": null,
+      "catalog_name": null,
+      "match_basis": "",
+      "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+    }
+  ],
+  "sources": [
+    {
+      "kind": "github_repo",
+      "name": "bostonrb/bostonrb",
+      "url": "https://github.com/bostonrb/bostonrb",
+      "claims": [
+        "owner name carries the 'boston' brand",
+        "repo name matches 'boston'",
+        "200 stars (community signal)"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "official",
+      "confidence": {
+        "level": "high",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "boston-dynamics/spot-sdk",
+      "url": "https://github.com/boston-dynamics/spot-sdk",
+      "claims": [
+        "owner name carries the 'boston' brand",
+        "2505 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "NOASSERTION",
+        "name": "Other"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "official",
+      "confidence": {
+        "level": "high",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "Boston-Robot-Hackers/ros2diag",
+      "url": "https://github.com/Boston-Robot-Hackers/ros2diag",
+      "claims": [
+        "owner name carries the 'boston' brand"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "official",
+      "confidence": {
+        "level": "high",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "Boston-Robot-Hackers/dome",
+      "url": "https://github.com/Boston-Robot-Hackers/dome",
+      "claims": [
+        "owner name carries the 'boston' brand"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "official",
+      "confidence": {
+        "level": "high",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": [
+        {
+          "path": "config/dome1.urdf.xacro",
+          "kind": "urdf_xacro",
+          "size": 10109
+        },
+        {
+          "path": "config/dome2.urdf",
+          "kind": "urdf",
+          "size": 7285
+        },
+        {
+          "path": "config/dome3-old.urdf",
+          "kind": "urdf",
+          "size": 7766
+        },
+        {
+          "path": "config/dome3.urdf",
+          "kind": "urdf",
+          "size": 7792
+        },
+        {
+          "path": "goodies/dome1.urdf",
+          "kind": "urdf",
+          "size": 7009
+        },
+        {
+          "path": "meshes/octagon_plate.stl",
+          "kind": "mesh",
+          "size": 1684
+        },
+        {
+          "path": "urdf/dome1.urdf.xacro",
+          "kind": "urdf_xacro",
+          "size": 7015
+        }
+      ]
+    },
+    {
+      "kind": "github_repo",
+      "name": "CityOfBoston/boston.gov-d7",
+      "url": "https://github.com/CityOfBoston/boston.gov-d7",
+      "claims": [
+        "repo name matches 'boston'",
+        "284 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "NOASSERTION",
+        "name": "Other"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "bluepylons/Boston",
+      "url": "https://github.com/bluepylons/Boston",
+      "claims": [
+        "repo name matches 'boston'",
+        "238 stars (community signal)"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "WebOfTrustInfo/rwot5-boston",
+      "url": "https://github.com/WebOfTrustInfo/rwot5-boston",
+      "claims": [
+        "repo name matches 'boston'",
+        "185 stars (community signal)"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "krishnaik06/bostonhousepricing",
+      "url": "https://github.com/krishnaik06/bostonhousepricing",
+      "claims": [
+        "repo name matches 'boston'",
+        "142 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "Apache-2.0",
+        "name": "Apache License 2.0"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "nd009/boston_housing",
+      "url": "https://github.com/nd009/boston_housing",
+      "claims": [
+        "repo name matches 'boston'",
+        "40 stars (community signal)"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "rogerSuperBuilderAlpha/cursor-boston",
+      "url": "https://github.com/rogerSuperBuilderAlpha/cursor-boston",
+      "claims": [
+        "repo name matches 'boston'",
+        "26 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "GPL-3.0",
+        "name": "GNU General Public License v3.0"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "TheoTime01/Spok--Boston-Dynamics-Spot-inspired-robot",
+      "url": "https://github.com/TheoTime01/Spok--Boston-Dynamics-Spot-inspired-robot",
+      "claims": [
+        "repo name matches 'boston'",
+        "7 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "MIT",
+        "name": "MIT License"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "MaxMarques/BostonDynamicsSpotDetection",
+      "url": "https://github.com/MaxMarques/BostonDynamicsSpotDetection",
+      "claims": [
+        "repo name matches 'boston'",
+        "2 stars (community signal)"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "Hotchnerz/BostonDynamicsSpot_ws",
+      "url": "https://github.com/Hotchnerz/BostonDynamicsSpot_ws",
+      "claims": [
+        "repo name matches 'boston'"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "heuristicus/spot_ros",
+      "url": "https://github.com/heuristicus/spot_ros",
+      "claims": [
+        "description matches the robot name",
+        "295 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "NOASSERTION",
+        "name": "Other"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "rai-opensource/spot_ros2",
+      "url": "https://github.com/rai-opensource/spot_ros2",
+      "claims": [
+        "description matches the robot name",
+        "294 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "NOASSERTION",
+        "name": "Other"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "justyx404/spot_gazebo_ros2",
+      "url": "https://github.com/justyx404/spot_gazebo_ros2",
+      "claims": [
+        "description matches the robot name",
+        "44 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "Apache-2.0",
+        "name": "Apache License 2.0"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "UTNuclearRoboticsPublic/spot_manipulation",
+      "url": "https://github.com/UTNuclearRoboticsPublic/spot_manipulation",
+      "claims": [
+        "description matches the robot name",
+        "3 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "name": "BSD 3-Clause \"New\" or \"Revised\" License"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "LCAS/spot_platform",
+      "url": "https://github.com/LCAS/spot_platform",
+      "claims": [
+        "description matches the robot name",
+        "3 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "Apache-2.0",
+        "name": "Apache License 2.0"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "janoleksiuk/Spot-Simulator",
+      "url": "https://github.com/janoleksiuk/Spot-Simulator",
+      "claims": [
+        "description matches the robot name",
+        "2 stars (community signal)"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "UTNuclearRoboticsPublic/spot_ros",
+      "url": "https://github.com/UTNuclearRoboticsPublic/spot_ros",
+      "claims": [
+        "description matches the robot name",
+        "2 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "NOASSERTION",
+        "name": "Other"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "github_repo",
+      "name": "UM-ARM-Lab/conq_ros",
+      "url": "https://github.com/UM-ARM-Lab/conq_ros",
+      "claims": [
+        "description matches the robot name",
+        "2 stars (community signal)"
+      ],
+      "license": {
+        "spdx": "NOASSERTION",
+        "name": "Other"
+      },
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+      },
+      "assets": []
+    },
+    {
+      "kind": "twin_candidate",
+      "name": "Boston-Robot-Hackers/dome \u2014 config/dome2.urdf",
+      "url": "https://github.com/Boston-Robot-Hackers/dome",
+      "claims": [
+        "best pullable model candidate (urdf) by the lookup ranking heuristic"
+      ],
+      "license": "not stated",
+      "provenance": "WEB-SOURCED",
+      "lookup_class": "candidate",
+      "confidence": {
+        "level": "medium",
+        "basis": "single best candidate by file-kind and variant heuristics"
+      },
+      "assets": [
+        {
+          "path": "config/dome2.urdf",
+          "kind": "urdf"
+        }
+      ]
+    }
+  ],
+  "draft_spec": {
+    "name": "Spot with Arm - photo draft",
+    "description": "Photo draft (all dimensions ESTIMATED): Yellow Boston Dynamics Spot quadruped lying in sitting pose with Spot Arm folded on top, estimate basis is published approximate Spot size.",
+    "drivetrain": "skid_steer",
+    "length_m": 1.1,
+    "width_m": 0.5,
+    "height_m": 0.55,
+    "mass_kg": 40.0,
+    "motor": {
+      "kind": "brushless_electric",
+      "voltage_v": 48.0,
+      "count": 18,
+      "stall_torque_nm": null
+    },
+    "battery": {
+      "chemistry": "li-ion",
+      "voltage_v": 50.4,
+      "capacity_mah": 12000
+    },
+    "sensors": [
+      {
+        "kind": "depth_camera",
+        "position": "front",
+        "range_m": 4
+      },
+      {
+        "kind": "depth_camera",
+        "position": "rear",
+        "range_m": 4
+      },
+      {
+        "kind": "depth_camera",
+        "position": "left",
+        "range_m": 4
+      },
+      {
+        "kind": "depth_camera",
+        "position": "right",
+        "range_m": 4
+      },
+      {
+        "kind": "rgb_camera",
+        "position": "arm gripper",
+        "range_m": 2
+      },
+      {
+        "kind": "imu",
+        "position": "body center",
+        "range_m": null
+      },
+      {
+        "kind": "encoder",
+        "position": "leg joints",
+        "range_m": null
+      }
+    ],
+    "component_mass_kg": {},
+    "ground_clearance_m": 0.05,
+    "wheel": {
+      "diameter_m": 0.12,
+      "width_m": 0.08,
+      "count": 0,
+      "driven": false
+    }
+  },
+  "validation": {
+    "verdict": "PASS",
+    "note": "validate() checks physical coherence of the ESTIMATED draft; a PASS means the draft is self-consistent, not that it matches the real robot",
+    "findings": [
+      {
+        "severity": "WARN",
+        "check": "provenance.estimated_dimensions",
+        "message": "every dimension in this spec is ESTIMATED from a photo, not measured \u2014 the checks ran against estimates, so this is not a verdict on the real robot; confirm the dimensions before trusting the spec"
+      }
+    ]
+  },
+  "stages": [
+    {
+      "stage": "photo",
+      "status": "ok",
+      "note": "vision draft produced; identity and every dimension are ESTIMATED"
+    },
+    {
+      "stage": "lookup",
+      "status": "ok",
+      "note": "21 public repos found on GitHub"
+    },
+    {
+      "stage": "catalog_match",
+      "status": "ok",
+      "note": "verdict NEW"
+    },
+    {
+      "stage": "validate",
+      "status": "ok",
+      "note": "draft validation: PASS"
+    }
+  ]
+}
