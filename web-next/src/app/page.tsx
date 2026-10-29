@@ -37,6 +37,14 @@ export default function HomePage() {
       {/* ============ HERO ============ */}
       <section className="hero">
         <div className="wrap">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="hero-logo"
+            src={assetPath("assets/img/logo.svg")}
+            width={1024}
+            height={1024}
+            alt="RobotForge logo — a rover inside a CAD wireframe cube"
+          />
           <div className="eyebrow">
             Built with Meta&apos;s Muse Spark · Meta Global AI Developer Hackathon
           </div>

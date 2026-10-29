@@ -24,6 +24,8 @@ body.app{min-height:100vh}
 .sidebar .brand:hover{text-decoration:none}
 .brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none}
 .brand-mark svg{width:16px;height:16px}
+.brand-mark--logo{background:#020e1c;display:block;position:relative;overflow:hidden}
+.brand-mark--logo img{position:absolute;width:152.9%;height:auto;max-width:none;left:-26.5%;top:-11.2%}
 .brand small{display:block;font:500 11px/1.2 var(--font);color:var(--text-faint);letter-spacing:.04em}
 .side-nav{display:grid;gap:2px}
 .side-nav a{

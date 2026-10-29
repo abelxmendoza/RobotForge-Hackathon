@@ -2,17 +2,18 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import ChatLauncher from "@/components/chat/ChatLauncher";
 import RevealInit from "./RevealInit";
+import { assetPath } from "@/components/home/asset";
 
 export const REPO_URL = "https://github.com/abelxmendoza/RobotForge-Hackathon";
 
 export function BrandMark() {
   return (
-    <span className="brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#1a1204" strokeWidth="2.2"
-        strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="6" width="16" height="9" rx="2" />
-        <circle cx="8" cy="17.5" r="2" /><circle cx="16" cy="17.5" r="2" />
-      </svg>
+    <span className="brand-mark brand-mark--logo" aria-hidden="true">
+      {/* Abel's logo (assets/img/logo.svg). The CSS geometry on
+          .brand-mark--logo crops the emblem out of the full lockup;
+          the landing hero shows the whole lockup. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={assetPath("assets/img/logo.svg")} alt="" />
     </span>
   );
 }
