@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RobotForge · Trajectory Replay</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#0b1020;color:#e8eefc}body{max-width:1100px;margin:35px auto;padding:0 20px}h1{margin-bottom:5px}p{color:#aab8d1}.panel{background:#151e32;border:1px solid #2a3953;border-radius:14px;padding:18px;margin-top:18px}canvas{width:100%;background:#0d1627;border-radius:10px}button,input{accent-color:#54dbb0}button{background:#263b56;color:white;border:1px solid #476482;border-radius:8px;padding:10px;cursor:pointer}button:hover{background:#35567c}.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.badge{padding:5px 10px;border-radius:8px;background:#49351d;color:#ffd18a}.ok{background:#173e35;color:#83e3b8}.fail{background:#4b222b;color:#ff9ba7}pre{white-space:pre-wrap;color:#b4c9e5}label{cursor:pointer}
+</style>
+<h1>RobotForge / Trajectory Replay</h1><p>Inspect recorded rover poses against a target trajectory. This viewer does not execute physics.</p>
+<div class="panel row"><label>Load evidence JSON <input id="file" type="file" accept=".json,application/json"></label><button id="demo">Load synthetic example</button><span id="source" class="badge">NO DATA</span></div>
+<div class="panel"><canvas id="plot" width="1000" height="570" aria-label="Top-down robot trajectory"></canvas><div class="row" style="margin-top:14px"><button id="play">▶ Play</button><button id="reset">↺ Reset</button><input id="scrub" type="range" min="0" max="0" value="0" style="flex:1"><span id="clock">0.00 s</span><label>Speed <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div></div>
+<div class="panel"><h2>Evidence</h2><div class="row"><span id="verdict" class="badge">UNVERIFIED</span><span id="metrics">Load a trace to inspect it.</span></div><p id="notice">Accepted schema: {source, samples:[{t,x,y,yaw}], target:[{x,y}], verdict?, thresholds?}. Angles in radians, distances in meters.</p></div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),ctx=$("plot").getContext("2d");
+let data=null,index=0,playing=false,last=null,elapsed=0;
+const finite=n=>typeof n==="number"&&Number.isFinite(n);
+function validate(d){
+ if(!d||!Array.isArray(d.samples)||d.samples.length<2||d.samples.length>100000)throw Error("Expected 2–100000 samples");
+ let prev=-Infinity;
+ for(const s of d.samples){if(![s.t,s.x,s.y,s.yaw].every(finite)||s.t<0||s.t<=prev)throw Error("Samples require strictly increasing t and finite x,y,yaw");prev=s.t}
+ if(d.target!==undefined&&(!Array.isArray(d.target)||d.target.some(p=>![p.x,p.y].every(finite))))throw Error("Invalid target path");
+ if(d.verdict!==undefined&&!["PASS","FAIL","UNVERIFIED"].includes(d.verdict))throw Error("Invalid verdict");
+ return d;
+}
+function load(d){data=validate(d);index=0;elapsed=0;playing=false;last=null;$("play").textContent="▶ Play";$("scrub").max=data.samples.length-1;$("scrub").value=0;
+ const recorded=data.source==="gazebo_recorded";$("source").textContent=recorded?"RECORDED GAZEBO":data.source==="synthetic"?"SYNTHETIC DEMO":"UNVERIFIED SOURCE";
+ $("source").className="badge"+(recorded?" ok":"");
+ const verdict=recorded?data.verdict||"UNVERIFIED":"UNVERIFIED";
+ $("verdict").textContent=verdict;$("verdict").className="badge"+(verdict==="PASS"?" ok":verdict==="FAIL"?" fail":"");
+ $("notice").textContent=recorded?"Verdict is imported from the evidence file, not independently recomputed by this viewer. Verify provenance before relying on it.":"This is not verified Gazebo evidence. Synthetic/demo data cannot establish a test pass.";
+ draw();
+}
+function demo(){let samples=[];for(let i=0;i<=160;i++){let t=i*.05;samples.push({t,x:t<4?t*.35:1.4,y:t<4?0:(t-4)*.17,yaw:t<4?0:Math.min(Math.PI/2,(t-4)*.4)})}load({source:"synthetic",samples,target:[{x:0,y:0},{x:1.4,y:0},{x:1.4,y:.68}],verdict:"UNVERIFIED"})}
+function draw(){const c=$("plot"),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.fillStyle="#0d1627";ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle="#223550";ctx.lineWidth=1;for(let x=0;x<w;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+ if(!data)return;let points=data.samples.concat(data.target||[]);let xs=points.map(p=>p.x),ys=points.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+ let scale=Math.min((w-110)/Math.max(maxx-minx,.5),(h-110)/Math.max(maxy-miny,.5));let px=x=>w/2+(x-(minx+maxx)/2)*scale,py=y=>h/2-(y-(miny+maxy)/2)*scale;
+ function path(arr,color){if(arr.length<2)return;ctx.strokeStyle=color;ctx.lineWidth=4;ctx.beginPath();arr.forEach((p,i)=>i?ctx.lineTo(px(p.x),py(p.y)):ctx.moveTo(px(p.x),py(p.y)));ctx.stroke()}
+ path(data.target||[],"#f5bc67");path(data.samples.slice(0,index+1),"#52dbb5");
+ const s=data.samples[index];ctx.save();ctx.translate(px(s.x),py(s.y));ctx.rotate(-s.yaw);ctx.fillStyle="#d8e6ff";ctx.fillRect(-17,-12,34,24);ctx.fillStyle="#52dbb5";ctx.fillRect(6,-8,14,16);ctx.restore();
+ $("clock").textContent=s.t.toFixed(2)+" s";$("scrub").value=index;
+ const first=data.samples[0],lastS=data.samples.at(-1),target=data.target?.at(-1);
+ $("metrics").textContent="Samples: "+data.samples.length+" · Duration: "+lastS.t.toFixed(2)+" s"+(target?" · Final target error: "+Math.hypot(lastS.x-target.x,lastS.y-target.y).toFixed(3)+" m":"");
+ ctx.font="16px system-ui";ctx.fillStyle="#f5bc67";ctx.fillText("— Target",20,28);ctx.fillStyle="#52dbb5";ctx.fillText("— Recorded path",145,28);
+}
+function frame(now){if(playing&&data){if(last!==null)elapsed+=(now-last)/1000*Number($("speed").value);last=now;while(index<data.samples.length-1&&data.samples[index+1].t<=data.samples[0].t+elapsed)index++;draw();if(index===data.samples.length-1){playing=false;$("play").textContent="▶ Play"}}else last=null;requestAnimationFrame(frame)}
+$("play").onclick=()=>{if(!data)return;if(index===data.samples.length-1){index=0;elapsed=0}playing=!playing;last=null;$("play").textContent=playing?"Ⅱ Pause":"▶ Play"};
+$("reset").onclick=()=>{playing=false;index=0;elapsed=0;last=null;$("play").textContent="▶ Play";draw()};
+$("scrub").oninput=e=>{if(!data)return;playing=false;index=Number(e.target.value);elapsed=data.samples[index].t-data.samples[0].t;draw();$("play").textContent="▶ Play"};
+$("demo").onclick=demo;
+$("file").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{load(JSON.parse(await f.text()))}catch(err){alert("Invalid evidence: "+err.message)}};
+requestAnimationFrame(frame);draw();
+</script></html>
