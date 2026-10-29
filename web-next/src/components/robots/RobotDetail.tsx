@@ -192,6 +192,44 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
         </div>
       </div>
 
+      <section className="card verdict-summary" aria-label="Verdict summary">
+        <div className="eyebrow">Verdict summary</div>
+        <div className="summary-flex">
+          {img ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              className="summary-photo"
+              src={imgSrc(img.src)}
+              alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")}
+              loading="lazy"
+            />
+          ) : null}
+          <div className="summary-main">
+            <div className="verdict-row">
+              <VerdictBadge status={gs.status} lg />
+              {check ? <StaticBadge check={check} lg /> : null}
+              {harnessRep ? <HarnessBadge rep={harnessRep} lg /> : null}
+            </div>
+            <div className="cls">{classPath(robot)}</div>
+            <div className="cls faint">{robot.class}</div>
+            {specKeys.length ? (
+              <table className="kv summary-specs">
+                <tbody>
+                  {specKeys.map((k) => (
+                    <tr key={k}>
+                      <th>{specLabel(k)}</th>
+                      <td>{String(keySpecs[k])}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="state-box">No key specs recorded yet.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="section" id="spec">
         <h2>Spec</h2>
         <div className="cols">

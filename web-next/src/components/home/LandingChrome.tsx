@@ -25,7 +25,7 @@ export function LandingHeader() {
           RobotForge
         </Link>
         <nav className="site-nav" aria-label="Page sections">
-          <a href={`${BASE_PATH}/problem-space.html#odometry`}>Problem space</a>
+          <a href={`${BASE_PATH}/problem-space/#odometry`}>Problem space</a>
           <a href="#workflow">How it works</a>
           <a href="#proof">Evidence</a>
           <a href="#robots">Robots</a>

@@ -43,7 +43,6 @@ export default function AppShell({ active, crumbs = [], children }:
         </nav>
         <div className="side-foot">
           <Link href="/">&larr; RobotForge site</Link>
-          <a href={REPO_URL}>GitHub</a>
         </div>
       </aside>
       <div className="main">
@@ -62,7 +61,6 @@ export default function AppShell({ active, crumbs = [], children }:
               );
             })}
           </nav>
-          <span className="recorded" title="This static site replays recorded runs. Nothing here calls a model or a simulator live.">Recorded runs</span>
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>
         <main className="content" id="content">{children}</main>

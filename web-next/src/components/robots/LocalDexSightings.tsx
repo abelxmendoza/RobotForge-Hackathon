@@ -24,7 +24,7 @@ export default function LocalDexSightings() {
   }
 
   return (
-    <div className="card" style={{ padding: "4px 20px", marginTop: 16 }}>
+    <div className="card">
       <div className="eyebrow">Saved in this browser</div>
       <p className="sub">
         Sightings you add are stored only in this browser in v1; the shared
@@ -50,11 +50,25 @@ export default function LocalDexSightings() {
                 <ul className="items rows">
                   {entries.map((e) => (
                     <li key={e.sighting.id}>
-                      <strong>{e.sighting.identity}</strong>
-                      {e.sighting.spotted_at ? (
-                        <span className="faint"> — {e.sighting.spotted_at}</span>
-                      ) : null}{" "}
-                      <span className="faint">[{e.grouping.outcome}]</span>
+                      <div className="spot-head">
+                        {e.sighting.photo ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            className="spot-thumb"
+                            src={e.sighting.photo}
+                            alt={`Your photo of ${e.sighting.identity}`}
+                            loading="lazy"
+                          />
+                        ) : null}
+                        <div>
+                          <strong>{e.sighting.identity}</strong>{" "}
+                          <span className="spotting-badge">USER SPOTTING</span>
+                          {e.sighting.spotted_at ? (
+                            <span className="faint"> — {e.sighting.spotted_at}</span>
+                          ) : null}{" "}
+                          <span className="faint">[{e.grouping.outcome}]</span>
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>

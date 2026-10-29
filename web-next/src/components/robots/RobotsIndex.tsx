@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { stashSpotPhoto } from "@/lib/spot";
 import { families, parts, robotSlug, robots } from "@/lib/data";
 import { describeSignature } from "@/lib/grouping";
 import type { AppDispatch, RootState } from "@/store/store";
@@ -32,6 +35,17 @@ export default function RobotsIndex() {
   const dispatch = useDispatch<AppDispatch>();
   const verdict = useSelector((s: RootState) => s.catalog.verdict);
   const mobility = useSelector((s: RootState) => s.catalog.drivetrain);
+  const router = useRouter();
+  const spotRef = useRef<HTMLInputElement>(null);
+
+  /* "Spot a robot": capture here, draft in the Forge. The photo is
+   * stashed in sessionStorage (lib/spot.ts) and the Forge thread
+   * picks it up on mount — one flow, no second implementation. */
+  const onSpotPhoto = async (file: File | null) => {
+    if (!file) return;
+    await stashSpotPhoto(file);
+    router.push("/forge/");
+  };
 
   const counts: Record<string, number> = { PASS: 0, FAIL: 0, NOT_GATED: 0 };
   for (const r of robots) {
@@ -56,8 +70,54 @@ export default function RobotsIndex() {
             so in grey.
           </p>
         </div>
+        <div className="spot-cta">
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={() => spotRef.current?.click()}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="17"
+              height="17"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+              <circle cx="12" cy="13.5" r="3.5" />
+            </svg>
+            Spot a robot
+          </button>
+          <p className="faint">
+            Take a photo — the Forge drafts it and the sighting files into
+            your dex below.
+          </p>
+          <input
+            type="file"
+            ref={spotRef}
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files && e.target.files[0];
+              e.target.value = "";
+              void onSpotPhoto(f);
+            }}
+          />
+        </div>
       </div>
 
+      <div className="toolbar seg-nav" role="group" aria-label="On this page">
+        <a className="chip" href="#robodex">Robodex</a>
+        <a className="chip" href="#parts">Parts</a>
+        <a className="chip" href="#sightings">My sightings</a>
+      </div>
+
+      <section id="robodex" className="seg">
       <div className="toolbar" role="group" aria-label="Filter by verdict">
         <button
           className="chip" type="button" data-filter="all"
@@ -232,10 +292,10 @@ export default function RobotsIndex() {
             </article>
           );
         })}
-        <LocalDexSightings />
+      </section>
       </section>
 
-      <section className="section" id="parts">
+      <section className="section seg" id="parts">
         <h2>Parts catalogue</h2>
         <p className="sub">
           {parts.length} real parts with datasheet-sourced specs, grouped by
@@ -243,6 +303,15 @@ export default function RobotsIndex() {
           parts lists against.
         </p>
         <PartsCatalogue />
+      </section>
+
+      <section className="section seg" id="sightings">
+        <h2>My sightings</h2>
+        <p className="sub">
+          Robots you have spotted from a photo and filed, grouped by family
+          and variant the same way as the dex above — and badged as yours.
+        </p>
+        <LocalDexSightings />
       </section>
     </>
   );

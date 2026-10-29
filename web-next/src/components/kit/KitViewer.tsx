@@ -1,16 +1,15 @@
 'use client';
-/* The standalone Parts Kit page — the React equivalent of kit.html:
- * header, the 3D stage (KitScene), the explode/spin/CAD/real/download
- * bar, part detail + live OpenSCAD panels, the 2D fallback stack,
- * and the full catalogue generated from the current parts data.
- * kit.html is a standalone page with its own stylesheet; here those
- * rules are carried in a <style> block scoped under .kitpage so they
- * cannot leak into the app shell (or vice versa).
- *
- * Below the kit.html content, the same Burger is shown in the
- * spec-driven take-apart panel (robot.js's TA panel, TakeApartViewer)
- * driven by its published spec file — the 2D/3D viewer the robot
- * pages use. */
+/* The standalone Parts Kit page — the React equivalent of kit.html,
+ * organised as one "Burger lab" with three tabs: the 3D kit (the
+ * KitScene stage, the explode/spin/CAD/real/download bar, part
+ * detail, the 2D fallback stack), Take-apart (the spec-driven
+ * take-apart panel — robot.js's TA panel, TakeApartViewer — driven
+ * by the Burger's published spec file, the viewer the robot pages
+ * use), and OpenSCAD (the live parametric panel). The full
+ * catalogue generated from the current parts data stays below the
+ * tabs. kit.html is a standalone page with its own stylesheet; here
+ * those rules are carried in a <style> block scoped under .kitpage
+ * so they cannot leak into the app shell (or vice versa). */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchJSON } from '../forge/model';
 import type { RobotSpec } from '../forge/model';
@@ -63,6 +62,7 @@ const KIT_CSS = `
 .kitpage .box td:first-child{color:#9aa3ad;white-space:nowrap}
 .kitpage pre{background:#0e1013;border:1px solid #2c313a;border-radius:10px;padding:12px;
   overflow:auto;font-size:11.5px;line-height:1.5;max-height:300px}
+.kitpage .tabs{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 4px}
 .kitpage .cls{margin:26px 0 6px;text-transform:capitalize}
 .kitpage .layer{width:78%;margin:3px auto;text-align:center;background:#21252e;
   border:1px solid #2c313a;border-radius:10px;padding:9px;cursor:pointer;font-weight:600}
@@ -87,7 +87,10 @@ type Detail =
   | { kind: 'specimenPart'; id: string }
   | { kind: 'specimenError' };
 
+type KitTab = 'kit' | 'takeapart' | 'scad';
+
 export default function KitViewer() {
+  const [tab, setTab] = useState<KitTab>('kit');
   const [slider, setSlider] = useState(0);
   const [explodeCur, setExplodeCur] = useState(0);
   const [spin, setSpin] = useState(false);
@@ -156,6 +159,35 @@ export default function KitViewer() {
           </p>
         </header>
 
+        <div className="tabs" role="tablist" aria-label="Burger lab">
+          <button
+            role="tab"
+            aria-selected={tab === 'kit'}
+            className={tab === 'kit' ? 'on' : undefined}
+            onClick={() => setTab('kit')}
+          >
+            3D kit
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'takeapart'}
+            className={tab === 'takeapart' ? 'on' : undefined}
+            onClick={() => setTab('takeapart')}
+          >
+            Take-apart
+          </button>
+          <button
+            role="tab"
+            aria-selected={tab === 'scad'}
+            className={tab === 'scad' ? 'on' : undefined}
+            onClick={() => setTab('scad')}
+          >
+            OpenSCAD
+          </button>
+        </div>
+
+        {tab === 'kit' && (
+          <>
         <div id="stage">
           <KitScene
             explodeTarget={slider / 100}
@@ -270,26 +302,31 @@ export default function KitViewer() {
           </div>
         )}
 
-        <div className="cols">
-          <section className="box" id="pdetail">
-            <DetailBody
-              detail={detail}
-              specimenById={specimenById}
-              specimenDoc={specimenDoc}
-              onSelectSpecimen={selectSpecimen}
-              onSpecimenList={() => setDetail({ kind: 'specimenList' })}
-            />
-          </section>
+        <section className="box" id="pdetail">
+          <DetailBody
+            detail={detail}
+            specimenById={specimenById}
+            specimenDoc={specimenDoc}
+            onSelectSpecimen={selectSpecimen}
+            onSpecimenList={() => setDetail({ kind: 'specimenList' })}
+          />
+        </section>
+          </>
+        )}
+
+        {tab === 'takeapart' && <SpecTakeApart />}
+
+        {tab === 'scad' && (
           <section className="box">
             <h3 style={{ marginTop: 0 }}>CAD — OpenSCAD</h3>
             <p className="dim" style={{ fontSize: 13.5 }}>
               Generated live from the same parameters as the 3D model, explode
-              included. Select a part to get its module alone, or download the
-              whole assembly.
+              included. Select a part in the 3D kit to get its module alone,
+              or download the whole assembly.
             </p>
             <pre id="scadCode">{scadText}</pre>
           </section>
-        </div>
+        )}
 
         <h2 style={{ marginTop: 36 }}>
           Full catalogue{' '}
@@ -317,7 +354,6 @@ export default function KitViewer() {
           </div>
         ))}
 
-        <SpecTakeApart />
       </div>
     </div>
   );
@@ -473,7 +509,9 @@ function DetailBody({
 }
 
 /* The spec-driven take-apart for the same Burger, from its published
- * spec file — robot.js's viewer, as TakeApartViewer. */
+ * spec file — robot.js's viewer, as TakeApartViewer. Rendered as the
+ * kit viewer's Take-apart tab (it used to be a second, separate
+ * instance of the same robot below the catalogue). */
 function SpecTakeApart() {
   const [spec, setSpec] = useState<RobotSpec | null>(null);
   const [failed, setFailed] = useState(false);
@@ -491,13 +529,13 @@ function SpecTakeApart() {
     };
   }, []);
   return (
-    <section style={{ marginTop: 36 }}>
-      <h2>
+    <section>
+      <h3 style={{ marginTop: 10 }}>
         The same Burger, from its spec{' '}
         <span className="dim">
           — the take-apart viewer the robot pages use
         </span>
-      </h2>
+      </h3>
       {failed ? (
         <div className="state-box">
           The spec file could not be loaded, so there is nothing honest to

@@ -44,7 +44,7 @@ body.app{min-height:100vh}
 .crumbs{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--text-faint);min-width:0}
 .crumbs a{color:var(--text-muted)}
 .crumbs .here{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar .recorded{margin-left:auto}
+.topbar .gh-link{margin-left:auto;display:inline-flex;align-items:center;font-size:var(--fs-sm);font-weight:600;color:var(--text-muted)}
 .topbar .mobile-brand{display:none}
 .content{padding:var(--s7) var(--s6) var(--s9);max-width:1120px;width:100%}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s5);flex-wrap:wrap;margin-bottom:var(--s6)}
@@ -54,6 +54,12 @@ body.app{min-height:100vh}
 .section > h2{font-size:var(--fs-lg);letter-spacing:-.015em}
 .section > .sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:6px;max-width:66ch}
 .section > h2 + .sub + *, .section > h2 + *{margin-top:var(--s4)}
+/* anchored segments (e.g. /robots: Robodex / Parts / My sightings)
+   clear the sticky topbar when jumped to */
+.seg{scroll-margin-top:76px}
+/* "Spot a robot" call-to-action in the /robots page head */
+.spot-cta{display:grid;gap:var(--s2);justify-items:start}
+.spot-cta p{margin:0;font-size:var(--fs-xs);max-width:30ch}
 .state-box{border:1px dashed var(--border-strong);border-radius:var(--r);padding:var(--s5);color:var(--text-muted);font-size:var(--fs-sm)}
 
 /* ---------- forge ---------- */
@@ -152,6 +158,13 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .robot-hero .desc{color:var(--text-muted);margin-top:var(--s4);font-size:var(--fs-sm);max-width:62ch}
 .robot-hero .verdict{margin-top:var(--s4)}
 .jump{display:flex;gap:6px;flex-wrap:wrap;margin-top:var(--s5)}
+/* verdict summary card (robot page, above the sections) */
+.verdict-summary{margin-top:var(--s6)}
+.summary-flex{display:flex;gap:var(--s5);flex-wrap:wrap;margin-top:var(--s3)}
+.summary-photo{width:148px;max-width:42vw;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r);border:1px solid var(--border)}
+.summary-main{flex:1;min-width:min(260px,100%)}
+.summary-main .cls{color:var(--text-muted);margin-top:var(--s3)}
+.summary-specs{margin-top:var(--s3)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
 .prov{color:var(--text-muted);font-size:var(--fs-sm);display:grid;gap:10px;align-content:start}
 .prov strong{color:var(--text)}
@@ -352,7 +365,6 @@ details.raw[open] summary{margin-bottom:var(--s3)}
   .items li{grid-template-columns:90px 34px 1fr;}
   .items .price{display:none}
   .crumbs .sep,.crumbs a{display:none}
-  .topbar .recorded{font-size:10px}
 }
 
 /* ---------- Forge chat: one conversation surface ---------- */
@@ -408,6 +420,21 @@ details.raw[open] summary{margin-bottom:var(--s3)}
   border:1px solid var(--border-strong);padding:6px 10px;border-radius:999px;
 }
 .composer-note{font-size:var(--fs-xs);margin:0}
+/* "Spot a robot": the composer's camera action row, and the photo
+   thumbnail layout shared by the grouping card and /robots
+   sightings. The spotting badge is a provenance tag — dashed and
+   neutral, never a verdict pill. */
+.spot-row{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.spot-btn{display:inline-flex;align-items:center;gap:8px;font-weight:700}
+.spot-head{display:flex;gap:var(--s4);align-items:flex-start}
+.spot-thumb{width:128px;max-width:36vw;border-radius:var(--r);border:1px solid var(--border)}
+.spot-proposal{min-width:0}
+.spotting-badge{
+  display:inline-flex;align-items:center;
+  font:700 11px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 9px;border-radius:999px;white-space:nowrap;
+  color:var(--text-muted);border:1px dashed var(--border-strong);
+}
 .elapsed{font-family:var(--mono)}
 .fv-side,.fv-top{margin-top:var(--s3)}
 .fv-detail{margin-top:var(--s4)}
@@ -445,7 +472,6 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .items.rows .title{white-space:normal;overflow:visible;text-overflow:clip}
 .items .slotname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fmsg.user{overflow-wrap:anywhere}
-.topbar .gh-link{display:none}
 @media (max-width:900px){
   /* The floating chat must clear the bottom tab bar, or its
      launcher sits on top of the bar's right-hand tab. */

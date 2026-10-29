@@ -431,10 +431,12 @@ export interface StoredDexSighting {
   sighting: {
     id: string;
     identity: string;
-    // The photo data URL is deliberately NOT stored: a downscaled
-    // photo is still far too big for localStorage quotas, and v1
-    // keeps only the draft the photo produced.
-    photo: null;
+    // The photo itself is deliberately NOT stored: even downscaled
+    // for the live call it is far too big for localStorage quotas.
+    // What may be stored is a small thumbnail data URL (the Forge
+    // caps it at 320px) so the sighting can render with its photo
+    // on /robots; older entries carry null here and render without.
+    photo: string | null;
     spotted_at: string;
     where: string;
     dossier: unknown;
@@ -482,17 +484,20 @@ export function saveSighting(entry: StoredDexSighting): StoredDexSighting[] {
   return next;
 }
 
-/** Build the stored entry for a draft + its grouping result. */
+/** Build the stored entry for a draft + its grouping result.
+ *  `photoThumb` is the small thumbnail data URL for the sighting's
+ *  photo (see StoredDexSighting) — never the full photo. */
 export function buildStoredSighting(
   draft: DraftLike,
   grouping: GroupingResult,
+  photoThumb: string | null = null,
 ): StoredDexSighting {
   const now = new Date();
   return {
     sighting: {
       id: `local-${now.getTime()}`,
       identity: draft.identity_guess || grouping.familyName,
-      photo: null,
+      photo: photoThumb,
       spotted_at: now.toISOString().slice(0, 10),
       where: "",
       dossier: draft,
@@ -537,7 +542,7 @@ export function familiesFromLocalSightings(
       const sighting: DexSighting = {
         id: entry.sighting.id,
         identity: entry.sighting.identity,
-        photo: null,
+        photo: entry.sighting.photo ?? null,
         spotted_at: entry.sighting.spotted_at,
         where: entry.sighting.where,
         dossier: null,

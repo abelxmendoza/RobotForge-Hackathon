@@ -71,6 +71,7 @@ import { RUNS, STEP_NAMES } from './samples';
 import type { SampleRun } from './samples';
 import { ForgeViewer } from './ForgeViewer';
 import GroupingCard from './GroupingCard';
+import { spotPhotoToFile, takeSpotPhoto } from '@/lib/spot';
 
 const ScanView = dynamic(() => import('./ScanView'), { ssr: false });
 
@@ -970,6 +971,10 @@ export default function ForgeThread() {
       timersRef.current.set(cardId, performance.now());
       try {
         const small = await downscale(dataUrl, 1024);
+        /* A thumbnail for the grouping card (and, if the sighting
+         * is saved, for its /robots rendering) — the full photo is
+         * never stored; see lib/grouping.ts. */
+        const thumb = await downscale(dataUrl, 320);
         const body = await postJSON<{ draft: PhotoDraft }>('/photo', {
           image_data_url: small,
           note: noteText || undefined,
@@ -1008,7 +1013,7 @@ export default function ForgeThread() {
             <div className="card" style={{ padding: '4px 20px' }}>
               <SpecTable spec={draft.spec} />
             </div>
-            <GroupingCard draft={draft} />
+            <GroupingCard draft={draft} photoThumb={thumb} />
             <RawJSON obj={draft.spec} label="Draft spec JSON" />
           </>,
         );
@@ -1033,6 +1038,8 @@ export default function ForgeThread() {
     },
     [beginRun, pushUser, pushNote, choosePhotoMode, runPhotoDocument, pushStage, setStageBody, specPipeline, sampleOffer],
   );
+  const runPhotoRef = useRef(runPhoto);
+  runPhotoRef.current = runPhoto;
 
   /* ---------------- input flow: parts list ---------------- */
   const runDoc = useCallback(
@@ -1389,6 +1396,27 @@ export default function ForgeThread() {
             : ''),
       );
     })();
+    /* A photo captured by the /robots "Spot a robot" action is
+     * stashed in sessionStorage (lib/spot.ts) and runs through the
+     * exact photo flow here. It takes precedence over the deep
+     * links below: it is a real capture, not a sample. */
+    const spot = takeSpotPhoto();
+    if (spot) {
+      void (async () => {
+        try {
+          const file = await spotPhotoToFile(spot);
+          if (!busyRef.current) {
+            busyRef.current = true;
+            runPhotoRef.current(file, '').finally(() => {
+              busyRef.current = false;
+            });
+          }
+        } catch {
+          /* A lost handoff just lands on the plain Forge. */
+        }
+      })();
+      return;
+    }
     /* Old step-walk deep links (#words, #photo, #list, #document)
      * play the matching recorded sample. */
     const hm = /^#(words|photo|list|document)/.exec(window.location.hash);
@@ -1571,6 +1599,33 @@ export default function ForgeThread() {
           }}
           placeholder="Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below."
         />
+        <div className="spot-row">
+          <button
+            className="btn spot-btn"
+            type="button"
+            onClick={() => fileRefs.camera.current?.click()}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="17"
+              height="17"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+              <circle cx="12" cy="13.5" r="3.5" />
+            </svg>
+            Spot a robot
+          </button>
+          <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>
+            Take a photo of a robot — it is drafted here and the sighting
+            files into the Robodex.
+          </span>
+        </div>
         <div className="composer-row">
           <div className="attach-btns">
             <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>
@@ -1582,13 +1637,6 @@ export default function ForgeThread() {
               onClick={() => fileRefs.photo.current?.click()}
             >
               Photo
-            </button>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              onClick={() => fileRefs.camera.current?.click()}
-            >
-              Take photo
             </button>{' '}
             <button
               className="btn btn-sm"

@@ -27,7 +27,17 @@ const OUTCOME_WORDS: Record<GroupingResult["outcome"], string> = {
   "new-family": "a new family",
 };
 
-export default function GroupingCard({ draft }: { draft: PhotoDraft }) {
+export default function GroupingCard({
+  draft,
+  photoThumb,
+}: {
+  draft: PhotoDraft;
+  /* Small (<=320px) data-URL thumbnail of the captured photo, when
+   * the draft came from one in this session. Rendered next to the
+   * proposed family/variant and stored with the sighting so it can
+   * render on /robots; the full photo itself is never stored. */
+  photoThumb?: string | null;
+}) {
   const [savedCount, setSavedCount] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
@@ -56,7 +66,7 @@ export default function GroupingCard({ draft }: { draft: PhotoDraft }) {
       : OUTCOME_WORDS[grouping.outcome];
 
   const onSave = () => {
-    const entry = buildStoredSighting(draft, grouping);
+    const entry = buildStoredSighting(draft, grouping, photoThumb ?? null);
     const next = saveSighting(entry);
     setSavedCount(next.length);
     // Confirm inline only if the sighting is actually in the store.
@@ -64,33 +74,45 @@ export default function GroupingCard({ draft }: { draft: PhotoDraft }) {
   };
 
   return (
-    <div className="card" style={{ padding: "4px 20px", marginTop: 12 }}>
+    <div className="card" style={{ marginTop: 12 }}>
       <div className="eyebrow">Robodex grouping</div>
-      <p className="intro" style={{ marginTop: 8 }}>
-        {grouping.family ? (
-          <>
-            Family: <strong>{grouping.family.name}</strong> — this sighting{" "}
-            <strong>{outcomeText}</strong>.
-          </>
-        ) : (
-          <>
-            <strong>Not in the dex yet — this would start a new family</strong>{" "}
-            ({outcomeText}).
-          </>
-        )}
-      </p>
-      <table className="kv">
-        <tbody>
-          <tr>
-            <th>Variant for this signature</th>
-            <td>{grouping.variantLabel}</td>
-          </tr>
-          <tr>
-            <th>Signature</th>
-            <td>{describeSignature(signature)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="spot-head">
+        {photoThumb ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            className="spot-thumb"
+            src={photoThumb}
+            alt="The photo this sighting was drafted from"
+          />
+        ) : null}
+        <div className="spot-proposal">
+          <p className="intro" style={{ marginTop: 0 }}>
+            {grouping.family ? (
+              <>
+                Family: <strong>{grouping.family.name}</strong> — this sighting{" "}
+                <strong>{outcomeText}</strong>.
+              </>
+            ) : (
+              <>
+                <strong>Not in the dex yet — this would start a new family</strong>{" "}
+                ({outcomeText}).
+              </>
+            )}
+          </p>
+          <table className="kv">
+            <tbody>
+              <tr>
+                <th>Variant for this signature</th>
+                <td>{grouping.variantLabel}</td>
+              </tr>
+              <tr>
+                <th>Signature</th>
+                <td>{describeSignature(signature)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       {grouping.family && grouping.siblingVariantLabels.length ? (
         <p className="faint">
           Also in the dex: {grouping.siblingVariantLabels.join(" · ")}
