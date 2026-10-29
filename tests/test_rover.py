@@ -15,6 +15,19 @@ from robotforge.cli import main  # noqa: E402
 from robotforge.schema import RobotSpec  # noqa: E402
 
 
+def _ts_node():
+    """node that can run .ts directly (--experimental-strip-types, 22.6+)."""
+    import shutil
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not available")
+    r = subprocess.run([node, "--experimental-strip-types", "-e", "0"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        pytest.skip("this node cannot strip TypeScript types (needs 22.6+)")
+    return node
+
+
 def load(name):
     return RobotSpec.from_json((REPO / "examples" / f"{name}.json").read_text())
 
@@ -78,9 +91,7 @@ def test_cli_rover_exit_codes(capsys):
 
 def test_browser_port_matches_python():
     """web-next's rover.ts gives the same numbers as rover.py."""
-    node = __import__("shutil").which("node")
-    if not node:
-        pytest.skip("node not available")
+    node = _ts_node()
     ts = REPO / "web-next" / "src" / "lib" / "rover.ts"
     script = f"""
 import {{ checkRover }} from '{ts.as_posix()}';
@@ -104,9 +115,7 @@ console.log(JSON.stringify(specs.map(s => checkRover(s, {{}}))));
 
 def test_browser_port_refuses_cleared_inputs():
     """A field cleared in the Garage arrives as null: NOT_CHECKED, never PASS."""
-    node = __import__("shutil").which("node")
-    if not node:
-        pytest.skip("node not available")
+    node = _ts_node()
     ts = REPO / "web-next" / "src" / "lib" / "rover.ts"
     spec = json.loads((REPO / "examples" / "pathfinder.json").read_text())
     spec["mass_kg"] = None
@@ -125,9 +134,7 @@ console.log(JSON.stringify(checkRover(JSON.parse(process.argv[1]), {{}})));
 
 
 def test_offline_part_helper_never_confirms_a_negation():
-    node = __import__("shutil").which("node")
-    if not node:
-        pytest.skip("node not available")
+    node = _ts_node()
     ts = REPO / "web-next" / "src" / "lib" / "inventory.ts"
     script = f"""
 import {{ offlinePartReply }} from '{ts.as_posix()}';
@@ -142,9 +149,7 @@ console.log(JSON.stringify(msgs.map(m => offlinePartReply(part, m).confirmed)));
 
 
 def test_inventory_merge_keeps_owner_edits_made_during_a_request():
-    node = __import__("shutil").which("node")
-    if not node:
-        pytest.skip("node not available")
+    node = _ts_node()
     ts = REPO / "web-next" / "src" / "lib" / "inventory.ts"
     script = f"""
 import {{ mergeUpdate }} from '{ts.as_posix()}';
