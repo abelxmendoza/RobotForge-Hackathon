@@ -6,6 +6,7 @@ checks it the way an engineer would, and its digital twin drives in Gazebo again
 ground truth. If the design doesn't add up, you find out before you buy parts.
 
 **Try it:** https://robot-forge-hackathon.vercel.app ·
+**One-click demo:** https://robot-forge-hackathon.vercel.app/demo/ ·
 **Demo video:** _(link added at submission)_
 
 ## Why I built this
@@ -21,6 +22,7 @@ deciding on motors and batteries before a competition.
 
 | | |
 |---|---|
+| **Demo** | One button: a broken robot, the checks that catch it, a Muse Spark fix the checks must accept, rover checks before and after, and the recorded Gazebo evidence. |
 | **Forge** | Words, a robot photo, a spec-sheet photo, a parts list or a 3D scan → a spec, checked. |
 | **Garage** | Bring in your robot (photo, spec file, or a Robodex robot), edit it, save every upgrade as a version, and compare any two: field diff, engineering checks and rover checks before and after. |
 | **Forge loop** | When the checks find a problem, Muse Spark proposes a fix, the validator re-checks it, up to three rounds. The model proposes; the checks decide; you approve. |

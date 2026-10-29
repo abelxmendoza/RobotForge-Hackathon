@@ -21,9 +21,9 @@ import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/L
 export const metadata: Metadata = {
   // Absolute: the vanilla landing's <title>, bypassing the layout's
   // "%s · RobotForge" template.
-  title: { absolute: "RobotForge — check a robot before you build it" },
+  title: { absolute: "RobotForge — fix your robot before you spend a dollar" },
   description:
-    "Describe a robot or paste its parts list. Muse Spark drafts the spec, RobotForge catches the numbers that don't add up, and a simulated twin has to pass a measured motion test.",
+    "Bring in a broken robot, an idea or a pile of parts. Muse Spark proposes the spec and the fixes, engineering checks decide what holds, and a simulated twin has to pass a measured motion test.",
 };
 
 export default function HomePage() {
@@ -37,17 +37,21 @@ export default function HomePage() {
           <div className="eyebrow">
             Meta Global AI Developer Hackathon · Indie track
           </div>
-          <h1>Check a robot before you build it.</h1>
+          <h1>Fix your robot before you spend a dollar.</h1>
           <p className="lede">
-            Describe a robot or paste its parts list. Muse Spark drafts the
-            spec, RobotForge catches the numbers that don&apos;t add up,
-            and a simulated twin has to pass a measured motion test.
+            Bring in a broken robot, an idea, or a pile of parts. Muse Spark
+            proposes the spec and the fixes, engineering checks decide what
+            holds, and a simulated twin has to pass a measured motion test,
+            all before you buy a single part.
           </p>
           <div className="ctas">
-            <Link className="btn btn-primary" href="/forge/">
-              Open the app →
+            <Link className="btn btn-primary" href="/demo/">
+              Run the one-click demo →
             </Link>
-            <a className="btn" href="#proof">
+            <Link className="btn" href="/forge/">
+              Open the app
+            </Link>
+            <a className="btn btn-ghost" href="#proof">
               See the evidence
             </a>
           </div>

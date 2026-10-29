@@ -18,6 +18,7 @@ export function BrandMark() {
 }
 
 const NAV = [
+  { id: "demo", label: "Demo", href: "/demo/", icon: (<><circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" /></>) },
   { id: "forge", label: "Forge", href: "/forge/", icon: (<><path d="M4 6h16M4 12h10M4 18h7" /><circle cx="18" cy="16" r="3" /></>) },
   { id: "garage", label: "Garage", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
   { id: "inventory", label: "Parts", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },

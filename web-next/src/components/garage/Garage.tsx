@@ -213,13 +213,13 @@ function Findings({ lines }: { lines: string[] }) {
   );
 }
 
-function RoverTable({ before, after }: { before: RoverCheck[] | null; after: RoverCheck[] | null }) {
+export function RoverTable({ before, after, labels = ['Baseline', 'Draft'] }: { before: RoverCheck[] | null; after: RoverCheck[] | null; labels?: [string, string] }) {
   const rows = (after ?? before ?? []).map((c, i) => ({ name: c.name, b: before?.[i], a: after?.[i] }));
   const label: Record<string, string> = { 'rover.slope_climb': 'Slope climb', 'rover.step_climb': 'Step climb', 'rover.runtime': 'Battery runtime' };
   return (
     <div className="g-tablewrap">
       <table className="g-table">
-        <thead><tr><th>Check</th><th>Baseline</th><th>Draft</th></tr></thead>
+        <thead><tr><th>Check</th><th>{labels[0]}</th><th>{labels[1]}</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.name}>
@@ -237,7 +237,7 @@ function RoverTable({ before, after }: { before: RoverCheck[] | null; after: Rov
   );
 }
 
-function LoopView({ res, rounds, running, live }: { res: LoopResult | null; rounds: LoopRound[]; running: boolean; live: boolean }) {
+export function LoopView({ res, rounds, running, live }: { res: LoopResult | null; rounds: LoopRound[]; running: boolean; live: boolean }) {
   return (
     <div className="g-loop" aria-live="polite">
       {rounds.map((r) => (
