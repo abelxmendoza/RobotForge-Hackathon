@@ -355,6 +355,39 @@ class _Graph:
         for c in conns:
             if c["kind"] == "power":
                 self._out_power.setdefault(c["from"], []).append(c)
+        # This v1 current solver assumes a directed power tree. Shared
+        # destinations and cycles cannot be assigned unambiguous branch
+        # currents without explicit current-split information.
+        incoming: dict[str, int] = {}
+        for c in conns:
+            if c["kind"] == "power":
+                dst = c["to"]
+                incoming[dst] = incoming.get(dst, 0) + 1
+        shared = sorted(k for k, count in incoming.items() if count > 1)
+        if shared:
+            raise HarnessError(
+                "power graph has multiply-fed nodes "
+                + ", ".join(shared)
+                + "; current split is not modeled")
+
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(node_id: str):
+            if node_id in visiting:
+                raise HarnessError(
+                    f"power graph contains a cycle at {node_id}; "
+                    "rail budgets cannot be computed reliably")
+            if node_id in visited:
+                return
+            visiting.add(node_id)
+            for edge in self._out_power.get(node_id, []):
+                visit(edge["to"])
+            visiting.remove(node_id)
+            visited.add(node_id)
+
+        for node_id in nodes:
+            visit(node_id)
         self._current_cache: dict[str, tuple] = {}
 
     # -- current resolution -------------------------------------------
