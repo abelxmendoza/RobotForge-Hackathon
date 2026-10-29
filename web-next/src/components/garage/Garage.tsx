@@ -11,6 +11,7 @@ import { robots as dexRobots } from '@/lib/data';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
+import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveStatus';
 import type { LiveHealth } from '@/components/forge/model';
 import { downloadJSON, uid, useStore } from '@/lib/store';
 import { preparePhoto } from '@/lib/image';
@@ -78,7 +79,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
   const fromPhoto = async (f: File | undefined) => {
     if (!f) return;
     setError('');
-    setBusy('Reading the photo with Muse Spark… this can take up to a minute.');
+    setBusy('Muse Spark is reading the photo');
     try {
       const { full } = await preparePhoto(f);
       const r = await postJSON<{ draft: { spec: Spec; identity_guess: string } }>('/photo', { image_data_url: full, note });
@@ -156,7 +157,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
           }}>Add robot</button>
         </div>
       )}
-      {busy && <p className="g-busy" role="status">{busy}</p>}
+      {busy && <LiveProgress what={busy} next="The draft lands in the editor, every dimension marked ESTIMATED" />}
       {error && <p className="g-error" role="alert">{error}</p>}
     </div>
   );
@@ -236,7 +237,7 @@ function RoverTable({ before, after }: { before: RoverCheck[] | null; after: Rov
   );
 }
 
-function LoopView({ res, rounds, running }: { res: LoopResult | null; rounds: LoopRound[]; running: boolean }) {
+function LoopView({ res, rounds, running, live }: { res: LoopResult | null; rounds: LoopRound[]; running: boolean; live: boolean }) {
   return (
     <div className="g-loop" aria-live="polite">
       {rounds.map((r) => (
@@ -253,7 +254,9 @@ function LoopView({ res, rounds, running }: { res: LoopResult | null; rounds: Lo
           <p className="g-small">Validator after this round: {r.errorsAfter} error{r.errorsAfter === 1 ? '' : 's'}.</p>
         </div>
       ))}
-      {running && <p className="g-busy" role="status">Muse Spark is proposing a fix… (live calls can take up to a minute)</p>}
+      {running && (live
+        ? <LiveProgress what={`Muse Spark is proposing round ${rounds.length + 1}`} next="The validator re-checks the spec in your browser and decides" />
+        : <p className="g-busy" role="status">Offline rules are proposing a fix…</p>)}
       {res && !running && (
         <p className={'g-loop-end ' + (res.resolved ? 'pass' : 'fail')}>
           {res.resolved ? 'Resolved' : 'Not resolved'}: {res.stop}. The validator made this call, not the model.
@@ -287,6 +290,7 @@ export default function Garage() {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => { liveHealth().then(setHealth); }, []);
+  const lm = useLiveMode('fix', 'mock');
   /* Each Forge loop run gets a token; switching robots or editing the
    * draft retires it, so a slow live result can never land in another
    * robot's editor or overwrite newer edits. */
@@ -381,6 +385,9 @@ export default function Garage() {
     setLoopRounds([]);
     try {
       const res = await runForgeLoop(draft, { includeWarnings: withWarnings, onRound: (r) => { if (current()) setLoopRounds((x) => [...x, r]); } });
+      const failed = res.rounds.find((r) => r.proposer.includes('live call failed'));
+      if (failed) lm.noteFailure(new Error(failed.proposer.replace(/^.*live call failed: /, '').replace(/\)$/, '')));
+      else if (res.rounds.some((r) => r.live)) lm.noteSuccess();
       if (current()) setLoop(res);
       else if (runRef.current === token) setLoopRounds([]);
     } finally {
@@ -408,6 +415,10 @@ export default function Garage() {
   if (!ready) return <p className="muted">Loading your garage…</p>;
 
   return (
+    <>
+    <ModeBanner mode={lm.mode} reason={lm.reason}>
+      {lm.mode === 'mock' ? 'Fix with Muse Spark uses offline textbook rules until live is back; the validator still decides every change.' : null}
+    </ModeBanner>
     <div className="garage">
       <aside className="garage-list" aria-label="Your robots">
         <h2>Your robots</h2>
@@ -541,7 +552,7 @@ export default function Garage() {
                 {health !== undefined && !routeOn(health ?? null, 'fix') && fixable && (
                   <p className="faint g-small">Live fixes are off right now (<LiveOffReason h={health ?? null} route="fix" />), so the loop uses the offline textbook rules.</p>
                 )}
-                {(looping || loop) && <LoopView res={loop} rounds={loopRounds} running={looping} />}
+                {(looping || loop) && <LoopView res={loop} rounds={loopRounds} running={looping} live={lm.mode === 'live'} />}
                 {loop && loop.rounds.length > 0 && !looping && (
                   <button type="button" className="btn" onClick={acceptLoop}>Use these changes in the draft</button>
                 )}
@@ -569,5 +580,6 @@ export default function Garage() {
         )}
       </div>
     </div>
+    </>
   );
 }

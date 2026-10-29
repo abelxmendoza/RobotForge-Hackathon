@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
+import { LiveProgress, ModeBanner, offReason, useLiveMode } from '@/components/shell/LiveStatus';
 import type { LiveHealth } from '@/components/forge/model';
 import { downloadJSON, uid, useStore } from '@/lib/store';
 import { preparePhoto } from '@/lib/image';
@@ -39,7 +40,7 @@ function PartCard({ p, active, onOpen }: { p: InventoryPart; active: boolean; on
   );
 }
 
-function PartDetail({ p, health, onChange, onPatch, onDelete }: { p: InventoryPart; health: LiveHealth | null | undefined; onChange: (next: InventoryPart) => void; onPatch: (id: string, fn: (latest: InventoryPart) => InventoryPart) => void; onDelete: () => void }) {
+function PartDetail({ p, health, onChange, onPatch, onDelete, onLive }: { p: InventoryPart; health: LiveHealth | null | undefined; onChange: (next: InventoryPart) => void; onPatch: (id: string, fn: (latest: InventoryPart) => InventoryPart) => void; onDelete: () => void; onLive: (err?: unknown) => void }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [newKey, setNewKey] = useState<string>('voltage_v');
@@ -65,7 +66,9 @@ function PartDetail({ p, health, onChange, onPatch, onDelete }: { p: InventoryPa
         });
         ({ reply, update, confirmed } = r);
         live = true;
+        onLive();
       } catch (e) {
+        onLive(e);
         ({ reply, update, confirmed } = offlinePartReply(p, text));
         reply = `The live model didn’t answer (${(e as Error).message}). ` + reply;
       }
@@ -149,7 +152,9 @@ function PartDetail({ p, health, onChange, onPatch, onDelete }: { p: InventoryPa
               {c.role === 'assistant' && c.live && <span className="fbadge live">LIVE</span>} {c.text}
             </p>
           ))}
-          {busy && <p className="inv-msg assistant faint" role="status">Thinking…</p>}
+          {busy && (chatLive
+            ? <div className="inv-msg assistant"><LiveProgress what="Muse Spark is reading your answer" next="Any change it proposes waits for your confirmation" typical="usually 5–30 s" /></div>
+            : <p className="inv-msg assistant faint" role="status">Thinking…</p>)}
         </div>
         <form className="inv-compose" onSubmit={(e) => { e.preventDefault(); if (!busy) send(); }}>
           <input id={'inv-msg-' + p.id} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Correct it or confirm it…" />
@@ -181,6 +186,8 @@ export default function Inventory() {
 
   useEffect(() => { liveHealth().then(setHealth); }, []);
   const partLive = routeOn(health ?? null, 'part');
+  const lm = useLiveMode('part_chat', 'mock');
+  const onLive = (err?: unknown) => (err === undefined ? lm.noteSuccess() : lm.noteFailure(err));
 
   const commit = (next: InventoryPart[]) => {
     partsRef.current = next;
@@ -256,6 +263,12 @@ export default function Inventory() {
 
   return (
     <div className="inv">
+      <ModeBanner mode={lm.mode} reason={lm.reason}>
+        {health === undefined ? null : partLive
+          ? 'Photo identification is live too.'
+          : `Photo identification is off (${offReason(health, 'part')}); photos are still saved for you to name.`}
+        {lm.mode === 'mock' ? ' The part chat uses an offline helper that records numbers with units and a “yes”.' : null}
+      </ModeBanner>
       <div className="inv-toolbar">
         <input ref={photoRef} type="file" accept="image/*" capture="environment" multiple hidden onChange={(e) => { addPhotos(e.target.files); e.target.value = ''; }} />
         <button type="button" className="btn btn-primary" onClick={() => photoRef.current?.click()}>Photograph parts</button>
@@ -265,10 +278,7 @@ export default function Inventory() {
         <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={(e) => { importFile(e.target.files?.[0]); e.target.value = ''; }} />
         <button type="button" className="btn btn-sm" onClick={() => importRef.current?.click()}>Import</button>
       </div>
-      {health !== undefined && !partLive && (
-        <p className="faint g-small">Photo identification is off right now (<LiveOffReason h={health ?? null} route="photo" />). Photos are still saved, and you can name the parts yourself.</p>
-      )}
-      {queue > 0 && <p className="g-busy" role="status">Identifying {queue} photo{queue === 1 ? '' : 's'} with Muse Spark… each can take up to a minute.</p>}
+      {queue > 0 && partLive && <LiveProgress what={`Muse Spark is identifying ${queue} photo${queue === 1 ? '' : 's'}`} next="Each part opens in a chat so you can confirm it" />}
       {error && <p className="g-error" role="alert">{error}</p>}
 
       {parts.length > 0 && (
@@ -296,7 +306,7 @@ export default function Inventory() {
           {shown.map((p) => <PartCard key={p.id} p={p} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
         </div>
         {open && (
-          <PartDetail key={open.id} p={open} health={health} onChange={update} onPatch={patch} onDelete={() => { commit(parts.filter((x) => x.id !== open.id)); setOpenId(null); }} />
+          <PartDetail key={open.id} p={open} health={health} onChange={update} onPatch={patch} onDelete={() => { commit(parts.filter((x) => x.id !== open.id)); setOpenId(null); }} onLive={onLive} />
         )}
       </div>
     </div>

@@ -635,3 +635,29 @@ details.raw[open] summary{margin-bottom:var(--s3)}
   .inv-detail-head img{width:72px;height:72px}
   .garage-add,.inv-detail,.g-fix,.g-rover{padding:var(--s4)}
 }
+
+/* LIVE / RECORDED / MOCK banner and slow-call progress (LiveStatus.tsx) */
+.mode-banner{display:flex;gap:var(--s3);align-items:flex-start;margin:var(--s4) 0;padding:10px 14px;border:1px solid var(--border);border-left:4px solid var(--norun);border-radius:8px;background:var(--surface-2);font-size:var(--fs-sm);color:var(--text-muted)}
+.mode-banner strong{color:var(--text)}
+.mode-pill{flex:none;font:700 11px/1 var(--mono);letter-spacing:.08em;padding:5px 8px;border-radius:5px;background:var(--surface-3);color:var(--text)}
+.mode-banner.m-live{border-left-color:var(--pass);background:var(--pass-soft)}
+.mode-banner.m-live .mode-pill{background:var(--pass);color:#06251a}
+.mode-banner.m-recorded{border-left-color:var(--accent);background:var(--accent-soft)}
+.mode-banner.m-recorded .mode-pill{background:var(--accent);color:var(--accent-ink)}
+.mode-banner.m-mock{border-left-color:var(--marginal);background:var(--marginal-soft)}
+.mode-banner.m-mock .mode-pill{background:var(--marginal);color:#241d02}
+.live-progress{margin:var(--s2) 0}
+.lp-steps{list-style:none;margin:0 0 var(--s2);padding:0;display:grid;gap:4px;font-size:var(--fs-sm)}
+.lp-steps li{padding-left:22px;position:relative;color:var(--text-faint)}
+.lp-steps li::before{content:"";position:absolute;left:4px;top:.45em;width:9px;height:9px;border-radius:50%;border:2px solid var(--border-strong)}
+.lp-steps li.done{color:var(--text-muted)}
+.lp-steps li.done::before{background:var(--pass);border-color:var(--pass)}
+.lp-steps li.now{color:var(--text)}
+.lp-steps li.now::before{border-color:var(--accent);animation:lp-pulse 1.2s ease-in-out infinite}
+.lp-time{font:12px/1 var(--mono);color:var(--accent);margin-left:6px}
+.lp-bar{height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden}
+.lp-bar span{display:block;height:100%;width:30%;background:var(--accent);animation:lp-slide 1.6s var(--ease) infinite}
+.lp-note{font-size:var(--fs-xs);margin:6px 0 0}
+@keyframes lp-pulse{50%{background:var(--accent)}}
+@keyframes lp-slide{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+@media (prefers-reduced-motion:reduce){.lp-bar span,.lp-steps li.now::before{animation:none}.lp-bar span{width:100%;opacity:.5}}
