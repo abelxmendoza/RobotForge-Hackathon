@@ -67,7 +67,7 @@ export default function AppShell({ active, crumbs = [], children }:
               );
             })}
           </nav>
-          <span className="recorded" title="This static site replays recorded runs. Nothing here calls a model or a simulator live.">Recorded runs</span>
+          <span className="recorded" title="Gazebo motion tests on this site are recorded runs. AI steps are labelled LIVE, RECORDED or MOCK where they happen.">Gazebo runs recorded</span>
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>
         <main className="content" id="content">{children}</main>
