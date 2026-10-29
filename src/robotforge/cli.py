@@ -28,7 +28,7 @@ from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
 from .spotter import format_card, save_dossier, spot_robot
 from .specimen import build_specimen
 from .stability import StabilityError, check_spec, format_stability_report
-from .schema import RobotSpec, SpecError
+from .schema import RobotSpec, SpecError, spec_is_estimated
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
 from .validate import has_errors, validate
@@ -627,6 +627,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"repaired spec written to {out}")
             return 0 if proposal.actionable else 1
         if args.cmd == "run-gate":
+            # Photo-derived dimensions are estimates, not a verified
+            # physical model. Refuse before spawning Gazebo or writing a
+            # gate verdict, even when deterministic checks have no ERROR.
+            if spec_is_estimated(spec):
+                print("refusing to run the gate on a photo draft with "
+                      "ESTIMATED dimensions; measure and confirm the "
+                      "robot before simulation", file=sys.stderr)
+                return 2
             rc = _print_findings(spec)
             if rc:
                 print("refusing to run the gate on an invalid spec",

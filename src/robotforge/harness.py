@@ -296,6 +296,38 @@ class _Graph:
                 f"{data.get('name', 'spec')}: no wiring block — harness "
                 "checks grade a documented wiring graph, and this spec "
                 "carries none (an undocumented harness is not invented)")
+        # Reject malformed electrical quantities before any calculation. A
+        # negative load or a zero-voltage power rail must never appear clean.
+        def require_quantity(value, label, *, positive=False):
+            if value is None:
+                return
+            if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(value)
+                    or (value <= 0 if positive else value < 0)):
+                rule = "finite and > 0" if positive else "finite and >= 0"
+                raise HarnessError(f"{label} must be {rule}")
+
+        for n in wiring.get("nodes", []):
+            for key in ("current_a", "output_current_a", "rated_output_a",
+                        "max_output_a"):
+                require_quantity(n.get(key), f"node {n.get('id')} {key}")
+        for c in wiring.get("connections", []):
+            if c.get("kind") == "power":
+                require_quantity(c.get("volts"),
+                                 f"connection {_subject(c)} volts",
+                                 positive=True)
+                require_quantity(c.get("current_a"),
+                                 f"connection {_subject(c)} current_a")
+            cable = _cable(c)
+            require_quantity(cable.get("length_mm"),
+                             f"connection {_subject(c)} cable.length_mm",
+                             positive=True)
+            gauge = cable.get("gauge_awg", cable.get("awg"))
+            require_quantity(gauge,
+                             f"connection {_subject(c)} cable.gauge_awg")
+            if gauge is not None and gauge > 40:
+                raise HarnessError("cable.gauge_awg must be <= 40")
+
         nodes = {}
         for n in wiring.get("nodes", []):
             nid = str(n.get("id", ""))
@@ -323,6 +355,45 @@ class _Graph:
         for c in conns:
             if c["kind"] == "power":
                 self._out_power.setdefault(c["from"], []).append(c)
+        # This v1 current solver assumes a directed power tree. Shared
+        # destinations and cycles cannot be assigned unambiguous branch
+        # currents without explicit current-split information.
+        incoming: dict[str, list[dict]] = {}
+        for c in conns:
+            if c["kind"] == "power":
+                incoming.setdefault(c["to"], []).append(c)
+        # An explicitly specified edge current does not require the
+        # downstream solver to infer that edge's share. Retain support
+        # for documented parallel feeds; reject ambiguous inferred ones.
+        shared = sorted(
+            node for node, edges in incoming.items()
+            if len(edges) > 1
+            and sum(_num(e.get("current_a")) is None for e in edges) > 1
+        )
+        if shared:
+            raise HarnessError(
+                "power graph has multiply-fed nodes "
+                + ", ".join(shared)
+                + "; current split is not modeled")
+
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(node_id: str):
+            if node_id in visiting:
+                raise HarnessError(
+                    f"power graph contains a cycle at {node_id}; "
+                    "rail budgets cannot be computed reliably")
+            if node_id in visited:
+                return
+            visiting.add(node_id)
+            for edge in self._out_power.get(node_id, []):
+                visit(edge["to"])
+            visiting.remove(node_id)
+            visited.add(node_id)
+
+        for node_id in nodes:
+            visit(node_id)
         self._current_cache: dict[str, tuple] = {}
 
     # -- current resolution -------------------------------------------

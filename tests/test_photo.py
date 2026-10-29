@@ -311,8 +311,8 @@ def test_cli_run_gate_refuses_photo_draft(tmp_path=None):
                            "--workdir", str(workdir)])
     finally:
         cli.run_motion_check = orig
-    assert rc == 1
+    assert rc == 2
     assert "refusing to run the gate on a photo draft" in err.getvalue()
-    assert "ESTIMATED" in out.getvalue()  # the provenance WARN surfaced
+    assert "ESTIMATED" in err.getvalue()  # rejection explains provenance
     assert "twin" not in called
     assert not (workdir / "gate-report.json").exists()

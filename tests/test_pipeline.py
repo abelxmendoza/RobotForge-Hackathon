@@ -32,11 +32,14 @@ def test_impossible_clearance_is_an_error():
     assert has_errors(validate(spec))
 
 
-def test_motor_above_battery_voltage_is_an_error():
+def test_motor_above_battery_voltage_requires_power_path_review():
     data = json.loads(EXAMPLE.read_text())
     data["motor"]["voltage_v"] = 24.0
     spec = RobotSpec.from_dict(data)
-    assert has_errors(validate(spec))
+    findings = validate(spec)
+    assert not has_errors(findings)
+    assert any(x.check == "electrical.voltage_match" and x.severity == "WARN"
+               for x in findings)
 
 
 def test_bad_drivetrain_rejected():
