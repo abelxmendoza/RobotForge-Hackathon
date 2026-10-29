@@ -30,6 +30,8 @@ const OUTCOME_WORDS: Record<GroupingResult["outcome"], string> = {
 export default function GroupingCard({
   draft,
   photoThumb,
+  inputClass,
+  filingDraft,
 }: {
   draft: PhotoDraft;
   /* Small (<=320px) data-URL thumbnail of the captured photo, when
@@ -37,6 +39,14 @@ export default function GroupingCard({
    * proposed family/variant and stored with the sighting so it can
    * render on /robots; the full photo itself is never stored. */
   photoThumb?: string | null;
+  /* Wave 5 intake class ("direct" | "second-hand" | "parts"), when
+   * the draft came through the classified flow. Shown on the card
+   * and stored with the sighting. */
+  inputClass?: string;
+  /* The draft object to FILE, when it differs from the displayed
+   * draft — a second-hand entry files its dimension-stripped copy
+   * so the withheld dimensions never reach the stored dossier. */
+  filingDraft?: PhotoDraft;
 }) {
   const [savedCount, setSavedCount] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -66,7 +76,12 @@ export default function GroupingCard({
       : OUTCOME_WORDS[grouping.outcome];
 
   const onSave = () => {
-    const entry = buildStoredSighting(draft, grouping, photoThumb ?? null);
+    const entry = buildStoredSighting(
+      filingDraft ?? draft,
+      grouping,
+      photoThumb ?? null,
+      inputClass,
+    );
     const next = saveSighting(entry);
     setSavedCount(next.length);
     // Confirm inline only if the sighting is actually in the store.
@@ -76,6 +91,18 @@ export default function GroupingCard({
   return (
     <div className="card" style={{ marginTop: 12 }}>
       <div className="eyebrow">Robodex grouping</div>
+      {inputClass === "second-hand" ? (
+        <p className="intro">
+          <span className="spotting-badge">IMAGE-OF-IMAGE</span> Input: a
+          photo of a picture — this entry files <strong>without</strong> any
+          dimensions (a picture carries no scale).
+        </p>
+      ) : inputClass === "direct" ? (
+        <p className="intro">
+          Input: a direct photo of a robot — dimensions in the draft are
+          photo estimates.
+        </p>
+      ) : null}
       <div className="spot-head">
         {photoThumb ? (
           /* eslint-disable-next-line @next/next/no-img-element */

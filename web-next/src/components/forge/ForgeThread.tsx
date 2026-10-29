@@ -33,7 +33,19 @@
  * markup, live fallbacks badged LIVE MODEL by the hook. Only a
  * fallback that reads as a build request runs the describe
  * pipeline; attachments and the recorded sample runs always run
- * the pipeline. There is no second composer or docked rail. */
+ * the pipeline. There is no second composer or docked rail.
+ *
+ * Wave 5 (photo intake): a Spot capture — and the /robots handoff —
+ * starts the photo flow on arrival, no Send tap. A guided session
+ * offers side/top angles that are stitched into ONE labelled sheet
+ * so a single vision call sees every view. Before any filing, the
+ * capture is CLASSIFIED (lib/intake.ts): direct photo / photo of a
+ * picture (second-hand: dimensions withheld entirely, confidence
+ * lowered) / parts photo (routed to catalogue matching, never a
+ * robot sighting). The class is heuristic, shown with its basis,
+ * stored with the entry, and correctable on the result card. A
+ * .ply attached to a photo draft replaces its estimated dimensions
+ * with measured ones (MEASURED (scan)) in a follow-up stage. */
 import {
   useCallback,
   useEffect,
@@ -71,7 +83,19 @@ import { RUNS, STEP_NAMES } from './samples';
 import type { SampleRun } from './samples';
 import { ForgeViewer } from './ForgeViewer';
 import GroupingCard from './GroupingCard';
+import PartsMatchCard from './PartsMatchCard';
 import { spotPhotoToFile, takeSpotPhoto } from '@/lib/spot';
+import { families } from '@/lib/data';
+import { groupSpotting, signatureFromDraft } from '@/lib/grouping';
+import {
+  buildContactSheet,
+  classifyFromDraft,
+  measureScreenPattern,
+  partConfidence,
+  preClassify,
+  stripDimensions,
+} from '@/lib/intake';
+import type { AnglePhoto, InputClass } from '@/lib/intake';
 
 const ScanView = dynamic(() => import('./ScanView'), { ssr: false });
 
@@ -191,6 +215,254 @@ function PhotoModeAsk({
         </button>
       </p>
     </>
+  );
+}
+
+/* Guided multi-angle capture (Wave 5): the first Spot photo is
+ * already in hand; this card offers a side and a top view in the
+ * same session. Every angle is optional — finishing with what you
+ * have is one tap, and collecting all three finishes on its own.
+ * The angles are later stitched into one labelled sheet so a
+ * single vision call sees them together (lib/intake.ts). */
+function AngleAsk({
+  first,
+  onDone,
+}: {
+  first: AnglePhoto;
+  onDone: (angles: AnglePhoto[]) => void;
+}) {
+  const [angles, setAngles] = useState<AnglePhoto[]>([first]);
+  const [done, setDone] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingAngle = useRef<string>('side');
+  const doneRef = useRef(false);
+
+  const finish = (list: AnglePhoto[]) => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    setDone(true);
+    onDone(list);
+  };
+  const addAngle = (angle: string) => {
+    pendingAngle.current = angle;
+    inputRef.current?.click();
+  };
+  const onFile = async (f: File | null) => {
+    if (!f) return;
+    try {
+      const raw = await readAsDataURL(f);
+      const small = await downscale(raw, 1024);
+      const next = [
+        ...angles,
+        { angle: pendingAngle.current, dataUrl: small },
+      ];
+      setAngles(next);
+      if (next.length >= 3) finish(next);
+    } catch {
+      /* A failed read just leaves the slot unfilled. */
+    }
+  };
+  const missing = ['side', 'top'].filter(
+    (a) => !angles.some((x) => x.angle === a),
+  );
+
+  return (
+    <>
+      <p>
+        <strong>Add another angle?</strong>
+      </p>
+      <p className="intro">
+        One photo works. A side and a top view make the parts list
+        noticeably better — the views are combined into one labelled
+        sheet, so the model sees the robot from all of them at once.
+        Skip whatever you can&rsquo;t get.
+      </p>
+      <div className="angle-thumbs">
+        {angles.map((a, i) => (
+          <figure key={i}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={a.dataUrl} alt={'Captured ' + a.angle + ' view'} />
+            <figcaption>{a.angle}</figcaption>
+          </figure>
+        ))}
+      </div>
+      {done ? (
+        <p className="faint">
+          Drafting from {angles.length} view{angles.length === 1 ? '' : 's'}…
+        </p>
+      ) : (
+        <p>
+          {missing.map((a) => (
+            <button
+              key={a}
+              className="btn btn-sm"
+              type="button"
+              onClick={() => addAngle(a)}
+            >
+              Add {a} view
+            </button>
+          ))}{' '}
+          <button
+            className="btn btn-sm"
+            type="button"
+            onClick={() => finish(angles)}
+          >
+            {angles.length === 1
+              ? 'Just this photo'
+              : 'Draft with these views'}
+          </button>
+        </p>
+      )}
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        ref={inputRef}
+        onChange={(e) => {
+          const f = e.target.files && e.target.files[0];
+          void onFile(f);
+          e.target.value = '';
+        }}
+      />
+    </>
+  );
+}
+
+/* The drafted visible-parts list with per-part confidence (Wave 5):
+ * a model-reported confidence when the draft carries one, else a
+ * local cross-check against the drafted spec — labelled as which.
+ * A SAM verdict rides along verbatim when the draft carries one;
+ * the browser flow itself has no SAM, and says so. */
+function VisiblePartsList({
+  draft,
+  inputClass,
+}: {
+  draft: PhotoDraft;
+  inputClass: InputClass;
+}) {
+  const list = draft.visible_parts ?? [];
+  if (!list.length) return null;
+  return (
+    <>
+      <div className="eyebrow">Parts the model could see — with confidence</div>
+      <ul className="items rows">
+        {list.map((p, i) => (
+          <li key={i}>
+            <strong>{p.kind}</strong> ×{p.count}
+            {p.position ? ' — ' + p.position : ''}
+            <span className="conf">
+              {partConfidence(p, draft.spec, inputClass)}
+            </span>
+            {p.notes ? <span className="faint"> {p.notes}</span> : null}
+          </li>
+        ))}
+      </ul>
+      {draft.sam_check && draft.sam_check.length ? (
+        <div className="callout">
+          <span>
+            <strong>SAM cross-check</strong> (produced by the engine run
+            behind this draft, printed verbatim):{' '}
+            {draft.sam_check
+              .map(
+                (s) =>
+                  s.kind +
+                  ' — draft saw ' +
+                  s.draft_count +
+                  ' / SAM found ' +
+                  s.sam_count +
+                  ' regions — ' +
+                  s.verdict,
+              )
+              .join(' · ')}
+          </span>
+        </div>
+      ) : (
+        <p className="faint">
+          The confidence lines above are local cross-checks against the
+          drafted spec, not a second model&rsquo;s opinion — the SAM 3.1
+          part-count cross-check runs in the CLI/engine (
+          <code>robotforge describe --photo</code>), not in this browser
+          flow, and no verdict is borrowed from it here.
+        </p>
+      )}
+    </>
+  );
+}
+
+/* The RealSense upgrade (Wave 5): a .ply attached to a photo draft.
+ * The file is parsed and measured in the browser (the scan module)
+ * and sent nowhere; the follow-up stage it produces is badged
+ * MEASURED (scan). */
+function ScanUpgradePrompt({
+  onScan,
+}: {
+  onScan: (f: File) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="callout">
+      <span>
+        <strong>Have a depth scan of this robot?</strong> Attach its .ply
+        (RealSense Viewer, Scaniverse and Polycam all export one) and the
+        estimated dimensions in this draft are replaced by measured ones.
+        The file is parsed and measured in your browser — it is sent
+        nowhere.
+      </span>
+      <p>
+        <button
+          className="btn btn-sm"
+          type="button"
+          onClick={() => ref.current?.click()}
+        >
+          Measure with a .ply scan
+        </button>
+      </p>
+      <input
+        type="file"
+        accept=".ply"
+        hidden
+        ref={ref}
+        onChange={(e) => {
+          const f = e.target.files && e.target.files[0];
+          if (f) onScan(f);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
+}
+
+/* Class correction: the classifier is a heuristic, so the result
+ * card — the confirm step — is where the user overrules it. */
+function ClassCorrection({
+  current,
+  onCorrect,
+}: {
+  current: InputClass;
+  onCorrect: (c: InputClass) => void;
+}) {
+  const options: { cls: InputClass; label: string }[] = [
+    { cls: 'direct', label: 'Direct photo' },
+    { cls: 'second-hand', label: 'Photo of a picture' },
+    { cls: 'parts', label: 'Parts photo' },
+  ];
+  return (
+    <p className="faint" style={{ marginTop: 10 }}>
+      Wrong class? Re-file this result as:{' '}
+      {options
+        .filter((o) => o.cls !== current)
+        .map((o) => (
+          <button
+            key={o.cls}
+            className="btn btn-sm btn-ghost"
+            type="button"
+            onClick={() => onCorrect(o.cls)}
+          >
+            {o.label}
+          </button>
+        ))}
+    </p>
   );
 }
 
@@ -341,6 +613,11 @@ export default function ForgeThread() {
   const photoResolveRef = useRef<((m: 'robot' | 'document') => void) | null>(
     null,
   );
+  /* Wave 5: the guided angle session's resolver + the set of photo
+   * draft cards whose spec pipeline already ran (a class correction
+   * re-renders a card; it must not re-run the pipeline stages). */
+  const angleResolveRef = useRef<((a: AnglePhoto[]) => void) | null>(null);
+  const photoPipelineRef = useRef(new Set<number>());
   const fileRefs = {
     photo: useRef<HTMLInputElement>(null),
     camera: useRef<HTMLInputElement>(null),
@@ -780,6 +1057,28 @@ export default function ForgeThread() {
     });
   }, [pushNote]);
 
+  /* The guided angle session (Wave 5): resolves with the session's
+   * photos — the first shot (already in hand, labelled by the user
+   * as the starting view) plus any side/top views they added. */
+  const collectAngles = useCallback(
+    (first: AnglePhoto): Promise<AnglePhoto[]> => {
+      return new Promise((resolve) => {
+        angleResolveRef.current = resolve;
+        pushNote(
+          <AngleAsk
+            first={first}
+            onDone={(angles) => {
+              const r = angleResolveRef.current;
+              angleResolveRef.current = null;
+              if (r) r(angles);
+            }}
+          />,
+        );
+      });
+    },
+    [pushNote],
+  );
+
   const renderDocDraft = useCallback(
     (cardId: number, draft: DocDraft, secs: number) => {
       const spec = (draft.spec || {}) as PartialSpec;
@@ -924,8 +1223,253 @@ export default function ForgeThread() {
     [pushNote, sampleOffer, pushStage, setStageBody, renderDocDraft],
   );
 
+  /* The RealSense upgrade applied to a photo draft (Wave 5): parse
+   * + measure the .ply in the browser, then push a follow-up stage
+   * whose spec carries the MEASURED dimensions. The original photo
+   * draft stage stays as it was — this stage supersedes its
+   * dimensions and says so; filing from THIS stage's grouping card
+   * keeps the measured numbers. */
+  const runScanUpgrade = useCallback(
+    async (draft: PhotoDraft, file: File, photoThumb: string) => {
+      let buf: ArrayBuffer;
+      try {
+        buf = await file.arrayBuffer();
+      } catch {
+        pushNote('That scan couldn’t be read in the browser. Nothing was uploaded.');
+        return;
+      }
+      let parsed: ParsedPly;
+      let measure: Measure;
+      try {
+        parsed = parsePly(buf);
+        measure = measureCloud(parsed.positions);
+      } catch (e) {
+        pushNote(
+          <>
+            <strong>The scan wasn’t readable:</strong> {errMsg(e)} The file
+            was read only in your browser and sent nowhere, and the photo
+            draft above is unchanged.
+          </>,
+        );
+        return;
+      }
+      if (!measure.ok) {
+        pushNote(
+          <>
+            <strong>No measurement was taken from that scan:</strong>{' '}
+            {measure.reason}. The photo draft above keeps its estimated
+            dimensions — nothing was rescaled into a plausible-looking
+            answer.
+          </>,
+        );
+        return;
+      }
+      const ext = measure.extentsM;
+      const r4 = (v: number) => Math.round(v * 10000) / 10000;
+      const fmt = (v: number) =>
+        v.toFixed(3) + ' m (' + Math.round(v * 1000) + ' mm)';
+      const upgradedSpec: RobotSpec = {
+        ...draft.spec,
+        length_m: r4(ext[0]),
+        width_m: r4(ext[1]),
+        height_m: r4(ext[2]),
+        description:
+          (
+            (draft.spec.description || '') +
+            ' Dimensions replaced by a .ply scan measurement (' +
+            file.name +
+            ', bounding box of the point cloud) — MEASURED (scan); every other field is still the photo draft’s estimate.'
+          ).trim(),
+      };
+      const upgraded: PhotoDraft = { ...draft, spec: upgradedSpec };
+      pushStage(
+        'local',
+        'measured in your browser just now',
+        'Scan upgrade — MEASURED (scan)',
+        <>
+          <p className="intro">
+            <strong>{parsed.count.toLocaleString('en-US')} points</strong> (
+            {parsed.format} PLY) from <strong>{file.name}</strong>, measured
+            as the cloud’s axis-aligned bounding box (x → length, y → width,
+            z → height, axes as stored in the file).
+            {measure.unitNote ? ' Unit note: ' + measure.unitNote + '.' : ''}{' '}
+            These three dimensions replace the photo draft’s estimates
+            below; mass, motors and voltage still cannot come from a scan,
+            so the rest of the spec is unchanged.
+          </p>
+          <table className="kv">
+            <tbody>
+              <tr>
+                <th>Length (x)</th>
+                <td>{fmt(ext[0])}</td>
+              </tr>
+              <tr>
+                <th>Width (y)</th>
+                <td>{fmt(ext[1])}</td>
+              </tr>
+              <tr>
+                <th>Height (z)</th>
+                <td>{fmt(ext[2])}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="card" style={{ padding: '4px 20px' }}>
+            <SpecTable spec={upgradedSpec} />
+          </div>
+          <p className="faint">
+            File the sighting from THIS grouping card to keep the measured
+            dimensions — the photo draft card above still files the
+            estimated ones.
+          </p>
+          <GroupingCard
+            draft={upgraded}
+            photoThumb={photoThumb}
+            inputClass="direct"
+          />
+          <RawJSON obj={upgradedSpec} label="Upgraded spec JSON" />
+        </>,
+      );
+      const res = checksStage(upgradedSpec);
+      if (!res.schemaErrors) viewerStage(upgradedSpec);
+    },
+    [pushNote, pushStage, checksStage, viewerStage],
+  );
+
+  /* Render (or re-render, after a class correction) the photo
+   * draft result card for one intake class. The three classes get
+   * three different cards — that difference IS the classification
+   * doing its job:
+   *   direct      — the full draft: estimates banner, parts with
+   *                 confidence, spec, scan upgrade, grouping, and
+   *                 the checks/viewer pipeline (once per card).
+   *   second-hand — dimensions withheld: the model’s size guesses
+   *                 never render and never file; grouping still
+   *                 runs on identity; no checks/viewer.
+   *   parts       — catalogue matching; no robot spec at all. */
+  const renderPhotoResult = useCallback(
+    (
+      cardId: number,
+      draft: PhotoDraft,
+      cls: InputClass,
+      ctx: { thumb: string; secs: number; basis: string[]; views: number },
+    ) => {
+      const correct = (c: InputClass) =>
+        renderPhotoResultRef.current(cardId, draft, c, ctx);
+      const correction = <ClassCorrection current={cls} onCorrect={correct} />;
+      if (cls === 'parts') {
+        setStageBody(
+          cardId,
+          <>
+            <p className="intro">
+              Identity guess: <strong>{draft.identity_guess}</strong> — but
+              this capture was classified as{' '}
+              <strong>parts, not a whole robot</strong> (
+              {ctx.basis.join('; ')}), so it is matched against the parts
+              catalogue instead of being drafted as a robot. No robot spec
+              is built from it, and it cannot be filed as a sighting.
+            </p>
+            <PartsMatchCard draft={draft} photoThumb={ctx.thumb} />
+            {correction}
+          </>,
+        );
+        return;
+      }
+      if (cls === 'second-hand') {
+        const stripped: PhotoDraft = {
+          ...draft,
+          spec: stripDimensions(draft.spec),
+        };
+        setStageBody(
+          cardId,
+          <>
+            <div className="callout warn">
+              <span>
+                <strong>Photo of a picture — IMAGE-OF-IMAGE.</strong>{' '}
+                Signals: {ctx.basis.join('; ')}. Identification ran, but a
+                picture carries no scale, so{' '}
+                <strong>
+                  no dimensions were drafted into this entry
+                </strong>{' '}
+                — the model’s size guesses were withheld rather than shown,
+                and part confidence is lowered. For a full draft, photograph
+                the real robot, or supply the original image file instead
+                of a photo of it.
+              </span>
+            </div>
+            <p className="intro" style={{ marginTop: 10 }}>
+              Drafted in {ctx.secs} s. Identity guess:{' '}
+              <strong>{draft.identity_guess}</strong>.
+            </p>
+            <VisiblePartsList draft={draft} inputClass="second-hand" />
+            <div className="card" style={{ padding: '4px 20px' }}>
+              <DocSpecTable spec={stripped.spec as PartialSpec} />
+            </div>
+            <p className="faint">
+              The checks and the take-apart viewer wait for a draft that
+              carries dimensions — they are not run on a dimensionless
+              entry, and no verdict is implied.
+            </p>
+            <GroupingCard
+              draft={stripped}
+              filingDraft={stripped}
+              photoThumb={ctx.thumb}
+              inputClass="second-hand"
+            />
+            {correction}
+          </>,
+        );
+        return;
+      }
+      setStageBody(
+        cardId,
+        <>
+          <span className="est">
+            Estimated, not measured — every dimension in a photo draft is an
+            estimate
+          </span>
+          <p className="intro" style={{ marginTop: 10 }}>
+            Drafted in {ctx.secs} s
+            {ctx.views > 1
+              ? ' from ' +
+                ctx.views +
+                ' views, combined into one labelled sheet so the model saw all of them together'
+              : ''}
+            . Identity guess: <strong>{draft.identity_guess}</strong>.
+            Input class: <strong>direct photo</strong> ({ctx.basis.join('; ')}
+            ).
+          </p>
+          <VisiblePartsList draft={draft} inputClass="direct" />
+          <div className="card" style={{ padding: '4px 20px' }}>
+            <SpecTable spec={draft.spec} />
+          </div>
+          <ScanUpgradePrompt
+            onScan={(f) => void runScanUpgrade(draft, f, ctx.thumb)}
+          />
+          <GroupingCard
+            draft={draft}
+            photoThumb={ctx.thumb}
+            inputClass="direct"
+          />
+          <RawJSON obj={draft.spec} label="Draft spec JSON" />
+          {correction}
+        </>,
+      );
+      if (!photoPipelineRef.current.has(cardId)) {
+        photoPipelineRef.current.add(cardId);
+        specPipeline(draft.spec, 'photo-draft.json');
+      }
+    },
+    [setStageBody, specPipeline, runScanUpgrade],
+  );
+  const renderPhotoResultRef = useRef(renderPhotoResult);
+  renderPhotoResultRef.current = renderPhotoResult;
+
   const runPhoto = useCallback(
-    async (file: File, noteText: string) => {
+    async (
+      file: File,
+      noteText: string,
+      opts?: { guided?: boolean },
+    ) => {
       beginRun('Photo');
       let dataUrl: string;
       try {
@@ -943,10 +1487,47 @@ export default function ForgeThread() {
           {noteText ? <p>{noteText}</p> : null}
         </>,
       );
+      /* Classification starts BEFORE the draft (Wave 5): local
+       * signals from the file itself — its name and a screen-pattern
+       * measurement on its pixels. Nothing is uploaded for this. */
+      const small = await downscale(dataUrl, 1024);
+      const pattern = await measureScreenPattern(small);
+      const pre = preClassify(file.name, pattern);
       const mode = await choosePhotoMode();
       if (mode === 'document') {
         await runPhotoDocument(noteText, dataUrl);
         return;
+      }
+      /* Guided sessions (Spot captures) collect side/top angles
+       * before drafting; the angles feed ONE draft via a labelled
+       * contact sheet. A plain photo attach skips this entirely. */
+      let sendDataUrl = dataUrl;
+      let views = 1;
+      if (opts && opts.guided) {
+        const angles = await collectAngles({
+          angle: 'photo 1',
+          dataUrl: small,
+        });
+        views = angles.length;
+        if (angles.length > 1) {
+          try {
+            sendDataUrl = await buildContactSheet(angles);
+          } catch {
+            sendDataUrl = dataUrl;
+            views = 1;
+          }
+        }
+      }
+      if (pre.secondHand) {
+        pushNote(
+          <>
+            <strong>Classified locally as a photo of a picture</strong> —{' '}
+            {pre.basis.join('; ')}. Identification can still run, but no
+            dimensions will be drafted into the entry: a picture carries no
+            scale. The class is a heuristic and can be corrected on the
+            result card.
+          </>,
+        );
       }
       const h = await liveHealth();
       if (!routeOn(h, 'photo')) {
@@ -970,54 +1551,46 @@ export default function ForgeThread() {
       );
       timersRef.current.set(cardId, performance.now());
       try {
-        const small = await downscale(dataUrl, 1024);
+        const sendSmall = await downscale(sendDataUrl, 1024);
         /* A thumbnail for the grouping card (and, if the sighting
          * is saved, for its /robots rendering) — the full photo is
          * never stored; see lib/grouping.ts. */
         const thumb = await downscale(dataUrl, 320);
         const body = await postJSON<{ draft: PhotoDraft }>('/photo', {
-          image_data_url: small,
-          note: noteText || undefined,
+          image_data_url: sendSmall,
+          note:
+            [
+              noteText || '',
+              views > 1
+                ? 'The image is one labelled sheet combining ' +
+                  views +
+                  ' views of the same robot (photo 1 / side / top).'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ') || undefined,
         });
         const secs = Math.round(
           (performance.now() - (timersRef.current.get(cardId) || 0)) / 1000,
         );
         const draft = body.draft;
-        setStageBody(
-          cardId,
-          <>
-            <span className="est">
-              Estimated, not measured — every dimension in a photo draft is an
-              estimate
-            </span>
-            <p className="intro" style={{ marginTop: 10 }}>
-              Drafted in {secs} s. Identity guess:{' '}
-              <strong>{draft.identity_guess}</strong>.
-            </p>
-            {draft.visible_parts && draft.visible_parts.length ? (
-              <>
-                <div className="eyebrow">Parts the model could see</div>
-                <ul className="items rows">
-                  {draft.visible_parts.map((p, i) => (
-                    <li key={i}>
-                      <strong>{p.kind}</strong> ×{p.count}
-                      {p.position ? ' — ' + p.position : ''}
-                      {p.notes ? (
-                        <span className="faint"> {p.notes}</span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-            <div className="card" style={{ padding: '4px 20px' }}>
-              <SpecTable spec={draft.spec} />
-            </div>
-            <GroupingCard draft={draft} photoThumb={thumb} />
-            <RawJSON obj={draft.spec} label="Draft spec JSON" />
-          </>,
+        /* Final classification, from the draft itself (Wave 5). */
+        const fam = groupSpotting(
+          draft.identity_guess || '',
+          signatureFromDraft(draft),
+          families,
         );
-        specPipeline(draft.spec, 'photo-draft.json');
+        const { cls, basis } = classifyFromDraft({
+          draft,
+          pre,
+          familyMatch: fam.outcome !== 'new-family',
+        });
+        renderPhotoResult(cardId, draft, cls, {
+          thumb,
+          secs,
+          basis,
+          views,
+        });
       } catch (e) {
         setStageBody(
           cardId,
@@ -1036,10 +1609,21 @@ export default function ForgeThread() {
         sampleOffer('photo', 'Play the recorded photo run (SAMPLE)');
       }
     },
-    [beginRun, pushUser, pushNote, choosePhotoMode, runPhotoDocument, pushStage, setStageBody, specPipeline, sampleOffer],
+    [beginRun, pushUser, pushNote, choosePhotoMode, collectAngles, runPhotoDocument, pushStage, setStageBody, sampleOffer, renderPhotoResult],
   );
   const runPhotoRef = useRef(runPhoto);
   runPhotoRef.current = runPhoto;
+
+  /* Auto-run (Wave 5): a Spot capture starts the photo flow the
+   * moment it arrives — no attach chip, no Send tap. Used by the
+   * composer's camera action and the /robots handoff alike. */
+  const startPhoto = useCallback((file: File) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    runPhotoRef.current(file, '', { guided: true }).finally(() => {
+      busyRef.current = false;
+    });
+  }, []);
 
   /* ---------------- input flow: parts list ---------------- */
   const runDoc = useCallback(
@@ -1405,12 +1989,7 @@ export default function ForgeThread() {
       void (async () => {
         try {
           const file = await spotPhotoToFile(spot);
-          if (!busyRef.current) {
-            busyRef.current = true;
-            runPhotoRef.current(file, '').finally(() => {
-              busyRef.current = false;
-            });
-          }
+          startPhoto(file);
         } catch {
           /* A lost handoff just lands on the plain Forge. */
         }
@@ -1695,7 +2274,10 @@ export default function ForgeThread() {
           hidden
           onChange={(e) => {
             const f = e.target.files && e.target.files[0];
-            if (f) setAttach({ kind: 'photo', file: f });
+            /* Spot captures auto-run (Wave 5): the flow starts on
+             * arrival — draft, classification, grouping — with the
+             * filing itself still one confirm tap on the card. */
+            if (f) startPhoto(f);
             e.target.value = '';
           }}
         />

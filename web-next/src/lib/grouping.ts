@@ -437,6 +437,12 @@ export interface StoredDexSighting {
     // caps it at 320px) so the sighting can render with its photo
     // on /robots; older entries carry null here and render without.
     photo: string | null;
+    /* Wave 5 intake class ("direct" | "second-hand" | "parts"),
+     * when the entry was filed by the classified flow. Optional:
+     * entries saved before Wave 5 carry no class and render as
+     * before. Parts finds are NOT stored here — they live under
+     * their own key (lib/intake.ts). */
+    input_class?: string;
     spotted_at: string;
     where: string;
     dossier: unknown;
@@ -486,11 +492,14 @@ export function saveSighting(entry: StoredDexSighting): StoredDexSighting[] {
 
 /** Build the stored entry for a draft + its grouping result.
  *  `photoThumb` is the small thumbnail data URL for the sighting's
- *  photo (see StoredDexSighting) — never the full photo. */
+ *  photo (see StoredDexSighting) — never the full photo.
+ *  `inputClass` (Wave 5) records how the capture was classified;
+ *  omit it and the entry is stored exactly as before. */
 export function buildStoredSighting(
   draft: DraftLike,
   grouping: GroupingResult,
   photoThumb: string | null = null,
+  inputClass?: string,
 ): StoredDexSighting {
   const now = new Date();
   return {
@@ -498,6 +507,7 @@ export function buildStoredSighting(
       id: `local-${now.getTime()}`,
       identity: draft.identity_guess || grouping.familyName,
       photo: photoThumb,
+      ...(inputClass ? { input_class: inputClass } : {}),
       spotted_at: now.toISOString().slice(0, 10),
       where: "",
       dossier: draft,

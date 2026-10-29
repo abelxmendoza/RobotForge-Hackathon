@@ -440,6 +440,15 @@ details.raw[open] summary{margin-bottom:var(--s3)}
   padding:5px 9px;border-radius:999px;white-space:nowrap;
   color:var(--text-muted);border:1px dashed var(--border-strong);
 }
+/* Wave 5 photo intake: guided-angle thumbnails + the per-part
+   confidence line. The confidence line is muted running text — it
+   annotates a part, it is not a verdict, so it takes no verdict
+   color. */
+.angle-thumbs{display:flex;gap:var(--s3);flex-wrap:wrap;margin:var(--s3) 0}
+.angle-thumbs figure{margin:0}
+.angle-thumbs img{width:88px;height:88px;object-fit:cover;border-radius:var(--r);border:1px solid var(--border)}
+.angle-thumbs figcaption{font-size:var(--fs-xs);color:var(--text-muted);text-transform:capitalize;margin-top:2px}
+.conf{display:block;font-size:var(--fs-xs);color:var(--text-muted)}
 .elapsed{font-family:var(--mono)}
 .fv-side,.fv-top{margin-top:var(--s3)}
 .fv-detail{margin-top:var(--s4)}

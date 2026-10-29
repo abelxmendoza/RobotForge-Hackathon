@@ -63,6 +63,14 @@ export default function LocalDexSightings() {
                         <div>
                           <strong>{e.sighting.identity}</strong>{" "}
                           <span className="spotting-badge">USER SPOTTING</span>
+                          {e.sighting.input_class === "second-hand" ? (
+                            <>
+                              {" "}
+                              <span className="spotting-badge">
+                                IMAGE-OF-IMAGE
+                              </span>
+                            </>
+                          ) : null}
                           {e.sighting.spotted_at ? (
                             <span className="faint"> — {e.sighting.spotted_at}</span>
                           ) : null}{" "}

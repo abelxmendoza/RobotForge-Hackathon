@@ -183,7 +183,25 @@ export interface ListReport {
 
 export interface PhotoDraft {
   identity_guess: string;
-  visible_parts?: { kind: string; count: number; position?: string; notes?: string }[];
+  visible_parts?: {
+    kind: string;
+    count: number;
+    position?: string;
+    notes?: string;
+    /* A model-reported confidence (0..1), when the draft carries
+     * one. Most web drafts do not — the intake then shows a local
+     * cross-check instead (lib/intake.ts), labelled as such. */
+    confidence?: number;
+  }[];
+  /* SAM 3.1 cross-check lines, when a draft carries them (the
+   * engine/CLI path produces these; the Worker has no SAM). The
+   * verdict text is rendered verbatim — agree or disagree. */
+  sam_check?: {
+    kind: string;
+    draft_count: number;
+    sam_count: number;
+    verdict: string;
+  }[];
   spec: RobotSpec;
   [k: string]: unknown;
 }

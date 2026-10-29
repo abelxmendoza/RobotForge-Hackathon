@@ -15,6 +15,7 @@ import { assetPath } from "@/components/home/asset";
 import RobotCard from "./RobotCard";
 import PartsCatalogue from "./PartsCatalogue";
 import LocalDexSightings from "./LocalDexSightings";
+import LocalDexParts from "./LocalDexParts";
 
 /* render_robots_index + robots.js: verdict chips and class chips are
    independent filters — a card shows only when it matches both. The
@@ -352,6 +353,7 @@ export default function RobotsIndex() {
           parts lists against.
         </p>
         <PartsCatalogue />
+        <LocalDexParts />
       </section>
 
       <section className="section seg" id="sightings">
