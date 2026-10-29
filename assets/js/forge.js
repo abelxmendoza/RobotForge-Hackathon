@@ -265,7 +265,7 @@ function forgeValidateSpec(spec) {
       ' V; verify motor-driver output, battery operating range, and any boost converter before approval');
   } else if (spec.motor.voltage_v < spec.battery.voltage_v * 0.5) {
     f('WARN', 'electrical.voltage_match',
-      'motor voltage ' + fvFmtG(spec.motor.voltage_v) +
+      'motor nominal voltage ' + fvFmtG(spec.motor.voltage_v) +
       ' V is far below battery nominal voltage ' + fvFmtG(spec.battery.voltage_v) +
       ' V; verify motor-driver output, regulation, and component voltage limits before approval');
   }
