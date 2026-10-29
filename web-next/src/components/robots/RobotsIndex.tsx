@@ -10,7 +10,6 @@ import { setDrivetrain, setVerdict } from "@/store/catalogSlice";
 import { MOBILITY_CLASSES, VERDICT_LABEL, gateStatusOf } from "./shared";
 import { assetPath } from "@/components/home/asset";
 import RobotCard from "./RobotCard";
-import PartsCatalogue from "./PartsCatalogue";
 import LocalDexSightings from "./LocalDexSightings";
 
 /* render_robots_index + robots.js: verdict chips and class chips are
@@ -19,15 +18,6 @@ import LocalDexSightings from "./LocalDexSightings";
    filter the slice calls drivetrain) and the parts search query. */
 
 const VERDICT_ORDER = ["PASS", "FAIL", "NOT_GATED"] as const;
-
-/* The illustration strip is fixed in the vanilla generator: the four
-   RobotForge-drawn robots, in dex order. */
-const DEX_STRIP = [
-  { file: "andino.svg", name: "Andino", dex: "#001" },
-  { file: "turtlebot3-burger.svg", name: "TurtleBot3 Burger", dex: "#002" },
-  { file: "turtlebot3-waffle-pi.svg", name: "TurtleBot3 Waffle Pi", dex: "#003" },
-  { file: "pathfinder.svg", name: "Pathfinder", dex: "#004" },
-];
 
 export default function RobotsIndex() {
   const dispatch = useDispatch<AppDispatch>();
@@ -120,32 +110,13 @@ export default function RobotsIndex() {
         })}
       </div>
 
-      <div className="dex-strip" aria-label="Robot illustrations">
-        {DEX_STRIP.map((d) => (
-          <figure key={d.file}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={assetPath(`assets/img/illustrations/${d.file}`)}
-              alt={`Illustration of ${d.name}`}
-              loading="lazy"
-            />
-            <figcaption>{d.dex} {d.name}</figcaption>
-          </figure>
-        ))}
-      </div>
-      <p className="sub">
-        RobotForge illustrations — drawn for this index; photos and gate badges
-        live on each robot&apos;s page.
-      </p>
-      <p>
-        <Link href="/kit/">
-          <strong>Take it apart in 3D &rarr;</strong> orbit, explode and export
-          the Burger kit as parametric CAD
-        </Link>
+      <p className="section-more">
+        <Link href="/kit/#parts">Browse the parts catalogue →</Link>{" "}
+        <span className="faint">{parts.length} real parts with datasheet specs, and the Burger kit in 3D.</span>
       </p>
 
-      <section className="section" id="families">
-        <h2>Robodex families — grouped sightings</h2>
+      <details className="section fold" id="families">
+        <summary><h2>Robot families and your sightings</h2></summary>
         <p className="sub">
           The same robot turns up in different configurations, so the dex
           groups sightings by family, then by variant: a variant is told
@@ -234,17 +205,7 @@ export default function RobotsIndex() {
           );
         })}
         <LocalDexSightings />
-      </section>
-
-      <section className="section" id="parts">
-        <h2>Parts catalogue</h2>
-        <p className="sub">
-          {parts.length} real parts with datasheet-sourced specs, grouped by
-          class. These are what the forge assembles robots from and checks
-          parts lists against.
-        </p>
-        <PartsCatalogue />
-      </section>
+      </details>
     </>
   );
 }

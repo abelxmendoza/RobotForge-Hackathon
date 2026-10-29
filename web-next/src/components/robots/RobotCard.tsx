@@ -3,6 +3,7 @@ import type { Robot } from "@/lib/types";
 import { robotSlug } from "@/lib/data";
 import { classPath, dexId, gateStatusOf, imgSrc, robotImage, staticCheckOf } from "./shared";
 import { StaticBadge, VerdictBadge } from "./badges";
+import RobotPhoto from "./RobotPhoto";
 
 /* site.py robot_card, byte-for-byte in structure: photo, dex number,
    name, taxonomy class path, verdict pill (recorded runs only), and
@@ -22,8 +23,7 @@ export default function RobotCard({ robot, hidden = false }: { robot: Robot; hid
     >
       {img ? (
         <div className={img.ai ? "ph ai" : "ph"}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imgSrc(img.src)} alt={alt} loading="lazy" />
+          <RobotPhoto src={imgSrc(img.src)} alt={alt} slug={robotSlug(robot)} name={robot.name} />
         </div>
       ) : (
         <div className="ph ai"></div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { robotSlug } from "@/lib/data";
 import type { Robot } from "@/lib/types";
 import { assetPath } from "./asset";
+import RobotPhoto from "@/components/robots/RobotPhoto";
 
 /**
  * One Robodex card in the landing robot row — a line-for-line port of
@@ -82,9 +83,7 @@ export default function RobotCard({ robot }: { robot: Robot }) {
     >
       {image ? (
         <div className={image.ai ? "ph ai" : "ph"}>
-          {/* Vanilla markup uses a plain <img>; next/image would alter it. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image.src} alt={alt} loading="lazy" />
+          <RobotPhoto src={image.src} alt={alt} slug={robotSlug(robot)} name={robot.name} />
         </div>
       ) : (
         <div className="ph ai"></div>

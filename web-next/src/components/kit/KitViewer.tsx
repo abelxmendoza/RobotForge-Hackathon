@@ -7,13 +7,10 @@
  * rules are carried in a <style> block scoped under .kitpage so they
  * cannot leak into the app shell (or vice versa).
  *
- * Below the kit.html content, the same Burger is shown in the
- * spec-driven take-apart panel (robot.js's TA panel, TakeApartViewer)
- * driven by its published spec file — the 2D/3D viewer the robot
- * pages use. */
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchJSON } from '../forge/model';
-import type { RobotSpec } from '../forge/model';
+ * The parts catalogue and the spec-driven take-apart viewer used to
+ * be repeated here; they now live once each, in PartsCatalogue (below
+ * this viewer on /kit/) and on the robot pages. */
+import { useEffect, useRef, useState } from 'react';
 import { parts as libParts } from '../forge/data';
 import type { CatalogPart } from '../forge/data';
 import {
@@ -28,7 +25,6 @@ import {
 } from './burger';
 import type { GeneratedKey, SpecimenDoc, SpecimenPart } from './burger';
 import KitScene from './KitScene';
-import TakeApartViewer from './TakeApartViewer';
 
 const KIT_CSS = `
 .kitpage{background:#14161a;color:#e8eaed;
@@ -127,17 +123,6 @@ export default function KitViewer() {
     ? `// ${selectedKey} — RobotForge kit module (mm)\n` + SCAD_MODULES[selectedKey]
     : assemblyScad(explodeCur);
 
-  const catalogue = useMemo(() => {
-    const groups = new Map<string, CatalogPart[]>();
-    libParts.forEach((p) => {
-      const arr = groups.get(p.part_class) || [];
-      arr.push(p);
-      groups.set(p.part_class, arr);
-    });
-    return Array.from(groups.entries()).sort((a, b) =>
-      a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
-    );
-  }, []);
 
   return (
     <div className="kitpage">
@@ -291,33 +276,6 @@ export default function KitViewer() {
           </section>
         </div>
 
-        <h2 style={{ marginTop: 36 }}>
-          Full catalogue{' '}
-          <span className="dim">
-            — {libParts.length} real parts, datasheet-sourced
-          </span>
-        </h2>
-        {catalogue.map(([cls, items]) => (
-          <div key={cls}>
-            <h3 className="cls">
-              {cls.replace(/_/g, ' ')}{' '}
-              <span className="dim">({items.length})</span>
-            </h3>
-            <table className="cat">
-              <tbody>
-                {items.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>{fmtSpecs(p)}</td>
-                    <td className="dim">{p.source}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
-
-        <SpecTakeApart />
       </div>
     </div>
   );
@@ -472,40 +430,3 @@ function DetailBody({
   );
 }
 
-/* The spec-driven take-apart for the same Burger, from its published
- * spec file — robot.js's viewer, as TakeApartViewer. */
-function SpecTakeApart() {
-  const [spec, setSpec] = useState<RobotSpec | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    let live = true;
-    fetchJSON<RobotSpec>('examples/turtlebot3-burger.json')
-      .then((s) => {
-        if (live) setSpec(s);
-      })
-      .catch(() => {
-        if (live) setFailed(true);
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return (
-    <section style={{ marginTop: 36 }}>
-      <h2>
-        The same Burger, from its spec{' '}
-        <span className="dim">
-          — the take-apart viewer the robot pages use
-        </span>
-      </h2>
-      {failed ? (
-        <div className="state-box">
-          The spec file could not be loaded, so there is nothing honest to
-          draw. The viewer builds only from published spec files.
-        </div>
-      ) : spec ? (
-        <TakeApartViewer spec={spec} />
-      ) : null}
-    </section>
-  );
-}

@@ -3,10 +3,9 @@
  * model, and whether that route is live right now. The second list is
  * what is deliberately NOT AI, so a reader can see where the model's
  * job ends and the deterministic checks take over. */
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { liveHealth, routeOn } from '@/components/forge/live';
-import type { LiveHealth } from '@/components/forge/model';
+import { routeOn } from '@/components/forge/live';
+import { useLiveHealth as useHealth } from '@/components/shell/LiveStatus';
 
 const OPEN = 'Muse Spark Open (Baseten, Fireworks failover)';
 const VISION = 'Muse Spark vision (muse-spark-1.3, Meta Model API)';
@@ -14,10 +13,10 @@ const VISION = 'Muse Spark vision (muse-spark-1.3, Meta Model API)';
 const ROWS: { step: string; model: string; route: string; where: string; href: string }[] = [
   { step: 'Plain words → engineering spec', model: OPEN, route: 'describe', where: 'Forge', href: '/forge/' },
   { step: 'Parts list → assembled draft', model: OPEN, route: 'list', where: 'Forge', href: '/forge/' },
-  { step: 'Robot photo or spec-sheet photo → draft (ESTIMATED / DOCUMENT-READ)', model: VISION, route: 'photo', where: 'Forge, Garage', href: '/forge/' },
-  { step: 'Failed check → proposed fix, up to 3 rounds', model: OPEN, route: 'fix', where: 'Demo, Garage', href: '/demo/' },
-  { step: 'Part photo → identified part, label values read', model: VISION, route: 'part', where: 'Parts', href: '/inventory/' },
-  { step: 'Confirm each part in a chat', model: OPEN, route: 'part_chat', where: 'Parts', href: '/inventory/' },
+  { step: 'Robot photo or spec-sheet photo → draft (ESTIMATED / DOCUMENT-READ)', model: VISION, route: 'photo', where: 'Forge, My robots', href: '/forge/' },
+  { step: 'Failed check → proposed fix, up to 3 rounds', model: OPEN, route: 'fix', where: 'Demo, My robots', href: '/demo/' },
+  { step: 'Part photo → identified part, label values read', model: VISION, route: 'part', where: 'My parts', href: '/inventory/' },
+  { step: 'Confirm each part in a chat', model: OPEN, route: 'part_chat', where: 'My parts', href: '/inventory/' },
   { step: 'Forge Guide follow-up questions', model: OPEN, route: 'chat', where: 'Every app page', href: '/forge/' },
 ];
 
@@ -28,16 +27,6 @@ const NOT_AI = [
   'URDF and Gazebo twin generation',
   'The Gazebo motion gate verdict, measured against ground truth',
 ];
-
-function useHealth() {
-  const [h, setH] = useState<LiveHealth | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    liveHealth().then((x) => { if (alive) setH(x); });
-    return () => { alive = false; };
-  }, []);
-  return h;
-}
 
 /* The landing page's short version: three jobs, one card each. */
 const JOBS: { title: string; body: string; routes: string[] }[] = [

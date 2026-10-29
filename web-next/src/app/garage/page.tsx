@@ -5,23 +5,20 @@ import AppShell from "@/components/shell/AppShell";
 import Garage from "@/components/garage/Garage";
 
 export const metadata: Metadata = {
-  title: "Garage",
+  title: "My robots",
   description: "Bring your robot in from a photo or a spec, plan hardware upgrades, and check each one before you buy parts.",
 };
 
 export default function GaragePage() {
   return (
-    <AppShell active="garage" crumbs={[{ label: "App", href: "/forge/" }, { label: "Garage" }]}>
+    <AppShell active="garage" crumbs={[{ label: "My robots" }]}>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Garage</div>
+          <div className="eyebrow">My robots</div>
           <h1>Your robots, and every upgrade you plan</h1>
           <p className="lede">
-            Bring in the robot you have, even a broken one. Change a battery, a motor
-            or the wheels in the editor and see what the change does before you spend
-            money: the engineering checks, the rover field checks, and a Muse Spark
-            fix when something doesn’t add up. Every upgrade is saved as a version,
-            so you can compare any two.
+            Bring in the robot you have, even a broken one, and try upgrades before
+            you buy parts. Every change is checked and saved as a version.
           </p>
         </div>
       </div>

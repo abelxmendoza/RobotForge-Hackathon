@@ -24,9 +24,9 @@ deciding on motors and batteries before a competition.
 |---|---|
 | **Demo** | One button: a broken robot, the checks that catch it, a Muse Spark fix the checks must accept, rover checks before and after, and the recorded Gazebo evidence. |
 | **Forge** | Words, a robot photo, a spec-sheet photo, a parts list or a 3D scan → a spec, checked. |
-| **Garage** | Bring in your robot (photo, spec file, or a Robodex robot), edit it, save every upgrade as a version, and compare any two: field diff, engineering checks and rover checks before and after. |
+| **My robots** (`/garage/`) | Bring in your robot (photo, spec file, or a Robodex robot), edit it, save every upgrade as a version, and compare any two: field diff, engineering checks and rover checks before and after. |
 | **Forge loop** | When the checks find a problem, Muse Spark proposes a fix, the validator re-checks it, up to three rounds. The model proposes; the checks decide; you approve. |
-| **Parts inventory** | Photograph the parts on your shelf. Muse Spark reads the labels and asks one question; you confirm each part in chat. Confirmed batteries, motors and wheels fit into a Garage robot with one click. |
+| **My parts** (`/inventory/`) | Photograph the parts on your shelf. Muse Spark reads the labels and asks one question; you confirm each part in chat. Confirmed batteries, motors and wheels fit into one of My robots with one click. |
 | **Rover field checks** | Slope climb, step climb and battery runtime, each with its assumptions listed (`robotforge rover`). |
 | **Evidence** | The Gazebo motion gate's recorded runs: drive, turn and stop measured against ground truth. |
 
@@ -35,7 +35,7 @@ deciding on motors and batteries before a competition.
 | Model | Where | What it does |
 |---|---|---|
 | Muse Spark (`muse-spark-1.3`, Meta Model API) | CLI describe, photo, document | Words → spec; robot photo → ESTIMATED draft; spec-sheet photo → transcribed values |
-| Muse Spark vision (Meta Model API) | Garage photo intake, Parts inventory | Robot photo → draft spec; part photo → identified part with label-read specs |
+| Muse Spark vision (Meta Model API) | My robots photo intake, My parts | Robot photo → draft spec; part photo → identified part with label-read specs |
 | Muse Spark Open (Baseten, Fireworks failover) | Live site: describe, parts lists, Forge Guide, Forge loop, part chat | Spec drafting, list import, guide answers, fix proposals, part confirmation chat |
 | SAM 3.1 (Meta Model API) | `robotforge describe --photo` | Cross-checks what Muse Spark saw in a photo against segmented regions |
 
@@ -173,7 +173,7 @@ The two `pathfinder` specs in `examples/` are a pair, made two different ways:
 ## Website
 
 The live site is the Next.js app in `web-next/`, deployed on Vercel at the
-domain root. It adds the **Garage** (`/garage/`) and the **Parts inventory**
+domain root. It adds **My robots** (`/garage/`) and **My parts**
 (`/inventory/`); both keep a visitor's robots and parts in that browser's
 local storage, with Export / Import JSON to move them. The original static
 site is kept alongside it under `/vanilla/`, and is described below.

@@ -121,8 +121,11 @@ export default function PartsCatalogue() {
       </div>
       <div id="parts-list">
         {rendered.map(({ g, any }) => (
-          <div className="parts-group" key={g.cls} hidden={!any}>
-            <h3>{g.label} <span>({g.items.length})</span></h3>
+          /* Groups fold to their name and count; a search or a deep
+             link to one part opens the groups that hold a match. */
+          <details className="parts-group fold" key={g.cls} hidden={!any}
+            open={Boolean(q) || g.items.some((p) => p.id === highlightId)}>
+            <summary><h3>{g.label} <span>({g.items.length})</span></h3></summary>
             <div className="part-list">
               {g.items.map((p) => (
                 <PartCard
@@ -137,7 +140,7 @@ export default function PartsCatalogue() {
                 />
               ))}
             </div>
-          </div>
+          </details>
         ))}
       </div>
       <p className="state-box" id="parts-empty" hidden={shownTotal > 0}>

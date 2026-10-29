@@ -10,7 +10,7 @@ body.app{min-height:100vh}
    after the rail. Below 1280px the guide is the floating widget
    again (chat.css) and the shell takes the full width. */
 @media (min-width:1280px){
-  .main{padding-left:320px}
+  .shell:has(.forge-chat.docked) .main{padding-left:320px}
 }
 .shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
 
@@ -48,7 +48,7 @@ body.app{min-height:100vh}
 .crumbs{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--text-faint);min-width:0}
 .crumbs a{color:var(--text-muted)}
 .crumbs .here{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar .recorded{margin-left:auto}
+.topbar .recorded,.topbar .gh-link{margin-left:auto}
 .topbar .mobile-brand{display:none}
 .content{padding:var(--s7) var(--s6) var(--s9);max-width:1120px;width:100%}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s5);flex-wrap:wrap;margin-bottom:var(--s6)}
@@ -130,7 +130,8 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 }
 .toolbar input[type="search"]:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .robot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--s4)}
-.parts-group + .parts-group{margin-top:var(--s5)}
+.parts-group + .parts-group{margin-top:var(--s3)}
+.parts-group[open] > .part-list{margin:var(--s3) 0 var(--s4)}
 .parts-group h3{font-size:var(--fs-sm);text-transform:capitalize;color:var(--text-muted);margin-bottom:var(--s2)}
 .parts-group h3 span{color:var(--text-faint);font-weight:500}
 .part-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
@@ -726,3 +727,18 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 @media (max-width:560px){.ai-cards{grid-template-columns:minmax(0,1fr)}}
 /* An open More menu sits where the floating chat button is. */
 .shell:has(.nav-more[open]) .forge-chat{display:none}
+
+/* Folded sections: secondary detail stays one tap away instead of
+   lengthening the page (Robots families, robot-page harness, later
+   Evidence reports). The summary carries the section's h2. */
+details.fold > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--text-muted);border-bottom:2px solid var(--text-muted);transform:rotate(-45deg);transition:transform .15s var(--ease);flex:none}
+details.fold[open] > summary::before{transform:rotate(45deg)}
+details.fold > summary h2,details.fold > summary h3{margin:0}
+details.fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
+.content .section-more{margin-top:var(--s4);font-weight:600}
+details.report-more{margin-top:var(--s3)}
+details.report-more > summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:var(--fs-sm);padding:6px 0}
+details.report-more[open] > summary{color:var(--text-muted)}
+details.report-more > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}

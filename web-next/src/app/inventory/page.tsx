@@ -5,16 +5,16 @@ import AppShell from "@/components/shell/AppShell";
 import Inventory from "@/components/inventory/Inventory";
 
 export const metadata: Metadata = {
-  title: "Parts inventory",
+  title: "My parts",
   description: "Photograph the robot parts you own, let Muse Spark identify them, and confirm each one in chat.",
 };
 
 export default function InventoryPage() {
   return (
-    <AppShell active="inventory" crumbs={[{ label: "App", href: "/forge/" }, { label: "Parts inventory" }]}>
+    <AppShell active="inventory" crumbs={[{ label: "My parts" }]}>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Parts inventory</div>
+          <div className="eyebrow">My parts</div>
           <h1>What’s on your shelf</h1>
           <p className="lede">
             Photograph your parts. Muse Spark reads the labels and asks one question

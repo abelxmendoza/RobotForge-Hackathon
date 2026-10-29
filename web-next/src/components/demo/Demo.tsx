@@ -98,7 +98,7 @@ export default function Demo() {
       ],
     };
     const err = writeStore(GARAGE_KEY, [...robots, robot]);
-    setSaved(err ? 'Couldn’t save: ' + err : 'Saved to your Garage with both versions.');
+    setSaved(err ? 'Couldn’t save: ' + err : 'Saved to My robots with both versions.');
   };
 
   const after = loop ? forgeValidateSpec(loop.finalSpec).lines : [];
@@ -172,7 +172,7 @@ export default function Demo() {
           <h2><span className="n">5</span> <span>Rover field checks</span></h2>
           {loop ? (
             <>
-              <p className="faint g-small">Indoor floor, 10° ramp, 10 mm threshold, 60-minute shift. First-order estimates; each names its assumptions in the Garage.</p>
+              <p className="faint g-small">Indoor floor, 10° ramp, 10 mm threshold, 60-minute shift. First-order estimates; each names its assumptions in My robots.</p>
               <RoverTable before={roverBefore} after={roverAfter} labels={['Broken', 'Fixed']} />
             </>
           ) : <p className="faint">Waiting for step 4.</p>}
@@ -197,8 +197,8 @@ export default function Demo() {
 
       {loop && (
         <div className="demo-end">
-          <button type="button" className="btn btn-primary" onClick={saveToGarage}>Save both versions to my Garage</button>
-          <Link className="btn" href="/garage/">Open the Garage</Link>
+          <button type="button" className="btn btn-primary" onClick={saveToGarage}>Save both versions to My robots</button>
+          <Link className="btn" href="/garage/">Open My robots</Link>
           {saved && <span className="faint" role="status">{saved}</span>}
         </div>
       )}

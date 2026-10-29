@@ -57,17 +57,18 @@ export default function HarnessSection({ rep, slug, specFile }:
     <section className="section" id="harness">
       <h2><Term k="harness">Harness</Term> checks</h2>
       <p className="sub">
-        Electrical computations over this robot&apos;s documented wiring
-        graph — voltage drop, ampacity, logic levels, rail budgets,
-        connector matching. Not a gate run and not a simulation: each
-        check is Checked, Partial or Not checked, and the headline is
-        counts, never a blanket pass.
+        Electrical checks over this robot&apos;s documented wiring. Not a
+        simulation; the headline is counts, never a blanket pass.
       </p>
       <div className="card">
         <HarnessBadge rep={rep} lg />
         <p className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
           {rep.headline}
         </p>
+        {/* The per-check table and the missing-data list are long and
+            mostly "not checked"; they fold behind the counts above. */}
+        <details className="report-more">
+        <summary>Check-by-check counts and missing data</summary>
         <div className="table-scroll" style={{ marginTop: 12 }}>
           <table className="data">
             <thead>
@@ -130,6 +131,7 @@ export default function HarnessSection({ rep, slug, specFile }:
             </div>
           </>
         ) : null}
+        </details>
         <p className="prov" style={{ marginTop: 12 }}>
           <span>
             <strong>Report:</strong>{" "}
