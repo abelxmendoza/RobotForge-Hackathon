@@ -35,6 +35,7 @@ measurements — only where the server process sits changes.
 from __future__ import annotations
 
 import gc
+import importlib
 import glob
 import math
 import os
@@ -47,7 +48,9 @@ import sys
 import threading
 import time
 from pathlib import Path
+from xml.sax.saxutils import escape
 
+from .gazebo import detect_release
 from .schema import RobotSpec
 from .urdf import box_inertia
 
@@ -81,7 +84,7 @@ def generate_sdf(spec: RobotSpec, *,
                 f"<izz>{izz:.6f}</izz></inertia></inertial>")
 
     out = ['<?xml version="1.0"?>', '<sdf version="1.9">',
-           f'<model name="{spec.name}">',
+           f'<model name="{escape(spec.name, {chr(34): "&quot;"})}">',
            f'  <link name="base_link"><pose>0 0 {chassis_z:.4f} 0 0 0</pose>',
            f'    {sdf_inertial(spec.mass_kg, spec.length_m, spec.width_m, spec.height_m)}',
            f'    <collision name="c"><geometry><box><size>{spec.length_m} '
@@ -177,7 +180,7 @@ def generate_world(spec: RobotSpec, model_sdf_path: str) -> str:
           <size>100 100</size></plane></geometry></visual>
       </link>
     </model>
-    <include><uri>file://{model_sdf_path}</uri><name>{spec.name}</name>
+    <include><uri>file://{escape(model_sdf_path)}</uri><name>{escape(spec.name)}</name>
       <pose>0 0 0 0 0 0</pose></include>
   </world>
 </sdf>
@@ -297,6 +300,7 @@ class _OdomStream:
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             start_new_session=True)
         self._tail = ""
+        self.trajectory: list[tuple[float, float, float]] = []
         self.latest: tuple[float, float, float] | None = None
 
     def poll(self) -> tuple[float, float, float] | None:
@@ -315,6 +319,7 @@ class _OdomStream:
         if self._tail:
             poses, self._tail = extract_odom_poses(self._tail)
             if poses:
+                self.trajectory.extend(poses)
                 self.latest = poses[-1]
         return self.latest
 
@@ -367,6 +372,17 @@ class _CmdVelStream:
 
 
 # ------------------------------------------------------------- transports
+_SYSTEM_DIST_PACKAGES = ("/usr/lib/python3/dist-packages",)
+
+
+def _ensure_system_dist_packages() -> None:
+    """Make distro-installed Gazebo Python bindings findable when running
+    inside an isolated virtualenv created without --system-site-packages."""
+    for p in _SYSTEM_DIST_PACKAGES:
+        if p not in sys.path and os.path.isdir(p):
+            sys.path.append(p)
+
+
 def _import_bindings():
     """Import the gz-transport Python bindings (gz.transport13 +
     gz.msgs10), returning (Node, Twist, Odometry) — or None when they are
@@ -382,17 +398,25 @@ def _import_bindings():
     small for that to matter. When protobuf is already loaded with a
     working implementation, the import simply succeeds as-is.
     """
-    try:
-        from gz.transport13 import Node
-    except Exception:
+    release = detect_release()
+    if release is None:
         return None
     if "google.protobuf" not in sys.modules:
-        os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION",
-                              "python")
+        os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
     try:
-        from gz.msgs10.odometry_pb2 import Odometry
-        from gz.msgs10.pose_v_pb2 import Pose_V
-        from gz.msgs10.twist_pb2 import Twist
+        Node = importlib.import_module(f"gz.transport{release.transport}").Node
+    except Exception:
+        _ensure_system_dist_packages()
+        try:
+            Node = importlib.import_module(
+                f"gz.transport{release.transport}").Node
+        except Exception:
+            return None
+    try:
+        prefix = f"gz.msgs{release.msgs}"
+        Odometry = importlib.import_module(prefix + ".odometry_pb2").Odometry
+        Pose_V = importlib.import_module(prefix + ".pose_v_pb2").Pose_V
+        Twist = importlib.import_module(prefix + ".twist_pb2").Twist
     except Exception:
         return None
     return Node, Twist, Odometry, Pose_V
@@ -426,6 +450,7 @@ class _BindingsTransport:
         self._closed = False
         self._node.subscribe(Odometry, "/odom", self._on_odom)
         self._model_name = model_name
+        self.trajectory = []
         self.truth_latest: tuple[float, float, float] | None = None
         self._node.subscribe(Pose_V, "/world/robotforge_world/dynamic_pose/info",
                              self._on_pose_v)
@@ -453,6 +478,7 @@ class _BindingsTransport:
                 with self._lock:
                     self.truth_latest = (p.x, p.y, _yaw_from_quat(
                         q.x, q.y, q.z, q.w))
+                    self.trajectory.append(self.truth_latest)
 
     def _publish_loop(self) -> None:
         period = 1.0 / self._RATE_HZ
@@ -499,10 +525,15 @@ class _CliTransport:
         self._cmd.set(linear, angular)
 
     def poll(self) -> tuple[float, float, float] | None:
+        self._truth.poll()
         return self._odom.poll()
 
     def poll_truth(self) -> tuple[float, float, float] | None:
         return self._truth.poll()
+
+    @property
+    def trajectory(self):
+        return self._truth.trajectory
 
     def close(self) -> None:
         self._cmd.stop()
@@ -525,6 +556,7 @@ class _TruthStream:
             start_new_session=True)
         self._tail = ""
         self._model_name = model_name
+        self.trajectory = []
         self.latest: tuple[float, float, float] | None = None
 
     def poll(self) -> tuple[float, float, float] | None:
@@ -543,6 +575,7 @@ class _TruthStream:
             poses, self._tail = extract_named_poses(self._tail,
                                                     self._model_name)
             if poses:
+                self.trajectory.extend(poses)
                 self.latest = poses[-1]
         return self.latest
 
@@ -558,7 +591,7 @@ def make_transport(log_path: Path, model_name: str = ""):
     bindings = _import_bindings()
     if bindings is not None:
         return _BindingsTransport(log_path, bindings, model_name), \
-            "gz-transport bindings (gz.transport13)"
+            f"gz-transport bindings (gz.transport{detect_release().transport})"
     return _CliTransport(log_path, model_name), "gz CLI (streamed)"
 
 
@@ -588,11 +621,18 @@ def _pose_stable(a: tuple[float, float, float],
 def _import_sim_bindings():
     """Import the gz-sim Python bindings (gz.sim8), returning
     (Server, ServerConfig) — or None when they are not importable."""
-    try:
-        from gz.sim8 import Server, ServerConfig
-    except Exception:
+    release = detect_release()
+    if release is None:
         return None
-    return Server, ServerConfig
+    try:
+        module = importlib.import_module(f"gz.sim{release.sim}")
+    except Exception:
+        _ensure_system_dist_packages()
+        try:
+            module = importlib.import_module(f"gz.sim{release.sim}")
+        except Exception:
+            return None
+    return module.Server, module.ServerConfig
 
 
 def _ensure_physics_engine_path(workdir: Path) -> None:
@@ -665,7 +705,7 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
         if sim is None:
             raise TwinError(
                 "in-process twin requested but the gz-sim Python "
-                "bindings (gz.sim8) are not importable")
+                "bindings for the detected release are not importable")
         _ensure_physics_engine_path(workdir)
         Server, ServerConfig = sim
         config = ServerConfig()
@@ -689,10 +729,10 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
             if bindings is None:
                 raise TwinError(
                     "in-process twin requires the gz-transport Python "
-                    "bindings (gz.transport13) for same-process delivery")
+                    "bindings for the detected release for same-process delivery")
             transport = _BindingsTransport(workdir / "odom.txt", bindings,
                                            spec.name)
-            transport_name = ("gz-transport bindings (gz.transport13) "
+            transport_name = (f"gz-transport bindings (gz.transport{detect_release().transport}) "
                               "[in-process gz-sim server]")
         else:
             if gz.poll() is not None:
@@ -783,10 +823,15 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
                           "measured_m": measured_drive,
                           "truth_m": truth_drive},
                 "turn": {"commanded_deg": turn_deg,
-                         "measured_deg": final_pose[2],
+                         "measured_deg": abs(heading_change_deg(
+                             mid_pose[2], final_pose[2])),
                          "truth_deg": abs(heading_change_deg(
                              truth_mid[2], truth_final[2]))},
-                "injected_wheel_radius_scale": wheel_radius_scale}
+                "injected_wheel_radius_scale": wheel_radius_scale,
+                "trajectory": {"source": "Gazebo ground truth",
+                               "units": "m, m, deg",
+                               "timing": "sample order; playback is not real-time",
+                               "poses": list(getattr(transport, "trajectory", ()))}}
     finally:
         if transport is not None:
             transport.close()
@@ -845,7 +890,7 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
         if _import_sim_bindings() is None or _import_bindings() is None:
             raise
         print(f"subprocess twin failed ({exc}); retrying with the "
-              "in-process gz-sim server (gz.sim8) — cross-process "
+              "in-process gz-sim server (detected release) — cross-process "
               "gz-transport discovery is unavailable on some hosts")
         return _run_motion_check_once(spec, workdir,
                                       embedded_server=True, **kwargs)

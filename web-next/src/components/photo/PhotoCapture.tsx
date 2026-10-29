@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {prepareImage} from './image';
-export default function PhotoCapture({onSelect,onClose}:{onSelect:(file:File,mode:'photo'|'document',note:string)=>void|Promise<void>;onClose:()=>void}){
+export default function PhotoCapture({onSelect,onClose,conversationOnly=false}:{onSelect:(file:File,mode:'photo'|'document',note:string)=>void|Promise<void>;onClose:()=>void;conversationOnly?:boolean}){
  const dialog=useRef<HTMLDialogElement>(null),video=useRef<HTMLVideoElement>(null),stream=useRef<MediaStream|null>(null),fileInput=useRef<HTMLInputElement>(null);
  const [file,setFile]=useState<File|null>(null),[preview,setPreview]=useState(''),[mode,setMode]=useState<'photo'|'document'>('photo'),[note,setNote]=useState(''),[camera,setCamera]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[rotation,setRotation]=useState(0);
  const stop=()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;setCamera(false);};
@@ -14,11 +14,11 @@ export default function PhotoCapture({onSelect,onClose}:{onSelect:(file:File,mod
  const use=async()=>{if(!file)return;setBusy(true);setError('');try{const data=await prepareImage(file,1600,rotation);const blob=await(await fetch(data)).blob();await onSelect(new File([blob],'robot-photo.jpg',{type:'image/jpeg'}),mode,note);}catch(e){setError(e instanceof Error?e.message:'Could not use photo')}finally{setBusy(false)}};
  return <dialog className="photo-dialog" ref={dialog} onCancel={e=>{e.preventDefault();if(!busy)onClose()}} aria-labelledby="photo-title"><div className="workspace-actions" style={{justifyContent:'space-between'}}><h2 id="photo-title">Capture your robot</h2><button className="btn" disabled={busy} onClick={onClose} aria-label="Close photo capture">Close</button></div>
  <p>Fit the whole robot in frame. Use good light and a plain background. Include a ruler for reference; a photo still does not establish measured dimensions.</p>
- <label>What are you showing?<select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="photo">Robot or component — estimated draft</option><option value="document">Spec sheet / blueprint — printed values only</option></select></label>
+ {!conversationOnly&&<label>What are you showing?<select value={mode} onChange={e=>setMode(e.target.value as typeof mode)}><option value="photo">Robot or component — estimated draft</option><option value="document">Spec sheet / blueprint — printed values only</option></select></label>}
  <div className="photo-stage">{camera?<video ref={video} autoPlay muted playsInline aria-label="Live camera preview"/>:preview?<img src={preview} alt="Review your robot photo before using it"/>:<p>No photo selected. Take one or upload an existing image.</p>}</div>
  <div className="workspace-actions"><button className="btn" disabled={busy} onClick={()=>fileInput.current?.click()}>Upload photo</button><button className="btn" disabled={busy} onClick={()=>void start()}>Open camera</button>{camera&&<button className="btn btn-primary" onClick={snap}>Take photo</button>}{file&&<><button className="btn" disabled={busy} onClick={()=>setRotation(r=>(r+90)%360)}>Rotate 90°</button><button className="btn" disabled={busy} onClick={()=>{setFile(null);setPreview('')}}>Retake / clear</button></>}</div>
  <input ref={fileInput} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{const f=e.target.files?.[0];if(f)select(f);e.target.value=''}}/>
- <label>What should we identify or change?<textarea rows={2} maxLength={1500} value={note} onChange={e=>setNote(e.target.value)} placeholder="Example: identify this rover and help me choose a camera mount"/></label>
+ {!conversationOnly&&<label>What should we identify or change?<textarea rows={2} maxLength={1500} value={note} onChange={e=>setNote(e.target.value)} placeholder="Example: identify this rover and help me choose a camera mount"/></label>}
  <p className="muted">Preview stays on this device. Using it in chat sends a resized image to the configured vision service only when you request analysis.</p>
- {error&&<p role="alert">{error}</p>}<button className="btn btn-primary" disabled={!file||!preview||busy} onClick={()=>void use()}>{busy?'Preparing photo…':'Use this photo'}</button></dialog>;
+ {error&&<p role="alert">{error}</p>}<button className="btn btn-primary" disabled={!file||!preview||busy} onClick={()=>void use()}>{busy?'Preparing photo…':conversationOnly?'Attach photo to chat':'Use this photo'}</button></dialog>;
 }

@@ -1,10 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import catalogReducer from "./catalogSlice";
 import workspaceReducer from "./workspaceSlice";
+import assistantReducer from "./assistantSlice";
 import forgeReducer from "./forgeSlice";
 
 export const makeStore = () =>
-  configureStore({ reducer: { catalog: catalogReducer, forge: forgeReducer, workspace: workspaceReducer } });
+  configureStore({ reducer: { catalog: catalogReducer, forge: forgeReducer, workspace: workspaceReducer, assistant: assistantReducer } });
 
 export type AppStore = ReturnType<typeof makeStore>;
 export type RootState = ReturnType<AppStore["getState"]>;

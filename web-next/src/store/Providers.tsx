@@ -1,6 +1,8 @@
 "use client";
 import { useRef, useEffect, useState, type ReactNode } from "react";
 import { Provider } from "react-redux";
+import { setFlow } from "./assistantSlice";
+import { validFlow } from "@/lib/conversation";
 import { setActiveRobot } from "./forgeSlice";
 import { hydrate } from "./workspaceSlice";
 import { validTable, validRecord } from "@/lib/workspace";
@@ -17,10 +19,14 @@ export default function Providers({ children }: { children: ReactNode }) {
     catch {storageReadable=false;setStorageError('Saved notebook could not be read. New changes remain in this session; export a backup.');}
     store.dispatch(hydrate({tables,records}));
     try{const raw=sessionStorage.getItem('robotforge-active-spec-v1');if(raw&&raw.length<50000){const active=JSON.parse(raw);if(active?.spec&&typeof active.spec==='object'&&!Array.isArray(active.spec)&&typeof active.source==='string')store.dispatch(setActiveRobot(active));}}catch{/* Active context is optional. */}
+    try{const raw=sessionStorage.getItem('robotforge-conversation-draft-v1');if(raw&&raw.length<500000){const draft=JSON.parse(raw);if(validFlow(draft,validRecord))store.dispatch(setFlow(draft));}}catch{/* Invalid drafts never become writes. */}
+    let previousFlow=store.getState().assistant.flow;
     let previousSpec=store.getState().forge.activeSpec;
 
     let previous=store.getState().workspace;
     const unsubscribe=store.subscribe(()=>{
+      const currentFlow=store.getState().assistant.flow;
+      if(currentFlow!==previousFlow){previousFlow=currentFlow;try{if(currentFlow)sessionStorage.setItem('robotforge-conversation-draft-v1',JSON.stringify(currentFlow));else sessionStorage.removeItem('robotforge-conversation-draft-v1');}catch{setStorageError('The conversation draft is only in this session. Saved notebook records are unchanged.');}}
       const forge=store.getState().forge;
       if(forge.activeSpec!==previousSpec){previousSpec=forge.activeSpec;try{if(forge.activeSpec)sessionStorage.setItem('robotforge-active-spec-v1',JSON.stringify({spec:forge.activeSpec,source:forge.source}));else sessionStorage.removeItem('robotforge-active-spec-v1');}catch{/* Notebook export remains available. */}}
       const next=store.getState().workspace;if(next.tables===previous.tables&&next.records===previous.records)return;previous=next;

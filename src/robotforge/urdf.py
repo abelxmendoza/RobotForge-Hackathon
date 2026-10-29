@@ -34,7 +34,7 @@ def _box_inertial(mass: float, x: float, y: float, z: float) -> str:
 
 
 def generate_urdf(spec: RobotSpec) -> str:
-    name = escape(spec.name)
+    name = escape(spec.name, {chr(34): "&quot;"})
     r = spec.wheel.diameter_m / 2.0
     chassis_z = spec.ground_clearance_m + spec.height_m / 2.0
     wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0

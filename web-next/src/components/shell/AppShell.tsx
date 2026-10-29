@@ -27,8 +27,8 @@ const NAV = [
 
 export interface Crumb { label: string; href?: string }
 
-export default function AppShell({ active, crumbs = [], children }:
-  { active: string; crumbs?: Crumb[]; children: ReactNode }) {
+export default function AppShell({ active, crumbs = [], children, showChat = true }:
+  { active: string; crumbs?: Crumb[]; children: ReactNode; showChat?: boolean }) {
   return (
     <div className="shell">
       <a className="workshop-skip" href="#content">Skip to workspace</a>

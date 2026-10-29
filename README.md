@@ -106,6 +106,19 @@ Fireworks model. The stderr line names the transport that actually
 produced the spec, e.g. `describe transport: fireworks
 (accounts/fireworks/models/muse-spark-open), forced`.
 
+## Procedural 3D assets
+
+```bash
+robotforge assets examples/pathfinder.json --out-dir build/pathfinder-assets
+```
+
+Open `build/pathfinder-assets/viewer.html` to inspect the generated robot. The
+bundle includes checked OBJ meshes, provenance, URDF/SDF and an offline viewer.
+Forge also exposes its interactive 3D take-apart view. New motion-gate reports
+capture ground-truth poses for sample-order replay in the exported viewer.
+Harmonic and Jetty use matching optional Python binding families.
+See [mesh pipeline, scope and replay](docs/MESH_PIPELINE.md).
+
 ## Examples
 
 The two `pathfinder` specs in `examples/` are a pair, made two different ways:

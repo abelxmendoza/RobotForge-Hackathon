@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: { default: "RobotForge", template: "%s · RobotForge" },
   description: "Check a robot before you build it — describe it, spec it, gate its simulated twin against ground truth.",
 };
-export const viewport: Viewport = { themeColor: "#0f1115" };
+export const viewport: Viewport = { themeColor: "#0b1420" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

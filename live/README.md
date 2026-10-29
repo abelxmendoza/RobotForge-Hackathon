@@ -172,3 +172,15 @@ binding (`RF_LIVE_KV`), the variables (`LIVE_ENABLED`, `DAILY_LIMIT`,
 secrets (`BASETEN_API_KEY`, optionally `META_API_KEY`) under
 Settings → Variables and Secrets (encrypt the keys). Same result;
 `wrangler.toml` stays the record of the intended settings.
+
+## Notebook/chat discovery extension
+
+The updated app can send bounded `context` and `history` with `/chat`.
+New read-only routes are `/sheet` (already-readable Google Sheet CSV snapshot),
+`/research` (optional Brave web search, otherwise attributed Wikipedia background),
+and `/models` (public GitHub CAD-file discovery, up to three pinned candidates).
+They share the existing budget, CORS and kill switch. Optional
+`BRAVE_SEARCH_API_KEY` is a Worker secret, never a client-side key.
+Private Google Sheets OAuth is not configured; no permission is changed by the
+importer. See [Notebook and chat contracts](../docs/NOTEBOOK_AND_CHAT.md).
+Deploy this Worker alongside the app update to activate the new external routes.

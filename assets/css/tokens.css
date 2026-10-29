@@ -1,32 +1,34 @@
 /* RobotForge design tokens + shared components.
    Used by both surfaces: the landing page (site.css) and the app
-   (app.css). Charcoal + forge amber. Amber is reserved for actions,
+   (app.css). Deep Ocean navy + teal. Teal is reserved for actions,
    the active nav item and focus; verdict colours only ever appear
    next to their verdict word. No external fonts or assets. */
 
 :root{
   /* surfaces */
-  --bg:#0f1115;
-  --surface:#171a20;
-  --surface-2:#1e222a;
-  --surface-3:#262b35;
-  --border:#2a2f38;
-  --border-strong:#3a404b;
+  --bg:#0b1420;
+  --surface:#142333;
+  --surface-2:#1b2e42;
+  --surface-3:#243c52;
+  --border:#2b4359;
+  --border-strong:#405e77;
   /* text */
-  --text:#eceef2;
-  --text-muted:#9aa3ae;
-  --text-faint:#6f7884;
+  --text:#edf4fa;
+  --text-muted:#9bafc1;
+  --text-faint:#8b9fb3;
   /* brand */
-  --accent:#f59e0b;
-  --accent-ink:#1a1204;
-  --accent-soft:rgba(245,158,11,.12);
+  --accent:#42d6c4;
+  --accent-ink:#082521;
+  --accent-soft:rgba(66,214,196,.12);
+  --link:#83b8ff;
+  --line:var(--border);
   /* verdicts — always paired with a label */
   --pass:#34d399;
-  --marginal:#facc15;
+  --marginal:#f2bc66;
   --fail:#f87171;
   --norun:#8b95a3;
   --pass-soft:rgba(52,211,153,.10);
-  --marginal-soft:rgba(250,204,21,.10);
+  --marginal-soft:rgba(242,188,102,.10);
   --fail-soft:rgba(248,113,113,.10);
   /* type */
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -47,7 +49,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 img,svg,canvas{display:block;max-width:100%}
-a{color:var(--accent);text-decoration:none}
+a{color:var(--link);text-decoration:none}
 a:hover{text-decoration:underline;text-underline-offset:3px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 code,pre,.mono,.num{font-family:var(--mono)}
@@ -75,7 +77,7 @@ h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
 .btn:active{transform:translateY(1px)}
 .btn[disabled]{opacity:.4;cursor:default}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn-primary:hover{background:#fbb02e;border-color:#fbb02e}
+.btn-primary:hover{background:#72e6d7;border-color:#72e6d7}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--text-muted)}
 .btn-ghost:hover{background:var(--surface-2);color:var(--text)}
 .btn-sm{padding:8px 12px;font-size:var(--fs-xs)}
@@ -114,7 +116,7 @@ h1,h2,h3,h4{line-height:1.15;letter-spacing:-.015em;font-weight:700}
   display:inline-flex;align-items:center;gap:6px;
   font:700 12px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;
   padding:6px 10px;border-radius:999px;white-space:nowrap;
-  color:var(--accent);border:1px dashed var(--accent);background:rgba(245,158,11,.07);
+  color:var(--accent);border:1px dashed var(--accent);background:var(--accent-soft);
 }
 .harness-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
 .harness-badge.lg{font-size:14px;padding:9px 14px}

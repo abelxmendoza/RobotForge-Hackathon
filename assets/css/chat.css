@@ -15,7 +15,7 @@
   box-shadow:0 10px 28px rgba(0,0,0,.5);
   transition:background .15s var(--ease),transform .15s var(--ease);
 }
-.fc-launcher:hover{background:#fbb02e}
+.fc-launcher:hover{background:var(--accent-hover,#72e6d7)}
 .fc-launcher:active{transform:translateY(1px)}
 .fc-launcher svg{width:19px;height:19px;flex:none}
 
@@ -58,13 +58,13 @@
   border:1px solid var(--border);border-bottom-left-radius:4px;
 }
 .fc-msg.user{
-  justify-self:end;background:var(--accent);color:var(--accent-ink);
+  justify-self:end;background:#173f43;color:var(--text);border:1px solid #2c6668;
   border-bottom-right-radius:4px;font-weight:600;
 }
 .fc-msg p + p{margin-top:8px}
 .fc-msg ul{margin:8px 0 2px;padding-left:19px}
 .fc-msg li + li{margin-top:3px}
-.fc-msg a{color:var(--accent)}
+.fc-msg a{color:var(--link)}
 .fc-dim{color:var(--text-faint);font-size:var(--fs-xs)}
 
 .fc-hits{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}

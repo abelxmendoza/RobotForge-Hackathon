@@ -227,3 +227,172 @@ def test_physics_engine_path_links_versioned_plugin(tmp_path, monkeypatch):
     assert os.environ["GZ_SIM_PHYSICS_ENGINE_PATH"] == str(link_dir)
     assert (link_dir / "libgz-physics-dartsim-plugin.so").is_symlink()
     assert (link_dir / "libgz-physics7-dartsim-plugin.so").is_symlink()
+
+
+def test_odom_and_truth_streams_initialize_and_record_trajectory(
+        tmp_path, monkeypatch):
+    import io
+
+    class _FakeProc:
+        pid = 999999
+
+        def __init__(self, payload: bytes):
+            self.stdout = io.BytesIO(payload)
+
+        def wait(self, timeout=None):
+            return 0
+
+    odom_payload = (
+        b"pose { position { x: 0.0 y: 0.0 } orientation { w: 1.0 } }\n"
+        b"pose { position { x: 0.5 y: 0.0 } orientation { w: 1.0 } }\n"
+    )
+    truth_payload = (
+        b'name: "pathfinder"\n'
+        b"position { x: 0.0 y: 0.0 }\norientation { w: 1.0 }\n"
+        b'name: "pathfinder"\n'
+        b"position { x: 0.5 y: 0.0 }\norientation { w: 1.0 }\n"
+    )
+
+    monkeypatch.setattr(twin.subprocess, "Popen",
+                        lambda cmd, **kw: _FakeProc(
+                            odom_payload if "/odom" in cmd else truth_payload))
+    monkeypatch.setattr(twin.select, "select",
+                        lambda r, w, x, t: (r, [], []))
+
+    odom_stream = twin._OdomStream(tmp_path / "odom.txt")
+    assert odom_stream.trajectory == []
+    reads = [odom_payload, b""]
+    monkeypatch.setattr(twin.os, "read", lambda fd, n: reads.pop(0))
+    monkeypatch.setattr(odom_stream._proc.stdout, "fileno", lambda: 1)
+    latest = odom_stream.poll()
+    assert latest == (0.5, 0.0, 0.0)
+    assert len(odom_stream.trajectory) == 2
+
+
+def test_cli_transport_poll_drains_truth_and_odom(tmp_path, monkeypatch):
+    calls = []
+
+    class _FakeOdom:
+        def __init__(self, log_path):
+            self.trajectory = []
+
+        def poll(self):
+            calls.append("odom")
+            return (1.0, 0.0, 0.0)
+
+        def close(self):
+            pass
+
+    class _FakeTruth:
+        def __init__(self, log_path, model_name):
+            self.trajectory = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
+
+        def poll(self):
+            calls.append("truth")
+            return (1.0, 0.0, 0.0)
+
+        def close(self):
+            pass
+
+    class _FakeCmd:
+        def set(self, linear, angular):
+            pass
+
+        def stop(self):
+            pass
+
+    monkeypatch.setattr(twin, "_OdomStream", _FakeOdom)
+    monkeypatch.setattr(twin, "_TruthStream", _FakeTruth)
+    monkeypatch.setattr(twin, "_CmdVelStream", _FakeCmd)
+
+    tr = twin._CliTransport(tmp_path / "odom.txt", "pathfinder")
+    pose = tr.poll()
+    assert pose == (1.0, 0.0, 0.0)
+    assert calls == ["truth", "odom"]
+    assert tr.trajectory == [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
+
+
+def test_run_motion_check_once_uses_relative_wrap_safe_odom_heading(
+        tmp_path, monkeypatch):
+    # Start heading at 110 deg, drive to (1.0, 0.0, 110 deg), then turn
+    # +90 deg across the +180/-180 wrap to -160 deg. Odometry turn
+    # measurement must be 90.0 deg (relative change from mid_pose[2]),
+    # NOT abs(-160.0) == 160.0 deg.
+    odom_poses = [
+        (0.0, 0.0, 110.0),    # start_pose
+        (1.0, 0.0, 110.0),    # drive_reached
+        (1.0, 0.0, 110.0),    # drive settle prev
+        (1.0, 0.0, 110.0),    # drive settle stable -> mid_pose
+        (1.0, 0.0, -160.0),   # turn_reached (+90 deg from +110 deg = -160 deg)
+        (1.0, 0.0, -160.0),   # turn settle prev
+        (1.0, 0.0, -160.0),   # turn settle stable -> final_pose
+    ]
+    truth_poses = [
+        (0.0, 0.0, 110.0),    # truth_start
+        (1.0, 0.0, 110.0),    # truth_mid
+        (1.0, 0.0, -160.0),   # truth_final
+    ]
+
+    class _FakeProc:
+        pid = 12345
+
+        def poll(self):
+            return None
+
+        def wait(self, timeout=None):
+            return 0
+
+    class _FakeTransport:
+        trajectory = [(0.0, 0.0, 110.0), (1.0, 0.0, 110.0), (1.0, 0.0, -160.0)]
+
+        def set(self, linear, angular):
+            pass
+
+        def poll(self):
+            return odom_poses.pop(0) if len(odom_poses) > 1 else odom_poses[0]
+
+        def poll_truth(self):
+            return truth_poses.pop(0) if len(truth_poses) > 1 else truth_poses[0]
+
+        def close(self):
+            pass
+
+    clock = [0.0]
+
+    def _fake_monotonic():
+        clock[0] += 1.1
+        return clock[0]
+
+    monkeypatch.setattr(twin.subprocess, "Popen", lambda *a, **k: _FakeProc())
+    monkeypatch.setattr(twin, "_kill_group", lambda proc: None)
+    monkeypatch.setattr(twin, "make_transport",
+                        lambda *a, **k: (_FakeTransport(), "fake"))
+    monkeypatch.setattr(twin.time, "sleep", lambda s: None)
+    monkeypatch.setattr(twin.time, "monotonic", _fake_monotonic)
+
+    spec = RobotSpec.from_json(EXAMPLE.read_text())
+    res = twin._run_motion_check_once(spec, tmp_path / "work")
+    assert abs(res["turn"]["measured_deg"] - 90.0) < 1e-6
+    assert abs(res["turn"]["truth_deg"] - 90.0) < 1e-6
+
+
+@pytest.mark.parametrize("drive_truth,turn_truth,expected_msg", [
+    (0.0, 0.0, "captured no motion"),
+    (0.0, 45.0, "captured no drive motion"),
+    (1.0, 0.0, "captured no turn motion"),
+])
+def test_cli_run_gate_rejects_partial_zero_truth_motion(
+        tmp_path, monkeypatch, capsys, drive_truth, turn_truth, expected_msg):
+    monkeypatch.setattr(cli, "run_motion_check", lambda *a, **k: {
+        "drive": {"commanded_m": 1.0, "measured_m": 1.0,
+                  "truth_m": drive_truth},
+        "turn": {"commanded_deg": 90.0, "measured_deg": 90.0,
+                 "truth_deg": turn_truth},
+        "injected_wheel_radius_scale": 1.0,
+    })
+    rc = cli.main(["run-gate", str(EXAMPLE), "--workdir",
+                   str(tmp_path / "work")])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert expected_msg in err
+    assert "Traceback" not in err

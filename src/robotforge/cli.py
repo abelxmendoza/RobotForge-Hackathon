@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -31,6 +32,7 @@ from .stability import StabilityError, check_spec, format_stability_report
 from .schema import RobotSpec, SpecError, spec_is_estimated
 from .twin import TwinError, run_motion_check
 from .urdf import generate_urdf
+from .meshes import write_bundle
 from .validate import has_errors, validate
 
 
@@ -251,6 +253,10 @@ def main(argv: list[str] | None = None) -> int:
     u = sub.add_parser("urdf", help="generate URDF from a valid spec")
     u.add_argument("spec")
     u.add_argument("--out", required=True)
+
+    mb = sub.add_parser("assets", help="export validated rover meshes, URDF/SDF and an offline 3D viewer")
+    mb.add_argument("spec")
+    mb.add_argument("--out-dir", required=True)
 
     cd = sub.add_parser("cad", help="generate a take-apart OpenSCAD parts "
                                     "kit from a valid spec")
@@ -570,6 +576,16 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             print(f"URDF written to {args.out}")
             return 0
+        if args.cmd == "assets":
+            try:
+                manifest = write_bundle(spec, Path(args.out_dir))
+            except OSError as exc:
+                print(f"asset export error: {exc}", file=sys.stderr)
+                return 2
+            print(f"Exported {len(manifest['assets'])} checked meshes to {args.out_dir}")
+            print(f"Open {Path(args.out_dir) / 'viewer.html'} to inspect the robot")
+            print(manifest["scope"])
+            return 0
         if args.cmd == "cad":
             rc = _print_findings(spec)
             if rc:
@@ -640,14 +656,29 @@ def main(argv: list[str] | None = None) -> int:
                 print("refusing to run the gate on an invalid spec",
                       file=sys.stderr)
                 return rc
+            def _require_truth_motion(run_res: dict) -> None:
+                drive_truth = run_res["drive"]["truth_m"]
+                turn_truth = run_res["turn"]["truth_deg"]
+                if drive_truth <= 0 and turn_truth <= 0:
+                    raise TwinError(
+                        "ground-truth stream captured no motion — the run is "
+                        "invalid, refusing to judge odometry against nothing")
+                if drive_truth <= 0:
+                    raise TwinError(
+                        "ground-truth stream captured no drive motion — the "
+                        "run is invalid, refusing to judge odometry distance "
+                        "against zero")
+                if args.turn_deg > 0 and turn_truth <= 0:
+                    raise TwinError(
+                        "ground-truth stream captured no turn motion — the "
+                        "run is invalid, refusing to judge odometry heading "
+                        "against zero")
+
             res = run_motion_check(spec, Path(args.workdir),
                                    drive_m=args.drive_m, turn_deg=args.turn_deg,
                                    wheel_radius_scale=args.inject_wheel_scale,
                                    embedded=True if args.in_process else None)
-            if res["drive"]["truth_m"] <= 0 and res["turn"]["truth_deg"] <= 0:
-                raise TwinError(
-                    "ground-truth stream captured no motion — the run is "
-                    "invalid, refusing to judge odometry against nothing")
+            _require_truth_motion(res)
             # Primary acceptance is against ground truth (what actually
             # happened); odometry checks judge what the robot believed.
             report = evaluate_run([
@@ -669,6 +700,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"GATE: {report.verdict}")
             report_path = Path(args.workdir) / "gate-report.json"
             report_doc = {"spec": spec.name,
+                          "spec_sha256": hashlib.sha256(json.dumps(spec.to_dict(), sort_keys=True).encode()).hexdigest(),
                           "measurements": res,
                           **report.to_dict()}
             report_path.write_text(json.dumps(report_doc, indent=2) + "\n")
@@ -691,6 +723,7 @@ def main(argv: list[str] | None = None) -> int:
                                         Path(args.workdir) / "repaired",
                                         drive_m=args.drive_m,
                                         turn_deg=args.turn_deg)
+                _require_truth_motion(res2)
                 report2 = evaluate_run([
                     evaluate_drive(res2["drive"]["commanded_m"],
                                    res2["drive"]["truth_m"]),
@@ -707,7 +740,8 @@ def main(argv: list[str] | None = None) -> int:
                           f"{c.commanded}, measured {c.measured:.3f}, "
                           f"error {c.error} {c.unit}")
                 print(f"GATE AFTER REPAIR: {report2.verdict}")
-                doc2 = {"spec": repaired.name, "measurements": res2,
+                doc2 = {"spec": repaired.name,
+                        "spec_sha256": hashlib.sha256(json.dumps(repaired.to_dict(), sort_keys=True).encode()).hexdigest(), "measurements": res2,
                         "repair_of": str(report_path), **report2.to_dict()}
                 (Path(args.workdir) / "repaired"
                  / "gate-report.json").write_text(
