@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Fragment } from "react";
 import CopyButton from "./CopyButton";
 
@@ -120,40 +121,9 @@ export default function HowItWorks() {
         </div>
       </div>
 
-      <div className="card thresholds">
-        <div className="card-head">
-          <h3 style={{ fontSize: "var(--fs-md)" }}>Locked thresholds</h3>
-          <span className="faint" style={{ fontSize: "var(--fs-xs)" }}>
-            Printed on every report, never quietly loosened
-          </span>
-        </div>
-        <div className="table-scroll" style={{ marginTop: 12 }}>
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Measurement</th>
-                <th>Pass</th>
-                <th>Marginal</th>
-                <th>Fail</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Distance error</td>
-                <td className="num">≤ 5%</td>
-                <td className="num">5–10%</td>
-                <td className="num">&gt; 10%</td>
-              </tr>
-              <tr>
-                <td>Heading error</td>
-                <td className="num">≤ 5°</td>
-                <td className="num">5–10°</td>
-                <td className="num">&gt; 10°</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <p className="section-more">
+        <Link href="/evidence/">The locked pass and fail thresholds, and every recorded report →</Link>
+      </p>
 
       <div className="card quickstart">
         <div className="card-head">

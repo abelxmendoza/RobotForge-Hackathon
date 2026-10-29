@@ -7,8 +7,7 @@
  * configured.
  *
  * Live-model hook: when a deployment configures the live endpoint
- * (LIVE_ENDPOINT below — empty in the committed site, mirroring
- * assets/js/live-config.js) and /health answers, a question the local
+ * (LIVE_ENDPOINT from components/forge/live.tsx) and /health answers, a question the local
  * engine honestly cannot answer (its `fallback: true` result) is
  * offered to the live model at POST /chat. The reply is rendered
  * escaped and badged "LIVE MODEL — not from recorded RobotForge
@@ -23,7 +22,7 @@
  * Routes: the engine already returns Next routes (/robots/<slug>/,
  * /evidence/, /forge/). Robot/kind/route hits navigate with the Next
  * router; part hits dispatch a window CustomEvent "rf-focus-part"
- * (detail {id}) and land on /robots/?part=<id>#parts.
+ * (detail {id}) and land on /kit/?part=<id>#parts.
  */
 import {
   useCallback,
@@ -50,11 +49,8 @@ import { gateReports, parts, robots } from "@/lib/data";
 import partsDoc from "@/data/parts.json";
 import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
+import { LIVE_ENDPOINT } from "@/components/forge/live";
 
-/* Deployment live-endpoint config (assets/js/live-config.js in the
- * vanilla site): EMPTY in the committed site — recorded answers
- * only, no network calls, no badges. */
-const LIVE_ENDPOINT = "https://robotforge-live.abelxmendoza.workers.dev";
 
 const DEFAULT_CHIPS = [
   "Which robots passed the gate?",
@@ -260,7 +256,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
 
   /* ---------------- part focus + in-page actions ---------------- */
 
-  const onRobotsPage = Boolean(pathname && pathname.startsWith("/robots"));
+  const onPartsPage = Boolean(pathname && pathname.startsWith("/kit"));
 
   const dispatchFocusPart = useCallback((id: string) => {
     window.dispatchEvent(
@@ -268,15 +264,15 @@ export function ChatWidget({ docked }: { docked: boolean }) {
     );
   }, []);
 
-  /* A part hit: on the Robots page, focus the part there (event +
+  /* A part hit: on the Parts catalogue page, focus the part there (event +
    * the ?part= deep link the page understands); from anywhere else,
    * navigate to that deep link. */
   const focusPartHit = useCallback(
     (hit: Hit) => {
       if (!hit.id) return;
       dispatchFocusPart(hit.id);
-      const url = "/robots/?part=" + encodeURIComponent(hit.id) + "#parts";
-      if (onRobotsPage) {
+      const url = "/kit/?part=" + encodeURIComponent(hit.id) + "#parts";
+      if (onPartsPage) {
         noteBubble(
           "I highlighted “" + hit.label + "” in the parts catalogue on this page."
         );
@@ -285,7 +281,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
         router.push(url);
       }
     },
-    [dispatchFocusPart, noteBubble, onRobotsPage, router]
+    [dispatchFocusPart, noteBubble, onPartsPage, router]
   );
 
   /* A real in-page action, not just an answer: on a page with the
@@ -318,7 +314,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
     (q: string, ans: AnswerResult) => {
       if (/^(find|search|show|filter)\b/i.test(q) && ans.hits) {
         const partHits = ans.hits.filter((h) => h.kind === "part");
-        if (partHits.length && onRobotsPage && partHits[0].id) {
+        if (partHits.length && onPartsPage && partHits[0].id) {
           dispatchFocusPart(partHits[0].id);
           noteBubble(
             "I highlighted the first match, “" +
@@ -331,7 +327,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
       }
       filterPartsHere(q);
     },
-    [dispatchFocusPart, filterPartsHere, noteBubble, onRobotsPage]
+    [dispatchFocusPart, filterPartsHere, noteBubble, onPartsPage]
   );
 
   /* ---------------- asking ---------------- */
@@ -464,7 +460,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
           <path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z" />
           <path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
         </svg>
-        <span>Forge Guide</span>
+        <span>{docked ? "Forge Guide" : "Ask the Guide"}</span>
       </button>
       <section
         className="fc-panel"

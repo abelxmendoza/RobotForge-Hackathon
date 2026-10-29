@@ -1229,11 +1229,9 @@ export default function ForgeThread() {
     initedRef.current = true;
     pushNote(
       <p>
-        <strong>Welcome to the Forge.</strong> Type a robot description, or
-        attach a photo, a parts list, a spec file, or a .ply scan. Spec files
-        are checked and drawn entirely in your browser, and scans are measured
-        right here; photo and list imports need the live endpoint; the recorded
-        sample runs below always work.
+        <strong>Welcome to the Forge.</strong> Photo and parts-list imports need
+        the live endpoint; spec files, scans and the recorded samples below
+        always work.
       </p>,
     );
     (async () => {

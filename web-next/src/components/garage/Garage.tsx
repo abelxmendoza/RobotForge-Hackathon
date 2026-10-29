@@ -132,7 +132,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
       )}
       {mode === 'file' && (
         <div className="g-pane">
-          <p className="muted">A RobotForge spec JSON, for example one written by <code>robotforge describe</code> or exported from this Garage.</p>
+          <p className="muted">A RobotForge spec JSON, for example one written by <code>robotforge describe</code> or exported from My robots.</p>
           <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => fromFile(e.target.files?.[0])} />
           <button type="button" className="btn btn-primary" onClick={() => fileRef.current?.click()}>Choose a spec file</button>
         </div>
@@ -445,7 +445,7 @@ export default function Garage() {
           <>
             <div className="g-head">
               <div>
-                <div className="eyebrow">Garage</div>
+                <div className="eyebrow">My robots</div>
                 <h2>{draft.name || robot.name}</h2>
               </div>
               <div className="g-head-actions">

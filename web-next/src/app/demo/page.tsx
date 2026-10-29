@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import Demo from "@/components/demo/Demo";
 import Link from "next/link";
-import { AiInsideCards } from "@/components/home/AiInside";
 
 export const metadata: Metadata = {
   title: "Demo",
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function DemoPage() {
   return (
-    <AppShell active="demo" crumbs={[{ label: "App", href: "/forge/" }, { label: "Demo" }]}>
+    <AppShell active="demo" crumbs={[{ label: "Demo" }]}>
       <div className="page-head">
         <div>
           <div className="eyebrow">One-click demo</div>
@@ -26,11 +25,9 @@ export default function DemoPage() {
         </div>
       </div>
       <Demo />
-      <section className="demo-ai" aria-labelledby="demo-ai-h">
-        <h2 id="demo-ai-h">AI inside RobotForge</h2>
-        <AiInsideCards />
-        <p className="section-more"><Link href="/how-it-works/#ai-inside">Every place Muse Spark works, and whether it is live now →</Link></p>
-      </section>
+      <p className="section-more">
+        <Link href="/how-it-works/#ai-inside">Where else Muse Spark works in RobotForge, and whether it is live now →</Link>
+      </p>
     </AppShell>
   );
 }

@@ -11,6 +11,7 @@ import { StaticBadge, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
+import RobotPhoto from "./RobotPhoto";
 
 /* render_robot_page (site.py): hero, spec + provenance, gate runs,
    static stability summary, harness checks, take-apart, reproduce.
@@ -167,11 +168,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
         {img ? (
           <figure>
             <div className={img.ai ? "ph ai" : "ph"}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imgSrc(img.src)}
-                alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")}
-              />
+              <RobotPhoto src={imgSrc(img.src)} slug={slug} name={robot.name}
+                alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")} />
             </div>
             {img.caption ? <figcaption>{img.caption}</figcaption> : null}
           </figure>

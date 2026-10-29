@@ -123,6 +123,10 @@ export default function ReportCard({
         <VerdictBadge status={d.verdict} lg />
       </div>
       <p className="story">{run.story}</p>
+      {/* Only the first report opens by default; the rest fold to their
+          verdict and story, one tap from the full measurements. */}
+      <details className="report-more" open={index === 0}>
+      <summary>Measurements, path and suspects</summary>
       <div className="report-grid">
         <div>
           <div className="checks">
@@ -207,6 +211,7 @@ export default function ReportCard({
           )}
         </div>
       </div>
+      </details>
     </article>
   );
 }

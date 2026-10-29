@@ -51,14 +51,21 @@ export interface LiveModeState {
   noteSuccess: () => void;
 }
 
-export function useLiveMode(route: string, fallback: 'recorded' | 'mock'): LiveModeState {
+/* The endpoint's /health answer: undefined while checking, null when
+ * it can't be reached. */
+export function useLiveHealth(): LiveHealth | null | undefined {
   const [health, setHealth] = useState<LiveHealth | null | undefined>(undefined);
-  const [failure, setFailure] = useState('');
   useEffect(() => {
     let alive = true;
     liveHealth().then((h) => { if (alive) setHealth(h); });
     return () => { alive = false; };
   }, []);
+  return health;
+}
+
+export function useLiveMode(route: string, fallback: 'recorded' | 'mock'): LiveModeState {
+  const health = useLiveHealth();
+  const [failure, setFailure] = useState('');
   const noteFailure = useCallback((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     setFailure('the last live call failed (' + msg + ')');

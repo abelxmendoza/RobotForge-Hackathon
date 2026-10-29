@@ -300,7 +300,7 @@ export default function Inventory() {
           {shown.length === 0 && (
             <div className="inv-empty">
               <h3>{parts.length ? 'Nothing in this filter' : 'Start with what’s on your shelf'}</h3>
-              <p className="muted">Photograph each part, or a few at once. Muse Spark reads the labels, guesses the rest, and asks you one question to confirm. Confirmed batteries, motors and wheels can be fitted to a robot in the <Link href="/garage/">Garage</Link>.</p>
+              <p className="muted">Photograph each part, or a few at once. Muse Spark reads the labels, guesses the rest, and asks you one question to confirm. Confirmed batteries, motors and wheels can be fitted to a robot in <Link href="/garage/">My robots</Link>.</p>
             </div>
           )}
           {shown.map((p) => <PartCard key={p.id} p={p} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}

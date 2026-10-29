@@ -22,22 +22,17 @@ export default function ForgePage() {
   return (
     <AppShell
       active="forge"
-      crumbs={[{ label: "App", href: "/forge/" }, { label: "Forge" }]}
+      crumbs={[{ label: "Forge" }]}
     >
       <div className="page-head">
         <div>
           <div className="eyebrow">Forge</div>
           <h1>Talk to the forge</h1>
           <p className="lede">
-            One conversation: describe a robot in words, or attach a photo, a
-            parts list, a spec file, or a 3D scan. A photo of a spec sheet or
-            blueprint is read as a document — printed values transcribed, never
-            inferred from drawing scale — and a scan (.ply) is measured right
-            in your browser. Every stage of every run wears the badge it
-            earned — <strong>LIVE</strong> (a real model call through the live
-            endpoint), <strong>LOCAL</strong> (real computation in your
-            browser) or <strong>RECORDED</strong> (a replayed run, labeled with
-            its date). Nothing wears a badge it didn’t earn.
+            Describe a robot in words, or attach a photo, a parts list, a spec
+            file or a 3D scan. Every step is labelled <strong>LIVE</strong>,{" "}
+            <strong>LOCAL</strong> or <strong>RECORDED</strong>, so you always
+            know what produced it.
           </p>
         </div>
       </div>

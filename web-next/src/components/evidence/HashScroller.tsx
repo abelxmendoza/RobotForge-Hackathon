@@ -7,10 +7,17 @@ import { useEffect } from "react";
 
 export default function HashScroller() {
   useEffect(() => {
-    if (location.hash) {
+    /* Reports 2+ start folded: open the one a link points at. */
+    const go = () => {
+      if (!location.hash) return;
       const el = document.querySelector(location.hash);
-      if (el) el.scrollIntoView();
-    }
+      if (!el) return;
+      el.querySelector("details.report-more")?.setAttribute("open", "");
+      el.scrollIntoView();
+    };
+    go();
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
   }, []);
   return null;
 }
