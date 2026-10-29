@@ -139,3 +139,24 @@ console.log(JSON.stringify(msgs.map(m => offlinePartReply(part, m).confirmed)));
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) == [False, False, False, True, True]
+
+
+def test_inventory_merge_keeps_owner_edits_made_during_a_request():
+    node = __import__("shutil").which("node")
+    if not node:
+        pytest.skip("node not available")
+    ts = REPO / "web-next" / "src" / "lib" / "inventory.ts"
+    script = f"""
+import {{ mergeUpdate }} from '{ts.as_posix()}';
+const snap = {{ name: 'Identifying…', category: 'other', quantity: 1, condition: 'unknown', specs: {{ voltage_v: 12 }} }};
+const latest = {{ ...snap, name: 'My 37 mm motor', specs: {{ voltage_v: 24 }} }};
+const out = mergeUpdate(latest, snap, {{ name: 'DC motor', category: 'motor', specs: {{ voltage_v: 6, rpm: 300 }} }});
+console.log(JSON.stringify(out));
+"""
+    r = subprocess.run([node, "--experimental-strip-types", "--input-type=module", "-e", script],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["name"] == "My 37 mm motor"      # owner edited it: owner wins
+    assert out["category"] == "motor"           # untouched: model fills it
+    assert out["specs"] == {"voltage_v": 24, "rpm": 300}

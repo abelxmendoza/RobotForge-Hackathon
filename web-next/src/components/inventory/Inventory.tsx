@@ -10,7 +10,7 @@ import type { LiveHealth } from '@/components/forge/model';
 import { downloadJSON, uid, useStore } from '@/lib/store';
 import { preparePhoto } from '@/lib/image';
 import {
-  applyUpdate, INVENTORY_KEY, offlinePartReply, PART_CATEGORIES, PART_SPEC_KEYS, SPEC_KEY_LABEL,
+  INVENTORY_KEY, mergeUpdate, offlinePartReply, PART_CATEGORIES, PART_SPEC_KEYS, SPEC_KEY_LABEL,
   type ChatLine, type InventoryPart,
 } from '@/lib/inventory';
 
@@ -39,7 +39,7 @@ function PartCard({ p, active, onOpen }: { p: InventoryPart; active: boolean; on
   );
 }
 
-function PartDetail({ p, health, onChange, onDelete }: { p: InventoryPart; health: LiveHealth | null | undefined; onChange: (next: InventoryPart) => void; onDelete: () => void }) {
+function PartDetail({ p, health, onChange, onPatch, onDelete }: { p: InventoryPart; health: LiveHealth | null | undefined; onChange: (next: InventoryPart) => void; onPatch: (id: string, fn: (latest: InventoryPart) => InventoryPart) => void; onDelete: () => void }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [newKey, setNewKey] = useState<string>('voltage_v');
@@ -72,10 +72,13 @@ function PartDetail({ p, health, onChange, onDelete }: { p: InventoryPart; healt
     } else {
       ({ reply, update, confirmed } = offlinePartReply(p, text));
     }
-    let next = applyUpdate(withUser, update);
-    if (confirmed) next = { ...next, status: 'confirmed', confidence: 'owner' };
-    next = { ...next, chat: [...withUser.chat, { role: 'assistant', text: reply || '(no reply)', live }] };
-    onChange(next);
+    /* Land the reply on the record as it is now, not the snapshot the
+     * request started from: edits made while waiting are kept. */
+    onPatch(withUser.id, (latest) => {
+      let next = mergeUpdate(latest, withUser, update);
+      if (confirmed) next = { ...next, status: 'confirmed', confidence: 'owner' };
+      return { ...next, chat: [...latest.chat, { role: 'assistant', text: reply || '(no reply)', live }] };
+    });
     setBusy(false);
   };
 
@@ -184,6 +187,8 @@ export default function Inventory() {
     setError(saveParts(next) ?? '');
   };
   const update = (p: InventoryPart) => commit(partsRef.current.map((x) => (x.id === p.id ? p : x)));
+  const patch = (id: string, fn: (latest: InventoryPart) => InventoryPart) =>
+    commit(partsRef.current.map((x) => (x.id === id ? fn(x) : x)));
 
   const addPhotos = async (files: FileList | null) => {
     if (!files || !files.length) return;
@@ -196,23 +201,27 @@ export default function Inventory() {
         part = blankPart('photo', thumb);
         commit([part, ...partsRef.current]);
         setOpenId(part.id);
+        const blank = part;
+        let found: Partial<InventoryPart> = {};
+        let opening: ChatLine;
         if (partLive) {
           try {
             const r = await postJSON<{ part: Omit<InventoryPart, 'id'> }>('/part', { image_data_url: full });
             const id = r.part;
-            part = {
-              ...part, name: id.name, category: id.category, quantity: id.quantity, catalog_part_id: id.catalog_part_id,
-              specs: id.specs, read_from_label: id.read_from_label, condition: id.condition, confidence: id.confidence,
-              question: id.question,
-              chat: [{ role: 'assistant', live: true, text: `This looks like ${id.name} (${id.confidence} confidence). ${id.question || 'Is that right?'}` }],
-            };
+            found = { name: id.name, category: id.category, quantity: id.quantity, condition: id.condition, specs: id.specs };
+            opening = { role: 'assistant', live: true, text: `This looks like ${id.name} (${id.confidence} confidence). ${id.question || 'Is that right?'}` };
+            const extra = { catalog_part_id: id.catalog_part_id, read_from_label: id.read_from_label, confidence: id.confidence, question: id.question };
+            /* The owner may have edited the card while it was being
+             * identified: their edits win (mergeUpdate). */
+            patch(blank.id, (latest) => ({ ...mergeUpdate(latest, blank, found), ...extra, chat: [opening, ...latest.chat] }));
+            continue;
           } catch (e) {
-            part = { ...part, name: 'Unidentified part', chat: [{ role: 'assistant', text: `I couldn’t identify this one (${(e as Error).message}). Tell me what it is and I’ll record it.` }] };
+            opening = { role: 'assistant', text: `I couldn’t identify this one (${(e as Error).message}). Tell me what it is and I’ll record it.` };
           }
         } else {
-          part = { ...part, name: 'Unidentified part', chat: [{ role: 'assistant', text: 'Live identification is off right now. Fill in the name and specs, or tell me what it is.' }] };
+          opening = { role: 'assistant', text: 'Live identification is off right now. Fill in the name and specs, or tell me what it is.' };
         }
-        update(part);
+        patch(blank.id, (latest) => ({ ...mergeUpdate(latest, blank, { name: 'Unidentified part' }), chat: [opening, ...latest.chat] }));
       } catch (e) {
         setError((e as Error).message);
       } finally {
@@ -287,7 +296,7 @@ export default function Inventory() {
           {shown.map((p) => <PartCard key={p.id} p={p} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
         </div>
         {open && (
-          <PartDetail key={open.id} p={open} health={health} onChange={update} onDelete={() => { commit(parts.filter((x) => x.id !== open.id)); setOpenId(null); }} />
+          <PartDetail key={open.id} p={open} health={health} onChange={update} onPatch={patch} onDelete={() => { commit(parts.filter((x) => x.id !== open.id)); setOpenId(null); }} />
         )}
       </div>
     </div>

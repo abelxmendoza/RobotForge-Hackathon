@@ -47,6 +47,22 @@ export function applyUpdate(part: InventoryPart, u: Partial<InventoryPart> | nul
   };
 }
 
+/* Apply a model reply that was computed from `snapshot` onto the
+ * record as it is NOW. Conflict policy: the owner wins — a field the
+ * owner changed while the request was in flight keeps the owner's
+ * value; only fields still equal to the snapshot take the update. */
+export function mergeUpdate(latest: InventoryPart, snapshot: InventoryPart, u: Partial<InventoryPart> | null): InventoryPart {
+  if (!u) return latest;
+  const next = { ...latest, specs: { ...latest.specs } };
+  for (const k of ['name', 'category', 'quantity', 'condition'] as const) {
+    if (u[k] !== undefined && latest[k] === snapshot[k]) (next as Record<string, unknown>)[k] = u[k];
+  }
+  for (const [k, v] of Object.entries(u.specs || {})) {
+    if (latest.specs[k] === snapshot.specs[k]) next.specs[k] = v;
+  }
+  return next;
+}
+
 /* Offline helper for the part chat when the live endpoint is down:
  * understands "yes"/"confirm" and simple "<number> <unit>" facts. */
 export function offlinePartReply(part: InventoryPart, message: string): { reply: string; update: Partial<InventoryPart> | null; confirmed: boolean } {
