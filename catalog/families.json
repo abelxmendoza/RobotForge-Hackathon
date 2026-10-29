@@ -1,0 +1,1997 @@
+{
+  "schema": "robotforge-robodex-families/1",
+  "families": [
+    {
+      "id": "andino",
+      "name": "Andino",
+      "aliases": [],
+      "catalog_dex_id": "#001",
+      "credit": "An existing design by its original makers \u2014 the Robodex records Andino with provenance: License is per-package LICENSE files in the repo (each reads BSD 3-Clause, (c) 2023 Ekumen Inc.); the repo root carries no single LICENSE file. Spec values were read from andino_description/config/andino/*.yaml and the andino_hardware BOM. (license: BSD-3-Clause)",
+      "variants": [
+        {
+          "label": "Andino + top lidar (rplidar_a1) + ultrasonic_sensor",
+          "signature": {
+            "manipulator": "absent",
+            "top_lidar": "rplidar_a1",
+            "drivetrain": "differential",
+            "payloads": [
+              "ultrasonic_sensor"
+            ]
+          },
+          "sightings": [
+            {
+              "id": "andino",
+              "identity": "Andino",
+              "photo": "examples/spotter/andino/spotted-photo.png",
+              "sha256": "65b37ff94e6a808ad633986698a2db7e4b7a8bb7f5d27d4edee1cbbd024cfda1",
+              "spotted_at": null,
+              "where": null,
+              "by": null,
+              "dossier": {
+                "schema": "robotforge-spotter/1",
+                "generated_at": "2026-10-28T15:57:25.432377+00:00",
+                "honesty_note": "Every value in this dossier carries its provenance. PHOTO-ESTIMATED values were read off a photograph and are not measurements; WEB-SOURCED values come from the public pages named beside them; CATALOG values are RobotForge's own recorded data, shown as a cross-check and never merged into the photo draft.",
+                "identity": {
+                  "value": "Andino",
+                  "provenance": "UNKNOWN",
+                  "source": "operator-provided identity; the photo model itself guessed 'unknown custom robot' and did not confirm it \u2014 the catalog match below is the corroboration, not the photo"
+                },
+                "credit": {
+                  "value": "An existing design by its original makers \u2014 the Robodex records Andino with provenance: License is per-package LICENSE files in the repo (each reads BSD 3-Clause, (c) 2023 Ekumen Inc.); the repo root carries no single LICENSE file. Spec values were read from andino_description/config/andino/*.yaml and the andino_hardware BOM. (license: BSD-3-Clause)",
+                  "provenance": "CATALOG",
+                  "source": "Robodex entry #001 (Andino) provenance record"
+                },
+                "catalog_match": {
+                  "verdict": "SAME",
+                  "robot": "Andino",
+                  "dex_id": "#001",
+                  "score": 110,
+                  "evidence": [
+                    "name is an exact match for catalog entry 'Andino'",
+                    "drivetrain agrees with the catalog spec (differential)",
+                    "length_m consistent with catalog (photo 0.24 vs catalog 0.25)",
+                    "width_m differs from catalog but within photo-estimate range (photo 0.17 vs catalog 0.1)",
+                    "mass_kg differs sharply from catalog (photo 1.1 vs catalog 3.364, 3.1x apart) \u2014 noted, but mass is the least photo-reliable field, so this alone does not veto a name match"
+                  ]
+                },
+                "photo": {
+                  "path": "examples/spotter/andino/spotted-photo.png",
+                  "sha256": "65b37ff94e6a808ad633986698a2db7e4b7a8bb7f5d27d4edee1cbbd024cfda1",
+                  "identity_guess": "unknown custom robot",
+                  "visible_parts": [
+                    {
+                      "kind": "drive wheel",
+                      "count": 2,
+                      "position": "left and right sides mid-body",
+                      "notes": "small rubber tires, yellow 5-spoke hub visible on right, left partly occluded",
+                      "provenance": "PHOTO-ESTIMATED"
+                    },
+                    {
+                      "kind": "lidar",
+                      "count": 1,
+                      "position": "front top",
+                      "notes": "black cylindrical 2D lidar puck on black mount plate",
+                      "provenance": "PHOTO-ESTIMATED"
+                    },
+                    {
+                      "kind": "ultrasonic sensor",
+                      "count": 1,
+                      "position": "front lower center",
+                      "notes": "blue box module inside chassis cutout with visible wiring",
+                      "provenance": "PHOTO-ESTIMATED"
+                    },
+                    {
+                      "kind": "chassis",
+                      "count": 1,
+                      "position": "central body",
+                      "notes": "blue 3D-printed rectangular body with vent slots and cartoon sticker on top",
+                      "provenance": "PHOTO-ESTIMATED"
+                    },
+                    {
+                      "kind": "power switch and cable",
+                      "count": 1,
+                      "position": "right rear side",
+                      "notes": "green rocker switch with black looped external cable",
+                      "provenance": "PHOTO-ESTIMATED"
+                    }
+                  ]
+                },
+                "fields": [
+                  {
+                    "field": "name",
+                    "draft": {
+                      "value": "Blue Mini Lidar Bot",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": "andino",
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "differs"
+                  },
+                  {
+                    "field": "drivetrain",
+                    "draft": {
+                      "value": "differential",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": "differential",
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "length_m",
+                    "draft": {
+                      "value": 0.24,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 0.25,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "width_m",
+                    "draft": {
+                      "value": 0.17,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 0.1,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "differs"
+                  },
+                  {
+                    "field": "height_m",
+                    "draft": {
+                      "value": 0.14,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 0.18,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "mass_kg",
+                    "draft": {
+                      "value": 1.1,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 3.364,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "differs"
+                  },
+                  {
+                    "field": "ground_clearance_m",
+                    "draft": {
+                      "value": 0.02,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 0.03,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "wheel.diameter_m",
+                    "draft": {
+                      "value": 0.065,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 0.0662,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "wheel.width_m",
+                    "draft": {
+                      "value": 0.027,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 0.025,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "wheel.count",
+                    "draft": {
+                      "value": 2,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 2,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "motor.kind",
+                    "draft": {
+                      "value": "brushed_dc_gear",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": "dc_gearmotor",
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "differs"
+                  },
+                  {
+                    "field": "motor.voltage_v",
+                    "draft": {
+                      "value": 6.0,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 9.0,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "motor.count",
+                    "draft": {
+                      "value": 2,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 2,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "battery.chemistry",
+                    "draft": {
+                      "value": "li-ion",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": "liion",
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "battery.voltage_v",
+                    "draft": {
+                      "value": 7.4,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 11.1,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "battery.capacity_mah",
+                    "draft": {
+                      "value": 2000,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    },
+                    "catalog": {
+                      "value": 2600,
+                      "provenance": "CATALOG",
+                      "source": "Robodex #001 Andino spec (examples/andino.json)"
+                    },
+                    "agreement": "consistent"
+                  },
+                  {
+                    "field": "sensors",
+                    "draft": {
+                      "value": [
+                        {
+                          "kind": "lidar_2d",
+                          "position": "front top",
+                          "range_m": 12.0,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "ultrasonic",
+                          "position": "front lower center",
+                          "range_m": 4.0,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "encoder",
+                          "position": "drive wheels",
+                          "range_m": null,
+                          "provenance": "PHOTO-ESTIMATED"
+                        }
+                      ],
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft"
+                    }
+                  }
+                ],
+                "parts": [
+                  {
+                    "label": "battery (li-ion 7.4 V, 2000 mAh)",
+                    "basis": "draft spec battery block",
+                    "provenance": "CATALOG",
+                    "catalog_id": "liion_18650_3s",
+                    "catalog_name": "18650 Li-ion pack 3S (3 cells)",
+                    "match_basis": "score 5: chemistry liion; capacity 2600 mAh in range",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "motor x2 (brushed_dc_gear, 6 V)",
+                    "basis": "draft spec motor block",
+                    "provenance": "CATALOG",
+                    "catalog_id": "brushed_motor_540",
+                    "catalog_name": "Brushed motor 540 size",
+                    "match_basis": "score 4: kind tokens ['brushed'] shared by catalog dc_brushed and draft brushed_dc_gear; voltage 7.4 V near 6 V",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "wheel x2 (0.065 m diameter)",
+                    "basis": "draft spec wheel block",
+                    "provenance": "CATALOG",
+                    "catalog_id": "wheel_100mm",
+                    "catalog_name": "Wheel 100 mm diameter",
+                    "match_basis": "score 4: diameter 0.1 m vs draft 0.065 m",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: lidar_2d (front top)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "rplidar_a1",
+                    "catalog_name": "RPLIDAR A1 2D lidar",
+                    "match_basis": "score 5: catalog kind lidar_2d matches",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: ultrasonic (front lower center)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "ultrasonic_hcsr04",
+                    "catalog_name": "HC-SR04 ultrasonic ranger",
+                    "match_basis": "score 5: catalog kind ultrasonic matches",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: encoder (drive wheels)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog part scored above threshold (best 0); needs a human pick"
+                  },
+                  {
+                    "label": "visible part: drive wheel x2",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+                  },
+                  {
+                    "label": "visible part: ultrasonic sensor x1",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "CATALOG",
+                    "catalog_id": "ultrasonic_hcsr04",
+                    "catalog_name": "HC-SR04 ultrasonic ranger",
+                    "match_basis": "score 5: catalog kind ultrasonic matches",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "visible part: chassis x1",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+                  },
+                  {
+                    "label": "visible part: power switch and cable x1",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+                  }
+                ],
+                "sources": [
+                  {
+                    "kind": "github_repo",
+                    "name": "andino-systems/Andino-X1",
+                    "url": "https://github.com/andino-systems/Andino-X1",
+                    "claims": [
+                      "owner name carries the 'andino' brand",
+                      "repo name matches 'andino'",
+                      "14 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "official",
+                    "confidence": {
+                      "level": "high",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "andino-systems/Andino",
+                    "url": "https://github.com/andino-systems/Andino",
+                    "claims": [
+                      "owner name carries the 'andino' brand",
+                      "repo name matches 'andino'",
+                      "12 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "official",
+                    "confidence": {
+                      "level": "high",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Ekumen-OS/andino",
+                    "url": "https://github.com/Ekumen-OS/andino",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "339 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": [
+                      {
+                        "path": "andino_description/meshes/andino/base_chassis.stl",
+                        "kind": "mesh",
+                        "size": 525084
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/battery_chassis.stl",
+                        "kind": "mesh",
+                        "size": 211484
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/caster_base.stl",
+                        "kind": "mesh",
+                        "size": 942484
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/caster_wheel.stl",
+                        "kind": "mesh",
+                        "size": 894884
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/caster_wheel_support.stl",
+                        "kind": "mesh",
+                        "size": 779684
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/lidar_chassis.stl",
+                        "kind": "mesh",
+                        "size": 280684
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/motor.stl",
+                        "kind": "mesh",
+                        "size": 195984
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/wheel_rim.stl",
+                        "kind": "mesh",
+                        "size": 669884
+                      },
+                      {
+                        "path": "andino_description/meshes/andino/wheel_tire.stl",
+                        "kind": "mesh",
+                        "size": 2601784
+                      },
+                      {
+                        "path": "andino_description/meshes/components/wheel.stl",
+                        "kind": "mesh",
+                        "size": 1045384
+                      },
+                      {
+                        "path": "andino_description/meshes/sensors/camera_mount.stl",
+                        "kind": "mesh",
+                        "size": 29384
+                      },
+                      {
+                        "path": "andino_description/meshes/sensors/rplidar-a1.stl",
+                        "kind": "mesh",
+                        "size": 314784
+                      },
+                      {
+                        "path": "andino_description/meshes/sensors/rplidar-a2.stl",
+                        "kind": "mesh",
+                        "size": 3152284
+                      },
+                      {
+                        "path": "andino_description/urdf/andino.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 4518
+                      },
+                      {
+                        "path": "andino_description/urdf/include/andino_caster_macro.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 2675
+                      },
+                      {
+                        "path": "andino_description/urdf/include/andino_control.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 1644
+                      },
+                      {
+                        "path": "andino_description/urdf/include/common_macros.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 11066
+                      },
+                      {
+                        "path": "andino_description/urdf/include/common_sensors.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 3347
+                      },
+                      {
+                        "path": "andino_hardware/printing_model/chassis/arduino_lock_base.stl",
+                        "kind": "mesh",
+                        "size": 70484
+                      },
+                      {
+                        "path": "andino_hardware/printing_model/chassis/base_chassis.stl",
+                        "kind": "mesh",
+                        "size": 525084
+                      },
+                      {
+                        "path": "andino_hardware/printing_model/chassis/battery_chassis.stl",
+                        "kind": "mesh",
+                        "size": 211484
+                      },
+                      {
+                        "path": "andino_hardware/printing_model/chassis/lidar_chassis.stl",
+                        "kind": "mesh",
+                        "size": 280684
+                      },
+                      {
+                        "path": "andino_hardware/printing_model/raspi_cam_mount/raspi_camera_mount_back.stl",
+                        "kind": "mesh",
+                        "size": 6184
+                      },
+                      {
+                        "path": "andino_hardware/printing_model/raspi_cam_mount/raspi_camera_mount_front.stl",
+                        "kind": "mesh",
+                        "size": 23284
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Ekumen-OS/andino_gz",
+                    "url": "https://github.com/Ekumen-OS/andino_gz",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "59 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": [
+                      {
+                        "path": "andino_gz/models/office/meshes/doors.dae",
+                        "kind": "mesh",
+                        "size": 13288
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/frame.dae",
+                        "kind": "mesh",
+                        "size": 11929
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/logo.dae",
+                        "kind": "mesh",
+                        "size": 4546
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/roof.dae",
+                        "kind": "mesh",
+                        "size": 3354
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/tiles.dae",
+                        "kind": "mesh",
+                        "size": 2471502
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/walls.dae",
+                        "kind": "mesh",
+                        "size": 180958
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/windows.dae",
+                        "kind": "mesh",
+                        "size": 8216
+                      },
+                      {
+                        "path": "andino_gz/models/office/meshes/wood.dae",
+                        "kind": "mesh",
+                        "size": 168857
+                      },
+                      {
+                        "path": "andino_gz/models/office/model.sdf",
+                        "kind": "sdf",
+                        "size": 6025
+                      },
+                      {
+                        "path": "andino_gz/urdf/andino_gz.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 3444
+                      },
+                      {
+                        "path": "andino_gz/urdf/include/andino_materials.xacro",
+                        "kind": "xacro",
+                        "size": 3607
+                      },
+                      {
+                        "path": "andino_gz/worlds/depot.sdf",
+                        "kind": "sdf",
+                        "size": 11715
+                      },
+                      {
+                        "path": "andino_gz/worlds/empty.sdf",
+                        "kind": "sdf",
+                        "size": 7675
+                      },
+                      {
+                        "path": "andino_gz/worlds/office.sdf",
+                        "kind": "sdf",
+                        "size": 22208
+                      },
+                      {
+                        "path": "andino_gz/worlds/populated_office.sdf",
+                        "kind": "sdf",
+                        "size": 37918
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "datosgobar/portal-andino",
+                    "url": "https://github.com/datosgobar/portal-andino",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "51 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "MIT",
+                      "name": "MIT License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "datosgobar/portal-andino-theme",
+                    "url": "https://github.com/datosgobar/portal-andino-theme",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "26 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "AGPL-3.0",
+                      "name": "GNU Affero General Public License v3.0"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Ekumen-OS/andino_rmf",
+                    "url": "https://github.com/Ekumen-OS/andino_rmf",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "17 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "BSD-3-Clause",
+                      "name": "BSD 3-Clause \"New\" or \"Revised\" License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Ekumen-OS/andino_o3de",
+                    "url": "https://github.com/Ekumen-OS/andino_o3de",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "12 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "BSD-3-Clause",
+                      "name": "BSD 3-Clause \"New\" or \"Revised\" License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Colifaa/Andino",
+                    "url": "https://github.com/Colifaa/Andino",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "1 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "CarlaMamaniChavez/WebSite-BancoAndino",
+                    "url": "https://github.com/CarlaMamaniChavez/WebSite-BancoAndino",
+                    "claims": [
+                      "repo name matches 'andino'",
+                      "1 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "yuqing21/ros2-andino-lidar-obstacle-avoidance",
+                    "url": "https://github.com/yuqing21/ros2-andino-lidar-obstacle-avoidance",
+                    "claims": [
+                      "repo name matches 'andino'"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "ros2-gbp/andino_gz-release",
+                    "url": "https://github.com/ros2-gbp/andino_gz-release",
+                    "claims": [
+                      "repo name matches 'andino'"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "ros2-gbp/andino-release",
+                    "url": "https://github.com/ros2-gbp/andino-release",
+                    "claims": [
+                      "repo name matches 'andino'"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "fangfano/MyRos2Andino",
+                    "url": "https://github.com/fangfano/MyRos2Andino",
+                    "claims": [
+                      "repo name matches 'andino'"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Danny024/andino-robot",
+                    "url": "https://github.com/Danny024/andino-robot",
+                    "claims": [
+                      "repo name matches 'andino'"
+                    ],
+                    "license": {
+                      "spdx": "BSD-3-Clause",
+                      "name": "BSD 3-Clause \"New\" or \"Revised\" License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "robocre8/mobo_bot",
+                    "url": "https://github.com/robocre8/mobo_bot",
+                    "claims": [
+                      "description matches the robot name",
+                      "24 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "MIT",
+                      "name": "MIT License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "kidat/ros2-astar-path-planner",
+                    "url": "https://github.com/kidat/ros2-astar-path-planner",
+                    "claims": [
+                      "description matches the robot name"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Lu2077/ros2-autonomous-nav-constrained-hardware",
+                    "url": "https://github.com/Lu2077/ros2-autonomous-nav-constrained-hardware",
+                    "claims": [
+                      "description matches the robot name"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "twin_candidate",
+                    "name": "Ekumen-OS/andino \u2014 andino_description/urdf/andino.urdf.xacro",
+                    "url": "https://github.com/Ekumen-OS/andino",
+                    "claims": [
+                      "best pullable model candidate (urdf_xacro) by the lookup ranking heuristic"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "candidate",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "single best candidate by file-kind and variant heuristics"
+                    },
+                    "assets": [
+                      {
+                        "path": "andino_description/urdf/andino.urdf.xacro",
+                        "kind": "urdf_xacro"
+                      }
+                    ]
+                  }
+                ],
+                "draft_spec": {
+                  "name": "Blue Mini Lidar Bot",
+                  "description": "Photo draft (all dimensions ESTIMATED): small blue 3D-printed differential-drive educational robot with front-mounted 2D lidar puck, front ultrasonic module, yellow drive wheels and rear caster",
+                  "drivetrain": "differential",
+                  "length_m": 0.24,
+                  "width_m": 0.17,
+                  "height_m": 0.14,
+                  "mass_kg": 1.1,
+                  "motor": {
+                    "kind": "brushed_dc_gear",
+                    "voltage_v": 6.0,
+                    "count": 2,
+                    "stall_torque_nm": 0.6
+                  },
+                  "battery": {
+                    "chemistry": "li-ion",
+                    "voltage_v": 7.4,
+                    "capacity_mah": 2000
+                  },
+                  "sensors": [
+                    {
+                      "kind": "lidar_2d",
+                      "position": "front top",
+                      "range_m": 12.0
+                    },
+                    {
+                      "kind": "ultrasonic",
+                      "position": "front lower center",
+                      "range_m": 4.0
+                    },
+                    {
+                      "kind": "encoder",
+                      "position": "drive wheels",
+                      "range_m": null
+                    }
+                  ],
+                  "component_mass_kg": {},
+                  "ground_clearance_m": 0.02,
+                  "wheel": {
+                    "diameter_m": 0.065,
+                    "width_m": 0.027,
+                    "count": 2,
+                    "driven": true
+                  }
+                },
+                "validation": {
+                  "verdict": "PASS",
+                  "note": "validate() checks physical coherence of the ESTIMATED draft; a PASS means the draft is self-consistent, not that it matches the real robot",
+                  "findings": [
+                    {
+                      "severity": "INFO",
+                      "check": "all",
+                      "message": "spec passed all engineering checks"
+                    }
+                  ]
+                },
+                "stages": [
+                  {
+                    "stage": "photo",
+                    "status": "ok",
+                    "note": "vision draft produced; identity and every dimension are ESTIMATED"
+                  },
+                  {
+                    "stage": "lookup",
+                    "status": "ok",
+                    "note": "18 public repos found on GitHub"
+                  },
+                  {
+                    "stage": "catalog_match",
+                    "status": "ok",
+                    "note": "verdict SAME"
+                  },
+                  {
+                    "stage": "validate",
+                    "status": "ok",
+                    "note": "draft validation: PASS"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "boston-dynamics-spot",
+      "name": "Boston Dynamics Spot",
+      "aliases": [],
+      "catalog_dex_id": null,
+      "credit": "Not identified against the Robodex. Its public footprint starts at bostonrb/bostonrb (owner bostonrb); credit belongs to that project's authors, whoever they are.",
+      "variants": [
+        {
+          "label": "Boston Dynamics Spot with Arm",
+          "signature": {
+            "manipulator": "present",
+            "top_lidar": "none",
+            "drivetrain": "skid_steer",
+            "payloads": []
+          },
+          "sightings": [
+            {
+              "id": "spot-cpp",
+              "identity": "Boston Dynamics Spot",
+              "photo": "examples/spotter/spot-cpp/spotted-photo.jpg",
+              "sha256": "07c80a3780cb61989d94650f0315569759345fd5e9ae2a8c3f294b396de2d960",
+              "spotted_at": "2026-10-28",
+              "where": "Cal Poly Pomona IRLab",
+              "by": null,
+              "dossier": {
+                "schema": "robotforge-spotter/1",
+                "generated_at": "2026-10-29T01:44:37.347526+00:00",
+                "honesty_note": "Every value in this dossier carries its provenance. PHOTO-ESTIMATED values were read off a photograph and are not measurements; WEB-SOURCED values come from the public pages named beside them; CATALOG values are RobotForge's own recorded data, shown as a cross-check and never merged into the photo draft.",
+                "identity": {
+                  "value": "Boston Dynamics Spot",
+                  "provenance": "UNKNOWN",
+                  "source": "operator-provided identity; the photo model itself guessed 'Boston Dynamics Spot with Spot Arm' and did not confirm it \u2014 the catalog match below is the corroboration, not the photo"
+                },
+                "credit": {
+                  "value": "Not identified against the Robodex. Its public footprint starts at bostonrb/bostonrb (owner bostonrb); credit belongs to that project's authors, whoever they are.",
+                  "provenance": "WEB-SOURCED",
+                  "source": "https://github.com/bostonrb/bostonrb"
+                },
+                "catalog_match": {
+                  "verdict": "NEW",
+                  "robot": null,
+                  "dex_id": null,
+                  "score": 0,
+                  "evidence": [
+                    "no Robodex entry name-matches 'Boston Dynamics Spot' (11 entries checked)"
+                  ]
+                },
+                "photo": {
+                  "path": "examples/spotter/spot-cpp/spotted-photo.jpg",
+                  "sha256": "07c80a3780cb61989d94650f0315569759345fd5e9ae2a8c3f294b396de2d960",
+                  "identity_guess": "Boston Dynamics Spot with Spot Arm",
+                  "visible_parts": [
+                    {
+                      "kind": "quadruped leg",
+                      "count": 4,
+                      "position": "body corners",
+                      "notes": "yellow legs with grey feet folded in sitting pose on carpet",
+                      "provenance": "PHOTO-ESTIMATED"
+                    },
+                    {
+                      "kind": "robot arm",
+                      "count": 1,
+                      "position": "front top",
+                      "notes": "yellow and black Spot Arm with gripper folded over body",
+                      "provenance": "PHOTO-ESTIMATED"
+                    },
+                    {
+                      "kind": "robot body",
+                      "count": 1,
+                      "position": "center foreground",
+                      "notes": "yellow rectangular body with BostonDynamics logo on side",
+                      "provenance": "PHOTO-ESTIMATED"
+                    }
+                  ]
+                },
+                "fields": [
+                  {
+                    "field": "name",
+                    "draft": {
+                      "value": "Spot with Arm - photo draft",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "drivetrain",
+                    "draft": {
+                      "value": "skid_steer",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "length_m",
+                    "draft": {
+                      "value": 1.1,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "width_m",
+                    "draft": {
+                      "value": 0.5,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "height_m",
+                    "draft": {
+                      "value": 0.55,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "mass_kg",
+                    "draft": {
+                      "value": 40.0,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "ground_clearance_m",
+                    "draft": {
+                      "value": 0.05,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "wheel.diameter_m",
+                    "draft": {
+                      "value": 0.12,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "wheel.width_m",
+                    "draft": {
+                      "value": 0.08,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "wheel.count",
+                    "draft": {
+                      "value": 0,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "motor.kind",
+                    "draft": {
+                      "value": "brushless_electric",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "motor.voltage_v",
+                    "draft": {
+                      "value": 48.0,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "motor.count",
+                    "draft": {
+                      "value": 18,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "battery.chemistry",
+                    "draft": {
+                      "value": "li-ion",
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "battery.voltage_v",
+                    "draft": {
+                      "value": 50.4,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "battery.capacity_mah",
+                    "draft": {
+                      "value": 12000,
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft \u2014 every dimension ESTIMATED, no scale reference in a photo"
+                    }
+                  },
+                  {
+                    "field": "sensors",
+                    "draft": {
+                      "value": [
+                        {
+                          "kind": "depth_camera",
+                          "position": "front",
+                          "range_m": 4,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "depth_camera",
+                          "position": "rear",
+                          "range_m": 4,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "depth_camera",
+                          "position": "left",
+                          "range_m": 4,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "depth_camera",
+                          "position": "right",
+                          "range_m": 4,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "rgb_camera",
+                          "position": "arm gripper",
+                          "range_m": 2,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "imu",
+                          "position": "body center",
+                          "range_m": null,
+                          "provenance": "PHOTO-ESTIMATED"
+                        },
+                        {
+                          "kind": "encoder",
+                          "position": "leg joints",
+                          "range_m": null,
+                          "provenance": "PHOTO-ESTIMATED"
+                        }
+                      ],
+                      "provenance": "PHOTO-ESTIMATED",
+                      "source": "photo vision draft"
+                    }
+                  }
+                ],
+                "parts": [
+                  {
+                    "label": "battery (li-ion 50.4 V, 12000 mAh)",
+                    "basis": "draft spec battery block",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog part scored above threshold (best 3); needs a human pick"
+                  },
+                  {
+                    "label": "motor x18 (brushless_electric, 48 V)",
+                    "basis": "draft spec motor block",
+                    "provenance": "CATALOG",
+                    "catalog_id": "brushless_2207_1960kv",
+                    "catalog_name": "Brushless motor 2207 1960 KV",
+                    "match_basis": "score 3: kind tokens ['brushless'] shared by catalog brushless_outrunner and draft brushless_electric",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "wheel x0 (0.12 m diameter)",
+                    "basis": "draft spec wheel block",
+                    "provenance": "CATALOG",
+                    "catalog_id": "wheel_100mm",
+                    "catalog_name": "Wheel 100 mm diameter",
+                    "match_basis": "score 4: diameter 0.1 m vs draft 0.12 m",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: depth_camera (front)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "realsense_d435",
+                    "catalog_name": "Intel RealSense D435 depth camera",
+                    "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: depth_camera (rear)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "realsense_d435",
+                    "catalog_name": "Intel RealSense D435 depth camera",
+                    "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: depth_camera (left)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "realsense_d435",
+                    "catalog_name": "Intel RealSense D435 depth camera",
+                    "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: depth_camera (right)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "realsense_d435",
+                    "catalog_name": "Intel RealSense D435 depth camera",
+                    "match_basis": "score 4: catalog kind rgbd_camera is a camera",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: rgb_camera (arm gripper)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "camera_rpi_v2",
+                    "catalog_name": "Raspberry Pi Camera Module V2 (8 MP)",
+                    "match_basis": "score 5: catalog kind rgb_camera matches",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: imu (body center)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "CATALOG",
+                    "catalog_id": "imu_bno055",
+                    "catalog_name": "BNO055 9-DOF IMU breakout",
+                    "match_basis": "score 5: catalog kind imu matches",
+                    "free_text": ""
+                  },
+                  {
+                    "label": "sensor: encoder (leg joints)",
+                    "basis": "draft spec sensors list",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog part scored above threshold (best 0); needs a human pick"
+                  },
+                  {
+                    "label": "visible part: quadruped leg x4",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+                  },
+                  {
+                    "label": "visible part: robot arm x1",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+                  },
+                  {
+                    "label": "visible part: robot body x1",
+                    "basis": "seen in the photo by the vision draft",
+                    "provenance": "PHOTO-ESTIMATED",
+                    "catalog_id": null,
+                    "catalog_name": null,
+                    "match_basis": "",
+                    "free_text": "no catalog mapping attempted for this kind in Spotter v1"
+                  }
+                ],
+                "sources": [
+                  {
+                    "kind": "github_repo",
+                    "name": "bostonrb/bostonrb",
+                    "url": "https://github.com/bostonrb/bostonrb",
+                    "claims": [
+                      "owner name carries the 'boston' brand",
+                      "repo name matches 'boston'",
+                      "200 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "official",
+                    "confidence": {
+                      "level": "high",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "boston-dynamics/spot-sdk",
+                    "url": "https://github.com/boston-dynamics/spot-sdk",
+                    "claims": [
+                      "owner name carries the 'boston' brand",
+                      "2505 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "NOASSERTION",
+                      "name": "Other"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "official",
+                    "confidence": {
+                      "level": "high",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Boston-Robot-Hackers/ros2diag",
+                    "url": "https://github.com/Boston-Robot-Hackers/ros2diag",
+                    "claims": [
+                      "owner name carries the 'boston' brand"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "official",
+                    "confidence": {
+                      "level": "high",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Boston-Robot-Hackers/dome",
+                    "url": "https://github.com/Boston-Robot-Hackers/dome",
+                    "claims": [
+                      "owner name carries the 'boston' brand"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "official",
+                    "confidence": {
+                      "level": "high",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": [
+                      {
+                        "path": "config/dome1.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 10109
+                      },
+                      {
+                        "path": "config/dome2.urdf",
+                        "kind": "urdf",
+                        "size": 7285
+                      },
+                      {
+                        "path": "config/dome3-old.urdf",
+                        "kind": "urdf",
+                        "size": 7766
+                      },
+                      {
+                        "path": "config/dome3.urdf",
+                        "kind": "urdf",
+                        "size": 7792
+                      },
+                      {
+                        "path": "goodies/dome1.urdf",
+                        "kind": "urdf",
+                        "size": 7009
+                      },
+                      {
+                        "path": "meshes/octagon_plate.stl",
+                        "kind": "mesh",
+                        "size": 1684
+                      },
+                      {
+                        "path": "urdf/dome1.urdf.xacro",
+                        "kind": "urdf_xacro",
+                        "size": 7015
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "CityOfBoston/boston.gov-d7",
+                    "url": "https://github.com/CityOfBoston/boston.gov-d7",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "284 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "NOASSERTION",
+                      "name": "Other"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "bluepylons/Boston",
+                    "url": "https://github.com/bluepylons/Boston",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "238 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "WebOfTrustInfo/rwot5-boston",
+                    "url": "https://github.com/WebOfTrustInfo/rwot5-boston",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "185 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "krishnaik06/bostonhousepricing",
+                    "url": "https://github.com/krishnaik06/bostonhousepricing",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "142 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "Apache-2.0",
+                      "name": "Apache License 2.0"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "nd009/boston_housing",
+                    "url": "https://github.com/nd009/boston_housing",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "40 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "rogerSuperBuilderAlpha/cursor-boston",
+                    "url": "https://github.com/rogerSuperBuilderAlpha/cursor-boston",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "26 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "GPL-3.0",
+                      "name": "GNU General Public License v3.0"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "TheoTime01/Spok--Boston-Dynamics-Spot-inspired-robot",
+                    "url": "https://github.com/TheoTime01/Spok--Boston-Dynamics-Spot-inspired-robot",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "7 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "MIT",
+                      "name": "MIT License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "MaxMarques/BostonDynamicsSpotDetection",
+                    "url": "https://github.com/MaxMarques/BostonDynamicsSpotDetection",
+                    "claims": [
+                      "repo name matches 'boston'",
+                      "2 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "Hotchnerz/BostonDynamicsSpot_ws",
+                    "url": "https://github.com/Hotchnerz/BostonDynamicsSpot_ws",
+                    "claims": [
+                      "repo name matches 'boston'"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "heuristicus/spot_ros",
+                    "url": "https://github.com/heuristicus/spot_ros",
+                    "claims": [
+                      "description matches the robot name",
+                      "295 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "NOASSERTION",
+                      "name": "Other"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "rai-opensource/spot_ros2",
+                    "url": "https://github.com/rai-opensource/spot_ros2",
+                    "claims": [
+                      "description matches the robot name",
+                      "294 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "NOASSERTION",
+                      "name": "Other"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "justyx404/spot_gazebo_ros2",
+                    "url": "https://github.com/justyx404/spot_gazebo_ros2",
+                    "claims": [
+                      "description matches the robot name",
+                      "44 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "Apache-2.0",
+                      "name": "Apache License 2.0"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "UTNuclearRoboticsPublic/spot_manipulation",
+                    "url": "https://github.com/UTNuclearRoboticsPublic/spot_manipulation",
+                    "claims": [
+                      "description matches the robot name",
+                      "3 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "BSD-3-Clause",
+                      "name": "BSD 3-Clause \"New\" or \"Revised\" License"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "LCAS/spot_platform",
+                    "url": "https://github.com/LCAS/spot_platform",
+                    "claims": [
+                      "description matches the robot name",
+                      "3 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "Apache-2.0",
+                      "name": "Apache License 2.0"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "janoleksiuk/Spot-Simulator",
+                    "url": "https://github.com/janoleksiuk/Spot-Simulator",
+                    "claims": [
+                      "description matches the robot name",
+                      "2 stars (community signal)"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "UTNuclearRoboticsPublic/spot_ros",
+                    "url": "https://github.com/UTNuclearRoboticsPublic/spot_ros",
+                    "claims": [
+                      "description matches the robot name",
+                      "2 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "NOASSERTION",
+                      "name": "Other"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "github_repo",
+                    "name": "UM-ARM-Lab/conq_ros",
+                    "url": "https://github.com/UM-ARM-Lab/conq_ros",
+                    "claims": [
+                      "description matches the robot name",
+                      "2 stars (community signal)"
+                    ],
+                    "license": {
+                      "spdx": "NOASSERTION",
+                      "name": "Other"
+                    },
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "community",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "lookup ranking class (vendor-org / name / stars heuristic \u2014 see lookup.py); a class is not an endorsement"
+                    },
+                    "assets": []
+                  },
+                  {
+                    "kind": "twin_candidate",
+                    "name": "Boston-Robot-Hackers/dome \u2014 config/dome2.urdf",
+                    "url": "https://github.com/Boston-Robot-Hackers/dome",
+                    "claims": [
+                      "best pullable model candidate (urdf) by the lookup ranking heuristic"
+                    ],
+                    "license": "not stated",
+                    "provenance": "WEB-SOURCED",
+                    "lookup_class": "candidate",
+                    "confidence": {
+                      "level": "medium",
+                      "basis": "single best candidate by file-kind and variant heuristics"
+                    },
+                    "assets": [
+                      {
+                        "path": "config/dome2.urdf",
+                        "kind": "urdf"
+                      }
+                    ]
+                  }
+                ],
+                "draft_spec": {
+                  "name": "Spot with Arm - photo draft",
+                  "description": "Photo draft (all dimensions ESTIMATED): Yellow Boston Dynamics Spot quadruped lying in sitting pose with Spot Arm folded on top, estimate basis is published approximate Spot size.",
+                  "drivetrain": "skid_steer",
+                  "length_m": 1.1,
+                  "width_m": 0.5,
+                  "height_m": 0.55,
+                  "mass_kg": 40.0,
+                  "motor": {
+                    "kind": "brushless_electric",
+                    "voltage_v": 48.0,
+                    "count": 18,
+                    "stall_torque_nm": null
+                  },
+                  "battery": {
+                    "chemistry": "li-ion",
+                    "voltage_v": 50.4,
+                    "capacity_mah": 12000
+                  },
+                  "sensors": [
+                    {
+                      "kind": "depth_camera",
+                      "position": "front",
+                      "range_m": 4
+                    },
+                    {
+                      "kind": "depth_camera",
+                      "position": "rear",
+                      "range_m": 4
+                    },
+                    {
+                      "kind": "depth_camera",
+                      "position": "left",
+                      "range_m": 4
+                    },
+                    {
+                      "kind": "depth_camera",
+                      "position": "right",
+                      "range_m": 4
+                    },
+                    {
+                      "kind": "rgb_camera",
+                      "position": "arm gripper",
+                      "range_m": 2
+                    },
+                    {
+                      "kind": "imu",
+                      "position": "body center",
+                      "range_m": null
+                    },
+                    {
+                      "kind": "encoder",
+                      "position": "leg joints",
+                      "range_m": null
+                    }
+                  ],
+                  "component_mass_kg": {},
+                  "ground_clearance_m": 0.05,
+                  "wheel": {
+                    "diameter_m": 0.12,
+                    "width_m": 0.08,
+                    "count": 0,
+                    "driven": false
+                  }
+                },
+                "validation": {
+                  "verdict": "PASS",
+                  "note": "validate() checks physical coherence of the ESTIMATED draft; a PASS means the draft is self-consistent, not that it matches the real robot",
+                  "findings": [
+                    {
+                      "severity": "WARN",
+                      "check": "provenance.estimated_dimensions",
+                      "message": "every dimension in this spec is ESTIMATED from a photo, not measured \u2014 the checks ran against estimates, so this is not a verdict on the real robot; confirm the dimensions before trusting the spec"
+                    }
+                  ]
+                },
+                "stages": [
+                  {
+                    "stage": "photo",
+                    "status": "ok",
+                    "note": "vision draft produced; identity and every dimension are ESTIMATED"
+                  },
+                  {
+                    "stage": "lookup",
+                    "status": "ok",
+                    "note": "21 public repos found on GitHub"
+                  },
+                  {
+                    "stage": "catalog_match",
+                    "status": "ok",
+                    "note": "verdict NEW"
+                  },
+                  {
+                    "stage": "validate",
+                    "status": "ok",
+                    "note": "draft validation: PASS"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

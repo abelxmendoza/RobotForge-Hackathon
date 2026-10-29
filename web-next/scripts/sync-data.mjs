@@ -14,6 +14,7 @@ mkdirSync(join(root, "src", "data"), { recursive: true });
 mkdirSync(join(root, "src", "styles"), { recursive: true });
 
 copyFileSync(join(repo, "catalog", "kinds.json"), join(root, "src", "data", "kinds.json"));
+copyFileSync(join(repo, "catalog", "families.json"), join(root, "src", "data", "families.json"));
 copyFileSync(join(repo, "assets", "js", "chat-intents.json"), join(root, "src", "data", "chat-intents.json"));
 for (const f of ["robots.json", "parts.json", "gate-reports.json"]) {
   copyFileSync(join(repo, "catalog", f), join(root, "src", "data", f));

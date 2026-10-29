@@ -44,3 +44,42 @@ export interface GateReportRun {
   traj?: unknown;
   [key: string]: unknown;
 }
+/* Robodex families (catalog/families.json, schema
+ * robotforge-robodex-families/1): robots grouped by family, with
+ * configuration variants told apart by a signature and individual
+ * sightings filed under the variant they match. */
+export interface DexSignature {
+  manipulator: string;
+  top_lidar: string;
+  drivetrain: string;
+  payloads: string[];
+  [key: string]: unknown;
+}
+export interface DexSighting {
+  id: string;
+  identity: string;
+  photo: string | null;
+  sha256?: string | null;
+  spotted_at?: string | null;
+  where?: string | null;
+  by?: string | null;
+  /* The canonical families.json embeds the full Spotter dossier
+   * object here; a plain path string is also accepted. */
+  dossier?: string | Record<string, unknown> | null;
+  [key: string]: unknown;
+}
+export interface DexVariant {
+  label: string;
+  signature: DexSignature;
+  sightings: DexSighting[];
+  [key: string]: unknown;
+}
+export interface Family {
+  id: string;
+  name: string;
+  aliases: string[];
+  catalog_dex_id: string | null;
+  credit?: string;
+  variants: DexVariant[];
+  [key: string]: unknown;
+}

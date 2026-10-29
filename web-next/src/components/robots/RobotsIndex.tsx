@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
-import { parts, robots } from "@/lib/data";
+import { families, parts, robotSlug, robots } from "@/lib/data";
+import { describeSignature } from "@/lib/grouping";
 import type { AppDispatch, RootState } from "@/store/store";
 import { setDrivetrain, setVerdict } from "@/store/catalogSlice";
 import { MOBILITY_CLASSES, VERDICT_LABEL, gateStatusOf } from "./shared";
 import { assetPath } from "@/components/home/asset";
 import RobotCard from "./RobotCard";
 import PartsCatalogue from "./PartsCatalogue";
+import LocalDexSightings from "./LocalDexSightings";
 
 /* render_robots_index + robots.js: verdict chips and class chips are
    independent filters — a card shows only when it matches both. The
@@ -140,6 +142,98 @@ export default function RobotsIndex() {
           the Burger kit as parametric CAD
         </Link>
       </p>
+
+      <section className="section" id="families">
+        <h2>Robodex families — grouped sightings</h2>
+        <p className="sub">
+          The same robot turns up in different configurations, so the dex
+          groups sightings by family, then by variant: a variant is told
+          apart by its signature — whether an arm is fitted, what sits on
+          top, and how it moves. A sighting that matches no variant starts
+          a new one; a robot that matches no family starts a new family.
+        </p>
+        {families.map((family) => {
+          const dexNum = family.catalog_dex_id
+            ? Number(String(family.catalog_dex_id).replace(/[^0-9]/g, ""))
+            : NaN;
+          const dexRobot = Number.isFinite(dexNum)
+            ? robots.find((r) => Number(r.number) === dexNum)
+            : undefined;
+          return (
+            <article
+              className="card"
+              key={family.id}
+              style={{ padding: "4px 20px", marginTop: 16 }}
+            >
+              <h3>
+                {family.name}{" "}
+                {family.catalog_dex_id ? (
+                  dexRobot ? (
+                    <Link
+                      href={`/robots/${robotSlug(dexRobot)}/`}
+                      className="faint"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
+                      Robodex {family.catalog_dex_id}
+                    </Link>
+                  ) : (
+                    <span className="faint" style={{ fontSize: "var(--fs-sm)" }}>
+                      Robodex {family.catalog_dex_id}
+                    </span>
+                  )
+                ) : null}
+              </h3>
+              {family.credit ? <p className="sub">{family.credit}</p> : null}
+              {family.variants.map((variant) => (
+                <div key={variant.label} style={{ margin: "14px 0 14px 12px" }}>
+                  <h4 style={{ margin: "0 0 4px" }}>{variant.label}</h4>
+                  <p className="faint" style={{ margin: "0 0 8px" }}>
+                    {describeSignature(variant.signature)}
+                  </p>
+                  {variant.sightings.length ? (
+                    <ul className="items rows">
+                      {variant.sightings.map((s) => (
+                        <li key={s.id}>
+                          {s.photo ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={assetPath(s.photo)}
+                              alt={`Photo of ${s.identity}`}
+                              loading="lazy"
+                              style={{
+                                width: 160,
+                                maxWidth: "40vw",
+                                display: "block",
+                                marginBottom: 6,
+                              }}
+                            />
+                          ) : null}
+                          <strong>{s.identity}</strong>
+                          {s.spotted_at ? (
+                            <span className="faint"> — spotted {s.spotted_at}</span>
+                          ) : null}
+                          {s.where ? (
+                            <span className="faint"> · {s.where}</span>
+                          ) : null}
+                          {typeof s.dossier === "string" ? (
+                            <>
+                              {" "}
+                              <a href={assetPath(s.dossier)}>Dossier</a>
+                            </>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="faint">No sightings filed yet.</p>
+                  )}
+                </div>
+              ))}
+            </article>
+          );
+        })}
+        <LocalDexSightings />
+      </section>
 
       <section className="section" id="parts">
         <h2>Parts catalogue</h2>

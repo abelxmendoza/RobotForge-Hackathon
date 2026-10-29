@@ -1,12 +1,15 @@
 import robotsDoc from "@/data/robots.json";
 import partsDoc from "@/data/parts.json";
+import familiesDoc from "@/data/families.json";
 import gateDoc from "@/data/gate-reports.json";
 import harnessDoc from "@/data/harness-reports.json";
 import stabilityDoc from "@/data/stability-reports.json";
-import type { GateReportRun, Part, Robot } from "./types";
+import type { Family, GateReportRun, Part, Robot } from "./types";
 
 export const robots = (robotsDoc as unknown as { robots: Robot[] }).robots;
 export const parts = (partsDoc as unknown as { parts: Part[] }).parts;
+export const families = (familiesDoc as unknown as { families: Family[] }).families;
+export const familiesSchema = (familiesDoc as unknown as { schema?: string }).schema ?? "";
 export const gateReports = (gateDoc as unknown as { runs: GateReportRun[] }).runs;
 export const gateNote = (gateDoc as unknown as { note?: string }).note ?? "";
 

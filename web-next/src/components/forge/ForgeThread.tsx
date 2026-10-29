@@ -55,6 +55,7 @@ import { assetPath } from '../home/asset';
 import { RUNS, STEP_NAMES } from './samples';
 import type { SampleRun } from './samples';
 import { ForgeViewer } from './ForgeViewer';
+import GroupingCard from './GroupingCard';
 
 const ScanView = dynamic(() => import('./ScanView'), { ssr: false });
 
@@ -297,6 +298,7 @@ export default function ForgeThread() {
   );
   const fileRefs = {
     photo: useRef<HTMLInputElement>(null),
+    camera: useRef<HTMLInputElement>(null),
     doc: useRef<HTMLInputElement>(null),
     spec: useRef<HTMLInputElement>(null),
     scan: useRef<HTMLInputElement>(null),
@@ -882,6 +884,7 @@ export default function ForgeThread() {
             <div className="card" style={{ padding: '4px 20px' }}>
               <SpecTable spec={draft.spec} />
             </div>
+            <GroupingCard draft={draft} />
             <RawJSON obj={draft.spec} label="Draft spec JSON" />
           </>,
         );
@@ -1409,6 +1412,13 @@ export default function ForgeThread() {
             <button
               className="btn btn-sm"
               type="button"
+              onClick={() => fileRefs.camera.current?.click()}
+            >
+              Take photo
+            </button>{' '}
+            <button
+              className="btn btn-sm"
+              type="button"
               onClick={() => fileRefs.doc.current?.click()}
             >
               Parts list
@@ -1448,6 +1458,18 @@ export default function ForgeThread() {
           type="file"
           ref={fileRefs.photo}
           accept="image/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files && e.target.files[0];
+            if (f) setAttach({ kind: 'photo', file: f });
+            e.target.value = '';
+          }}
+        />
+        <input
+          type="file"
+          ref={fileRefs.camera}
+          accept="image/*"
+          capture="environment"
           hidden
           onChange={(e) => {
             const f = e.target.files && e.target.files[0];
