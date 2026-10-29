@@ -49,6 +49,22 @@ export interface RoverOptions {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Spec = any;
 
+const isPos = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+
+/* The Garage edits raw values, so a cleared field arrives as null.
+ * Name the first missing input instead of letting null coerce to 0. */
+function missing(spec: Spec, paths: string[]): string | null {
+  for (const path of paths) {
+    const v = path.split('.').reduce((o: Spec, k) => (o && typeof o === 'object' ? o[k] : undefined), spec);
+    if (!isPos(v)) return path;
+  }
+  return null;
+}
+
+function notChecked(name: string, field: string): RoverCheck {
+  return { name, status: 'NOT_CHECKED', summary: `needs ${field} (a positive number)`, value: null, unit: '', assumptions: [] };
+}
+
 function verdict(margin: number): RoverStatus {
   if (margin >= MARGIN_OK) return 'PASS';
   if (margin >= 1.0) return 'MARGINAL';
@@ -75,6 +91,8 @@ export function checkSlope(spec: Spec, slopeDeg: number, crr: number): RoverChec
   if (!spec.motor || !spec.motor.stall_torque_nm) {
     return { name, status: 'NOT_CHECKED', summary: 'needs motor.stall_torque_nm (from the motor datasheet)', value: null, unit: '', assumptions: [] };
   }
+  const gap = missing(spec, ['mass_kg', 'wheel.diameter_m', 'motor.count']);
+  if (gap) return notChecked(name, gap);
   const r = spec.wheel.diameter_m / 2;
   const a = (slopeDeg * Math.PI) / 180;
   const need = spec.mass_kg * G * (Math.sin(a) + crr * Math.cos(a)) * r;
@@ -94,10 +112,12 @@ export function checkSlope(spec: Spec, slopeDeg: number, crr: number): RoverChec
 export function checkStep(spec: Spec, stepM: number): RoverCheck {
   const name = 'rover.step_climb';
   if (!spec.wheel) return { name, status: 'NOT_CHECKED', summary: 'no wheels in this spec', value: null, unit: '', assumptions: [] };
+  const gap = missing(spec, ['wheel.diameter_m']);
+  if (gap) return notChecked(name, gap);
   const wheelLimit = STEP_FRACTION * spec.wheel.diameter_m;
   const limits = [wheelLimit];
   let detail = `wheels clear ≈ ${(wheelLimit * 1000).toFixed(0)} mm`;
-  if (typeof spec.ground_clearance_m === 'number') {
+  if (isPos(spec.ground_clearance_m)) {
     limits.push(spec.ground_clearance_m);
     detail += `, belly clears ${(spec.ground_clearance_m * 1000).toFixed(0)} mm`;
   }
@@ -123,6 +143,8 @@ export function estimateRuntime(spec: Spec, speedMps: number, crr: number, elect
 }
 
 export function checkRuntime(spec: Spec, speedMps: number, crr: number, electronicsW: number, targetMin: number): RoverCheck {
+  const gap = missing(spec, ['battery.voltage_v', 'battery.capacity_mah', 'mass_kg', 'motor.count']);
+  if (gap) return notChecked('rover.runtime', gap);
   const { hours, energy, draw } = estimateRuntime(spec, speedMps, crr, electronicsW);
   const minutes = hours * 60;
   const margin = targetMin > 0 ? minutes / targetMin : Infinity;

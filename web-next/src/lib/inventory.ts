@@ -64,7 +64,10 @@ export function offlinePartReply(part: InventoryPart, message: string): { reply:
   const update: Partial<InventoryPart> = {};
   if (Object.keys(specs).length) update.specs = specs;
   if (qty) update.quantity = parseInt(qty[1] || qty[2], 10);
-  const confirmed = /\b(yes|yep|yeah|correct|confirm(ed)?|that'?s right|right)\b/.test(m);
+  /* A negation anywhere ("no, that's not right", "don't confirm")
+   * wins: the helper only confirms an unambiguous yes. */
+  const negated = /\b(no|nope|not|don'?t|do not|never|wrong|incorrect|isn'?t|nah)\b/.test(m);
+  const confirmed = !negated && /\b(yes|yep|yeah|correct|confirm(ed)?|that'?s right)\b/.test(m);
   const bits = [] as string[];
   if (update.specs) bits.push('noted ' + Object.entries(update.specs).map(([k, v]) => `${SPEC_KEY_LABEL[k] ?? k} ${v}`).join(', '));
   if (update.quantity) bits.push(`quantity ${update.quantity}`);

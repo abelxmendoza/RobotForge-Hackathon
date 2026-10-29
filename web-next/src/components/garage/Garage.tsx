@@ -287,6 +287,10 @@ export default function Garage() {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => { liveHealth().then(setHealth); }, []);
+  /* Each Forge loop run gets a token; switching robots or editing the
+   * draft retires it, so a slow live result can never land in another
+   * robot's editor or overwrite newer edits. */
+  const runRef = useRef(0);
 
   const robot = robots.find((r) => r.id === selected) ?? null;
   const latest = robot ? robot.versions[robot.versions.length - 1] : null;
@@ -303,6 +307,8 @@ export default function Garage() {
     setDraft(JSON.parse(JSON.stringify(v.spec)));
     setBaseId(v.id);
     setDraftNote([]);
+    runRef.current += 1;
+    setLooping(false);
     setLoop(null);
     setLoopRounds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,6 +345,17 @@ export default function Garage() {
   };
 
   const edit = (path: string, value: unknown) => setDraft((d: Spec) => setPath(d, path, value));
+  /* A finished loop result belongs to the draft it started from; once
+   * the draft changes, "Use these changes" would overwrite newer edits,
+   * so the result is retired. */
+  const loopFrom = useRef<string>('');
+  useEffect(() => {
+    if (loop && JSON.stringify(draft) !== loopFrom.current) {
+      setLoop(null);
+      setLoopRounds([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
 
   const draftLines = useMemo(() => (draft ? forgeValidateSpec(draft).lines : []), [draft]);
   const baseLines = useMemo(() => (base ? forgeValidateSpec(base.spec).lines : []), [base]);
@@ -350,16 +367,24 @@ export default function Garage() {
   const dc = counts(draftLines);
   const fixable = dc.errors > 0 || (withWarnings && dc.warns > 0);
 
+  const draftRef = useRef<Spec | null>(null);
+  draftRef.current = draft;
+
   const runLoop = async () => {
     if (!draft) return;
+    const token = ++runRef.current;
+    const started = JSON.stringify(draft);
+    loopFrom.current = started;
+    const current = () => runRef.current === token && JSON.stringify(draftRef.current) === started;
     setLooping(true);
     setLoop(null);
     setLoopRounds([]);
     try {
-      const res = await runForgeLoop(draft, { includeWarnings: withWarnings, onRound: (r) => setLoopRounds((x) => [...x, r]) });
-      setLoop(res);
+      const res = await runForgeLoop(draft, { includeWarnings: withWarnings, onRound: (r) => { if (current()) setLoopRounds((x) => [...x, r]); } });
+      if (current()) setLoop(res);
+      else if (runRef.current === token) setLoopRounds([]);
     } finally {
-      setLooping(false);
+      if (runRef.current === token) setLooping(false);
     }
   };
 

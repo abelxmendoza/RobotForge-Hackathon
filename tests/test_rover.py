@@ -100,3 +100,42 @@ console.log(JSON.stringify(specs.map(s => checkRover(s, {{}}))));
             assert w["status"] == g["status"], (name, w, g)
             if w["value"] is not None:
                 assert g["value"] == pytest.approx(w["value"], abs=0.051), (name, w["name"])
+
+
+def test_browser_port_refuses_cleared_inputs():
+    """A field cleared in the Garage arrives as null: NOT_CHECKED, never PASS."""
+    node = __import__("shutil").which("node")
+    if not node:
+        pytest.skip("node not available")
+    ts = REPO / "web-next" / "src" / "lib" / "rover.ts"
+    spec = json.loads((REPO / "examples" / "pathfinder.json").read_text())
+    spec["mass_kg"] = None
+    script = f"""
+import {{ checkRover }} from '{ts.as_posix()}';
+console.log(JSON.stringify(checkRover(JSON.parse(process.argv[1]), {{}})));
+"""
+    r = subprocess.run([node, "--experimental-strip-types", "--input-type=module",
+                        "-e", script, json.dumps(spec)], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    checks = {c["name"]: c for c in json.loads(r.stdout)["checks"]}
+    assert checks["rover.slope_climb"]["status"] == "NOT_CHECKED"
+    assert "mass_kg" in checks["rover.slope_climb"]["summary"]
+    assert checks["rover.runtime"]["status"] == "NOT_CHECKED"
+    assert checks["rover.step_climb"]["status"] != "NOT_CHECKED"
+
+
+def test_offline_part_helper_never_confirms_a_negation():
+    node = __import__("shutil").which("node")
+    if not node:
+        pytest.skip("node not available")
+    ts = REPO / "web-next" / "src" / "lib" / "inventory.ts"
+    script = f"""
+import {{ offlinePartReply }} from '{ts.as_posix()}';
+const part = {{ name: 'motor?', specs: {{}} }};
+const msgs = ["No, that is not correct", "do not confirm", "that's wrong", "yes, that's right", "Yep 12 V"];
+console.log(JSON.stringify(msgs.map(m => offlinePartReply(part, m).confirmed)));
+"""
+    r = subprocess.run([node, "--experimental-strip-types", "--input-type=module", "-e", script],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == [False, False, False, True, True]
