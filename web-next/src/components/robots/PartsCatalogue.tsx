@@ -66,6 +66,15 @@ function PartCard({ part, query, highlight, cardRef }: {
       ) : null}
       <h4>{part.name}</h4>
       {part.blurb ? <p>{part.blurb}</p> : null}
+      {/* Wave 6: used_for is recorded for every part but was only
+          searchable, never shown — surface it as the "why it
+          matters" line, verbatim from the catalog entry. */}
+      {part.used_for ? (
+        <p className="leading-snug text-faint">
+          <span className="font-semibold text-dim">Used for:</span>{" "}
+          {part.used_for}
+        </p>
+      ) : null}
       {specs ? <div className="specs">{specs}</div> : null}
     </div>
   );

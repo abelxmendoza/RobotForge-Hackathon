@@ -344,7 +344,17 @@ export default function KitViewer() {
               <tbody>
                 {items.map((p) => (
                   <tr key={p.id}>
-                    <td>{p.name}</td>
+                    <td>
+                      {p.name}
+                      {/* Wave 6: the recorded one-line blurb under
+                          the name — what the part is, from the
+                          catalog entry itself. */}
+                      {p.blurb ? (
+                        <div className="max-w-[46ch] text-[12.5px] leading-snug text-dim">
+                          {p.blurb}
+                        </div>
+                      ) : null}
+                    </td>
                     <td>{fmtSpecs(p)}</td>
                     <td className="dim">{p.source}</td>
                   </tr>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Robot } from "@/lib/types";
 import { robotSlug } from "@/lib/data";
+import { firstSentence } from "@/lib/excerpt";
 import { classPath, dexId, gateStatusOf, imgSrc, robotImage, staticCheckOf } from "./shared";
 import { StaticBadge, VerdictBadge } from "./badges";
 
@@ -32,6 +33,11 @@ export default function RobotCard({ robot, hidden = false }: { robot: Robot; hid
         <span className="dex">{dexId(robot)}</span>
         <h3>{robot.name}</h3>
         <span className="cls">{classPath(robot)}</span>
+        {/* Wave 6: what this robot is, in one line — the first
+            sentence of its recorded catalog description, verbatim. */}
+        <p className="line-clamp-3 text-[13px] leading-snug text-dim">
+          {firstSentence(robot.description)}
+        </p>
         <VerdictBadge status={status} />
         {check ? <StaticBadge check={check} /> : null}
       </div>

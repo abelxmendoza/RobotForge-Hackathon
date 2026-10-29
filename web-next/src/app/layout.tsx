@@ -6,6 +6,11 @@ import "@/styles/app.css";
 import "@/styles/site.css";
 import "@/styles/chat.css";
 import "@/styles/anim.css";
+/* Wave 6: the Tailwind v4 entry + Next-only polish. Imported last so
+   its rules land after the synced vanilla stylesheets; the file lives
+   outside src/styles/ because those five are overwritten by
+   scripts/sync-data from the canonical assets/css/. */
+import "@/tailwind.css";
 
 export const metadata: Metadata = {
   title: { default: "RobotForge", template: "%s · RobotForge" },

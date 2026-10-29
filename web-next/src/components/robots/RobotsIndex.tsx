@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { stashSpotPhoto } from "@/lib/spot";
 import { families, parts, robotSlug, robots } from "@/lib/data";
+import { firstSentence } from "@/lib/excerpt";
 import { describeSignature } from "@/lib/grouping";
 import type { AppDispatch, RootState } from "@/store/store";
 import { setDrivetrain, setVerdict } from "@/store/catalogSlice";
@@ -280,6 +281,18 @@ export default function RobotsIndex() {
                 ) : null}
               </h3>
               {family.credit ? <p className="sub">{family.credit}</p> : null}
+              {/* Wave 6: when the family resolves to a Robodex entry,
+                  say what that robot is — the first sentence of its
+                  recorded description. Families with no dex entry
+                  stay plain rather than padded. */}
+              {dexRobot ? (
+                <p
+                  className="max-w-[72ch] text-sm leading-relaxed text-dim"
+                  style={{ marginTop: 4 }}
+                >
+                  {firstSentence(dexRobot.description)}
+                </p>
+              ) : null}
               {family.variants.map((variant) => (
                 <div key={variant.label} style={{ margin: "14px 0 14px 12px" }}>
                   <h4 style={{ margin: "0 0 4px" }}>{variant.label}</h4>

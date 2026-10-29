@@ -1,0 +1,148 @@
+/* RobotForge Wave 6 — Tailwind v4 entry + visual polish (Next-only).
+ *
+ * Why this file exists: tailwindcss v4 and @tailwindcss/postcss were
+ * installed and the PostCSS plugin was registered, but no stylesheet
+ * ever imported Tailwind, so the plugin generated nothing — the
+ * production CSS bundle contained zero utilities (verified by grep
+ * against the built CSS before this wave). This file is the entry.
+ *
+ * It lives OUTSIDE src/styles/ on purpose: the five files there are
+ * synced copies of the canonical assets/css/*.css (scripts/sync-data
+ * overwrites them at prebuild), while everything in this file is
+ * Next-only presentation and must not leak into the parked vanilla
+ * site. Import order in layout.tsx puts this file last.
+ *
+ * Preflight is deliberately NOT imported: tokens.css already owns the
+ * base reset, and Tailwind's preflight (h1–h6 inherit, button cursor,
+ * …) would silently restyle the vanilla-derived base. Only the theme
+ * and utilities layers are pulled in.
+ *
+ * Theme tokens are mapped `inline` onto the design tokens, so a
+ * utility like text-dim or bg-panel resolves to the same CSS variable
+ * the vanilla stylesheets use — one source of truth. Verdict colours
+ * (--pass / --marginal / --fail / badge styles) are intentionally NOT
+ * mapped and NOT touched anywhere below: badge colour is semantic
+ * and locked; the pop in this file comes from depth, brand surfaces,
+ * and motion around them.
+ *
+ * Cascade note: the vanilla stylesheets are unlayered, and unlayered
+ * CSS beats layered CSS — so Tailwind margin/padding utilities lose
+ * to tokens.css's `*{margin:0}` reset. The components in this wave
+ * use utilities for typography, colour, line-clamp and max-width
+ * (which win), and get their spacing from parent grid/flex gaps and
+ * the vanilla component rhythm, as before. */
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  --color-ink: var(--bg);
+  --color-panel: var(--surface);
+  --color-panel-2: var(--surface-2);
+  --color-panel-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fog: var(--text);
+  --color-dim: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-forge: var(--accent);
+  --color-forge-ink: var(--accent-ink);
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+}
+
+/* ---------- depth: layered surfaces ----------
+   A faint top sheen + a real shadow under cards and metric tiles.
+   Only properties the vanilla rules never set on these classes
+   (background-image layer over the flat fill, box-shadow), so the
+   flat fills — including the callout tints that share .card — are
+   unchanged in colour. */
+.card {
+  background-image: linear-gradient(
+    180deg, rgba(255, 255, 255, .028), rgba(255, 255, 255, 0) 42%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .30),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+.metric {
+  background-image: linear-gradient(
+    180deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, 0) 55%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04),
+    0 8px 20px rgba(0, 0, 0, .22);
+}
+
+/* ---------- robot cards: resting depth, 3D lift + sheen ----------
+   The lift itself (translateY) is anim.css's; this adds the resting
+   shadow everywhere and — on hover-capable, fine-pointer devices
+   only, so touch never tilt-janks — a slight perspective tilt that
+   overrides the flat lift, plus a light sweep across the photo.
+   Transform/opacity only: cheap on a base iPhone 15 GPU. */
+.robot-card { box-shadow: 0 10px 26px rgba(0, 0, 0, .30); }
+@media (hover: hover) and (pointer: fine) {
+  .robot-card:hover {
+    transform: perspective(1000px) rotateX(1.4deg) rotateY(-1.4deg)
+      translateY(-5px);
+    box-shadow: 0 26px 48px rgba(0, 0, 0, .50);
+  }
+  .robot-card .ph { position: relative; }
+  .robot-card .ph::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 30%,
+      rgba(255, 255, 255, .14) 48%, transparent 62%);
+    transform: translateX(-120%);
+    transition: transform .8s var(--ease);
+  }
+  .robot-card:hover .ph::after { transform: translateX(120%); }
+}
+
+/* ---------- brand surfaces: gradient amber ----------
+   Brand colour only — buttons and the brand mark. No verdict or
+   badge surface is recoloured anywhere in this file. */
+.btn-primary {
+  background-image: linear-gradient(180deg, #fbb02e, var(--accent));
+  box-shadow: 0 8px 22px rgba(245, 158, 11, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.brand-mark {
+  background-image: linear-gradient(145deg, #fbb02e, var(--accent));
+  box-shadow: 0 4px 14px rgba(245, 158, 11, .35);
+}
+
+/* ---------- landing hero: a soft forge glow ----------
+   A radial amber wash behind the hero, gradient falloff only (no
+   blur filter — those are the expensive kind on phones). */
+.hero { position: relative; }
+.hero::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 100%;
+  max-height: 460px; pointer-events: none;
+  background: radial-gradient(560px 260px at 50% 0%,
+    rgba(245, 158, 11, .10), transparent 70%);
+}
+
+/* ---------- tabs + chips: state changes glide ----------
+   Filters and tabs are controls, not verdicts; accent here is the
+   brand's "active" colour, as in the sidebar's current-page rule. */
+.chip, .tab {
+  transition: background .18s var(--ease), color .18s var(--ease),
+    border-color .18s var(--ease), box-shadow .18s var(--ease),
+    transform .12s var(--ease);
+}
+.chip:active, .tab:active { transform: scale(.97); }
+.tab[aria-selected="true"] {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+/* ---------- take-apart: focus switches glide ----------
+   The harness-focus ghosting is an opacity rule on .part-shape
+   (assets/css/app.css); a transition on that property turns the
+   All / Model / Harness switch into a cross-fade instead of a cut.
+   The stage itself fades in on mount (rf-fadein ships in anim.css).
+   tokens.css's global reduced-motion rule disables both. */
+.ta-stage { animation: rf-fadein .4s ease both; }
+.ta-stage .part-shape { transition: opacity .35s ease; }
+
+::selection { background: rgba(245, 158, 11, .35); }

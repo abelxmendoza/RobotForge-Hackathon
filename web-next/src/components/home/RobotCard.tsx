@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { robotSlug } from "@/lib/data";
+import { firstSentence } from "@/lib/excerpt";
 import type { Robot } from "@/lib/types";
 import { assetPath } from "./asset";
 
@@ -95,6 +96,11 @@ export default function RobotCard({ robot }: { robot: Robot }) {
         <span className="cls">
           {robot.mobility_class} · {robot.subtype}
         </span>
+        {/* Wave 6: one-line description — the first sentence of the
+            recorded catalog description, verbatim. */}
+        <p className="line-clamp-3 text-[13px] leading-snug text-dim">
+          {firstSentence(robot.description)}
+        </p>
         <span className={`verdict ${VERDICT_CLASS[status] ?? "norun"}`}>
           {VERDICT_LABEL[status] ?? status}
         </span>
