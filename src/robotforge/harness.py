@@ -358,12 +358,18 @@ class _Graph:
         # This v1 current solver assumes a directed power tree. Shared
         # destinations and cycles cannot be assigned unambiguous branch
         # currents without explicit current-split information.
-        incoming: dict[str, int] = {}
+        incoming: dict[str, list[dict]] = {}
         for c in conns:
             if c["kind"] == "power":
-                dst = c["to"]
-                incoming[dst] = incoming.get(dst, 0) + 1
-        shared = sorted(k for k, count in incoming.items() if count > 1)
+                incoming.setdefault(c["to"], []).append(c)
+        # An explicitly specified edge current does not require the
+        # downstream solver to infer that edge's share. Retain support
+        # for documented parallel feeds; reject ambiguous inferred ones.
+        shared = sorted(
+            node for node, edges in incoming.items()
+            if len(edges) > 1
+            and sum(_num(e.get("current_a")) is None for e in edges) > 1
+        )
         if shared:
             raise HarnessError(
                 "power graph has multiply-fed nodes "
