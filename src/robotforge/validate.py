@@ -100,17 +100,22 @@ def validate(spec: RobotSpec) -> list[Finding]:
                                  f"a {spec.drivetrain} normally has {want} "
                                  f"arm(s), spec declares {spec.arms.count}"))
 
-    # Electrical: motor supply must not exceed battery voltage by a wide margin.
+    # The schema records nominal component voltages, not the actual
+    # battery -> regulator -> motor-driver -> motor power path. A mismatch
+    # is therefore a review warning, not proof of an impossible design.
+    # Do not silently claim that a regulator exists (or is absent).
     if spec.motor.voltage_v > spec.battery.voltage_v * 1.05:
-        f.append(Finding(ERROR, "electrical.voltage_match",
-                         f"motor voltage {spec.motor.voltage_v:g} V exceeds battery "
-                         f"{spec.battery.voltage_v:g} V — motors would be undervolted "
-                         f"or need a boost converter"))
+        f.append(Finding(WARN, "electrical.voltage_match",
+                         f"motor nominal voltage {spec.motor.voltage_v:g} V exceeds "
+                         f"battery nominal voltage {spec.battery.voltage_v:g} V; "
+                         "verify motor-driver output, battery operating range, "
+                         "and any boost converter before approval"))
     elif spec.motor.voltage_v < spec.battery.voltage_v * 0.5:
         f.append(Finding(WARN, "electrical.voltage_match",
-                         f"motor voltage {spec.motor.voltage_v:g} V is far below "
-                         f"battery {spec.battery.voltage_v:g} V — a regulator is "
-                         f"required and was not declared"))
+                         f"motor nominal voltage {spec.motor.voltage_v:g} V is far "
+                         f"below battery nominal voltage {spec.battery.voltage_v:g} V; "
+                         "verify motor-driver output, regulation, and component "
+                         "voltage limits before approval"))
 
     # Mass budget: if component masses are given, they must not exceed the
     # declared total, and should account for a plausible share of it.
