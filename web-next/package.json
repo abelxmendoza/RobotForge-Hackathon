@@ -9,7 +9,8 @@
     "parity": "node scripts/parity.mjs",
     "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
     "predev": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
-    "sample-scan": "node scripts/make-sample-scan.mjs"
+    "sample-scan": "node scripts/make-sample-scan.mjs",
+    "postbuild": "node scripts/copy-vanilla.mjs"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.5.0",
