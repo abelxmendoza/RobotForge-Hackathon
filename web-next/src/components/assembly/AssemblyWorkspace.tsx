@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { overlapPairs } from '@/lib/spatial';
 import { COMPONENTS, componentById } from '@/lib/components';
 import { ASSEMBLY_KEY, applyAssembly, currentAssembly, operationFor, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation, type ComponentInstance, type Pose } from '@/lib/assembly';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
@@ -32,6 +33,14 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
   const [animate,setAnimate] = useState(true);
   const [xray,setXray] = useState(false);
   const [explode,setExplode] = useState(0);
+  const [dragMode,setDragMode] = useState(false);
+  const [snapDeck,setSnapDeck] = useState(true);
+  const [ghostMount,setGhostMount] = useState(false);
+  const [showFov,setShowFov] = useState(false);
+  const [fovDeg,setFovDeg] = useState(60);
+  const [fovRange,setFovRange] = useState(0.5);
+  const [replay,setReplay] = useState(1);
+  const [playing,setPlaying] = useState(false);
   const [retry,setRetry] = useState(0);
   const [from,setFrom] = useState(''); const [to,setTo] = useState('');
   const robot = robots.find(r => r.id === robotId);
@@ -42,6 +51,9 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     try {return {preview:previewAssembly(robots,all,proposal),previewError:''};}
     catch(e) {return {preview:saved,previewError:(e as Error).message};}
   },[robots,all,proposal,saved]);
+  const overlaps = useMemo(()=>overlapPairs(preview.components),[preview.components]);
+  const collisionIds = useMemo(()=>[...new Set(overlaps.flat())],[overlaps]);
+  const previousVersion = (all[robotId]??[]).at(-2);
   const instance = preview.components.find(c => c.id === selected);
   const definition = instance ? componentById(instance.componentId) : null;
   if (!ready || !spec) return <p>Loading saved robot assembly…</p>;
@@ -81,21 +93,34 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     {notice && <p role="status">{notice}</p>}
     {proposal && <div className="card" role="region" aria-label="Assembly operation preview">
       <strong>Preview: {previewError || preview.note}</strong>
-      <p>Placement is illustrative. No fastener fit, collision, thermal or electrical validation has been performed.</p>
+      <p>Placement is illustrative. Only added-component envelope overlaps are checked. Fastener fit, chassis interference, thermal and electrical validation are not performed.</p>
       <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(previewError)} onClick={apply}>Apply assembly change</button>{' '}
       <button type="button" className="btn btn-sm" onClick={()=>setProposal(null)}>Cancel</button>
     </div>}
     <div className="g-tabs" aria-label="3D workbench controls">
       <button type="button" className="chip" aria-pressed={animate} onClick={()=>setAnimate(v=>!v)}>Motion effects {animate?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={xray} onClick={()=>setXray(v=>!v)}>X-ray {xray?'on':'off'}</button>
+      <button type="button" className="chip" aria-pressed={dragMode} disabled={explode>0||replay<1||playing} onClick={()=>setDragMode(v=>!v)}>Drag placement {dragMode?'on':'off'}</button>
+      <button type="button" className="chip" aria-pressed={snapDeck} onClick={()=>setSnapDeck(v=>!v)}>Snap to deck {snapDeck?'on':'off'}</button>
+      <button type="button" className="chip" aria-pressed={ghostMount} onClick={()=>setGhostMount(v=>!v)}>Ghost tray {ghostMount?'on':'off'}</button>
+      <button type="button" className="chip" aria-pressed={showFov} onClick={()=>setShowFov(v=>!v)}>FOV sketch {showFov?'on':'off'}</button>
       <label className="g-field"><span>Explode assembly · {explode} mm</span><input type="range" min="0" max="100" value={explode} onChange={e=>setExplode(Number(e.target.value))}/></label>
     </div>
+    {overlaps.length>0 && <p role="status">Envelope overlaps: {overlaps.length} pair(s), highlighted red at saved/preview positions. This checks added component boxes only, including yaw; not the chassis, cables, mounting hardware or detailed CAD.</p>}
+    {ghostMount && <p className="faint">Ghost tray is an illustrative mounting concept with corner support proxies. Hole locations and fasteners are unverified; it is not printable CAD.</p>}
+    {showFov && <fieldset className="g-group"><legend>Illustrative FOV on selected component · local +X forward</legend><label className="g-field"><span>Full cone angle (degrees)</span><input type="number" min="5" max="150" value={fovDeg} onChange={e=>setFovDeg(Math.max(5,Math.min(150,Number(e.target.value)||60)))}/></label><label className="g-field"><span>Range (m)</span><input type="number" min="0.05" max="5" step="0.05" value={fovRange} onChange={e=>setFovRange(Math.max(0.05,Math.min(5,Number(e.target.value)||0.5)))}/></label><p>Assumed visualization inputs, not a sensor datasheet or an obstruction test.</p></fieldset>}
+    {previousVersion && <fieldset className="g-group"><legend>Upgrade playback · previous assembly → latest preview</legend><input aria-label="Upgrade playback progress" type="range" min="0" max="100" value={Math.round(replay*100)} onChange={e=>{setPlaying(false);setReplay(Number(e.target.value)/100);}}/><button type="button" className="chip" onClick={()=>{setReplay(0);setPlaying(true);setDragMode(false);}}>Play upgrade</button><button type="button" className="chip" onClick={()=>{setPlaying(false);setReplay(1);}}>Latest pose</button><p>Component-pose comparison only; cables show the latest planned connections. Scrubbing does not change saved versions. Motion respects reduced-motion preferences.</p></fieldset>}
+    <p className="faint">Drag placement: move a part in XY on a 5 mm grid, release to preview, Escape to cancel. Deck snap uses the schematic plate surface. Disable explode and finish playback before dragging.</p>
     <p className="faint">Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Cable arcs and moving pulses show planned connectivity, not electrical current or verified routing.</p>
     {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
       const wire=preview.connections.find(c=>c.id===id);
       if(wire){setSelectedWire(id);setTab('wiring');setFrom(wire.from);setTo(wire.to);setNotice('Selected planned connection · NOT_CHECKED');}
       else {setSelectedWire(null);setSelected(id);}
-    }} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections} animate={animate} xray={xray}/> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
+    }} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections} animate={animate} xray={xray}
+      collisionIds={collisionIds} dragMode={dragMode&&explode===0&&replay===1&&!playing} snapDeck={snapDeck}
+      ghostMount={ghostMount} fov={showFov?{angleDeg:fovDeg,rangeM:fovRange}:undefined}
+      comparison={previousVersion?.components} replay={replay} playing={playing} onPlaybackEnd={()=>{setPlaying(false);setReplay(1);}}
+      onMove={(id,positionM)=>{const current=preview.components.find(c=>c.id===id);if(current){setSelected(id);propose({kind:'move',instanceId:id,positionM,yawDeg:current.yawDeg});}}}/> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
     {tab==='components' ? <>
       <label className="g-field"><span>Add a component by name</span><select value={componentId} onChange={e=>setComponentId(e.target.value)}>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <p className="faint">{componentById(componentId)?.note}</p>

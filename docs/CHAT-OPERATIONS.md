@@ -88,3 +88,14 @@ Suggested next 3D features, in priority order:
 4. Sensor field-of-view cones and editable obstruction overlays, driven by documented sensor parameters.
 5. Version comparison in 3D: animate old/new placements, highlight changed parts, and replay assembly steps.
 6. Mass-informed center-of-mass markers and clearance/thermal keep-out volumes, explicitly naming missing inputs.
+
+
+## Interactive spatial increment
+
+- Drag placement uses ray/plane intersection in robot XY, with a 5 mm grid and optional snap to the schematic deck top. Release creates a move proposal through the existing transaction runner; Apply is still required. Escape/pointer cancellation restores the displayed pose. Dragging is disabled during explode/playback. Numeric XYZ/yaw inputs remain available for precise and keyboard edits.
+- Red overlap warnings use a separating-axis test on yaw-oriented component envelope boxes, including vertical separation. They do not check the chassis, cables, holes, detailed geometry or transient replay poses. Face contact is not counted as penetration.
+- Ghost trays show an illustrative plate and corner support proxies. No mounting holes, fastener fit or printable geometry is claimed without measured mounting data.
+- An adjustable FOV sketch projects a cone along the selected component local +X. Its angle/range are assumed user inputs, not verified sensor parameters. It does not test occlusion.
+- Upgrade playback compares the previous assembly component poses to the latest preview, interpolates position and shortest-path yaw, and shows added/removed components at their endpoints. Wiring remains the latest planned graph. Playback is visual only and never commits a version; reduced-motion skips autoplay animation.
+
+GPU interaction verification is still outstanding in this environment because its browser disables WebGL. Unit tests exercise overlap orientation/contact/vertical separation, snapping, numeric validity and yaw interpolation. The production build checks the renderer and control types.
