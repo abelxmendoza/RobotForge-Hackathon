@@ -52,8 +52,9 @@ export function useStore<T>(key: string, fallback: T): [T, (next: T) => string |
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   const save = useCallback((next: T) => {
-    setValue(next);
-    return writeStore(key, next);
+    const error = writeStore(key, next);
+    if (!error) setValue(next);
+    return error;
   }, [key]);
   return [value, save, ready];
 }

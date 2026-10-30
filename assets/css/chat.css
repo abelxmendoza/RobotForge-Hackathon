@@ -142,3 +142,15 @@
 @media (pointer:coarse){
   .fc-form input{font-size:16px}
 }
+
+/* Floating/docked legacy widgets are retired. The React assistant now renders
+   within the primary Forge thread, using its single composer. */
+.forge-chat{display:none!important}
+.main-chat-actions{display:grid;gap:12px;min-width:0}
+.main-chat-actions:empty{display:none}
+.main-chat-actions .fc-msg{max-width:100%;margin:0;padding:16px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.main-chat-actions .btn{min-height:44px}
+.main-assistant-reply{overflow-wrap:anywhere;min-width:0}
+.main-assistant-reply p+p{margin-top:10px}
+.main-chat-composer{margin-top:16px}
+@media(max-width:600px){.main-chat-actions .btn{width:100%;margin-top:8px}.main-chat-suggestions .chip{min-height:44px}}

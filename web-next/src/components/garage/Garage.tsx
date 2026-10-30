@@ -368,7 +368,7 @@ export default function Garage() {
   const roverOn = draft && isRover(draft);
   const roverDraft = useMemo(() => (draft && isRover(draft) ? checkRover(draft, rover).checks : null), [draft, rover]);
   const roverBase = useMemo(() => (base && isRover(base.spec) ? checkRover(base.spec, rover).checks : null), [base, rover]);
-  const usableParts = inventory.filter((p) => p.status === 'confirmed' && partToChanges(p).length);
+  const usableParts = inventory.filter((p) => p.status === 'confirmed' && p.quantity > 0 && (!p.robot_id || p.robot_id === robot?.id) && partToChanges(p).length);
   const dc = counts(draftLines);
   const fixable = dc.errors > 0 || (withWarnings && dc.warns > 0);
 
@@ -456,6 +456,7 @@ export default function Garage() {
               </div>
             </div>
 
+            <p><Link className="btn btn-sm" href={'/inventory/?robot='+encodeURIComponent(robot.id)}>Manage photos & parts for {robot.name}</Link></p>
             <AssemblyWorkspace key={robot.id} robotId={robot.id} />
 
             <section className="g-versions" aria-label="Versions">

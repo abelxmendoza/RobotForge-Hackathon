@@ -16,6 +16,12 @@ export const SPEC_KEY_LABEL: Record<string, string> = {
 export interface ChatLine { role: 'user' | 'assistant'; text: string; live?: boolean }
 
 export interface InventoryPart {
+  robot_id?: string | null;
+  stock_location?: string;
+  notes?: string;
+  last_counted_at?: string;
+  photo_asset_id?: string | null;
+  filename?: string;
   id: string;
   name: string;
   category: string;
@@ -41,7 +47,7 @@ export function applyUpdate(part: InventoryPart, u: Partial<InventoryPart> | nul
     ...part,
     ...(u.name ? { name: u.name } : {}),
     ...(u.category ? { category: u.category } : {}),
-    ...(u.quantity ? { quantity: u.quantity } : {}),
+    ...(typeof u.quantity === 'number' && Number.isInteger(u.quantity) && u.quantity >= 0 ? { quantity: u.quantity } : {}),
     ...(u.condition ? { condition: u.condition } : {}),
     specs: { ...part.specs, ...(u.specs || {}) },
   };
@@ -93,4 +99,62 @@ export function offlinePartReply(part: InventoryPart, message: string): { reply:
     update: Object.keys(update).length ? update : null,
     confirmed,
   };
+}
+
+
+/* Filename classification is a hint only; photo drafts remain unconfirmed. */
+export function categoryHint(name: string): string {
+  const n=name.toLowerCase().replace(/[_-]/g,' ');
+  const rules: [string,RegExp][]=[['motor_driver',/motor driver|tb6612|l298/],['computer',/jetson|raspberry|rpi/],['battery',/battery|lipo|li ion|lifepo/],['power',/buck|boost|converter|regulator|bms/],['servo',/servo/],['motor',/motor/],['sensor',/lidar|camera|realsense|imu|ultrasonic|sensor/],['wheel',/wheel/],['controller',/esp32|arduino|pico/],['cable',/cable|harness|connector/],['frame',/frame|chassis|mount/]];
+  return rules.find(([,re])=>re.test(n))?.[0]??'other';
+}
+export function matchesInventory(part: InventoryPart, query: string, category: string, robot: string): boolean {
+  const text=[part.name,part.category,part.stock_location,part.notes,part.filename,...Object.values(part.specs)].join(' ').toLowerCase();
+  return (!query.trim()||query.toLowerCase().trim().split(/\s+/).every(t=>text.includes(t))) &&
+    (category==='all'||part.category===category) && (robot==='all'||(robot==='unassigned'?!part.robot_id:part.robot_id===robot));
+}
+export function countedPart(part: InventoryPart, quantity: number, at: string): InventoryPart {
+  if(!Number.isSafeInteger(quantity)||quantity<0)throw new Error('Quantity must be a whole number, zero or more.');
+  return {...part,quantity,last_counted_at:at};
+}
+
+export function importedPart(raw: unknown): InventoryPart {
+  if(!raw||typeof raw!=='object')throw new Error('Invalid inventory record.');
+  const p=raw as Partial<InventoryPart>;
+  if(typeof p.id!=='string'||!p.id||typeof p.name!=='string'||!Number.isSafeInteger(p.quantity)||p.quantity!<0||!PART_CATEGORIES.includes(p.category as typeof PART_CATEGORIES[number]))throw new Error('Inventory records need an ID, name, valid category and whole nonnegative quantity.');
+  const safe={...p};delete (safe as Record<string,unknown>).photo_full;
+  const image=(v:unknown)=>typeof v==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(v)?v:null;
+  const specs=Object.fromEntries(Object.entries(p.specs??{}).filter(([,v])=>typeof v==='string'||(typeof v==='number'&&Number.isFinite(v))));
+  return {...safe,id:p.id,name:p.name,category:p.category!,quantity:p.quantity!,specs,photo:image(p.photo),photo_asset_id:null,catalog_part_id:typeof p.catalog_part_id==='string'?p.catalog_part_id:null,read_from_label:Array.isArray(p.read_from_label)?p.read_from_label.filter(x=>typeof x==='string'):[],condition:['new','used','damaged','unknown'].includes(p.condition??'')?p.condition!:'unknown',confidence:'owner',status:p.status==='confirmed'?'confirmed':'needs_confirmation',question:typeof p.question==='string'?p.question:'',chat:Array.isArray(p.chat)?p.chat.filter(c=>c&&(c.role==='user'||c.role==='assistant')&&typeof c.text==='string'):[],createdAt:typeof p.createdAt==='string'?p.createdAt:new Date().toISOString(),source:p.source==='photo'?'photo':'manual',robot_id:typeof p.robot_id==='string'?p.robot_id:null,stock_location:typeof p.stock_location==='string'?p.stock_location:'',notes:typeof p.notes==='string'?p.notes:''};
+}
+
+export type InventoryCommand = {kind:'list';robotName?:string}|{kind:'quantity';name:string;quantity:number}|{kind:'assign';name:string;robotName:string};
+export function parseInventoryCommand(text:string):InventoryCommand|null{
+  const q=text.trim();
+  const list=q.match(/^(?:list|show) my (?:inventory|parts)(?: for "([^"\n]+)")?$/i);
+  if(list)return{kind:'list',robotName:list[1]};
+  const count=q.match(/^set inventory "([^"\n]+)" quantity to (\d+)$/i);
+  if(count)return{kind:'quantity',name:count[1],quantity:Number(count[2])};
+  const assign=q.match(/^assign inventory "([^"\n]+)" to "([^"\n]+)"$/i);
+  return assign?{kind:'assign',name:assign[1],robotName:assign[2]}:null;
+}
+export interface InventoryOperation{partId:string;expected:string;quantity?:number;robotId?:string;description:string}
+export function proposeInventory(parts:InventoryPart[],robots:{id:string;name:string}[],command:Exclude<InventoryCommand,{kind:'list'}>):InventoryOperation{
+  const matches=parts.filter(p=>p.name.toLowerCase()===command.name.toLowerCase()||p.id===command.name);
+  if(matches.length!==1)throw new Error('Use a unique inventory part name or its ID.');
+  const p=matches[0];
+  if(command.kind==='quantity'){
+    countedPart(p,command.quantity,'preview');
+    return{partId:p.id,expected:JSON.stringify(p),quantity:command.quantity,description:`Count ${p.name}: ${p.quantity} → ${command.quantity}`};
+  }
+  const targets=robots.filter(r=>r.name.toLowerCase()===command.robotName.toLowerCase());
+  if(targets.length!==1)throw new Error('Use a unique saved robot name.');
+  return{partId:p.id,expected:JSON.stringify(p),robotId:targets[0].id,description:`Assign ${p.name} to ${targets[0].name}`};
+}
+export function applyInventory(parts:InventoryPart[],op:InventoryOperation,at:string):InventoryPart[]{
+  const p=parts.find(p=>p.id===op.partId);
+  if(!p||JSON.stringify(p)!==op.expected)throw new Error('Inventory changed. Ask for a fresh preview.');
+  const next=op.quantity!==undefined?countedPart(p,op.quantity,at):typeof op.robotId==='string'?{...p,robot_id:op.robotId}:null;
+  if(!next)throw new Error('Invalid inventory operation.');
+  return parts.map(p=>p.id===op.partId?next:p);
 }
