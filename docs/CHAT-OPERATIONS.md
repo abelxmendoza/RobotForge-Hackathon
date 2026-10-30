@@ -111,3 +111,14 @@ Component interiors are stylized visual proxies inside the existing envelope: bo
 ## Mobile workbench
 
 Graphics/placement controls collapse into an accessible disclosure. Phone controls use a two-column layout, 44px touch targets, 16px form text, wrapping labels/IDs and a single-column component list. Preview actions stay within the safe area above bottom navigation; landscape uses normal document flow. The canvas fits viewport height and listens to visual viewport resizing. Small/coarse-pointer screens start in Balanced quality, with Studio still selectable. Drag handlers track the primary pointer so a second touch cannot move or commit another finger's drag. Full multi-touch gesture and GPU verification remain browser QA requirements.
+
+
+## Unified main chat and inventory
+
+The floating Ask the Guide launcher is removed from the React app and landing page. Existing archived widget markup is hidden; it no longer reserves a side rail. The question/operation engine is now a headless hook owned by the Forge thread. One main composer offers Ask & manage (recorded/live Q&A and inventory/robot operations) or Design a robot (existing description pipeline). Attachments retain spec, scan, document and robot-photo flows; a Part choice saves photos into inventory through the same intake as My parts. Operation previews render beside the main conversation composer, and results join the main message history.
+
+Inventory saves a thumbnail record before attempting identification. A compressed larger copy is retained in browser IndexedDB when available. Unknown/offline results remain saved, with filename category hints explicitly unconfirmed. Records support robot ownership/intended-use links, category, quantity including zero, shelf location, notes and last-counted timestamp. Search and category/robot filters operate on the saved list. Garage links directly to its parts, and fitting filters out zero-stock or other-robot parts.
+
+Inventory exports include retained compressed photos; import validates records and restores those photos. These records and photos are browser-local, with no account/cloud sync. Assignment does not install/consume stock. Each image creates one record; no automatic multi-object splitting or cross-photo deduplication is claimed. Main chat supports list my inventory, list my parts for a robot, previewed quantity changes and robot assignments.
+
+Recommended next layout: keep the single conversation central; place selected robot/3D beside it on desktop; use Parts/Wiring/Checks as context panels sharing selected robot state. On mobile, promote those panels to full-width tabs below the conversation, never floating overlays. A selected-robot context picker and a unified activity/version timeline should follow, avoiding silent target guessing.

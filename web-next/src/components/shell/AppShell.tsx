@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import ChatLauncher from "@/components/chat/ChatLauncher";
 import RevealInit from "./RevealInit";
 import { assetPath } from "@/components/home/asset";
 
@@ -25,7 +24,7 @@ export const RESEARCH_URL = "/problem-space";
 const NAV = [
   { id: "home", label: "Home", href: "/", icon: (<><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></>) },
   { id: "demo", label: "Demo", href: "/demo/", icon: (<><circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" /></>) },
-  { id: "forge", label: "Forge", href: "/forge/", icon: (<><path d="M4 6h16M4 12h10M4 18h7" /><circle cx="18" cy="16" r="3" /></>) },
+  { id: "forge", label: "Workspace", href: "/forge/", icon: (<><path d="M4 6h16M4 12h10M4 18h7" /><circle cx="18" cy="16" r="3" /></>) },
   { id: "garage", label: "My robots", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
   { id: "inventory", more: true, label: "My parts", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
   { id: "robots", more: true, label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
@@ -42,7 +41,6 @@ export default function AppShell({ active, crumbs = [], children }:
   return (
     <div className="shell">
       <a className="skip-link" href="#content">Skip to content</a>
-      <ChatLauncher />
       <aside className="sidebar">
         <Link className="brand" href="/">
           <BrandMark /><span>RobotForge<small>App</small></span>

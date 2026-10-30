@@ -33,6 +33,8 @@ import {
 } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import { useForgeAssistant } from '@/components/chat/ChatDock';
+import PartPhotoIntake from '@/components/inventory/PartPhotoIntake';
 import { useDispatch } from 'react-redux';
 import { setStep, setTab } from '@/store/forgeSlice';
 import { BADGE_LABEL, downloadJSON } from './model';
@@ -100,10 +102,10 @@ function WorkingBody({ what }: { what: string }) {
 function PhotoModeAsk({
   onPick,
 }: {
-  onPick: (mode: 'robot' | 'document') => void;
+  onPick: (mode: 'robot' | 'document' | 'part') => void;
 }) {
   const [picked, setPicked] = useState(false);
-  const pick = (m: 'robot' | 'document') => {
+  const pick = (m: 'robot' | 'document' | 'part') => {
     if (picked) return;
     setPicked(true);
     onPick(m);
@@ -135,7 +137,8 @@ function PhotoModeAsk({
           onClick={() => pick('document')}
         >
           Spec sheet or blueprint
-        </button>
+        </button>{' '}
+        <button className="btn btn-sm" type="button" disabled={picked} onClick={()=>pick('part')}>Part → save to inventory</button>
       </p>
     </>
   );
@@ -273,6 +276,11 @@ function downscale(dataUrl: string, maxDim: number): Promise<string> {
 
 export default function ForgeThread() {
   const dispatch = useDispatch();
+  const assistant = useForgeAssistant();
+  const assistantRef = useRef(assistant);
+  assistantRef.current = assistant;
+  const assistantEntryIds = useRef(new Map<number,number>());
+  const [inputMode,setInputMode]=useState<'chat'|'design'>('chat');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('Checking what this deployment can do…');
   const [mode, setMode] = useState<{ mode: LiveMode; why: string }>({
@@ -293,7 +301,7 @@ export default function ForgeThread() {
   const timersRef = useRef(new Map<number, number>());
   const runCacheRef = useRef(new Map<string, unknown>());
   const elRefs = useRef(new Map<number, HTMLElement>());
-  const photoResolveRef = useRef<((m: 'robot' | 'document') => void) | null>(
+  const photoResolveRef = useRef<((m: 'robot' | 'document' | 'part') => void) | null>(
     null,
   );
   const fileRefs = {
@@ -319,6 +327,19 @@ export default function ForgeThread() {
     (node: ReactNode) => push({ kind: 'note', node }),
     [push],
   );
+  useEffect(()=>{
+    for(const message of assistant.messages){
+      if(message.who==='user')continue;
+      const node=<div className="main-assistant-reply">
+        {message.html&&<div dangerouslySetInnerHTML={{__html:message.html}}/>}
+        {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
+        {message.hits&&<div className="g-tabs">{message.hits.map((hit,i)=><button type="button" className="chip" key={i} onClick={()=>assistantRef.current.onHitClick(hit)}>{hit.label}</button>)}</div>}
+      </div>;
+      const entryId=assistantEntryIds.current.get(message.id);
+      if(entryId===undefined)assistantEntryIds.current.set(message.id,pushNote(node));
+      else setEntries(current=>current.map(e=>e.id===entryId?{...e,node}:e));
+    }
+  },[assistant.messages,pushNote]);
   const pushStage = useCallback(
     (
       badge: Badge,
@@ -642,7 +663,7 @@ export default function ForgeThread() {
   );
 
   /* ---------------- input flows: photo + document ---------------- */
-  const choosePhotoMode = useCallback((): Promise<'robot' | 'document'> => {
+  const choosePhotoMode = useCallback((): Promise<'robot' | 'document' | 'part'> => {
     return new Promise((resolve) => {
       photoResolveRef.current = resolve;
       pushNote(
@@ -823,6 +844,7 @@ export default function ForgeThread() {
         </>,
       );
       const mode = await choosePhotoMode();
+      if(mode==='part'){pushNote(<PartPhotoIntake file={file}/>);return;}
       if (mode === 'document') {
         await runPhotoDocument(noteText, dataUrl);
         return;
@@ -1214,7 +1236,8 @@ export default function ForgeThread() {
       else if (a && a.kind === 'photo') await runPhoto(a.file, value);
       else if (a && a.kind === 'doc') await runDoc(a.file, value);
       else if (a && a.kind === 'scan') await runScan(a.file);
-      else await runText(value);
+      else if(inputMode==='design')await runText(value);
+      else{pushUser(<p>{value}</p>);assistant.ask(value);}
     } finally {
       busyRef.current = false;
       setAttach(null);
@@ -1229,7 +1252,7 @@ export default function ForgeThread() {
     initedRef.current = true;
     pushNote(
       <p>
-        <strong>Welcome to the Forge.</strong> Photo and parts-list imports need
+        <strong>One workspace for your robot.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
         the live endpoint; spec files, scans and the recorded samples below
         always work.
       </p>,
@@ -1362,7 +1385,10 @@ export default function ForgeThread() {
           Document — TurtleBot3 spec sheet
         </button>
       </div>
-      <form className="forge-composer" onSubmit={onSubmit}>
+      {assistant.actions}
+      <div className="main-chat-suggestions g-tabs" aria-label="Workspace suggestions">{['List my robots','List my inventory','Operations'].map(q=><button className="chip" type="button" key={q} onClick={()=>{pushUser(<p>{q}</p>);assistant.ask(q);}}>{q}</button>)}</div>
+      <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
+        <div className="g-tabs" aria-label="Message mode"><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button></div>
         <div className="attach-row" hidden={!attach}>
           <span className="attach-chip">
             {attach ? (
@@ -1384,7 +1410,7 @@ export default function ForgeThread() {
           htmlFor="forge-input"
           style={{ fontSize: 'var(--fs-xs)' }}
         >
-          Message the forge
+          Message your robot workspace
         </label>
         <textarea
           id="forge-input"

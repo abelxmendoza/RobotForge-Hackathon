@@ -1,32 +1,9 @@
 "use client";
-/* Forge Guide widget — the chat UI (React port of assets/js/chat.js).
- *
- * Answering is done by ./engine.ts (the chat-engine.js port) from the
- * site's recorded data, and the local recorded answer is ALWAYS the
- * default: instant, and the only answer whenever no live endpoint is
- * configured.
- *
- * Live-model hook: when a deployment configures the live endpoint
- * (LIVE_ENDPOINT from components/forge/live.tsx) and /health answers, a question the local
- * engine honestly cannot answer (its `fallback: true` result) is
- * offered to the live model at POST /chat. The reply is rendered
- * escaped and badged "LIVE MODEL — not from recorded RobotForge
- * data". If the endpoint errors or is over budget, the Guide says
- * so plainly and keeps the local answer. No API keys ever live in
- * this file or any page: the endpoint holds them server-side.
- *
- * Data: the vanilla widget fetched catalog/*.json at runtime; here
- * the same JSON is statically imported (see @/lib/data and @/data),
- * so the engine is built synchronously and no fetching happens.
- *
- * Routes: the engine already returns Next routes (/robots/<slug>/,
- * /evidence/, /forge/). Robot/kind/route hits navigate with the Next
- * router; part hits dispatch a window CustomEvent "rf-focus-part"
- * (detail {id}) and land on /kit/?part=<id>#parts.
- */
+/* Headless assistant for the primary Forge conversation. Recorded answers,
+ * live fallback and validated operation proposals share its single composer.
+ * No floating launcher or separate chat panel is mounted. */
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -49,6 +26,8 @@ import { gateReports, parts, robots } from "@/lib/data";
 import partsDoc from "@/data/parts.json";
 import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
+import InventoryProposal from './InventoryProposal';
+import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,type InventoryOperation} from '@/lib/inventory';
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { GARAGE_KEY, fmtValue, type GarageRobot } from '@/lib/garage';
@@ -107,47 +86,23 @@ interface Msg {
 
 let nextId = 1;
 
-export function ChatWidget({ docked }: { docked: boolean }) {
+export function useForgeAssistant() {
   const router = useRouter();
   const pathname = usePathname();
   const engine = useMemo(buildEngine, []);
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [chips, setChipsState] = useState<string[]>(DEFAULT_CHIPS);
-  const [inputValue, setInputValue] = useState("");
-  const [manualOpen, setManualOpen] = useState(false);
-  const [wide, setWide] = useState(false);
   const [subText, setSubText] = useState(SUB_RECORDED);
 
   const [proposal, setProposal] = useState<Preview | null>(null);
+  const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(null);
   const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(null);
   const lastApplied = useRef<{ robotId: string; versionId: string; scope?: 'assembly' } | null>(null);
   const proposalRef = useRef<Preview | null>(null);
   proposalRef.current = proposal;
 
-  const msgsRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const greetedRef = useRef(false);
   const healthRef = useRef<Promise<LiveHealth | null> | null>(null);
-
-  /* Docked mode (app pages, wide screens): the panel is a fixed
-   * left rail and is simply open — there is nothing to toggle. The
-   * media query mirrors the one in chat.css / app.css. */
-  const dockedWide = docked && wide;
-  const open = docked ? dockedWide || manualOpen : manualOpen;
-
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1280px)");
-    setWide(mq.matches);
-    const onChange = (ev: MediaQueryListEvent) => setWide(ev.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  useEffect(() => {
-    const el = msgsRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
 
   const setChips = useCallback(
     (list: string[] | undefined | null) => {
@@ -229,43 +184,6 @@ export function ChatWidget({ docked }: { docked: boolean }) {
       ),
     [liveBase]
   );
-
-  /* ---------------- greeting ---------------- */
-
-  const greet = useCallback(() => {
-    if (greetedRef.current) return;
-    greetedRef.current = true;
-    appendMsg({
-      who: "bot",
-      html:
-        "<p>Hello — I&rsquo;m the <strong>Forge Guide</strong>. I answer " +
-        "from RobotForge&rsquo;s recorded data (the Robodex, the parts catalogue " +
-        "and the recorded gate reports), not from a live AI.</p>" +
-        "<p>Ask about a robot by name or number, a catalogue part, or how the " +
-        "gate works. I can also list saved robots and preview versioned edits: type &ldquo;operations&rdquo;.</p>",
-    });
-    setChips(engine.suggestions);
-  }, [appendMsg, engine, setChips]);
-
-  useEffect(() => {
-    if (!open) return;
-    greet();
-    void checkLive(); // updates the header disclosure when live is on
-    /* Auto-focus only with a fine pointer: on touch devices the
-     * keyboard would immediately cover the panel the user just
-     * opened. */
-    if (!dockedWide && window.matchMedia("(pointer: fine)").matches) {
-      inputRef.current?.focus();
-    }
-  }, [open, dockedWide, greet, checkLive]);
-
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape" && open && !dockedWide) setManualOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, dockedWide]);
 
   /* ---------------- part focus + in-page actions ---------------- */
 
@@ -350,9 +268,22 @@ export function ChatWidget({ docked }: { docked: boolean }) {
       const q = String(question || "").trim();
       if (!q) return;
       appendMsg({ who: "user", text: q });
-      setInputValue("");
       setProposal(null);
       setAssemblyProposal(null);
+      setInventoryProposal(null);
+      const stockCommand=parseInventoryCommand(q);
+      if(stockCommand){
+        try{
+          const stock=readStore<InventoryPart[]>(INVENTORY_KEY,[]);
+          const robots=readStore<GarageRobot[]>(GARAGE_KEY,[]);
+          if(stockCommand.kind==='list'){
+            let shown=stock;
+            if(stockCommand.robotName){const match=robots.filter(r=>r.name.toLowerCase()===stockCommand.robotName!.toLowerCase());if(match.length!==1)throw new Error('Use a unique saved robot name.');shown=stock.filter(p=>p.robot_id===match[0].id);}
+            noteBubble(shown.length?shown.map(p=>`${p.name}: ×${p.quantity} · ${p.category} · ${robots.find(r=>r.id===p.robot_id)?.name??'shared/unassigned'} · ${p.stock_location||'no shelf location'}`).join('\n'):'No matching parts saved in this browser. Add photos in My parts or attach a part photo in Forge.');
+          }else setInventoryProposal(proposeInventory(stock,robots,stockCommand));
+        }catch(e){noteBubble((e as Error).message);}
+        return;
+      }
       try {
         const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
         const assemblies = readStore<Assemblies>(ASSEMBLY_KEY, {});
@@ -369,7 +300,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
         try {
           const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
           if (command.kind === 'help') {
-            noteBubble('Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Mount generation and simulation jobs remain planned.');
+            noteBubble('Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
             noteBubble(saved.length ? saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') : 'No robots saved in this browser yet. Add one in My robots.');
           } else if (command.kind === 'undo') {
@@ -495,88 +426,8 @@ export function ChatWidget({ docked }: { docked: boolean }) {
     else if (h.route) router.push(h.route);
   };
 
-  const toggle = () => {
-    if (!dockedWide) setManualOpen((v) => !v);
-  };
-  const close = () => {
-    if (!dockedWide) setManualOpen(false);
-  };
-
-  return (
-    <div className={docked ? "forge-chat docked" : "forge-chat"} id="forge-chat">
-      <button
-        className="fc-launcher"
-        id="fc-launcher"
-        type="button"
-        aria-expanded={open ? "true" : "false"}
-        aria-controls="fc-panel"
-        onClick={toggle}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.9A8 8 0 1 1 21 12z" />
-          <path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
-        </svg>
-        <span>{docked ? "Forge Guide" : "Ask the Guide"}</span>
-      </button>
-      <section
-        className="fc-panel"
-        id="fc-panel"
-        hidden={!open}
-        role="dialog"
-        aria-label="Forge Guide chat"
-      >
-        <header className="fc-head">
-          <div>
-            <strong>Forge Guide</strong>
-            <span className="fc-sub">{subText}</span>
-          </div>
-          <button
-            className="fc-close"
-            id="fc-close"
-            type="button"
-            aria-label="Close chat"
-            onClick={close}
-          >
-            &times;
-          </button>
-        </header>
-        <div className="fc-msgs" id="fc-msgs" role="log" aria-live="polite" ref={msgsRef}>
-          {messages.map((m) =>
-            m.who === "user" ? (
-              <div className="fc-msg user" key={m.id}>
-                {m.text}
-              </div>
-            ) : (
-              <div className="fc-msg bot" key={m.id}>
-                <div dangerouslySetInnerHTML={{ __html: m.html || "" }} />
-                {m.text ? <p>{m.text}</p> : null}
-                {m.hits && m.hits.length ? (
-                  <div className="fc-hits">
-                    {m.hits.slice(0, 6).map((h, i) => (
-                      <button
-                        type="button"
-                        className="fc-hit"
-                        data-kind={h.kind || ""}
-                        key={i}
-                        onClick={() => onHitClick(h)}
-                      >
-                        {h.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            )
-          )}
-        </div>
+  return {ask,messages,chips,onHitClick,subText,actions: <div className="main-chat-actions">
+        {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
           onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}
           onCancel={() => {setAssemblyProposal(null); noteBubble('Cancelled. Assembly unchanged.');}}
@@ -612,49 +463,9 @@ export function ChatWidget({ docked }: { docked: boolean }) {
             <button type="button" className="btn btn-sm" onClick={() => { proposalRef.current = null; setProposal(null); noteBubble('Cancelled. Nothing changed.'); }}>Cancel</button>
           </div>;
         })()}
-        <div className="fc-chips" id="fc-chips" aria-label="Suggested questions">
-          {chips.map((q, i) => (
-            <button
-              type="button"
-              className="chip"
-              key={i}
-              onClick={() => ask(q)}
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-        <form
-          className="fc-form"
-          id="fc-form"
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            ask(inputValue);
-          }}
-        >
-          <input
-            id="fc-input"
-            type="text"
-            autoComplete="off"
-            placeholder="Ask about a robot, a part, or the gate…"
-            aria-label="Your question"
-            ref={inputRef}
-            value={inputValue}
-            onChange={(ev) => setInputValue(ev.target.value)}
-          />
-          <button className="btn btn-primary btn-sm" type="submit">
-            Ask
-          </button>
-        </form>
-      </section>
-    </div>
-  );
+  </div>};
 }
 
-/* Docked variant: the same chat as a persistent left rail inside
- * the app shell (site.py chat_widget(docked=True)). At min-width
- * 1280px the panel is simply open; below that it behaves as the
- * toggleable panel, mirroring the vanilla media query. */
-export default function ChatDock() {
-  return <ChatWidget docked />;
-}
+/* Compatibility exports intentionally render nothing: conversation lives in Forge. */
+export function ChatWidget(_props: {docked:boolean}) { return null; }
+export default function ChatDock() { return null; }

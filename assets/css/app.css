@@ -785,3 +785,12 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 }
 @media(max-width:380px){.assembly-controls{grid-template-columns:minmax(0,1fr)}}
 @media(max-height:500px) and (max-width:900px){.assembly-preview{position:static}.assembly-viewport{min-height:200px!important}}
+
+/* No blank rail remains on archived pages whose widget markup is retained. */
+.shell:has(.forge-chat.docked) .main{padding-left:0}
+@media(max-width:600px){
+ .inv-toolbar>.btn{min-height:44px;flex:1 1 140px}
+ .inv-compose{flex-wrap:wrap}.inv-compose input{flex-basis:100%}
+ .inv-addspec{grid-template-columns:minmax(0,1fr)}
+ .inv-specs li{grid-template-columns:minmax(0,1fr)}
+}
