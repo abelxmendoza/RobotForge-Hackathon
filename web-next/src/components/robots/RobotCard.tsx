@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Robot } from "@/lib/types";
 import { robotSlug } from "@/lib/data";
 import { classPath, dexId, gateStatusOf, imgSrc, robotImage, staticCheckOf } from "./shared";
-import { StaticBadge, VerdictBadge } from "./badges";
+import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
 import RobotPhoto from "./RobotPhoto";
 
 /* site.py robot_card, byte-for-byte in structure: photo, dex number,
@@ -10,7 +10,8 @@ import RobotPhoto from "./RobotPhoto";
    the static-check badge when the entry carries one. */
 export default function RobotCard({ robot, hidden = false }: { robot: Robot; hidden?: boolean }) {
   const img = robotImage(robot);
-  const status = gateStatusOf(robot).status;
+  const gs = gateStatusOf(robot);
+  const status = gs.status;
   const check = staticCheckOf(robot);
   const alt = robot.name + (img?.ai ? " (AI concept illustration)" : "");
   return (
@@ -33,6 +34,7 @@ export default function RobotCard({ robot, hidden = false }: { robot: Robot; hid
         <h3>{robot.name}</h3>
         <span className="cls">{classPath(robot)}</span>
         <VerdictBadge status={status} />
+        <GateReceipt gs={gs} />
         {check ? <StaticBadge check={check} /> : null}
       </div>
     </Link>
