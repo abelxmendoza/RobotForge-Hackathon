@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
+import ChatRail from "@/components/chat/ChatRail";
 import { assetPath } from "@/components/home/asset";
 
 export const REPO_URL = "https://github.com/abelxmendoza/RobotForge-Hackathon";
@@ -77,6 +78,7 @@ export default function AppShell({ active, crumbs = [], children }:
           <a href={REPO_URL}>GitHub</a>
         </div>
       </aside>
+      <ChatRail />
       <div className="main">
         <header className="topbar">
           <Link className="mobile-brand" href="/" aria-label="RobotForge home"><BrandMark /></Link>

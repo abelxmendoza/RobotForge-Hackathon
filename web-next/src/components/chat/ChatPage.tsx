@@ -6,6 +6,7 @@
  * design/uploads thread; this page is just the conversation, full-size. */
 import { useEffect, useRef, useState } from "react";
 import { useForgeAssistant } from "./ChatDock";
+import ChatMessages from "./ChatMessages";
 
 export default function ChatPage() {
   const assistant = useForgeAssistant();
@@ -35,38 +36,7 @@ export default function ChatPage() {
       </div>
 
       <div className="fc-msgs chat-page-msgs" ref={msgsRef} aria-live="polite">
-        {assistant.messages.length === 0 && (
-          <div className="fc-msg bot">
-            <p>
-              Ask me about the robots in the Robodex, the parts catalogue, or
-              the recorded gate evidence — or tell me to change something:
-              try &ldquo;Operations&rdquo; to see what I can do to your saved
-              robots and parts. Answers come from RobotForge&rsquo;s recorded
-              data first; anything a live model adds is badged.
-            </p>
-          </div>
-        )}
-        {assistant.messages.map((m) => (
-          <div key={m.id} className={"fc-msg " + m.who}>
-            {m.html && <div dangerouslySetInnerHTML={{ __html: m.html }} />}
-            {m.text && <p style={{ whiteSpace: "pre-wrap" }}>{m.text}</p>}
-            {m.hits && m.hits.length > 0 && (
-              <div className="fc-hits">
-                {m.hits.map((hit, i) => (
-                  <button
-                    type="button"
-                    className="fc-hit"
-                    data-kind={hit.kind}
-                    key={i}
-                    onClick={() => assistant.onHitClick(hit)}
-                  >
-                    {hit.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+        <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} />
       </div>
 
       {assistant.actions}
