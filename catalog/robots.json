@@ -208,6 +208,34 @@
         "source_url": "https://github.com/PX4/PX4-gazebo-models/blob/main/models/x500_base/model.sdf"
       },
       "spec_file": "examples/px4-x500.json",
+      "specimen": {
+      "kind": "imported_description",
+      "manifest": "catalog/specimens/px4-x500.json",
+      "imported_via": "direct clone of the manufacturer's model repo (no robot_descriptions module covers this robot); description read at the pinned commit",
+      "source_repo": "https://github.com/PX4/PX4-gazebo-models",
+      "source_commit": "e5997f455e33ec071c7c677fc59a65781de496a4",
+      "sdf": "models/x500_base/model.sdf",
+      "license": "BSD-3-Clause",
+      "imported": "2026-10-29",
+      "source_label": "PX4 Gazebo models repository (direct import)",
+      "facts": {
+        "robot_name_in_sdf": "x500_base",
+        "link_count": 5,
+        "links_with_inertial": 5,
+        "joint_count": 4,
+        "joints_by_type": {
+          "revolute": 4
+        },
+        "total_mass_kg": 2.064308,
+        "base_link_mass_kg": 2.0,
+        "rotor_count": 4,
+        "rotor_span_m": {
+          "x": 0.348,
+          "y": 0.348
+        },
+        "fact_source": "Parsed from the SDF at the pinned upstream commit: link/joint elements, inertial masses and rotor link poses."
+      }
+      },
       "subtype": "Quadcopter"
     },
     {
@@ -237,6 +265,29 @@
         "source_url": "https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf"
       },
       "spec_file": "examples/crazyflie-2-1.json",
+      "specimen": {
+      "kind": "imported_description",
+      "manifest": "catalog/specimens/crazyflie-2-1.json",
+      "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.cf2_description",
+      "source_repo": "https://github.com/utiasDSL/gym-pybullet-drones",
+      "source_commit": "2c2470c2043eb4cf474d9af2681c9fa10f2d0e2f",
+      "urdf": "gym_pybullet_drones/assets/cf2p.urdf",
+      "license": "MIT",
+      "imported": "2026-10-29",
+      "facts": {
+        "robot_name_in_urdf": "cf2",
+        "link_count": 6,
+        "links_with_inertial": 6,
+        "joint_count": 5,
+        "joints_by_type": {
+          "fixed": 5
+        },
+        "total_mass_kg": 0.027,
+        "base_link_mass_kg": 0.027,
+        "rotor_count": 4,
+        "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements and inertial masses. Every joint in the file is fixed and the propeller links carry zero mass — a rigid-body model with no spinning-rotor dynamics."
+      }
+      },
       "subtype": "Quadcopter"
     },
     {
@@ -418,6 +469,31 @@
         "source_url": "https://emanual.robotis.com/docs/en/platform/op3/introduction/"
       },
       "spec_file": "examples/robotis-op3.json",
+      "specimen": {
+      "kind": "imported_description",
+      "manifest": "catalog/specimens/robotis-op3.json",
+      "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.op3_mj_description",
+      "source_repo": "https://github.com/deepmind/mujoco_menagerie",
+      "source_commit": "feadf76d42f8a2162426f7d226a3b539556b3bf5",
+      "mjcf": "robotis_op3/op3.xml",
+      "license": "Apache-2.0",
+      "imported": "2026-10-29",
+      "facts": {
+        "robot_name_in_mjcf": "robotis_op3",
+        "body_count": 21,
+        "bodies_with_inertial": 21,
+        "joint_count": 21,
+        "joints_by_type": {
+          "free": 1,
+          "hinge": 20
+        },
+        "actuator_count": 20,
+        "degrees_of_freedom": 20,
+        "total_mass_kg": 3.14747,
+        "root_body_mass_kg": 1.34928,
+        "fact_source": "Parsed from the MJCF at the pinned upstream commit: body/inertial elements under <worldbody>, joint elements (the <default> class stub excluded), the root body's <freejoint/> and the <actuator> list."
+      }
+      },
       "subtype": "Humanoid",
       "checks": [
         {
@@ -459,6 +535,42 @@
         "source_url": "https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/"
       },
       "spec_file": "examples/openmanipulator-x.json",
+      "specimen": {
+      "kind": "imported_description",
+      "manifest": "catalog/specimens/openmanipulator-x.json",
+      "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.open_manipulator_x_description",
+      "source_repo": "https://github.com/ROBOTIS-GIT/open_manipulator",
+      "source_commit": "bc555a9c41ebd7493dc945ddabc43fc649681b62",
+      "urdf": "open_manipulator_description/urdf/open_manipulator_x/open_manipulator_x.urdf",
+      "license": "Apache-2.0",
+      "imported": "2026-10-29",
+      "facts": {
+        "robot_name_in_urdf": "open_manipulator_x",
+        "link_count": 9,
+        "links_with_inertial": 7,
+        "joint_count": 8,
+        "joints_by_type": {
+          "fixed": 2,
+          "prismatic": 2,
+          "revolute": 4
+        },
+        "total_mass_kg": 0.594057,
+        "actuated_joints": {
+          "revolute": [
+            "joint1",
+            "joint2",
+            "joint3",
+            "joint4"
+          ],
+          "prismatic": [
+            "gripper_left_joint",
+            "gripper_right_joint"
+          ]
+        },
+        "degrees_of_freedom": 5,
+        "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements, inertial masses, joint types and mimic tags (the gripper's right finger joint mimics the left, so the two prismatic joints count as one gripper degree of freedom)."
+      }
+      },
       "subtype": "Robotic arm"
     }
   ],

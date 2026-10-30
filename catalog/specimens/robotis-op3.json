@@ -1,0 +1,40 @@
+{
+  "specimen": {
+    "robot": "ROBOTIS OP3",
+    "dex_id": "#010",
+    "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.op3_mj_description",
+    "source": {
+      "repo": "https://github.com/deepmind/mujoco_menagerie",
+      "commit": "feadf76d42f8a2162426f7d226a3b539556b3bf5",
+      "mjcf": "robotis_op3/op3.xml",
+      "package": "robotis_op3",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file in the robotis_op3 directory of the upstream repo: 'Apache License'; Version 2.0, January 2004; the repo root LICENSE carries the same text under the section \"License for contents in the directory 'robotis_op3/'\"",
+      "retrieved": "2026-10-29"
+    },
+    "facts": {
+      "robot_name_in_mjcf": "robotis_op3",
+      "body_count": 21,
+      "bodies_with_inertial": 21,
+      "joint_count": 21,
+      "joints_by_type": {
+        "free": 1,
+        "hinge": 20
+      },
+      "actuator_count": 20,
+      "degrees_of_freedom": 20,
+      "total_mass_kg": 3.14747,
+      "root_body_mass_kg": 1.34928,
+      "fact_source": "Parsed from the MJCF at the pinned upstream commit: body/inertial elements under <worldbody>, joint elements (the <default> class stub excluded), the root body's <freejoint/> and the <actuator> list."
+    },
+    "annotation_note": "This entry arrived by import, not by hand: the description was downloaded by robot_descriptions (module op3_mj_description) from DeepMind's MuJoCo Menagerie, a curated mirror of manufacturers' models; the facts above were parsed out of its robotis_op3 MJCF. Nothing here was gated — importing a description is not a verdict.",
+    "honesty": [
+      "The Menagerie README calls this a 'simplified' description of the OP3, and it is treated as one: its inertial total is 3.147 kg, below the e-Manual's ~3.5 kg (without the skin cover) for the physical robot. The entry keeps the e-Manual figure; the model's figure is recorded here, with the difference stated, not smoothed over.",
+      "The model's 20 hinge joints and 20 position actuators agree with the OP3's 20 Dynamixel servos and the e-Manual's 20-DOF layout.",
+      "Gate status stays NOT_GATED: the motion gate grades wheeled ground robots, and no walking gate exists yet.",
+      "The parts kit stays undefined (kit: null in catalog/parts-kits.json): the kit generator builds wheeled kits from a spec's wheel block, and this robot has no wheels.",
+      "ROBOTIS's own OP3 repositories carry the same Apache-2.0 license (checked against ROBOTIS-GIT/ROBOTIS-OP3's root LICENSE during this import); the license recorded above is the one read from the Menagerie files themselves.",
+      "The MJCF tree is not vendored into this repo — the manifest pins the upstream repo, commit and MJCF path."
+    ]
+  }
+}

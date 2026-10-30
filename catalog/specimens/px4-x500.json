@@ -1,0 +1,41 @@
+{
+  "specimen": {
+    "robot": "PX4 X500",
+    "dex_id": "#005",
+    "imported_via": "direct clone of the manufacturer's model repo (no robot_descriptions module covers this robot); description read at the pinned commit",
+    "source": {
+      "repo": "https://github.com/PX4/PX4-gazebo-models",
+      "commit": "e5997f455e33ec071c7c677fc59a65781de496a4",
+      "sdf": "models/x500_base/model.sdf",
+      "package": "x500_base",
+      "license": "BSD-3-Clause",
+      "license_evidence": "LICENSE file at the upstream repo root: 'BSD 3-Clause License'; Copyright (c) 2022, PX4 Autopilot for Drones",
+      "retrieved": "2026-10-29"
+    },
+    "facts": {
+      "robot_name_in_sdf": "x500_base",
+      "link_count": 5,
+      "links_with_inertial": 5,
+      "joint_count": 4,
+      "joints_by_type": {
+        "revolute": 4
+      },
+      "total_mass_kg": 2.064308,
+      "base_link_mass_kg": 2.0,
+      "rotor_count": 4,
+      "rotor_span_m": {
+        "x": 0.348,
+        "y": 0.348
+      },
+      "fact_source": "Parsed from the SDF at the pinned upstream commit: link/joint elements, inertial masses and rotor link poses."
+    },
+    "annotation_note": "This entry arrived by import, not by hand: no robot_descriptions module covers the X500, so the tool cloned PX4's own PX4-gazebo-models repository directly and the facts above were parsed out of its x500_base SDF — the same file this entry's specs were originally read from. Nothing here was gated — importing a description is not a verdict.",
+    "honesty": [
+      "The specimen covers x500_base, the base airframe model; PX4 composes its fuller variants (with cameras, lidar and gimbals) from this base, and those are not what was imported.",
+      "The SDF's total (2.064 kg) is the model's own bookkeeping — a 2.0 kg base link plus four 0.0160769 kg rotor links — not a weighed airframe; the entry already states it as the Gazebo model's sum, and it still does.",
+      "Gate status stays NOT_GATED: the motion gate grades wheeled ground robots, and no flight gate exists yet.",
+      "The parts kit stays undefined (kit: null in catalog/parts-kits.json): the kit generator builds wheeled kits from a spec's wheel block, and this robot has no wheels.",
+      "The SDF tree is not vendored into this repo — the manifest pins the upstream repo, commit and SDF path, and the license above was read from that repo's LICENSE file, not assumed."
+    ]
+  }
+}
