@@ -143,6 +143,29 @@
   .fc-form input{font-size:16px}
 }
 
+/* ---------- dedicated Chat page (/chat) ----------
+   The same assistant as the Workspace thread, framed as a full page:
+   a bordered conversation panel, suggestions above the composer. */
+.chat-page{
+  display:flex;flex-direction:column;gap:var(--s3);
+  border:1px solid var(--border-strong);border-radius:var(--r-lg);
+  background:var(--surface);padding:var(--s4);min-width:0;
+}
+.chat-page-head{
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;
+}
+.chat-page-msgs{
+  border:1px solid var(--border);border-radius:var(--r);
+  background:var(--surface-2);min-height:300px;max-height:58dvh;
+}
+.chat-page-chips{border-top:0;padding:0}
+.chat-page-composer{margin-top:0}
+@media(max-width:600px){
+  .chat-page{padding:var(--s3)}
+  .chat-page-msgs{max-height:52dvh}
+}
+
 /* Floating/docked legacy widgets are retired. The React assistant now renders
    within the primary Forge thread, using its single composer. */
 .forge-chat{display:none!important}
