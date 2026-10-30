@@ -49,6 +49,8 @@ import { gateReports, parts, robots } from "@/lib/data";
 import partsDoc from "@/data/parts.json";
 import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
+import AssemblyProposal from './AssemblyProposal';
+import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { GARAGE_KEY, fmtValue, type GarageRobot } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
@@ -118,7 +120,8 @@ export function ChatWidget({ docked }: { docked: boolean }) {
   const [subText, setSubText] = useState(SUB_RECORDED);
 
   const [proposal, setProposal] = useState<Preview | null>(null);
-  const lastApplied = useRef<{ robotId: string; versionId: string } | null>(null);
+  const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(null);
+  const lastApplied = useRef<{ robotId: string; versionId: string; scope?: 'assembly' } | null>(null);
   const proposalRef = useRef<Preview | null>(null);
   proposalRef.current = proposal;
 
@@ -349,17 +352,37 @@ export function ChatWidget({ docked }: { docked: boolean }) {
       appendMsg({ who: "user", text: q });
       setInputValue("");
       setProposal(null);
+      setAssemblyProposal(null);
+      try {
+        const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        const assemblies = readStore<Assemblies>(ASSEMBLY_KEY, {});
+        const assembly = parseAssemblyCommand(q, saved, assemblies, uid('part'));
+        if (assembly) {
+          previewAssembly(saved, assemblies, assembly);
+          setAssemblyProposal(assembly);
+          noteBubble('Review the assembly action below. Apply saves it as a new assembly version, visible in My robots.');
+          return;
+        }
+      } catch (e) { noteBubble((e as Error).message); return; }
       const command = parseCommand(q);
       if (command) {
         try {
           const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
           if (command.kind === 'help') {
-            noteBubble('Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Component placement, wiring edits, mounts and simulation jobs are planned.');
+            noteBubble('Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
             noteBubble(saved.length ? saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') : 'No robots saved in this browser yet. Add one in My robots.');
           } else if (command.kind === 'undo') {
             const last = lastApplied.current;
             if (!last) throw new Error('No chat change to undo in this session.');
+            if (last.scope === 'assembly') {
+              const fresh = readStore<Assemblies>(ASSEMBLY_KEY, {});
+              const next = undoAssembly(fresh,last.robotId,last.versionId,uid('assembly'),new Date().toISOString());
+              const error = writeStore(ASSEMBLY_KEY,next); if(error) throw new Error(error);
+              lastApplied.current = null;
+              noteBubble('Previous assembly restored as a new version.');
+              return;
+            }
             const next = undoOperation(saved, last.robotId, last.versionId, uid('v'), new Date().toISOString());
             const error = writeStore(GARAGE_KEY, next);
             if (error) throw new Error(error);
@@ -554,6 +577,10 @@ export function ChatWidget({ docked }: { docked: boolean }) {
             )
           )}
         </div>
+        {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
+          onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}
+          onCancel={() => {setAssemblyProposal(null); noteBubble('Cancelled. Assembly unchanged.');}}
+          onError={text => {setAssemblyProposal(null); noteBubble(text);}} />}
         {proposal && (() => {
           const op = proposal.operation;
           const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);

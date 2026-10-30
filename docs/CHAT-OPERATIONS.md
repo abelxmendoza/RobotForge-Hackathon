@@ -49,3 +49,26 @@ Open a rover -> type a supported Jetson name -> resolve carrier-board variant ->
 ## Remaining verification
 
 Browser interaction QA should cover Apply/Cancel, double click, failed localStorage writes, reload persistence, duplicate names, stale previews, undo and preserving unsaved Garage drafts. The production app build and the existing Python suite remain release checks. Headless Gazebo validation remains a separate integration task.
+
+
+## Component assembly increment (implemented)
+
+My robots now includes an Assembly workbench before spec editing. The Guide and buttons share the same revision-checked assembly transactions. Supported chat commands:
+
+- `add a Jetson Orin Nano to "Omega1"`
+- `add a battery to "Omega1"` (explicit illustrative placeholder)
+- `add a buck converter to "Omega1"` (explicit illustrative placeholder)
+- `move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm yaw 90`
+- `connect "battery" to "Jetson Orin Nano" on "Omega1"`
+- `remove "part-id" from "Omega1"`
+- `undo` (last chat action only, rejects intervening revisions)
+
+The robot name is unique and explicit. Component names resolve when unique; duplicate parts require their displayed instance IDs. The published NVIDIA reference developer-kit envelope is sourced in `components.ts`; the bare module and third-party carriers are not assumed equivalent. Other initial assets are planning placeholders with clearly estimated dimensions, not selected products.
+
+Assembly instances have stable IDs, positions in metres (robot X forward/Y left/Z up, component centre), and yaw in degrees. Add, move, remove, connect and disconnect produce a preview; Apply persists another assembly version. Removing a component previews removal of dependent connections. Undo appends a restoration, never deletes history. Export contains saved spec plus all assembly versions.
+
+Three.js reuses the existing robot schematic renderer and adds component envelope boxes and dashed planning edges. A selectable SVG top view works without WebGL. Three geometric placement candidates are offered as starting points; no collision, cooling, cable-routing or mounting-hole fit claim is made. Assembly additions do not yet update CLI specs, mass budgets, electrical checks or simulation inputs.
+
+Wiring is a visible tab. Its edges are **NOT_CHECKED planning connections**, not pin-level wiring instructions or core harness-validator results. Exact part ratings, pin assignments and protection still need a schema and a connection to the existing electrical checks. Printable mounts, detailed manufacturer CAD retrieval, supplier search and live model tool proposals remain next stages.
+
+Verification includes transaction tests for identity resolution, invalid transforms, unknown components, duplicate instance/connection detection, stale robot/assembly revisions, cascade removal, ambiguity and undo. Browser QA confirmed chat addition, placement preview/apply, reload persistence, and wiring connection preview/apply. The test browser disables WebGL, so actual GPU rendering remains unverified; its fallback was exercised instead.

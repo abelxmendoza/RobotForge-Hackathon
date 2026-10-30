@@ -10,6 +10,8 @@
  * matching kit.html's Z-up convention. */
 import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
+import type { ComponentInstance, Connection } from '@/lib/assembly';
+import { componentById } from '@/lib/components';
 import type { RobotSpec } from '../forge/model';
 import { taBuildParts, taGeom3d } from './takeapart';
 
@@ -52,12 +54,16 @@ export default function Robot3D({
   selected,
   onSelect,
   onFail,
+  instances,
+  connections,
 }: {
   spec: RobotSpec;
   explode: number;
   selected: string | null;
   onSelect: (id: string) => void;
   onFail: () => void;
+  instances?: ComponentInstance[];
+  connections?: Connection[];
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<Session | null>(null);
@@ -80,6 +86,15 @@ export default function Robot3D({
         if (disposed) return;
         const built = taBuildParts(spec);
         const units = taGeom3d(spec, built.parts, built.pos);
+
+        for (const instance of instances ?? []) {
+          const part = componentById(instance.componentId);
+          if (!part) continue;
+          units.push({ part: instance.id, explode: [0, 0, 0], meshes: [{
+            kind: 'box', size: part.sizeM, center: instance.positionM,
+            rot: [0, 0, instance.yawDeg * Math.PI / 180],
+          }] });
+        }
 
         const renderer = new THREE.WebGLRenderer({
           antialias: true,
@@ -186,6 +201,18 @@ export default function Robot3D({
           scene.add(g);
           groups.push(g);
         });
+
+        for (const connection of connections ?? []) {
+          const a = instances?.find(c => c.id === connection.from);
+          const b = instances?.find(c => c.id === connection.to);
+          if (!a || !b) continue;
+          const geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(...a.positionM), new THREE.Vector3(...b.positionM),
+          ]);
+          const line = new THREE.Line(geometry, new THREE.LineDashedMaterial({ color: 0xfbbf24, dashSize: 0.01, gapSize: 0.005 }));
+          line.computeLineDistances();
+          scene.add(line);
+        }
 
         const st: Session = {
           renderer,
@@ -315,6 +342,13 @@ export default function Robot3D({
           renderer.domElement.removeEventListener('pointerdown', onDown);
           renderer.domElement.removeEventListener('pointerup', onUp);
           controls.dispose();
+          scene.traverse(object => {
+            const drawable = object as THREE_NS.Mesh;
+            drawable.geometry?.dispose();
+            const material = drawable.material;
+            if (Array.isArray(material)) material.forEach(m => m.dispose());
+            else material?.dispose();
+          });
           renderer.dispose();
           if (renderer.domElement.parentElement === host) {
             host.removeChild(renderer.domElement);
@@ -331,7 +365,7 @@ export default function Robot3D({
       if (cleanup) cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec]);
+  }, [spec, instances, connections]);
 
   useEffect(() => {
     const st = sessionRef.current;

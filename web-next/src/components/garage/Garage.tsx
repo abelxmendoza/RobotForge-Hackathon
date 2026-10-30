@@ -7,6 +7,7 @@
  * draft; parts confirmed in the inventory can be dropped in. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import { robots as dexRobots } from '@/lib/data';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -454,6 +455,8 @@ export default function Garage() {
                 <button type="button" className="btn btn-sm btn-ghost" onClick={removeRobot}>Remove</button>
               </div>
             </div>
+
+            <AssemblyWorkspace key={robot.id} robotId={robot.id} />
 
             <section className="g-versions" aria-label="Versions">
               <h3>Versions</h3>
