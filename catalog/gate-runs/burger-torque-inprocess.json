@@ -1,0 +1,52 @@
+{
+  "spec": "turtlebot3-burger",
+  "measurements": {
+    "drive": {
+      "commanded_m": 1.0,
+      "measured_m": 1.0224999991342785,
+      "truth_m": 1.0229264132550318
+    },
+    "turn": {
+      "commanded_deg": 90.0,
+      "measured_deg": 91.2149999186159,
+      "truth_deg": 88.57915195978933
+    },
+    "injected_wheel_radius_scale": 1.0
+  },
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "drive_distance",
+      "commanded": 1.0,
+      "measured": 1.0229264132550318,
+      "error": 2.293,
+      "unit": "%",
+      "verdict": "PASS"
+    },
+    {
+      "name": "turn_heading",
+      "commanded": 90.0,
+      "measured": 88.57915195978933,
+      "error": 1.421,
+      "unit": "deg",
+      "verdict": "PASS"
+    },
+    {
+      "name": "odometry_distance",
+      "commanded": 1.0229264132550318,
+      "measured": 1.0224999991342785,
+      "error": 0.042,
+      "unit": "%",
+      "verdict": "PASS"
+    },
+    {
+      "name": "odometry_heading",
+      "commanded": 88.57915195978933,
+      "measured": 91.2149999186159,
+      "error": 2.636,
+      "unit": "deg",
+      "verdict": "PASS"
+    }
+  ],
+  "suspects": []
+}

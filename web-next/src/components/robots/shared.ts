@@ -1,4 +1,4 @@
-import type { Robot } from "@/lib/types";
+import type { GateReportRun, Robot } from "@/lib/types";
 import { assetPath } from "@/components/home/asset";
 
 /* Mirrors of the vanilla generator's helpers (site.py / catalog.py):
@@ -62,6 +62,9 @@ export interface GateRunFull {
   odometry_distance_error_pct: number | null;
   odometry_heading_error_deg: number | null;
   source?: string;
+  /* Repo-relative path of the run's full gate-report JSON, when the
+     report file itself is in the repo (served under public/). */
+  report?: string;
 }
 export interface GateStatusFull {
   status: string;
@@ -85,6 +88,7 @@ export function gateStatusOf(r: Robot): GateStatusFull {
         odometry_distance_error_pct: numOrNull(q.odometry_distance_error_pct),
         odometry_heading_error_deg: numOrNull(q.odometry_heading_error_deg),
         source: typeof q.source === "string" ? q.source : undefined,
+        report: typeof q.report === "string" ? q.report : undefined,
       };
     });
     return {
@@ -94,6 +98,48 @@ export function gateStatusOf(r: Robot): GateStatusFull {
     };
   }
   return { status: "NOT_GATED", runs: [] };
+}
+
+/* ---- badge receipts: the numbers behind the pill ----
+   A receipt is built only from the robot's recorded runs in
+   catalog/robots.json — the latest recorded run's drive/turn errors
+   against ground truth. A robot with no runs gets no receipt. */
+export function latestRun(gs: GateStatusFull): GateRunFull | null {
+  return gs.runs.length ? gs.runs[gs.runs.length - 1] : null;
+}
+export function receiptText(gs: GateStatusFull): string | null {
+  const run = latestRun(gs);
+  if (!run) return null;
+  const bits: string[] = [];
+  if (run.drive_error_pct !== null) bits.push(`drive ${run.drive_error_pct.toFixed(3)}%`);
+  if (run.heading_error_deg !== null) bits.push(`turn ${run.heading_error_deg.toFixed(3)}°`);
+  if (!bits.length) return null;
+  return `Latest recorded run: ${bits.join(" · ")} vs ground truth`;
+}
+
+/* The full gate report behind a badge, when one is actually served:
+   a gate-reports.json entry whose doc names this robot's spec, whose
+   verdict matches the badge, and which is not a fault-injection run.
+   Anything else (e.g. Pathfinder's scrub story — a caught failure of
+   a different run, not its PASS evidence) does not qualify, and the
+   caller falls back to the robot page's own gate section. */
+export function fullReportId(r: Robot, reports: GateReportRun[]): string | null {
+  const specName = (r.spec_file ?? "").split("/").pop()?.replace(/\.json$/, "");
+  if (!specName) return null;
+  const status = gateStatusOf(r).status;
+  for (const run of reports) {
+    const doc = (run.doc ?? {}) as Record<string, unknown>;
+    if (doc.spec !== specName || doc.verdict !== status) continue;
+    const m = (doc.measurements ?? {}) as Record<string, unknown>;
+    const scale = m.injected_wheel_radius_scale;
+    if (typeof scale === "number" && scale !== 1) continue;
+    return run.id;
+  }
+  return null;
+}
+export function evidenceHref(r: Robot, slug: string, reports: GateReportRun[]): string {
+  const id = fullReportId(r, reports);
+  return id ? `/evidence/#run-${id}` : `/robots/${slug}/#gate`;
 }
 
 /* ---- static stability check (robots.json checks blob) ---- */

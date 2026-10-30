@@ -16,7 +16,7 @@ mkdirSync(join(root, "src", "styles"), { recursive: true });
 copyFileSync(join(repo, "catalog", "kinds.json"), join(root, "src", "data", "kinds.json"));
 copyFileSync(join(repo, "catalog", "families.json"), join(root, "src", "data", "families.json"));
 copyFileSync(join(repo, "assets", "js", "chat-intents.json"), join(root, "src", "data", "chat-intents.json"));
-for (const f of ["robots.json", "parts.json", "gate-reports.json"]) {
+for (const f of ["robots.json", "parts.json", "gate-reports.json", "parts-kits.json"]) {
   copyFileSync(join(repo, "catalog", f), join(root, "src", "data", f));
 }
 mkdirSync(join(root, "public"), { recursive: true });
@@ -28,6 +28,9 @@ for (const css of ["tokens.css", "app.css", "site.css", "chat.css", "anim.css"])
 cpSync(join(repo, "examples"), join(root, "public", "examples"), { recursive: true });
 copyFileSync(join(repo, "problem-space.html"), join(root, "public", "problem-space.html"));
 cpSync(join(repo, "catalog", "specimens"), join(root, "public", "catalog", "specimens"), { recursive: true });
+// Raw gate-report JSONs, served as-is so a badge's receipt can link
+// the actual report file (catalog/gate-runs/<run>.json).
+cpSync(join(repo, "catalog", "gate-runs"), join(root, "public", "catalog", "gate-runs"), { recursive: true });
 // Per-slug report folders merged into single maps for static import.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 for (const [folder, out] of [["harness-reports", "harness-reports.json"],

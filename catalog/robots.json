@@ -70,6 +70,15 @@
             "odometry_distance_error_pct": 0.042,
             "source": "Evidence run embedded in reports.html (burger-clean): drive 0.968%, turn 2.028 deg, all four checks PASS",
             "transport": null
+          },
+          {
+            "drive_error_pct": 2.293,
+            "heading_error_deg": 1.421,
+            "odometry_distance_error_pct": 0.042,
+            "odometry_heading_error_deg": 2.636,
+            "report": "catalog/gate-runs/burger-torque-inprocess.json",
+            "source": "Gate run on Torque's VM, 2026-10-28 — Gazebo Sim (Harmonic) with the gz-sim server embedded in-process, because the VM sandbox blocks the UDP transport the gate normally discovers over; verdict logic, thresholds and spec untouched. Full gate report: catalog/gate-runs/burger-torque-inprocess.json",
+            "transport": "gz-sim server embedded in-process (VM sandbox blocks UDP)"
           }
         ],
         "status": "PASS"

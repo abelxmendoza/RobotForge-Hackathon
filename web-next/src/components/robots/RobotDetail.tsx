@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { Robot } from "@/lib/types";
-import { harnessOf, robotSlug, stabilityOf } from "@/lib/data";
+import { gateReports, harnessOf, robotSlug, stabilityOf } from "@/lib/data";
 import { REPO_URL } from "@/components/shell/AppShell";
+import { assetPath } from "@/components/home/asset";
 import Term from "@/components/shell/Term";
 import {
-  classPath, dexId, gateStatusOf, gradeOf, imgSrc, robotImage, specLabel,
+  classPath, dexId, evidenceHref, fullReportId, gateStatusOf, gradeOf,
+  imgSrc, robotImage, specLabel,
   staticCheckOf, type GateRunFull,
 } from "./shared";
-import { StaticBadge, VerdictBadge } from "./badges";
+import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
+import PartsKitSection from "./PartsKitSection";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
 import RobotPhoto from "./RobotPhoto";
@@ -49,8 +53,8 @@ function FmtCell({ v, unit }: { v: number | null; unit: string }) {
 
 function RunsTable({ runs }: { runs: GateRunFull[] }) {
   const sources = runs
-    .map((run, i) => (run.source ? { i: i + 1, source: run.source } : null))
-    .filter((x): x is { i: number; source: string } => x !== null);
+    .map((run, i) => (run.source || run.report ? { i: i + 1, source: run.source, report: run.report } : null))
+    .filter((x): x is { i: number; source: string | undefined; report: string | undefined } => x !== null);
   return (
     <>
       <div className="table-scroll">
@@ -77,7 +81,14 @@ function RunsTable({ runs }: { runs: GateRunFull[] }) {
       {sources.length ? (
         <ul className="prov" style={{ marginTop: 12, paddingLeft: 18 }}>
           {sources.map((s) => (
-            <li key={s.i}>Run {s.i}: {s.source}</li>
+            <li key={s.i}>
+              Run {s.i}: {s.source}
+              {s.report ? (
+                <>
+                  {" "}· <a href={assetPath(s.report)}>full gate report (JSON)</a>
+                </>
+              ) : null}
+            </li>
           ))}
         </ul>
       ) : null}
@@ -108,6 +119,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   const jump: { href: string; label: string }[] = [
     { href: "#spec", label: "Spec" },
     { href: "#gate", label: "Gate runs" },
+    { href: "#parts-kit", label: "Parts kit" },
   ];
   if (check) jump.push({ href: "#stability", label: "Static stability" });
   if (harnessRep) jump.push({ href: "#harness", label: "Harness checks" });
@@ -182,6 +194,16 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           <VerdictBadge status={gs.status} lg />
           {check ? <StaticBadge check={check} lg /> : null}
           {harnessRep ? <HarnessBadge rep={harnessRep} lg /> : null}
+          <GateReceipt gs={gs} />
+          {gs.runs.length ? (
+            <p style={{ marginTop: 8 }}>
+              <Link href={evidenceHref(robot, slug, gateReports)}>
+                {fullReportId(robot, gateReports)
+                  ? "Evidence: the full gate report →"
+                  : "Evidence: the recorded runs and their sources ↓"}
+              </Link>
+            </p>
+          ) : null}
           <p className="desc">{robot.description}</p>
           <nav className="jump" aria-label="On this page">
             {jump.map((j) => (
@@ -372,6 +394,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           </div>
         </section>
       ) : null}
+
+      <PartsKitSection slug={slug} />
 
       {specFile ? (
         <section className="section" id="commands">
