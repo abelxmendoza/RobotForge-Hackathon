@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { Fragment } from "react";
 import CopyButton from "./CopyButton";
 
 /**
- * The "How RobotForge decides" content — ported verbatim from the
- * landing's #how section in index.html. That section is the only
- * how-it-works content the vanilla site has: there is no standalone
- * vanilla how-it-works page or generator (the app nav is Forge /
- * Robots / Evidence only), so both the Home page (as the landing's
- * #how band) and the /how-it-works/ page render this same content.
+ * The fine print for /how-it-works/: what a PASS proves, what it
+ * doesn't, and the CLI quickstart.
+ *
+ * The test itself is explained once, on the landing page's #workflow
+ * band — that is the canonical explanation. This component used to
+ * restate the whole mechanism a second time (pipeline graphic, three
+ * explainer cards); it was cut on 2026-10-29 at Abel's direction
+ * (declutter: one explanation, links instead of copies, less is more).
  */
 
 const QUICKSTART = `pip install -e .
@@ -17,41 +18,17 @@ robotforge validate rover.json
 robotforge urdf rover.json --out build/rover.urdf
 robotforge run-gate rover.json`;
 
-const PIPELINE: { label: string; small: string; cls?: string }[] = [
-  { label: "Describe", small: "words · list · photo" },
-  { label: "Spec", small: "Muse Spark", cls: "node ai" },
-  { label: "Validate", small: "engineering checks" },
-  { label: "URDF", small: "model" },
-  { label: "Twin", small: "Gazebo, headless" },
-  { label: "Gate", small: "pass · marginal · fail", cls: "node gate" },
-];
-
 export default function HowItWorks() {
   return (
     <>
       <div className="section-head">
         <div className="eyebrow">Under the hood</div>
-        <h2>How RobotForge decides.</h2>
+        <h2>What a PASS proves.</h2>
         <p>
-          The model sits on the critical path, and nothing it says is
-          trusted until it is checked and measured.
+          The test itself is explained once, on the home page:{" "}
+          <Link href="/#workflow">how the driving test works</Link>. This
+          page keeps the fine print.
         </p>
-      </div>
-
-      <div className="pipeline" role="list" aria-label="Pipeline">
-        {PIPELINE.map((node, i) => (
-          <Fragment key={node.label}>
-            {i > 0 && (
-              <span className="arrow" aria-hidden="true">
-                →
-              </span>
-            )}
-            <div className={node.cls ?? "node"} role="listitem">
-              {node.label}
-              <small>{node.small}</small>
-            </div>
-          </Fragment>
-        ))}
       </div>
 
       <div className="split">
@@ -59,16 +36,12 @@ export default function HowItWorks() {
           <h3>What a PASS proves</h3>
           <ul>
             <li>
-              The spec&apos;s numbers are consistent with each other:
-              geometry, mass budget, voltages.
+              The spec&apos;s numbers agree with each other: geometry,
+              mass budget, voltages.
             </li>
             <li>
-              A twin built from exactly that spec drives 1 m and turns 90°
-              within the locked thresholds.
-            </li>
-            <li>
-              The twin&apos;s own odometry agrees with simulator ground
-              truth, so its sensors aren&apos;t lying to it.
+              The twin&apos;s odometry matched ground truth within the
+              locked thresholds.
             </li>
           </ul>
         </div>
@@ -91,38 +64,8 @@ export default function HowItWorks() {
         </div>
       </div>
 
-      <div className="grid-3">
-        <div className="card">
-          <div className="eyebrow">Meta model</div>
-          <h3 style={{ marginTop: 8 }}>Muse Spark drafts the spec</h3>
-          <p>
-            Through the Meta Model API in Standard mode. It turns words or
-            a photo into a strict spec schema and never writes simulation
-            code.
-          </p>
-        </div>
-        <div className="card">
-          <div className="eyebrow">Cross-check</div>
-          <h3 style={{ marginTop: 8 }}>SAM 3.1 double-checks photos</h3>
-          <p>
-            It locates parts in the picture independently. When it
-            disagrees with Spark, both answers are printed, not smoothed
-            over.
-          </p>
-        </div>
-        <div className="card">
-          <div className="eyebrow">Gate</div>
-          <h3 style={{ marginTop: 8 }}>Ground truth, not belief</h3>
-          <p>
-            Drive and turn are judged against the simulator&apos;s true
-            pose. Odometry is graded too, so a robot can&apos;t pass on
-            its own word.
-          </p>
-        </div>
-      </div>
-
       <p className="section-more">
-        <Link href="/evidence/">The locked pass and fail thresholds, and every recorded report →</Link>
+        <Link href="/evidence/">Every recorded gate report →</Link>
       </p>
 
       <div className="card quickstart">

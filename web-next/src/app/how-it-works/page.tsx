@@ -5,25 +5,22 @@ import AiInside from "@/components/home/AiInside";
 import { Glossary } from "@/components/shell/Term";
 
 /**
- * How it works — the landing's "How RobotForge decides" section as a
- * standalone page.
+ * How it works — the fine-print page: what a PASS proves and what it
+ * doesn't, the AI-inside table, and the plain-English glossary.
  *
- * Provenance, stated plainly: the vanilla site has NO standalone
- * how-it-works page and no generator for one (src/robotforge/site.py's
- * app pages are Forge, Robots and Evidence only, and the app nav links
- * nothing else). The content below is therefore the landing #how
- * section, ported verbatim via the shared HowItWorks component — same
- * words, same classes, same locked-threshold table, same quickstart.
- * Nothing was written for this page that the vanilla site doesn't say.
- * The AI-inside table and the glossary moved here from the landing
- * page (2026-10-29), which now keeps only a short version of each.
+ * The test itself is explained once, on the landing page's #workflow
+ * band (the canonical explanation). This page used to restate the
+ * whole mechanism via the HowItWorks component; that copy was cut on
+ * 2026-10-29 at Abel's direction (declutter: one explanation, links
+ * instead of copies). The AI-inside table and the glossary live here;
+ * the landing keeps only a short version of the table.
  */
 
 export const metadata: Metadata = {
   // The layout template appends "· RobotForge".
   title: "How it works",
   description:
-    "How RobotForge decides: Muse Spark drafts the spec, engineering checks validate it, and a Gazebo twin is graded against ground truth — what a PASS proves, and what it doesn't.",
+    "What a RobotForge PASS proves, what it doesn't, where Muse Spark works, and a plain-English glossary.",
 };
 
 export default function HowItWorksPage() {

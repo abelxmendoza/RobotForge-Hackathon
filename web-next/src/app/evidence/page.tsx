@@ -36,10 +36,9 @@ export default function EvidencePage() {
           <div className="eyebrow">Evidence</div>
           <h1>Measured, not believed</h1>
           <p className="lede">
-            Every verdict is judged against simulator ground truth, where the
-            robot actually went, never against its own odometry alone. These
-            are the gate&apos;s own reports from real runs in Gazebo Sim,
-            headless, on Oct 26, 2026.
+            The gate&apos;s own reports from real runs in Gazebo Sim, each
+            graded against simulator ground truth.{" "}
+            <Link href="/#workflow">How the test works →</Link>
           </p>
         </div>
       </div>
