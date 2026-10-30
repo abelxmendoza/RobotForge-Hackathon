@@ -313,12 +313,12 @@
           <ul>
             <li><strong>The problem:</strong> robot models are trusted before anyone checks that they move the way they claim; modeling errors stay silent until hardware.</li>
             <li><strong>Who has it:</strong> university rover teams, ROS 2 hobbyists and small startups, with no test team and no test budget.</li>
-            <li><strong>Why a gate:</strong> no free tool gives a pass/fail verdict with evidence. RobotForge drives the twin in Gazebo and grades it on ground truth.</li>
+            <li><strong>Why a gate:</strong> no free tool gives a pass/fail verdict with evidence.</li>
           </ul>
         </div>
         <p class="dateline">Research brief · Compiled October 25–26, 2026 · America/Los_Angeles · <b>For the RobotForge scope lock</b></p>
         <h1>A robot model should have to <span class="hl">pass</span> before anyone trusts it.</h1>
-        <p class="lede">RobotForge is a proposed open-source <strong>acceptance gate</strong> for robot models: describe a wheeled robot, generate its URDF/SDF, run it headlessly in Gazebo, compare the odometry it reports against the simulator's ground truth on simple maneuvers — drive straight about a meter, turn about 90° — and emit a <strong>PASS/FAIL evidence report</strong>. This brief documents whether the problem is real, who already solves pieces of it, and what to build first. Short answer: the problem is documented by the field's own research, and the verdict-shaped hole in the tooling is still empty.</p>
+        <p class="lede">RobotForge is a proposed open-source <strong>acceptance gate</strong> for robot models: a model has to pass a measured driving test in simulation before anyone trusts it, and the verdict comes with evidence (<a href="/#workflow">how the test works</a>). This brief documents whether the problem is real, who already solves pieces of it, and what to build first. Short answer: the problem is documented by the field's own research, and the verdict-shaped hole in the tooling is still empty.</p>
 
         <div class="hero-grid">
           <figure>

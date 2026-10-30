@@ -8,15 +8,19 @@ import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 
 /**
- * Home — a port of the vanilla landing's <main> (index.html), section
- * for section, class for class. The header, footer and Forge Guide chat
- * live in the root layout, as they wrap every page; the robot row is
- * generated from the same catalog data the Python generator uses
- * (catalog/robots.json), never hand-written.
+ * Home — originally a port of the vanilla landing's <main> (index.html),
+ * section for section, class for class. The header, footer and Forge
+ * Guide chat live in the root layout, as they wrap every page; the
+ * robot row is generated from the same catalog data the Python
+ * generator uses (catalog/robots.json), never hand-written.
  *
- * The proof figures are literal in the vanilla markup (they are the
- * recorded Oct 26, 2026 runs the landing cites); they are ported as-is,
- * not re-derived or rounded.
+ * Explainer copy exception (2026-10-29, Abel's direction — declutter,
+ * less is more): the #workflow band is now the ONE canonical
+ * plain-English explanation of the gate, rewritten here; other pages
+ * link to it instead of restating the test. The proof cards' figures
+ * are still the recorded Oct 26, 2026 runs the landing cites, ported
+ * as-is; the canonical proof line cites the catalog-recorded runs
+ * (Burger's 2026-10-28 Torque-VM run, Pathfinder, Andino).
  */
 
 export const metadata: Metadata = {
@@ -24,7 +28,7 @@ export const metadata: Metadata = {
   // "%s · RobotForge" template.
   title: { absolute: "RobotForge — fix your robot before you spend a dollar" },
   description:
-    "Bring in a broken robot, an idea or a pile of parts. Muse Spark proposes the spec and the fixes, engineering checks decide what holds, and a simulated twin has to pass a measured motion test.",
+    "RobotForge gives robot models a driving test before anyone trusts them. Describe a robot in words, a photo or a parts list — its simulated twin has to pass.",
 };
 
 export default function HomePage() {
@@ -50,9 +54,10 @@ export default function HomePage() {
           </div>
           <h1>Fix your robot before you spend a dollar.</h1>
           <p className="lede">
-            Bring in a broken robot, an idea or a pile of parts. Muse Spark
-            proposes the spec and the fixes, engineering checks decide what
-            holds, and a simulated twin has to pass a measured motion test.
+            RobotForge gives robot models a driving test before anyone
+            trusts them. Describe a robot in words, a photo or a parts
+            list — its simulated twin has to pass before you build or buy
+            anything.
           </p>
           <div className="ctas">
             <Link className="btn btn-primary" href="/forge/">
@@ -78,37 +83,80 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============ HOW IT WORKS ============ */}
+      {/* ============ HOW IT WORKS — the one canonical explanation.
+           Every other page links here instead of restating the test
+           (decluttered 2026-10-29 at Abel's direction: less is more). */}
       <section className="band" id="workflow">
         <div className="wrap">
           <div className="section-head">
             <div className="eyebrow">How it works</div>
-            <h2>Four steps, and the AI never grades itself.</h2>
+            <h2>How the driving test works.</h2>
           </div>
           <ol className="flow flow-4">
             <li>
               <span className="n">01</span>
-              <h3>Bring your robot</h3>
-              <p>Plain words, a photo, a parts list or a <Term k="spec">spec</Term> file.</p>
+              <h3>Describe it</h3>
+              <p>Words, a photo, or a parts list.</p>
             </li>
             <li>
               <span className="n">02</span>
-              <h3>Muse Spark drafts and fixes</h3>
-              <p>It writes the spec and proposes repairs when a check fails.</p>
+              <h3>Muse Spark writes the spec</h3>
+              <p>The description becomes a spec sheet — numbers only.</p>
             </li>
             <li>
               <span className="n">03</span>
-              <h3><Term k="checks">Checks</Term> decide</h3>
-              <p>Fixed engineering rules accept or reject every number and every fix.</p>
+              <h3>The app builds the twin</h3>
+              <p>The spec becomes a model (URDF/SDF), built in the Gazebo simulator.</p>
             </li>
             <li>
               <span className="n">04</span>
-              <h3><Term k="gazebo">Gazebo</Term> proves it</h3>
-              <p>A <Term k="twin">twin</Term> drives 1 m and turns 90°, graded on <Term k="ground_truth">ground truth</Term>.</p>
+              <h3>The gate runs the test</h3>
+              <p>The robot drives straight and turns. The gate compares odometry — where it thinks it went — with ground truth: where it actually went.</p>
             </li>
           </ol>
+          <div className="split">
+            <div className="card">
+              <h3>The verdict</h3>
+              <p style={{ marginTop: 12 }}>
+                <span className="verdict pass">Pass</span>{" "}
+                Distance error 5% or less, heading error 5° or less.
+              </p>
+              <p style={{ marginTop: 10 }}>
+                <span className="verdict marginal">Marginal</span>{" "}
+                Between 5% and 10%.
+              </p>
+              <p style={{ marginTop: 10 }}>
+                <span className="verdict fail">Fail</span>{" "}
+                Over 10%, or over 10°. The gate names the spec numbers it suspects.
+              </p>
+              <p style={{ marginTop: 10 }}>
+                A physically impossible spec — ground clearance bigger than
+                the wheel radius — is refused before the test runs.
+              </p>
+            </div>
+            <div className="card">
+              <h3>Proof, from real runs</h3>
+              <p style={{ marginTop: 12 }}>
+                TurtleBot3 Burger — <strong>PASS</strong>. Distance off by
+                2.293%, heading by 1.421°.
+              </p>
+              <p style={{ marginTop: 10 }}>Pathfinder — <strong>PASS</strong>.</p>
+              <p style={{ marginTop: 10 }}>
+                Andino — <strong>FAIL</strong>. Heading off by 9.104°: its
+                caster wheel drags in a turn.
+              </p>
+              <p style={{ marginTop: 10 }}>
+                A robot that has not run the test is marked{" "}
+                <strong>NOT GATED</strong>.
+              </p>
+            </div>
+          </div>
+          <p className="section-more muted">
+            Under the hood: Muse Spark → spec → deterministic URDF/SDF
+            generation → Gazebo → odometry vs ground truth.
+          </p>
           <p className="section-more">
-            <Link href="/how-it-works/">How RobotForge decides, in detail →</Link>
+            <Link href="/how-it-works/">What a PASS proves — and what it doesn&apos;t →</Link>
           </p>
         </div>
       </section>
@@ -118,10 +166,10 @@ export default function HomePage() {
         <div className="wrap">
           <div className="section-head">
             <div className="eyebrow">Proof</div>
-            <h2>The simulation test is not a rubber stamp.</h2>
+            <h2>Two recorded runs.</h2>
             <p>
-              One robot that earned a PASS in Gazebo, and one rigged to fail.
-              The limits are fixed: 5% passes, over 10% fails.
+              One earned a PASS. One was rigged to fail — and its own
+              sensors couldn&apos;t tell.
             </p>
           </div>
           <div className="proof">
@@ -135,9 +183,7 @@ export default function HomePage() {
               <h3>Indoor Delivery Rover</h3>
               <p>
                 One paragraph of plain English became a spec, a twin, and
-                a measured PASS. Its odometry — the robot&apos;s own
-                estimate of how far it has travelled, from its wheels and
-                sensors — matched ground truth to 0.002%.
+                a measured PASS.
               </p>
               <div className="metrics">
                 <div className="metric">
@@ -247,9 +293,8 @@ export default function HomePage() {
           </div>
           <div className="proof-foot">
             <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
-              Bars run 0–15. Green zone passes, yellow is marginal, past it
-              fails. Recorded in Gazebo Sim, headless (no window opens —
-              the simulator runs unseen), Oct 26, 2026.
+              Bars run 0–15: green passes, yellow is marginal, past it
+              fails. Recorded in Gazebo Sim, headless, Oct 26, 2026.
             </p>
             <Link className="btn" href="/evidence/">
               All gate reports →
@@ -267,7 +312,7 @@ export default function HomePage() {
           </div>
           <AiInsideCards />
           <p className="section-more">
-            <Link href="/how-it-works/#ai-inside">Every place Muse Spark works, and whether it is live now →</Link>
+            <Link href="/how-it-works/#ai-inside">Where Muse Spark works →</Link>
           </p>
         </div>
       </section>
@@ -295,8 +340,8 @@ export default function HomePage() {
         <div className="wrap">
           <h2>See a broken robot get fixed in one click.</h2>
           <p>
-            The demo runs the whole story: the checks catch the mistakes,
-            Muse Spark proposes the fix, and the checks decide.
+            Watch a broken spec get caught, fixed and re-tested — the
+            whole loop in one run.
           </p>
           <div
             style={{

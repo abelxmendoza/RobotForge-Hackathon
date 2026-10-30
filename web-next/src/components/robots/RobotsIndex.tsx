@@ -42,9 +42,9 @@ export default function RobotsIndex() {
           <div className="eyebrow">Robots</div>
           <h1><Term k="robodex">Robodex</Term></h1>
           <p className="lede">
-            Every robot the forge knows, numbered in the order it learned them.
-            Badges come only from recorded gate runs. A robot with no run says
-            so in grey.
+            Every robot RobotForge knows. A badge comes only from a recorded
+            gate run — untested robots are marked NOT GATED.{" "}
+            <Link href="/#workflow">How the test works →</Link>
           </p>
         </div>
       </div>
