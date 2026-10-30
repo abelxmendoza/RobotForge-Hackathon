@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/copy-vanilla.mjs",
+    "build": "next build",
     "sync-data": "node scripts/sync-data.mjs",
     "parity": "node scripts/parity.mjs",
-    "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
+    "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs && node scripts/copy-vanilla.mjs",
     "predev": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs",
     "sample-scan": "node scripts/make-sample-scan.mjs"
   },

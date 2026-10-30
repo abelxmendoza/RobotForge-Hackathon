@@ -9,6 +9,8 @@ public/assets/
 public/examples/
 public/catalog/
 public/problem-space.html
+# Copied at prebuild by scripts/copy-vanilla.mjs from the repo root.
+public/vanilla/
 
 # Generated at prebuild by scripts/make-sample-scan.mjs — do not commit.
 public/sample-scan.ply
