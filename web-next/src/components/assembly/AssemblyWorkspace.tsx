@@ -30,6 +30,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
   const [proposal,setProposal] = useState<AssemblyOperation|null>(null);
   const [notice,setNotice] = useState('');
   const [failed3D,setFailed3D] = useState(false);
+  const [quality,setQuality] = useState<'high'|'balanced'>('high');
   const [animate,setAnimate] = useState(true);
   const [xray,setXray] = useState(false);
   const [explode,setExplode] = useState(0);
@@ -98,6 +99,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       <button type="button" className="btn btn-sm" onClick={()=>setProposal(null)}>Cancel</button>
     </div>}
     <div className="g-tabs" aria-label="3D workbench controls">
+      <label className="g-field"><span>Graphics quality</span><select value={quality} onChange={e=>setQuality(e.target.value as 'high'|'balanced')}><option value="high">Studio · highest quality</option><option value="balanced">Balanced · lighter GPU load</option></select></label>
       <button type="button" className="chip" aria-pressed={animate} onClick={()=>setAnimate(v=>!v)}>Motion effects {animate?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={xray} onClick={()=>setXray(v=>!v)}>X-ray {xray?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={dragMode} disabled={explode>0||replay<1||playing} onClick={()=>setDragMode(v=>!v)}>Drag placement {dragMode?'on':'off'}</button>
@@ -111,12 +113,12 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     {showFov && <fieldset className="g-group"><legend>Illustrative FOV on selected component · local +X forward</legend><label className="g-field"><span>Full cone angle (degrees)</span><input type="number" min="5" max="150" value={fovDeg} onChange={e=>setFovDeg(Math.max(5,Math.min(150,Number(e.target.value)||60)))}/></label><label className="g-field"><span>Range (m)</span><input type="number" min="0.05" max="5" step="0.05" value={fovRange} onChange={e=>setFovRange(Math.max(0.05,Math.min(5,Number(e.target.value)||0.5)))}/></label><p>Assumed visualization inputs, not a sensor datasheet or an obstruction test.</p></fieldset>}
     {previousVersion && <fieldset className="g-group"><legend>Upgrade playback · previous assembly → latest preview</legend><input aria-label="Upgrade playback progress" type="range" min="0" max="100" value={Math.round(replay*100)} onChange={e=>{setPlaying(false);setReplay(Number(e.target.value)/100);}}/><button type="button" className="chip" onClick={()=>{setReplay(0);setPlaying(true);setDragMode(false);}}>Play upgrade</button><button type="button" className="chip" onClick={()=>{setPlaying(false);setReplay(1);}}>Latest pose</button><p>Component-pose comparison only; cables show the latest planned connections. Scrubbing does not change saved versions. Motion respects reduced-motion preferences.</p></fieldset>}
     <p className="faint">Drag placement: move a part in XY on a 5 mm grid, release to preview, Escape to cancel. Deck snap uses the schematic plate surface. Disable explode and finish playback before dragging.</p>
-    <p className="faint">Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Cable arcs and moving pulses show planned connectivity, not electrical current or verified routing.</p>
+    <p className="faint">Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Stylized component details are visual proxies, not manufacturer CAD. Cable arcs and pulses show planned connectivity, not electrical current or verified routing.</p>
     {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
       const wire=preview.connections.find(c=>c.id===id);
       if(wire){setSelectedWire(id);setTab('wiring');setFrom(wire.from);setTo(wire.to);setNotice('Selected planned connection · NOT_CHECKED');}
       else {setSelectedWire(null);setSelected(id);}
-    }} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections} animate={animate} xray={xray}
+    }} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections} animate={animate} xray={xray} quality={quality}
       collisionIds={collisionIds} dragMode={dragMode&&explode===0&&replay===1&&!playing} snapDeck={snapDeck}
       ghostMount={ghostMount} fov={showFov?{angleDeg:fovDeg,rangeM:fovRange}:undefined}
       comparison={previousVersion?.components} replay={replay} playing={playing} onPlaybackEnd={()=>{setPlaying(false);setReplay(1);}}

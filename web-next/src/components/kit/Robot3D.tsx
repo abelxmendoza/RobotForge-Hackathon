@@ -11,6 +11,7 @@
 import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
 import type { ComponentInstance, Connection } from '@/lib/assembly';
+import { addComponentSkin } from './componentSkin';
 import { snapPlacement, shortestYaw } from '@/lib/spatial';
 import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
@@ -61,6 +62,7 @@ export default function Robot3D({
   animate = true,
   xray = false,
   collisionIds = [], dragMode = false, snapDeck = true, ghostMount = false,
+  quality = 'balanced',
   fov, comparison, replay = 1, playing = false, onMove, onPlaybackEnd,
 }: {
   spec: RobotSpec;
@@ -72,6 +74,7 @@ export default function Robot3D({
   connections?: Connection[];
   animate?: boolean;
   xray?: boolean;
+  quality?: 'high'|'balanced';
   collisionIds?: string[]; dragMode?: boolean; snapDeck?: boolean; ghostMount?: boolean;
   fov?: {angleDeg:number;rangeM:number}; comparison?: ComponentInstance[];
   replay?: number; playing?: boolean;
@@ -100,7 +103,12 @@ export default function Robot3D({
         const { OrbitControls } = await import(
           'three/addons/controls/OrbitControls.js'
         );
+        const [{RoomEnvironment},{RoundedBoxGeometry}]=await Promise.all([
+          import('three/addons/environments/RoomEnvironment.js'),
+          import('three/addons/geometries/RoundedBoxGeometry.js'),
+        ]);
         if (disposed) return;
+        const studio=quality==='high';
         const built = taBuildParts(spec);
         const units = taGeom3d(spec, built.parts, built.pos);
 
@@ -120,14 +128,21 @@ export default function Robot3D({
           antialias: true,
           alpha: true,
         });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, studio ? 2 : 1.25));
+        renderer.outputColorSpace=THREE.SRGBColorSpace;
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.05;
+        renderer.toneMappingExposure = 1.1;
         host.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
+        scene.background=new THREE.Color(0x081321);
+        const pmrem=new THREE.PMREMGenerator(renderer);
+        const room=new RoomEnvironment();
+        const environment=pmrem.fromScene(room,0.04);
+        scene.environment=environment.texture;
+        room.dispose();pmrem.dispose();
         const camera = new THREE.PerspectiveCamera(42, 2, 0.01, 30);
         camera.up.set(0, 0, 1);
         const span = Math.max(
@@ -153,27 +168,39 @@ export default function Robot3D({
         const key = new THREE.DirectionalLight(0xffffff, 2.2);
         key.position.set(span, -span * 0.7, span * 1.6);
         key.castShadow = true;
+        key.shadow.mapSize.set(studio?2048:1024,studio?2048:1024);
+        key.shadow.camera.left=-span*1.5;key.shadow.camera.right=span*1.5;
+        key.shadow.camera.top=span*1.5;key.shadow.camera.bottom=-span*1.5;
+        key.shadow.camera.near=0.01;key.shadow.camera.far=span*8;
+        key.shadow.normalBias=0.001;key.shadow.bias=-0.0001;
+        key.shadow.camera.updateProjectionMatrix();
         scene.add(key);
-        const rim = new THREE.DirectionalLight(0xf59e0b, 0.7);
+        const rim = new THREE.DirectionalLight(0x3fe4db, 1.4);
         rim.position.set(-span, span, span * 0.6);
         scene.add(rim);
+        const fill=new THREE.DirectionalLight(0x7d9bff,0.8);
+        fill.position.set(-span,-span,span*0.5);scene.add(fill);
 
         const ground = new THREE.Mesh(
-          new THREE.CircleGeometry(span * 1.05, 48),
+          new THREE.CircleGeometry(span * 1.5, 96),
           new THREE.MeshStandardMaterial({
-            color: 0x1b1e24,
-            roughness: 0.95,
+            color: 0x102132,
+            roughness: 0.58,
+            metalness:0.35,
           }),
         );
         ground.receiveShadow = true;
+        ground.position.z=-0.003;
         scene.add(ground);
+        const stageRing=new THREE.Mesh(new THREE.RingGeometry(span*1.3,span*1.305,128),new THREE.MeshBasicMaterial({color:0x249f9e,transparent:true,opacity:0.45,depthWrite:false}));
+        stageRing.position.z=-0.002;scene.add(stageRing);
         const grid = new THREE.PolarGridHelper(
           span,
           12,
           6,
           48,
-          0x2c313a,
-          0x23262e,
+          0x28465b,
+          0x193044,
         );
         grid.rotation.x = Math.PI / 2;
         grid.position.z = 0.001;
@@ -184,16 +211,18 @@ export default function Robot3D({
         const groups: THREE_NS.Group[] = [];
         units.forEach((u) => {
           if (!materials[u.part]) {
-            materials[u.part] = new THREE.MeshStandardMaterial({
+            materials[u.part] = new THREE.MeshPhysicalMaterial({
               color: PALETTE[u.part] || 0x167f83,
-              roughness: 0.75,
-              metalness: 0.08,
+              roughness: u.part==='wheel'?0.9:0.38,
+              metalness: u.part==='wheel'?0.05:0.45,
+              clearcoat:0.25,
+              clearcoatRoughness:0.3,
             });
           }
           const g = new THREE.Group();
           u.meshes.forEach((m) => {
             let geo: THREE_NS.BufferGeometry;
-            if (m.kind === 'box') geo = new THREE.BoxGeometry(...m.size);
+            if (m.kind === 'box') geo = new RoundedBoxGeometry(m.size[0],m.size[1],m.size[2],studio?3:1,Math.min(...m.size)*0.12);
             else if (m.kind === 'cyl')
               geo = new THREE.CylinderGeometry(m.size[0], m.size[0], m.size[1], 28);
             else geo = new THREE.SphereGeometry(m.size[0], 24, 18);
@@ -205,6 +234,11 @@ export default function Robot3D({
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             mesh.userData.part = u.part;
+            const component=renderInstances.find(c=>c.id===u.part);
+            if(component){
+              mesh.castShadow=false;
+              addComponentSkin(THREE,mesh,componentById(component.componentId)!.sizeM,component.componentId);
+            }
             if (m.kind === 'box') {
               const edges = new THREE.LineSegments(
                 new THREE.EdgesGeometry(geo),
@@ -239,6 +273,10 @@ export default function Robot3D({
             }
             tray.position.set(...current.positionM);tray.rotation.z=current.yawDeg*Math.PI/180;
             tray.visible=false;g.add(tray);g.userData.tray=tray;
+            const haloRadius=Math.hypot(part.sizeM[0],part.sizeM[1])*0.56;
+            const halo=new THREE.Mesh(new THREE.RingGeometry(haloRadius,haloRadius+0.0015,96),new THREE.MeshBasicMaterial({color:new THREE.Color(0.25,1.8,1.6),transparent:true,opacity:0.6,depthWrite:false,side:THREE.DoubleSide}));
+            halo.position.set(current.positionM[0],current.positionM[1],current.positionM[2]-part.sizeM[2]/2-0.002);
+            halo.visible=false;g.add(halo);g.userData.halo=halo;
           }
           scene.add(g);
           groups.push(g);
@@ -253,7 +291,7 @@ export default function Robot3D({
           const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,32,0.0016,8,false),new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0x805000,emissiveIntensity:0.3,roughness:0.5}));
           mesh.userData.part=connection.id;
           scene.add(mesh); pickMeshes.push(mesh);
-          const pulse=new THREE.Mesh(new THREE.SphereGeometry(0.003,10,8),new THREE.MeshBasicMaterial({color:0xfff3ae}));
+          const pulse=new THREE.Mesh(new THREE.SphereGeometry(0.003,10,8),new THREE.MeshBasicMaterial({color:new THREE.Color(3,2.3,1.1)}));
           scene.add(pulse);
           const anchors=[a,b].map(()=>{
             const anchor=new THREE.Mesh(new THREE.SphereGeometry(0.0025,10,8),new THREE.MeshBasicMaterial({color:0x5eead4}));
@@ -262,6 +300,25 @@ export default function Robot3D({
             return anchor;
           });
           cables.push({curve,mesh,pulse,anchors,a,b,index,last:''});
+        }
+        // A restrained bloom pass catches the bright cable markers and selection glow.
+        let composer: import('three/addons/postprocessing/EffectComposer.js').EffectComposer|undefined;
+        if(studio){
+          try{
+            const [{EffectComposer},{RenderPass},{UnrealBloomPass},{OutputPass}]=await Promise.all([
+              import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/RenderPass.js'),
+              import('three/addons/postprocessing/UnrealBloomPass.js'),import('three/addons/postprocessing/OutputPass.js'),
+            ]);
+            if(disposed){
+              controls.dispose();
+              scene.traverse(object=>{const drawable=object as THREE_NS.Mesh;drawable.geometry?.dispose();const material=drawable.material;if(Array.isArray(material))material.forEach(m=>m.dispose());else material?.dispose();});
+              renderer.dispose();environment.dispose();host.removeChild(renderer.domElement);return;
+            }
+            composer=new EffectComposer(renderer);
+            composer.addPass(new RenderPass(scene,camera));
+            composer.addPass(new UnrealBloomPass(new THREE.Vector2(700,430),0.25,0.4,1.1));
+            composer.addPass(new OutputPass());
+          }catch{composer?.dispose();composer=undefined;}
         }
         const axes = new THREE.AxesHelper(span*0.4);
         scene.add(axes);
@@ -408,6 +465,7 @@ export default function Robot3D({
           const w = host.clientWidth || 700;
           const h = window.innerWidth <= 560 ? 320 : 430;
           renderer.setSize(w, h);
+          composer?.setSize(w,h);
           camera.aspect = w / h;
           if (!fitted && !cameraRef.current) {
             fitted = true;
@@ -463,12 +521,14 @@ export default function Robot3D({
             }
             g.visible=!current || (instances?.some(c=>c.id===current.id)?(old?true:progress>0.001):progress<0.999);
             if(g.userData.tray)(g.userData.tray as THREE_NS.Group).visible=settings.ghostMount&&g.userData.part===st.selected;
+            const halo=g.userData.halo as THREE_NS.Mesh|undefined;
+            if(halo){halo.visible=g.userData.part===st.selected;(halo.material as THREE_NS.MeshBasicMaterial).opacity=effects?0.55+Math.sin(clock.elapsedTime*2.5)*0.12:0.6;}
             if(effects) g.position.lerp(target,1-Math.exp(-delta*12)); else g.position.copy(target);
           }
           for(const [id,material] of Object.entries(materials)){
             const isComponent=Boolean(instances?.some(c=>c.id===id));
-            material.transparent=motionRef.current.xray&&!isComponent;
-            material.opacity=material.transparent?0.18:1;
+            material.transparent=isComponent||(motionRef.current.xray&&!isComponent);
+            material.opacity=isComponent?(motionRef.current.collisionIds.includes(id)?0.3:0.10):(material.transparent?0.18:1);
             material.depthWrite=!material.transparent;
             if(motionRef.current.collisionIds.includes(id)){
               material.color.setHex(0xef4444);material.emissive.setHex(0x7f1111);
@@ -512,7 +572,7 @@ export default function Robot3D({
             if(effects) cable.pulse.position.copy(cable.curve.getPoint(animationPhase(clock.elapsedTime,cable.index)));
           }
           controls.update();
-          renderer.render(scene, camera);
+          if(composer)composer.render(delta);else renderer.render(scene, camera);
         });
 
         cleanup = () => {
@@ -533,6 +593,8 @@ export default function Robot3D({
             if (Array.isArray(material)) material.forEach(m => m.dispose());
             else material?.dispose();
           });
+          composer?.passes.forEach(pass=>pass.dispose());composer?.dispose();
+          environment.dispose();
           renderer.dispose();
           if (renderer.domElement.parentElement === host) {
             host.removeChild(renderer.domElement);
@@ -549,7 +611,7 @@ export default function Robot3D({
       if (cleanup) cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, instances, connections, comparison]);
+  }, [spec, instances, connections, comparison, quality]);
 
   useEffect(() => {
     const st = sessionRef.current;

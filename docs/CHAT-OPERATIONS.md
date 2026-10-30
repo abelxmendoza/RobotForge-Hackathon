@@ -99,3 +99,10 @@ Suggested next 3D features, in priority order:
 - Upgrade playback compares the previous assembly component poses to the latest preview, interpolates position and shortest-path yaw, and shows added/removed components at their endpoints. Wiring remains the latest planned graph. Playback is visual only and never commits a version; reduced-motion skips autoplay animation.
 
 GPU interaction verification is still outstanding in this environment because its browser disables WebGL. Unit tests exercise overlap orientation/contact/vertical separation, snapping, numeric validity and yaw interpolation. The production build checks the renderer and control types.
+
+
+## Studio graphics increment
+
+The workbench defaults to Studio quality: procedural room-environment lighting, ACES tone mapping with sRGB output, a teal rim/blue fill studio rig, fitted soft-shadow bounds with 2048px shadow maps, rounded-box edges, physical materials and restrained bloom. Balanced quality lowers pixel ratio/shadow resolution, simplifies rounded edges and renders directly without bloom. Other existing robot viewers retain Balanced as their default. Renderer, postprocessing passes and environment resources are disposed on scene replacement.
+
+Component interiors are stylized visual proxies inside the existing envelope: board/heatsink/port-like blocks for the reference Jetson, a board/coil for the converter placeholder, and a strapped battery-like block. These are not measured ports, detailed manufacturer geometry, mounting data or verified parts. Envelope checks and saved component dimensions remain the source for spatial computations. GPU visual QA remains outstanding because the available browser disables WebGL.
