@@ -11,6 +11,7 @@
 import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
 import type { ComponentInstance, Connection } from '@/lib/assembly';
+import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
 import type { RobotSpec } from '../forge/model';
 import { taBuildParts, taGeom3d } from './takeapart';
@@ -56,6 +57,8 @@ export default function Robot3D({
   onFail,
   instances,
   connections,
+  animate = true,
+  xray = false,
 }: {
   spec: RobotSpec;
   explode: number;
@@ -64,7 +67,13 @@ export default function Robot3D({
   onFail: () => void;
   instances?: ComponentInstance[];
   connections?: Connection[];
+  animate?: boolean;
+  xray?: boolean;
 }) {
+  const motionRef = useRef({animate,xray});
+  motionRef.current = {animate,xray};
+  const previousRef = useRef<ComponentInstance[]>([]);
+  const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<Session | null>(null);
   const cbRef = useRef({ onSelect, onFail });
@@ -87,10 +96,12 @@ export default function Robot3D({
         const built = taBuildParts(spec);
         const units = taGeom3d(spec, built.parts, built.pos);
 
-        for (const instance of instances ?? []) {
+        const previous = previousRef.current;
+        previousRef.current = instances ?? [];
+        for (const [index,instance] of (instances ?? []).entries()) {
           const part = componentById(instance.componentId);
           if (!part) continue;
-          units.push({ part: instance.id, explode: [0, 0, 0], meshes: [{
+          units.push({ part: instance.id, explode: [0, 0, 1 + index*0.35], meshes: [{
             kind: 'box', size: part.sizeM, center: instance.positionM,
             rot: [0, 0, instance.yawDeg * Math.PI / 180],
           }] });
@@ -117,9 +128,11 @@ export default function Robot3D({
           0.2,
         );
         camera.position.set(span * 1.25, -span * 1.45, span * 1.0);
+        if(cameraRef.current) camera.position.set(...cameraRef.current.position);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, spec.height_m * 0.45);
+        if(cameraRef.current) controls.target.set(...cameraRef.current.target);
         controls.enableDamping = true;
         /* Two-finger pan on a phone-sized canvas loses the robot
          * off-screen too easily; rotate + pinch-zoom stay. */
@@ -163,7 +176,7 @@ export default function Robot3D({
         units.forEach((u) => {
           if (!materials[u.part]) {
             materials[u.part] = new THREE.MeshStandardMaterial({
-              color: PALETTE[u.part] || 0x3d4656,
+              color: PALETTE[u.part] || 0x167f83,
               roughness: 0.75,
               metalness: 0.08,
             });
@@ -197,22 +210,40 @@ export default function Robot3D({
             g.add(mesh);
             pickMeshes.push(mesh);
           });
-          g.userData = { part: u.part, explode: u.explode };
+          g.userData = { part: u.part, explode: u.explode, target: new THREE.Vector3() };
+          const old = previous.find(p=>p.id===u.part);
+          const current = instances?.find(p=>p.id===u.part);
+          if(current){
+            if(old) g.position.set(...current.positionM.map((v,i)=>old.positionM[i]-v) as [number,number,number]);
+            else g.position.z=0.06;
+          }
           scene.add(g);
           groups.push(g);
         });
 
-        for (const connection of connections ?? []) {
+        const cables: {curve: THREE_NS.CatmullRomCurve3; mesh: THREE_NS.Mesh; pulse: THREE_NS.Mesh; anchors: THREE_NS.Mesh[]; a: ComponentInstance; b: ComponentInstance; index:number; last:string}[] = [];
+        for (const [index,connection] of (connections ?? []).entries()) {
           const a = instances?.find(c => c.id === connection.from);
           const b = instances?.find(c => c.id === connection.to);
           if (!a || !b) continue;
-          const geometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(...a.positionM), new THREE.Vector3(...b.positionM),
-          ]);
-          const line = new THREE.Line(geometry, new THREE.LineDashedMaterial({ color: 0xfbbf24, dashSize: 0.01, gapSize: 0.005 }));
-          line.computeLineDistances();
-          scene.add(line);
+          const curve=new THREE.CatmullRomCurve3(cableControlPoints(a.positionM,b.positionM,index).map(p=>new THREE.Vector3(...p)));
+          const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,32,0.0016,8,false),new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0x805000,emissiveIntensity:0.3,roughness:0.5}));
+          mesh.userData.part=connection.id;
+          scene.add(mesh); pickMeshes.push(mesh);
+          const pulse=new THREE.Mesh(new THREE.SphereGeometry(0.003,10,8),new THREE.MeshBasicMaterial({color:0xfff3ae}));
+          scene.add(pulse);
+          const anchors=[a,b].map(()=>{
+            const anchor=new THREE.Mesh(new THREE.SphereGeometry(0.0025,10,8),new THREE.MeshBasicMaterial({color:0x5eead4}));
+            anchor.userData.part=connection.id;
+            scene.add(anchor);pickMeshes.push(anchor);
+            return anchor;
+          });
+          cables.push({curve,mesh,pulse,anchors,a,b,index,last:''});
         }
+        const axes = new THREE.AxesHelper(span*0.4);
+        scene.add(axes);
+        const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+        const clock=new THREE.Clock();
 
         const st: Session = {
           renderer,
@@ -245,7 +276,7 @@ export default function Robot3D({
           const e = st.explode / 1000;
           st.groups.forEach((g) => {
             const v = g.userData.explode as [number, number, number];
-            g.position.set(v[0] * e, v[1] * e, v[2] * e);
+            (g.userData.target as THREE_NS.Vector3).set(v[0] * e, v[1] * e, v[2] * e);
           });
         };
         st.refresh = refresh;
@@ -296,7 +327,7 @@ export default function Robot3D({
           const h = window.innerWidth <= 560 ? 320 : 430;
           renderer.setSize(w, h);
           camera.aspect = w / h;
-          if (!fitted) {
+          if (!fitted && !cameraRef.current) {
             fitted = true;
             /* Portrait viewports crop the model's width at the
              * span-derived distance: pull the camera back once,
@@ -330,6 +361,40 @@ export default function Robot3D({
         window.addEventListener('resize', resize);
 
         renderer.setAnimationLoop(() => {
+          const delta=Math.min(clock.getDelta(),0.05);
+          const effects=motionRef.current.animate&&!reducedMotion.matches;
+          for(const g of groups){
+            const target=g.userData.target as THREE_NS.Vector3;
+            if(effects) g.position.lerp(target,1-Math.exp(-delta*12)); else g.position.copy(target);
+          }
+          for(const [id,material] of Object.entries(materials)){
+            const isComponent=Boolean(instances?.some(c=>c.id===id));
+            material.transparent=motionRef.current.xray&&!isComponent;
+            material.opacity=material.transparent?0.18:1;
+            material.depthWrite=!material.transparent;
+            if(id===st.selected&&effects) material.emissiveIntensity=0.3+Math.sin(clock.elapsedTime*3)*0.1;
+          }
+          for(const cable of cables){
+            const offset=(id:string)=>groups.find(g=>g.userData.part===id)?.position ?? new THREE.Vector3();
+            const a=new THREE.Vector3(...cable.a.positionM).add(offset(cable.a.id));
+            const b=new THREE.Vector3(...cable.b.positionM).add(offset(cable.b.id));
+            // Visual anchor proxies at envelope tops, not documented connector locations.
+            a.z+=(componentById(cable.a.componentId)?.sizeM[2]??0)/2+0.002;
+            b.z+=(componentById(cable.b.componentId)?.sizeM[2]??0)/2+0.002;
+            cable.anchors[0].position.copy(a);cable.anchors[1].position.copy(b);
+            const material=cable.mesh.material as THREE_NS.MeshStandardMaterial;
+            material.emissiveIntensity=st.selected===cable.mesh.userData.part?0.9:0.3;
+            const signature=[...a.toArray(),...b.toArray()].map(v=>v.toFixed(5)).join(',');
+            if(signature!==cable.last){
+              cable.curve.points=cableControlPoints(a.toArray() as [number,number,number],b.toArray() as [number,number,number],cable.index).map(p=>new THREE.Vector3(...p));
+              cable.curve.updateArcLengths();
+              cable.mesh.geometry.dispose();
+              cable.mesh.geometry=new THREE.TubeGeometry(cable.curve,32,0.0016,8,false);
+              cable.last=signature;
+            }
+            cable.pulse.visible=effects;
+            if(effects) cable.pulse.position.copy(cable.curve.getPoint(animationPhase(clock.elapsedTime,cable.index)));
+          }
           controls.update();
           renderer.render(scene, camera);
         });
@@ -341,6 +406,7 @@ export default function Robot3D({
           renderer.domElement.removeEventListener('pointermove', onMove);
           renderer.domElement.removeEventListener('pointerdown', onDown);
           renderer.domElement.removeEventListener('pointerup', onUp);
+          cameraRef.current={position:camera.position.toArray() as [number,number,number],target:controls.target.toArray() as [number,number,number]};
           controls.dispose();
           scene.traverse(object => {
             const drawable = object as THREE_NS.Mesh;
@@ -383,5 +449,5 @@ export default function Robot3D({
     }
   }, [selected]);
 
-  return <div ref={hostRef} />;
+  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" style={{minHeight:320}} />;
 }

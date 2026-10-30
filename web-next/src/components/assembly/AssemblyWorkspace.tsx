@@ -1,5 +1,4 @@
 "use client";
-import AssemblyPlan from './AssemblyPlan';
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { COMPONENTS, componentById } from '@/lib/components';
@@ -26,10 +25,14 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
   const [tab,setTab] = useState<'components'|'wiring'>('components');
   const [componentId,setComponentId] = useState(COMPONENTS[0].id);
   const [selected,setSelected] = useState<string|null>(null);
+  const [selectedWire,setSelectedWire] = useState<string|null>(null);
   const [proposal,setProposal] = useState<AssemblyOperation|null>(null);
   const [notice,setNotice] = useState('');
   const [failed3D,setFailed3D] = useState(false);
-  const [view,setView] = useState<'3d'|'top'>('3d');
+  const [animate,setAnimate] = useState(true);
+  const [xray,setXray] = useState(false);
+  const [explode,setExplode] = useState(0);
+  const [retry,setRetry] = useState(0);
   const [from,setFrom] = useState(''); const [to,setTo] = useState('');
   const robot = robots.find(r => r.id === robotId);
   const spec = robot?.versions.at(-1)?.spec;
@@ -82,9 +85,17 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(previewError)} onClick={apply}>Apply assembly change</button>{' '}
       <button type="button" className="btn btn-sm" onClick={()=>setProposal(null)}>Cancel</button>
     </div>}
-    <p className="faint">3D: robot schematic + component envelopes. Amber dashed lines are planned connections, not routed harnesses.</p>
-    <div className="g-tabs" aria-label="Assembly visualization"><button type="button" className="chip" aria-pressed={view==='3d'&&!failed3D} disabled={failed3D} onClick={()=>setView('3d')}>3D</button><button type="button" className="chip" aria-pressed={view==='top'||failed3D} onClick={()=>setView('top')}>Top view</button></div>
-    {view==='3d' && !failed3D ? <Robot3D spec={spec as RobotSpec} explode={0} selected={selected} onSelect={setSelected} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections}/> : <>{failed3D && <p role="status">WebGL is unavailable here. Showing the top view; positions remain editable below.</p>}<AssemblyPlan lengthM={Number(spec.length_m)} widthM={Number(spec.width_m)} instances={preview.components} connections={preview.connections} selected={selected} onSelect={setSelected}/></>}
+    <div className="g-tabs" aria-label="3D workbench controls">
+      <button type="button" className="chip" aria-pressed={animate} onClick={()=>setAnimate(v=>!v)}>Motion effects {animate?'on':'off'}</button>
+      <button type="button" className="chip" aria-pressed={xray} onClick={()=>setXray(v=>!v)}>X-ray {xray?'on':'off'}</button>
+      <label className="g-field"><span>Explode assembly · {explode} mm</span><input type="range" min="0" max="100" value={explode} onChange={e=>setExplode(Number(e.target.value))}/></label>
+    </div>
+    <p className="faint">Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Cable arcs and moving pulses show planned connectivity, not electrical current or verified routing.</p>
+    {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
+      const wire=preview.connections.find(c=>c.id===id);
+      if(wire){setSelectedWire(id);setTab('wiring');setFrom(wire.from);setTo(wire.to);setNotice('Selected planned connection · NOT_CHECKED');}
+      else {setSelectedWire(null);setSelected(id);}
+    }} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections} animate={animate} xray={xray}/> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
     {tab==='components' ? <>
       <label className="g-field"><span>Add a component by name</span><select value={componentId} onChange={e=>setComponentId(e.target.value)}>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <p className="faint">{componentById(componentId)?.note}</p>
@@ -99,7 +110,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     </>}
     <h4>Components ({preview.components.length})</h4>
     {!preview.components.length && <p>No components yet. Add one above or through the Guide.</p>}
-    <ul>{preview.components.map(c=><li key={c.id}><button type="button" className="chip" aria-pressed={selected===c.id} onClick={()=>setSelected(c.id)}>{componentById(c.componentId)?.name} · {c.id}</button> <span className="faint">{c.positionM.map(v=>Math.round(v*1000)).join(', ')} mm · yaw {c.yawDeg}°</span></li>)}</ul>
+    <ul>{preview.components.map(c=><li key={c.id}><button type="button" className="chip" aria-pressed={selected===c.id} onClick={()=>{setSelectedWire(null);setSelected(c.id);}}>{componentById(c.componentId)?.name} · {c.id}</button> <span className="faint">{c.positionM.map(v=>Math.round(v*1000)).join(', ')} mm · yaw {c.yawDeg}°</span></li>)}</ul>
     {instance && definition && <div className="card">
       <h4>{definition.name}</h4><p>{definition.note}</p>
       <p>{definition.sizeM.map(v=>Math.round(v*1000)).join(' × ')} mm · {definition.geometry === 'published-envelope' ? 'Published envelope; simplified geometry' : 'ESTIMATED illustrative dimensions'}</p>

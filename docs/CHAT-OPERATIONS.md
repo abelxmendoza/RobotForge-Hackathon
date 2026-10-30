@@ -67,8 +67,24 @@ The robot name is unique and explicit. Component names resolve when unique; dupl
 
 Assembly instances have stable IDs, positions in metres (robot X forward/Y left/Z up, component centre), and yaw in degrees. Add, move, remove, connect and disconnect produce a preview; Apply persists another assembly version. Removing a component previews removal of dependent connections. Undo appends a restoration, never deletes history. Export contains saved spec plus all assembly versions.
 
-Three.js reuses the existing robot schematic renderer and adds component envelope boxes and dashed planning edges. A selectable SVG top view works without WebGL. Three geometric placement candidates are offered as starting points; no collision, cooling, cable-routing or mounting-hole fit claim is made. Assembly additions do not yet update CLI specs, mass budgets, electrical checks or simulation inputs.
+Three.js reuses the existing robot schematic renderer and adds component envelope boxes and dashed planning edges. The workbench is 3D-only; WebGL failure shows an actionable error and Retry 3D button, without substituting a flat view. Three geometric placement candidates are offered as starting points; no collision, cooling, cable-routing or mounting-hole fit claim is made. Assembly additions do not yet update CLI specs, mass budgets, electrical checks or simulation inputs.
 
 Wiring is a visible tab. Its edges are **NOT_CHECKED planning connections**, not pin-level wiring instructions or core harness-validator results. Exact part ratings, pin assignments and protection still need a schema and a connection to the existing electrical checks. Printable mounts, detailed manufacturer CAD retrieval, supplier search and live model tool proposals remain next stages.
 
-Verification includes transaction tests for identity resolution, invalid transforms, unknown components, duplicate instance/connection detection, stale robot/assembly revisions, cascade removal, ambiguity and undo. Browser QA confirmed chat addition, placement preview/apply, reload persistence, and wiring connection preview/apply. The test browser disables WebGL, so actual GPU rendering remains unverified; its fallback was exercised instead.
+Verification includes transaction tests for identity resolution, invalid transforms, unknown components, duplicate instance/connection detection, stale robot/assembly revisions, cascade removal, ambiguity and undo. Browser QA confirmed chat addition, placement preview/apply, reload persistence, and wiring connection preview/apply. The test browser disables WebGL, so actual GPU rendering remains unverified. Earlier SVG fallback QA does not establish 3D rendering correctness.
+
+
+## 3D workbench and effects
+
+Both assembly placement and wiring use one Three.js scene. Connections are selectable tube meshes with curved illustrative paths, envelope-top anchor proxies and optional moving pulses. The paths do not solve collision, bend radius or physical cable routing; anchors are not documented connector positions. Pulses illustrate graph direction, not measured current.
+
+Added components ease into position, exploded-view offsets animate, and the camera is retained when previews change. X-ray mode fades the robot schematic while leaving added components and cables visible. Motion effects can be disabled and respect the operating system's reduced-motion preference. Explode and X-ray are view controls and do not change saved assembly coordinates.
+
+Suggested next 3D features, in priority order:
+
+1. Transform gizmos and snapping to defined deck/mount planes, with ghost previews and the existing Apply/Cancel transaction.
+2. Verified mounting holes and fastener previews, followed by parameterized printable brackets.
+3. Geometry-based interference highlighting and cable bend-radius checks once actual models and cable types are available.
+4. Sensor field-of-view cones and editable obstruction overlays, driven by documented sensor parameters.
+5. Version comparison in 3D: animate old/new placements, highlight changed parts, and replay assembly steps.
+6. Mass-informed center-of-mass markers and clearance/thermal keep-out volumes, explicitly naming missing inputs.

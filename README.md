@@ -33,7 +33,9 @@ deciding on motors and batteries before a competition.
 ### Chat operations and assembly workbench
 
 In **My robots**, use the Assembly workbench to add component envelopes, preview
-positions, and plan connections in the visible Wiring tab. The Guide accepts
+positions, and plan connections in the visible Wiring tab. Both use the 3D scene,
+with curved selectable cable previews, optional connection pulses, X-ray mode and
+an animated exploded view. The workbench requires WebGL; it does not substitute a flat view. The Guide accepts
 `add a Jetson Orin Nano to "Omega1"` and previews the action before saving.
 Type `operations` for the supported commands. Every applied action creates a
 version and supports undo. Export assembly keeps the saved spec and assembly history.
