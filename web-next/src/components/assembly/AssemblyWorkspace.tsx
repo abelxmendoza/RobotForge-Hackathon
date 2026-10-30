@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { overlapPairs } from '@/lib/spatial';
 import { COMPONENTS, componentById } from '@/lib/components';
@@ -31,6 +31,10 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
   const [notice,setNotice] = useState('');
   const [failed3D,setFailed3D] = useState(false);
   const [quality,setQuality] = useState<'high'|'balanced'>('high');
+  useEffect(()=>{
+    // Start lightweight on phones/tablets; explicit quality choices remain available.
+    if(window.matchMedia('(max-width: 768px), (pointer: coarse)').matches)setQuality('balanced');
+  },[]);
   const [animate,setAnimate] = useState(true);
   const [xray,setXray] = useState(false);
   const [explode,setExplode] = useState(0);
@@ -80,7 +84,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     const part = componentById(componentId)!;
     propose({kind:'add',instanceId:uid('part'),componentId,positionM:[0,0,Number(spec.ground_clearance_m ?? 0)+0.003+part.sizeM[2]/2]});
   };
-  return <section className="g-editor" id="assembly" aria-label="Robot assembly">
+  return <section className="g-editor assembly-workbench" id="assembly" aria-label="Robot assembly">
     <h3>Assembly workbench</h3>
     <p className="sub">This uses the latest saved robot spec. Added parts, placement and planned connections save separately from the CLI spec. These added parts are not yet included in mass, electrical or Gazebo checks. Your unsaved spec draft stays in the editor below.</p>
     <div className="g-tabs" aria-label="Workbench views">
@@ -92,13 +96,14 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       }}>Undo assembly change</button>
     </div>
     {notice && <p role="status">{notice}</p>}
-    {proposal && <div className="card" role="region" aria-label="Assembly operation preview">
+    {proposal && <div className="card assembly-preview" role="region" aria-label="Assembly operation preview">
       <strong>Preview: {previewError || preview.note}</strong>
       <p>Placement is illustrative. Only added-component envelope overlaps are checked. Fastener fit, chassis interference, thermal and electrical validation are not performed.</p>
       <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(previewError)} onClick={apply}>Apply assembly change</button>{' '}
       <button type="button" className="btn btn-sm" onClick={()=>setProposal(null)}>Cancel</button>
     </div>}
-    <div className="g-tabs" aria-label="3D workbench controls">
+    <details className="assembly-tools"><summary>Graphics & placement controls</summary>
+    <div className="g-tabs assembly-controls" aria-label="3D workbench controls">
       <label className="g-field"><span>Graphics quality</span><select value={quality} onChange={e=>setQuality(e.target.value as 'high'|'balanced')}><option value="high">Studio · highest quality</option><option value="balanced">Balanced · lighter GPU load</option></select></label>
       <button type="button" className="chip" aria-pressed={animate} onClick={()=>setAnimate(v=>!v)}>Motion effects {animate?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={xray} onClick={()=>setXray(v=>!v)}>X-ray {xray?'on':'off'}</button>
@@ -108,11 +113,12 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       <button type="button" className="chip" aria-pressed={showFov} onClick={()=>setShowFov(v=>!v)}>FOV sketch {showFov?'on':'off'}</button>
       <label className="g-field"><span>Explode assembly · {explode} mm</span><input type="range" min="0" max="100" value={explode} onChange={e=>setExplode(Number(e.target.value))}/></label>
     </div>
+    </details>
     {overlaps.length>0 && <p role="status">Envelope overlaps: {overlaps.length} pair(s), highlighted red at saved/preview positions. This checks added component boxes only, including yaw; not the chassis, cables, mounting hardware or detailed CAD.</p>}
     {ghostMount && <p className="faint">Ghost tray is an illustrative mounting concept with corner support proxies. Hole locations and fasteners are unverified; it is not printable CAD.</p>}
     {showFov && <fieldset className="g-group"><legend>Illustrative FOV on selected component · local +X forward</legend><label className="g-field"><span>Full cone angle (degrees)</span><input type="number" min="5" max="150" value={fovDeg} onChange={e=>setFovDeg(Math.max(5,Math.min(150,Number(e.target.value)||60)))}/></label><label className="g-field"><span>Range (m)</span><input type="number" min="0.05" max="5" step="0.05" value={fovRange} onChange={e=>setFovRange(Math.max(0.05,Math.min(5,Number(e.target.value)||0.5)))}/></label><p>Assumed visualization inputs, not a sensor datasheet or an obstruction test.</p></fieldset>}
     {previousVersion && <fieldset className="g-group"><legend>Upgrade playback · previous assembly → latest preview</legend><input aria-label="Upgrade playback progress" type="range" min="0" max="100" value={Math.round(replay*100)} onChange={e=>{setPlaying(false);setReplay(Number(e.target.value)/100);}}/><button type="button" className="chip" onClick={()=>{setReplay(0);setPlaying(true);setDragMode(false);}}>Play upgrade</button><button type="button" className="chip" onClick={()=>{setPlaying(false);setReplay(1);}}>Latest pose</button><p>Component-pose comparison only; cables show the latest planned connections. Scrubbing does not change saved versions. Motion respects reduced-motion preferences.</p></fieldset>}
-    <p className="faint">Drag placement: move a part in XY on a 5 mm grid, release to preview, Escape to cancel. Deck snap uses the schematic plate surface. Disable explode and finish playback before dragging.</p>
+    <p className="faint">Drag placement: move a part in XY on a 5 mm grid, release to preview, Cancel the preview to discard a move; Escape cancels an active drag. Deck snap uses the schematic plate surface. Disable explode and finish playback before dragging.</p>
     <p className="faint">Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Stylized component details are visual proxies, not manufacturer CAD. Cable arcs and pulses show planned connectivity, not electrical current or verified routing.</p>
     {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
       const wire=preview.connections.find(c=>c.id===id);
@@ -133,11 +139,11 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       <p>NOT_CHECKED — these are component-to-component planning edges. Pin assignments, wire gauge, protection, voltage ranges and current ratings are not yet entered or checked. They do not alter the core harness report.</p>
       {[['From',from,setFrom],['To',to,setTo]].map(([label,value,setter])=><label className="g-field" key={String(label)}><span>{String(label)}</span><select value={String(value)} onChange={e=>(setter as (s:string)=>void)(e.target.value)}><option value="">Select component</option>{saved.components.map(c=><option value={c.id} key={c.id}>{componentById(c.componentId)?.name} ({c.id})</option>)}</select></label>)}
       <button type="button" className="btn btn-sm" disabled={!from||!to} onClick={()=>propose({kind:'connect',instanceId:from,targetId:to})}>Preview connection</button>
-      <ul>{saved.connections.map(c=><li key={c.id}>{c.from} → {c.to} · NOT_CHECKED <button type="button" className="chip" onClick={()=>propose({kind:'disconnect',instanceId:c.id})}>Remove connection</button></li>)}</ul>
+      <ul className="assembly-wires">{saved.connections.map(c=><li key={c.id}>{c.from} → {c.to} · NOT_CHECKED <button type="button" className="chip" onClick={()=>propose({kind:'disconnect',instanceId:c.id})}>Remove connection</button></li>)}</ul>
     </>}
     <h4>Components ({preview.components.length})</h4>
     {!preview.components.length && <p>No components yet. Add one above or through the Guide.</p>}
-    <ul>{preview.components.map(c=><li key={c.id}><button type="button" className="chip" aria-pressed={selected===c.id} onClick={()=>{setSelectedWire(null);setSelected(c.id);}}>{componentById(c.componentId)?.name} · {c.id}</button> <span className="faint">{c.positionM.map(v=>Math.round(v*1000)).join(', ')} mm · yaw {c.yawDeg}°</span></li>)}</ul>
+    <ul className="assembly-parts">{preview.components.map(c=><li key={c.id}><button type="button" className="chip" aria-pressed={selected===c.id} onClick={()=>{setSelectedWire(null);setSelected(c.id);}}>{componentById(c.componentId)?.name} · {c.id}</button> <span className="faint">{c.positionM.map(v=>Math.round(v*1000)).join(', ')} mm · yaw {c.yawDeg}°</span></li>)}</ul>
     {instance && definition && <div className="card">
       <h4>{definition.name}</h4><p>{definition.note}</p>
       <p>{definition.sizeM.map(v=>Math.round(v*1000)).join(' × ')} mm · {definition.geometry === 'published-envelope' ? 'Published envelope; simplified geometry' : 'ESTIMATED illustrative dimensions'}</p>

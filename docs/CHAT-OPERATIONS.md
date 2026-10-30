@@ -106,3 +106,8 @@ GPU interaction verification is still outstanding in this environment because it
 The workbench defaults to Studio quality: procedural room-environment lighting, ACES tone mapping with sRGB output, a teal rim/blue fill studio rig, fitted soft-shadow bounds with 2048px shadow maps, rounded-box edges, physical materials and restrained bloom. Balanced quality lowers pixel ratio/shadow resolution, simplifies rounded edges and renders directly without bloom. Other existing robot viewers retain Balanced as their default. Renderer, postprocessing passes and environment resources are disposed on scene replacement.
 
 Component interiors are stylized visual proxies inside the existing envelope: board/heatsink/port-like blocks for the reference Jetson, a board/coil for the converter placeholder, and a strapped battery-like block. These are not measured ports, detailed manufacturer geometry, mounting data or verified parts. Envelope checks and saved component dimensions remain the source for spatial computations. GPU visual QA remains outstanding because the available browser disables WebGL.
+
+
+## Mobile workbench
+
+Graphics/placement controls collapse into an accessible disclosure. Phone controls use a two-column layout, 44px touch targets, 16px form text, wrapping labels/IDs and a single-column component list. Preview actions stay within the safe area above bottom navigation; landscape uses normal document flow. The canvas fits viewport height and listens to visual viewport resizing. Small/coarse-pointer screens start in Balanced quality, with Studio still selectable. Drag handlers track the primary pointer so a second touch cannot move or commit another finger's drag. Full multi-touch gesture and GPU verification remain browser QA requirements.

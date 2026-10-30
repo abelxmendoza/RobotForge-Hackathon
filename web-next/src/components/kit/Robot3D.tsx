@@ -392,6 +392,7 @@ export default function Robot3D({
         };
         let downAt: [number, number] | null = null;
         const onMove = (ev: PointerEvent) => {
+          if(dragging&&ev.pointerId!==dragging.pointerId)return;
           if(dragging){
             const rect=renderer.domElement.getBoundingClientRect();
             ptr.set((ev.clientX-rect.left)/rect.width*2-1,-(ev.clientY-rect.top)/rect.height*2+1);
@@ -422,7 +423,7 @@ export default function Robot3D({
           if(motionRef.current.dragMode && ev.button===0){
             const id=pick(ev);const item=instances?.find(c=>c.id===id);
             const group=groups.find(g=>g.userData.part===id);
-            if(item&&group){
+            if(item&&group&&ev.isPrimary){
               const plane=new THREE.Plane(new THREE.Vector3(0,0,1),-item.positionM[2]);
               const point=new THREE.Vector3();
               if(ray.ray.intersectPlane(plane,point)){
@@ -435,6 +436,7 @@ export default function Robot3D({
           downAt = [ev.clientX, ev.clientY];
         };
         const onUp = (ev: PointerEvent) => {
+          if(dragging&&ev.pointerId!==dragging.pointerId)return;
           if(dragging){
             const result=dragging;dragging=null;controls.enabled=true;
             if(renderer.domElement.hasPointerCapture(ev.pointerId))renderer.domElement.releasePointerCapture(ev.pointerId);
@@ -463,7 +465,8 @@ export default function Robot3D({
         let fitted = false;
         const resize = () => {
           const w = host.clientWidth || 700;
-          const h = window.innerWidth <= 560 ? 320 : 430;
+          const viewportHeight=window.visualViewport?.height??window.innerHeight;
+          const h = window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460;
           renderer.setSize(w, h);
           composer?.setSize(w,h);
           camera.aspect = w / h;
@@ -499,6 +502,7 @@ export default function Robot3D({
           ro.observe(host);
         }
         window.addEventListener('resize', resize);
+        window.visualViewport?.addEventListener('resize',resize);
 
         renderer.setAnimationLoop(() => {
           const delta=Math.min(clock.getDelta(),0.05);
@@ -579,6 +583,7 @@ export default function Robot3D({
           renderer.setAnimationLoop(null);
           if (ro) ro.disconnect();
           window.removeEventListener('resize', resize);
+          window.visualViewport?.removeEventListener('resize',resize);
           renderer.domElement.removeEventListener('pointermove', onMove);
           renderer.domElement.removeEventListener('pointerdown', onDown,true);
           renderer.domElement.removeEventListener('pointercancel',abortDrag);
@@ -629,5 +634,5 @@ export default function Robot3D({
     }
   }, [selected]);
 
-  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" style={{minHeight:320}} />;
+  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" className="assembly-viewport" style={{minHeight:220}} />;
 }
