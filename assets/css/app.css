@@ -744,3 +744,44 @@ details.report-more{margin-top:var(--s3)}
 details.report-more > summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:var(--fs-sm);padding:6px 0}
 details.report-more[open] > summary{color:var(--text-muted)}
 details.report-more > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+
+/* Assembly workbench: controls stay usable from narrow phones to desktop. */
+.assembly-workbench{min-width:0;max-width:100%;display:grid;gap:12px;scroll-margin-top:72px}
+.assembly-workbench>*{min-width:0;max-width:100%}
+.assembly-workbench p,.assembly-workbench li,.assembly-workbench code{overflow-wrap:anywhere}
+.assembly-workbench .chip{white-space:normal;line-height:1.35;min-height:44px}
+.assembly-workbench .g-tabs{margin-block:4px}
+.assembly-tools{border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;min-width:0}
+.assembly-tools>summary{cursor:pointer;min-height:28px;display:list-item;font-weight:600}
+.assembly-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));align-items:end;padding-top:12px}
+.assembly-controls .g-field{align-self:stretch}
+.assembly-controls input[type=range],.assembly-workbench input[type=range]{min-height:44px;width:100%;touch-action:pan-y;accent-color:var(--accent)}
+.assembly-viewport{position:relative;overflow:hidden;max-width:100%;border:1px solid var(--border);border-radius:var(--r-lg);background:#081321;isolation:isolate}
+.assembly-viewport canvas{display:block;max-width:100%;touch-action:none;outline:none}
+.assembly-parts,.assembly-wires{list-style:none;display:grid;gap:10px;padding:0}
+.assembly-parts li,.assembly-wires li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--border);border-radius:var(--r);min-width:0}
+.assembly-parts .chip{max-width:100%;text-align:left;overflow-wrap:anywhere}
+.assembly-preview{border-color:var(--accent);padding:14px;box-shadow:0 4px 20px #0003}
+.assembly-preview .btn{min-height:44px;margin-top:8px}
+@media(max-width:600px){
+  .assembly-workbench{gap:10px}
+  .assembly-workbench h3{font-size:20px}
+  .assembly-workbench .g-tabs[aria-label="Workbench views"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .assembly-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .assembly-controls>.g-field{grid-column:1/-1}
+  .assembly-workbench button,.assembly-workbench select,.assembly-workbench input:not([type=range]){min-height:44px}
+  .assembly-workbench input,.assembly-workbench select{font-size:16px}
+  .assembly-workbench .g-group{padding:12px;gap:10px}
+  .assembly-workbench .g-group legend{max-width:100%;white-space:normal}
+  .assembly-workbench .card{padding:12px}
+  .assembly-parts li,.assembly-wires li{align-items:stretch;flex-direction:column}
+  .assembly-parts li .chip,.assembly-wires li .chip{width:100%}
+  .assembly-preview{position:sticky;bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:12;background:var(--surface-2)}
+  .assembly-preview .btn{width:100%}
+  .garage{gap:16px}
+  .g-groups{grid-template-columns:minmax(0,1fr)}
+  .garage-list .g-robot{min-height:48px}
+}
+@media(max-width:380px){.assembly-controls{grid-template-columns:minmax(0,1fr)}}
+@media(max-height:500px) and (max-width:900px){.assembly-preview{position:static}.assembly-viewport{min-height:200px!important}}

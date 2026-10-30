@@ -49,12 +49,19 @@ import { gateReports, parts, robots } from "@/lib/data";
 import partsDoc from "@/data/parts.json";
 import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
+import AssemblyProposal from './AssemblyProposal';
+import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
+import { GARAGE_KEY, fmtValue, type GarageRobot } from '@/lib/garage';
+import { readStore, writeStore, uid } from '@/lib/store';
+import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
+import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT } from "@/components/forge/live";
 
 
 const DEFAULT_CHIPS = [
   "Which robots passed the gate?",
-  "What are the gate thresholds?",
+  "List my robots",
+  "Operations",
   "Tell me about Andino",
   "How does RobotForge work?",
 ];
@@ -111,6 +118,12 @@ export function ChatWidget({ docked }: { docked: boolean }) {
   const [manualOpen, setManualOpen] = useState(false);
   const [wide, setWide] = useState(false);
   const [subText, setSubText] = useState(SUB_RECORDED);
+
+  const [proposal, setProposal] = useState<Preview | null>(null);
+  const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(null);
+  const lastApplied = useRef<{ robotId: string; versionId: string; scope?: 'assembly' } | null>(null);
+  const proposalRef = useRef<Preview | null>(null);
+  proposalRef.current = proposal;
 
   const msgsRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -229,7 +242,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
         "from RobotForge&rsquo;s recorded data (the Robodex, the parts catalogue " +
         "and the recorded gate reports), not from a live AI.</p>" +
         "<p>Ask about a robot by name or number, a catalogue part, or how the " +
-        "gate works — or tap a suggestion.</p>",
+        "gate works. I can also list saved robots and preview versioned edits: type &ldquo;operations&rdquo;.</p>",
     });
     setChips(engine.suggestions);
   }, [appendMsg, engine, setChips]);
@@ -338,6 +351,57 @@ export function ChatWidget({ docked }: { docked: boolean }) {
       if (!q) return;
       appendMsg({ who: "user", text: q });
       setInputValue("");
+      setProposal(null);
+      setAssemblyProposal(null);
+      try {
+        const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        const assemblies = readStore<Assemblies>(ASSEMBLY_KEY, {});
+        const assembly = parseAssemblyCommand(q, saved, assemblies, uid('part'));
+        if (assembly) {
+          previewAssembly(saved, assemblies, assembly);
+          setAssemblyProposal(assembly);
+          noteBubble('Review the assembly action below. Apply saves it as a new assembly version, visible in My robots.');
+          return;
+        }
+      } catch (e) { noteBubble((e as Error).message); return; }
+      const command = parseCommand(q);
+      if (command) {
+        try {
+          const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          if (command.kind === 'help') {
+            noteBubble('Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Mount generation and simulation jobs remain planned.');
+          } else if (command.kind === 'list') {
+            noteBubble(saved.length ? saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') : 'No robots saved in this browser yet. Add one in My robots.');
+          } else if (command.kind === 'undo') {
+            const last = lastApplied.current;
+            if (!last) throw new Error('No chat change to undo in this session.');
+            if (last.scope === 'assembly') {
+              const fresh = readStore<Assemblies>(ASSEMBLY_KEY, {});
+              const next = undoAssembly(fresh,last.robotId,last.versionId,uid('assembly'),new Date().toISOString());
+              const error = writeStore(ASSEMBLY_KEY,next); if(error) throw new Error(error);
+              lastApplied.current = null;
+              noteBubble('Previous assembly restored as a new version.');
+              return;
+            }
+            const next = undoOperation(saved, last.robotId, last.versionId, uid('v'), new Date().toISOString());
+            const error = writeStore(GARAGE_KEY, next);
+            if (error) throw new Error(error);
+            lastApplied.current = null;
+            noteBubble('Restored the previous spec as a new version. History is preserved. Reopen the robot to load it into the editor.');
+          } else {
+            const preview = proposeCommand(saved, command);
+            setProposal(preview);
+            noteBubble('Proposed change to the latest saved version. Your unsaved editor draft is separate. Review the preview below.');
+          }
+        } catch (e) { noteBubble((e as Error).message); }
+        return;
+      }
+      // Unknown operational requests are never sent to an answer-only model
+      // that could claim an action happened without executing it.
+      if (/^(?:add|remove|delete|move|place|mount|connect|wire|disconnect|generate|export|run|save|set|undo)\b/i.test(q)) {
+        noteBubble('That operation is not supported yet. Type “operations” for the commands I can execute. Nothing was changed.');
+        return;
+      }
       const waitId = appendMsg({
         who: "bot",
         html: '<p class="fc-dim">Checking the recorded data&hellip;</p>',
@@ -423,7 +487,7 @@ export function ChatWidget({ docked }: { docked: boolean }) {
         });
       }, 0);
     },
-    [appendMsg, autoAction, checkLive, engine, liveBase, liveChat, setChips]
+    [appendMsg, autoAction, checkLive, engine, liveBase, liveChat, setChips, noteBubble]
   );
 
   const onHitClick = (h: Hit) => {
@@ -513,6 +577,41 @@ export function ChatWidget({ docked }: { docked: boolean }) {
             )
           )}
         </div>
+        {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
+          onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}
+          onCancel={() => {setAssemblyProposal(null); noteBubble('Cancelled. Assembly unchanged.');}}
+          onError={text => {setAssemblyProposal(null); noteBubble(text);}} />}
+        {proposal && (() => {
+          const op = proposal.operation;
+          const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          let checks: string[] = [];
+          try {
+            const candidate = applyOperation(saved, op, 'preview', 'preview');
+            checks = forgeValidateSpec(candidate.find(r => r.id === op.robotId)!.versions.at(-1)!.spec).lines;
+          } catch (e) { checks = [(e as Error).message]; }
+          return <div className="fc-msg bot" role="region" aria-label="Operation preview">
+            <strong>Change {op.path}</strong>
+            <p>{fmtValue(proposal.before)} → {fmtValue(proposal.after)}</p>
+            <p>Spec units: m, kg, V, mAh. Creates a saved version; does not replace your open editor draft.</p>
+            <details><summary>Browser checks (subset)</summary>{checks.map((line, i) => <p key={i}>{line}</p>)}{!checks.length && <p>No findings in the browser subset.</p>}</details>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => {
+              if (proposalRef.current !== proposal) return;
+              // Invalidate synchronously so a double click cannot apply twice.
+              proposalRef.current = null;
+              setProposal(null);
+              try {
+                const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+                const versionId = uid('v');
+                const next = applyOperation(current, op, versionId, new Date().toISOString());
+                const error = writeStore(GARAGE_KEY, next);
+                if (error) throw new Error(error);
+                lastApplied.current = { robotId: op.robotId, versionId };
+                noteBubble('Saved as a new robot version. Type “undo” to restore the previous spec. Reopen the robot to load this version into the editor.');
+              } catch (e) { noteBubble((e as Error).message); }
+            }}>Apply change</button>
+            <button type="button" className="btn btn-sm" onClick={() => { proposalRef.current = null; setProposal(null); noteBubble('Cancelled. Nothing changed.'); }}>Cancel</button>
+          </div>;
+        })()}
         <div className="fc-chips" id="fc-chips" aria-label="Suggested questions">
           {chips.map((q, i) => (
             <button

@@ -30,6 +30,22 @@ deciding on motors and batteries before a competition.
 | **Rover field checks** | Slope climb, step climb and battery runtime, each with its assumptions listed (`robotforge rover`). |
 | **Evidence** | The Gazebo motion gate's recorded runs: drive, turn and stop measured against ground truth. |
 
+### Chat operations and assembly workbench
+
+In **My robots**, use the Assembly workbench to add component envelopes, preview
+positions, and plan connections in the visible Wiring tab. Both use the 3D scene,
+with curved selectable cable previews, optional connection pulses, X-ray mode and
+an animated exploded view. The workbench requires WebGL; it does not substitute a flat view. The Guide accepts
+`add a Jetson Orin Nano to "Omega1"` and previews the action before saving.
+Type `operations` for the supported commands. Every applied action creates a
+version and supports undo. Export assembly keeps the saved spec and assembly history.
+
+The initial Jetson asset is a published-dimension envelope for NVIDIA's reference
+developer kit, not detailed manufacturer CAD. Batteries and converters are explicitly
+illustrative placeholders. Placement and wiring are planning-only: added parts are
+not yet included in engineering checks or Gazebo, and planned connections remain
+NOT_CHECKED. See [the implementation plan](docs/CHAT-OPERATIONS.md).
+
 ## Meta models inside
 
 | Model | Where | What it does |
