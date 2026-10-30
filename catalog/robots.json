@@ -266,6 +266,37 @@
         "source_url": "https://github.com/unitreerobotics/unitree_ros/blob/master/robots/go2_description/urdf/go2_description.urdf"
       },
       "spec_file": "examples/unitree-go2.json",
+      "specimen": {
+        "kind": "imported_description",
+        "manifest": "catalog/specimens/unitree-go2.json",
+        "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.go2_description",
+        "source_repo": "https://github.com/unitreerobotics/unitree_ros",
+        "source_commit": "267182b8521c8d6a631bab1fe63836873237a525",
+        "urdf": "robots/go2_description/urdf/go2_description.urdf",
+        "license": "BSD-3-Clause",
+        "imported": "2026-10-29",
+        "facts": {
+          "robot_name_in_urdf": "go2_description",
+          "link_count": 42,
+          "links_with_inertial": 33,
+          "joint_count": 41,
+          "joints_by_type": {
+            "fixed": 29,
+            "revolute": 12
+          },
+          "total_mass_kg": 16.087,
+          "base_link_mass_kg": 6.921,
+          "leg_mass_kg_each": [
+            2.291
+          ],
+          "zero_pose_foot_span_m": {
+            "x": 0.387,
+            "y": 0.284
+          },
+          "zero_pose_foot_drop_m": 0.426,
+          "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements, inertial masses, and forward kinematics over joint origins at the zero pose."
+        }
+      },
       "subtype": "Quadruped",
       "checks": [
         {

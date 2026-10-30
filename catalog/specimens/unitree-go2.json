@@ -1,0 +1,44 @@
+{
+  "specimen": {
+    "robot": "Unitree Go2",
+    "dex_id": "#007",
+    "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.go2_description",
+    "source": {
+      "repo": "https://github.com/unitreerobotics/unitree_ros",
+      "commit": "267182b8521c8d6a631bab1fe63836873237a525",
+      "urdf": "robots/go2_description/urdf/go2_description.urdf",
+      "package": "go2_description",
+      "license": "BSD-3-Clause",
+      "license_evidence": "LICENSE file at the upstream repo root: 'BSD 3-Clause License'; Copyright (c) 2016-2022 HangZhou YuShu TECHNOLOGY CO.,LTD. (\"Unitree Robotics\")",
+      "retrieved": "2026-10-29"
+    },
+    "facts": {
+      "robot_name_in_urdf": "go2_description",
+      "link_count": 42,
+      "links_with_inertial": 33,
+      "joint_count": 41,
+      "joints_by_type": {
+        "fixed": 29,
+        "revolute": 12
+      },
+      "total_mass_kg": 16.087,
+      "base_link_mass_kg": 6.921,
+      "leg_mass_kg_each": [
+        2.291
+      ],
+      "zero_pose_foot_span_m": {
+        "x": 0.387,
+        "y": 0.284
+      },
+      "zero_pose_foot_drop_m": 0.426,
+      "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements, inertial masses, and forward kinematics over joint origins at the zero pose."
+    },
+    "annotation_note": "This entry arrived by import, not by hand: the description was downloaded by robot_descriptions from Unitree's own repository and the facts above were parsed out of its URDF. Nothing here was gated — importing a description is not a verdict.",
+    "honesty": [
+      "Gate status stays NOT_GATED: the motion gate grades wheeled ground robots, and no walking gate exists yet.",
+      "The parts kit stays undefined (kit: null in catalog/parts-kits.json): the kit generator builds wheeled kits from a spec's wheel block, and this robot has no wheels.",
+      "The entry's standing dimensions (0.70 x 0.31 x 0.40 m) come from Unitree's published parameter table, not from this URDF; the URDF's own zero-pose foot span (0.387 x 0.284 m) is a different measurement and neither replaces the other.",
+      "The URDF tree is not vendored into this repo — the manifest pins the upstream repo, commit and URDF path, and the license above was read from that repo's LICENSE file, not assumed."
+    ]
+  }
+}

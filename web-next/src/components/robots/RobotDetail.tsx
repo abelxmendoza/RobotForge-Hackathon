@@ -96,6 +96,83 @@ function RunsTable({ runs }: { runs: GateRunFull[] }) {
   );
 }
 
+/* An imported description (robots.json `specimen` block, written by
+   tools/import_go2_specimen.py from the robot_descriptions package).
+   The facts are parsed from the upstream URDF at the pinned commit —
+   an import is provenance, never a gate verdict. */
+interface SpecimenFacts {
+  robot_name_in_urdf: string;
+  link_count: number;
+  links_with_inertial: number;
+  joint_count: number;
+  joints_by_type: Record<string, number>;
+  total_mass_kg: number;
+  base_link_mass_kg: number;
+  leg_mass_kg_each: number[];
+  zero_pose_foot_span_m: { x: number; y: number };
+  zero_pose_foot_drop_m: number;
+  fact_source: string;
+}
+interface SpecimenBlock {
+  kind: string;
+  manifest: string;
+  imported_via: string;
+  source_repo: string;
+  source_commit: string;
+  urdf: string;
+  license: string;
+  imported: string;
+  facts: SpecimenFacts;
+}
+
+function SpecimenSection({ specimen }: { specimen: SpecimenBlock }) {
+  const f = specimen.facts;
+  const upstream = specimen.source_repo.replace(/^https?:\/\/github\.com\//, "");
+  const joints = Object.entries(f.joints_by_type)
+    .map(([t, n]) => `${n} ${t}`).join(", ");
+  const rows: [string, string][] = [
+    ["Links", `${f.link_count} (${f.links_with_inertial} with inertial data)`],
+    ["Joints", `${f.joint_count} (${joints})`],
+    ["Total mass (URDF inertials)", `${f.total_mass_kg} kg`],
+    ["Base link mass", `${f.base_link_mass_kg} kg`],
+    ["Mass per leg", f.leg_mass_kg_each.map((m) => `${m} kg`).join(", ")],
+    ["Zero-pose foot span", `${f.zero_pose_foot_span_m.x} × ${f.zero_pose_foot_span_m.y} m`],
+    ["Feet below base origin (zero pose)", `${f.zero_pose_foot_drop_m} m`],
+  ];
+  return (
+    <section className="section" id="specimen">
+      <h2>Imported specimen</h2>
+      <p className="sub">
+        Imported specimen — source: robot_descriptions (upstream:{" "}
+        <a href={specimen.source_repo}>{upstream}</a>), license:{" "}
+        {specimen.license}, imported {specimen.imported}.
+      </p>
+      <div className="card">
+        <table className="kv">
+          <tbody>
+            {rows.map(([k, v]) => (
+              <tr key={k}><th>{k}</th><td>{v}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        <p style={{ marginTop: 10 }}>
+          {f.fact_source} Full record:{" "}
+          <a href={assetPath(specimen.manifest)}>
+            <code>{specimen.manifest}</code>
+          </a>{" "}
+          (upstream URDF <code>{specimen.urdf}</code> at commit{" "}
+          <code>{specimen.source_commit.slice(0, 8)}</code>, via{" "}
+          {specimen.imported_via}).
+        </p>
+        <p>
+          An import is provenance, not a verdict: this entry stays{" "}
+          <strong>Not gated</strong>, and no parts kit is defined for it.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export default function RobotDetail({ robot }: { robot: Robot }) {
   const slug = robotSlug(robot);
   const img = robotImage(robot);
@@ -107,6 +184,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   const specFile = robot.spec_file;
 
   const keySpecs = robot.key_specs ?? {};
+  const specimen = (robot.specimen ?? null) as SpecimenBlock | null;
   const specKeys = Object.keys(keySpecs).sort();
   const prov = (robot.provenance ?? {}) as Record<string, unknown>;
   const provStr = (k: string): string =>
@@ -122,6 +200,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
     { href: "#parts-kit", label: "Parts kit" },
   ];
   if (check) jump.push({ href: "#stability", label: "Static stability" });
+  if (specimen) jump.push({ href: "#specimen", label: "Specimen" });
   if (harnessRep) jump.push({ href: "#harness", label: "Harness checks" });
   if (specFile) {
     jump.push({ href: "#take-apart", label: "Take it apart" });
@@ -254,6 +333,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           </div>
         </div>
       </section>
+
+      {specimen ? <SpecimenSection specimen={specimen} /> : null}
 
       <section className="section" id="gate">
         <h2><Term k="gate">Gate</Term> runs</h2>
