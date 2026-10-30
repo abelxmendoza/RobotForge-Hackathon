@@ -1,0 +1,38 @@
+{
+  "specimen": {
+    "robot": "Crazyflie 2.1",
+    "dex_id": "#006",
+    "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.cf2_description",
+    "source": {
+      "repo": "https://github.com/utiasDSL/gym-pybullet-drones",
+      "commit": "2c2470c2043eb4cf474d9af2681c9fa10f2d0e2f",
+      "urdf": "gym_pybullet_drones/assets/cf2p.urdf",
+      "package": "cf2_description",
+      "license": "MIT",
+      "license_evidence": "LICENSE file at the upstream repo root: 'MIT License'; Copyright (c) 2020 Jacopo Panerati",
+      "retrieved": "2026-10-29"
+    },
+    "facts": {
+      "robot_name_in_urdf": "cf2",
+      "link_count": 6,
+      "links_with_inertial": 6,
+      "joint_count": 5,
+      "joints_by_type": {
+        "fixed": 5
+      },
+      "total_mass_kg": 0.027,
+      "base_link_mass_kg": 0.027,
+      "rotor_count": 4,
+      "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements and inertial masses. Every joint in the file is fixed and the propeller links carry zero mass — a rigid-body model with no spinning-rotor dynamics."
+    },
+    "annotation_note": "This entry arrived by import, not by hand: the description was located by robot_descriptions (module cf2_description), which downloads UTIAS's gym-pybullet-drones repository; the facts above were parsed out of its cf2p.urdf, which describes the Crazyflie 2.0 (see the version note under honesty). Nothing here was gated — importing a description is not a verdict.",
+    "honesty": [
+      "VERSION: the upstream file describes the Crazyflie 2.0, not this entry's Crazyflie 2.1 — the two are not silently equated. The file's total mass is 27 g (the 2.0's figure); the 2.1 datasheet takeoff weight is 29 g. The entry keeps the 2.1 datasheet figures; the specimen records the 2.0 file's numbers, with the difference stated here.",
+      "Gate status stays NOT_GATED: the motion gate grades wheeled ground robots, and no flight gate exists yet.",
+      "The parts kit stays undefined (kit: null in catalog/parts-kits.json): the kit generator builds wheeled kits from a spec's wheel block, and this robot has no wheels.",
+      "The file is a rigid model: all five joints are fixed and the propeller links carry zero mass — it supports geometry and mass bookkeeping, not rotor dynamics.",
+      "The license recorded here is the license of the gym-pybullet-drones repository that carries the file, read from its LICENSE. Bitcraze publishes the Crazyflie design files themselves as open-source hardware — see the entry provenance; the two statements are about different artifacts.",
+      "The URDF tree is not vendored into this repo — the manifest pins the upstream repo, commit and URDF path."
+    ]
+  }
+}

@@ -97,20 +97,33 @@ function RunsTable({ runs }: { runs: GateRunFull[] }) {
 }
 
 /* An imported description (robots.json `specimen` block, written by
-   tools/import_go2_specimen.py from the robot_descriptions package).
-   The facts are parsed from the upstream URDF at the pinned commit —
-   an import is provenance, never a gate verdict. */
+   tools/import_go2_specimen.py — a name-parameterized importer over
+   the robot_descriptions package plus, for the X500, a direct clone
+   of PX4's model repo). The facts are parsed from the upstream
+   description (URDF, MJCF or SDF) at the pinned commit — an import
+   is provenance, never a gate verdict. Fact fields are per-class:
+   only the rows a robot's file supports are rendered. */
 interface SpecimenFacts {
-  robot_name_in_urdf: string;
-  link_count: number;
-  links_with_inertial: number;
+  robot_name_in_urdf?: string;
+  robot_name_in_mjcf?: string;
+  robot_name_in_sdf?: string;
+  link_count?: number;
+  links_with_inertial?: number;
+  body_count?: number;
+  bodies_with_inertial?: number;
   joint_count: number;
   joints_by_type: Record<string, number>;
+  actuator_count?: number;
+  degrees_of_freedom?: number;
+  actuated_joints?: Record<string, string[]>;
   total_mass_kg: number;
-  base_link_mass_kg: number;
-  leg_mass_kg_each: number[];
-  zero_pose_foot_span_m: { x: number; y: number };
-  zero_pose_foot_drop_m: number;
+  base_link_mass_kg?: number;
+  root_body_mass_kg?: number;
+  leg_mass_kg_each?: number[];
+  zero_pose_foot_span_m?: { x: number; y: number };
+  zero_pose_foot_drop_m?: number;
+  rotor_count?: number;
+  rotor_span_m?: { x: number; y: number };
   fact_source: string;
 }
 interface SpecimenBlock {
@@ -119,9 +132,12 @@ interface SpecimenBlock {
   imported_via: string;
   source_repo: string;
   source_commit: string;
-  urdf: string;
+  urdf?: string;
+  mjcf?: string;
+  sdf?: string;
   license: string;
   imported: string;
+  source_label?: string;
   facts: SpecimenFacts;
 }
 
@@ -130,20 +146,54 @@ function SpecimenSection({ specimen }: { specimen: SpecimenBlock }) {
   const upstream = specimen.source_repo.replace(/^https?:\/\/github\.com\//, "");
   const joints = Object.entries(f.joints_by_type)
     .map(([t, n]) => `${n} ${t}`).join(", ");
-  const rows: [string, string][] = [
-    ["Links", `${f.link_count} (${f.links_with_inertial} with inertial data)`],
-    ["Joints", `${f.joint_count} (${joints})`],
-    ["Total mass (URDF inertials)", `${f.total_mass_kg} kg`],
-    ["Base link mass", `${f.base_link_mass_kg} kg`],
-    ["Mass per leg", f.leg_mass_kg_each.map((m) => `${m} kg`).join(", ")],
-    ["Zero-pose foot span", `${f.zero_pose_foot_span_m.x} × ${f.zero_pose_foot_span_m.y} m`],
-    ["Feet below base origin (zero pose)", `${f.zero_pose_foot_drop_m} m`],
-  ];
+  const rows: [string, string][] = [];
+  if (f.link_count !== undefined) {
+    rows.push(["Links", `${f.link_count} (${f.links_with_inertial} with inertial data)`]);
+  }
+  if (f.body_count !== undefined) {
+    rows.push(["Bodies", `${f.body_count} (${f.bodies_with_inertial} with inertial data)`]);
+  }
+  rows.push(["Joints", `${f.joint_count} (${joints})`]);
+  if (f.actuator_count !== undefined) {
+    rows.push(["Actuators", `${f.actuator_count}`]);
+  }
+  if (f.degrees_of_freedom !== undefined) {
+    rows.push(["Degrees of freedom", `${f.degrees_of_freedom}`]);
+  }
+  if (f.actuated_joints) {
+    const desc = Object.entries(f.actuated_joints)
+      .map(([t, names]) => `${names.length} ${t}: ${names.join(", ")}`)
+      .join("; ");
+    rows.push(["Actuated joints", desc]);
+  }
+  rows.push(["Total mass (description inertials)", `${f.total_mass_kg} kg`]);
+  if (f.base_link_mass_kg !== undefined) {
+    rows.push(["Base link mass", `${f.base_link_mass_kg} kg`]);
+  }
+  if (f.root_body_mass_kg !== undefined) {
+    rows.push(["Root body mass", `${f.root_body_mass_kg} kg`]);
+  }
+  if (f.leg_mass_kg_each) {
+    rows.push(["Mass per leg", f.leg_mass_kg_each.map((m) => `${m} kg`).join(", ")]);
+  }
+  if (f.zero_pose_foot_span_m) {
+    rows.push(["Zero-pose foot span", `${f.zero_pose_foot_span_m.x} × ${f.zero_pose_foot_span_m.y} m`]);
+  }
+  if (f.zero_pose_foot_drop_m !== undefined) {
+    rows.push(["Feet below base origin (zero pose)", `${f.zero_pose_foot_drop_m} m`]);
+  }
+  if (f.rotor_count !== undefined) {
+    rows.push(["Rotors", f.rotor_span_m
+      ? `${f.rotor_count} (span ${f.rotor_span_m.x} × ${f.rotor_span_m.y} m)`
+      : `${f.rotor_count}`]);
+  }
+  const descPath = specimen.urdf ?? specimen.mjcf ?? specimen.sdf ?? "";
+  const descFormat = specimen.urdf ? "URDF" : specimen.mjcf ? "MJCF" : "SDF";
   return (
     <section className="section" id="specimen">
       <h2>Imported specimen</h2>
       <p className="sub">
-        Imported specimen — source: robot_descriptions (upstream:{" "}
+        Imported specimen — source: {specimen.source_label ?? "robot_descriptions"} (upstream:{" "}
         <a href={specimen.source_repo}>{upstream}</a>), license:{" "}
         {specimen.license}, imported {specimen.imported}.
       </p>
@@ -160,7 +210,7 @@ function SpecimenSection({ specimen }: { specimen: SpecimenBlock }) {
           <a href={assetPath(specimen.manifest)}>
             <code>{specimen.manifest}</code>
           </a>{" "}
-          (upstream URDF <code>{specimen.urdf}</code> at commit{" "}
+          (upstream {descFormat} <code>{descPath}</code> at commit{" "}
           <code>{specimen.source_commit.slice(0, 8)}</code>, via{" "}
           {specimen.imported_via}).
         </p>

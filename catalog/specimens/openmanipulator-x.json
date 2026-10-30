@@ -1,0 +1,49 @@
+{
+  "specimen": {
+    "robot": "OpenManipulator-X",
+    "dex_id": "#011",
+    "imported_via": "robot_descriptions 3.3.0 (Python package), module robot_descriptions.open_manipulator_x_description",
+    "source": {
+      "repo": "https://github.com/ROBOTIS-GIT/open_manipulator",
+      "commit": "bc555a9c41ebd7493dc945ddabc43fc649681b62",
+      "urdf": "open_manipulator_description/urdf/open_manipulator_x/open_manipulator_x.urdf",
+      "package": "open_manipulator_x_description",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file at the upstream repo root: 'Apache License'; Version 2.0, January 2004",
+      "retrieved": "2026-10-29"
+    },
+    "facts": {
+      "robot_name_in_urdf": "open_manipulator_x",
+      "link_count": 9,
+      "links_with_inertial": 7,
+      "joint_count": 8,
+      "joints_by_type": {
+        "fixed": 2,
+        "prismatic": 2,
+        "revolute": 4
+      },
+      "total_mass_kg": 0.594057,
+      "actuated_joints": {
+        "revolute": [
+          "joint1",
+          "joint2",
+          "joint3",
+          "joint4"
+        ],
+        "prismatic": [
+          "gripper_left_joint",
+          "gripper_right_joint"
+        ]
+      },
+      "degrees_of_freedom": 5,
+      "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements, inertial masses, joint types and mimic tags (the gripper's right finger joint mimics the left, so the two prismatic joints count as one gripper degree of freedom)."
+    },
+    "annotation_note": "This entry arrived by import, not by hand: the description was downloaded by robot_descriptions from ROBOTIS's own open_manipulator repository and the facts above were parsed out of its URDF. Nothing here was gated — importing a description is not a verdict.",
+    "honesty": [
+      "Gate status stays NOT_GATED: the motion gate grades wheeled ground robots, and no arm gate exists yet.",
+      "The parts kit stays undefined (kit: null in catalog/parts-kits.json): the kit generator builds wheeled kits from a spec's wheel block, and this robot has no wheels.",
+      "The URDF's seven link masses sum to 0.594 kg — the figure this entry already recorded. The e-Manual's 0.70 kg excludes the base plate; the two figures describe different things and both stay.",
+      "The URDF tree is not vendored into this repo — the manifest pins the upstream repo, commit and URDF path, and the license above was read from that repo's LICENSE file, not assumed."
+    ]
+  }
+}
