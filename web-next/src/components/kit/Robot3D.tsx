@@ -551,7 +551,13 @@ export default function Robot3D({
               const v=g.userData.explode as [number,number,number];
               const h=Math.hypot(v[0],v[1]);
               const out=h>0?span*0.5*Math.min(1,h)/h:0;
-              target.add(new THREE.Vector3(v[0]*out,v[1]*out,span*0.22));
+              if(v[2]<0&&h===0){
+                // Parts that drop out from underneath (a drone's battery) slide out sideways
+                // instead, clear of the parts above them and of the floor.
+                target.add(new THREE.Vector3(0,-span*0.6,0));
+              }else{
+                target.add(new THREE.Vector3(v[0]*out,v[1]*out,v[2]<0?0:span*0.22));
+              }
             }
             if(effects) g.position.lerp(target,1-Math.exp(-delta*(td?6:12))); else g.position.copy(target);
           }

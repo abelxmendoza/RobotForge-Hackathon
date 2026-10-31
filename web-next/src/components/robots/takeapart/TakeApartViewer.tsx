@@ -107,7 +107,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
 
   /* Play: one part off every 1.8 s until only the core is left. */
   useEffect(() => {
-    if (!tdPlaying) return;
+    if (!tdPlaying || mode !== "3d") return;
     if (tdDone >= td.steps.length) { setTdPlaying(false); return; }
     const id = setTimeout(() => {
       const next = tdDone + 1;
@@ -117,7 +117,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
       setDetail({ kind: "part", id: part });
     }, tdDone === 0 ? 400 : 1800);
     return () => clearTimeout(id);
-  }, [tdPlaying, tdDone, td.steps]);
+  }, [tdPlaying, tdDone, td.steps, mode]);
 
   if (failed) {
     return (
@@ -418,7 +418,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
         <div className="tabs" role="tablist" aria-label="Take-apart view">
           <button
             className="tab" type="button" id="ta-view-2d" role="tab"
-            aria-selected={mode === "2d"} onClick={() => setMode("2d")}
+            aria-selected={mode === "2d"} onClick={() => { setTdPlaying(false); setMode("2d"); }}
           >
             2D views
           </button>
