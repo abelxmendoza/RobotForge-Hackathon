@@ -30,12 +30,14 @@ export default function FixReplay3D({
   beforeLines,
   afterLines,
   autoplay,
+  resolved = true,
 }: {
   before: Spec;
   after: Spec | null; // null while the fix is still being worked out
   beforeLines: string[];
   afterLines: string[];
   autoplay: boolean;
+  resolved?: boolean; // false when the loop stopped with checks still failing
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [t, setT] = useState(0);
@@ -103,7 +105,7 @@ export default function FixReplay3D({
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, (before.height_m ?? 0.2) * 0.3);
         controls.enableDamping = true;
-        controls.autoRotate = true;
+        controls.autoRotate = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         controls.autoRotateSpeed = 0.6;
         let touched = false;
         controls.addEventListener('start', () => { controls.autoRotate = false; touched = true; });
@@ -212,7 +214,7 @@ export default function FixReplay3D({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [before.length_m, before.width_m, before.height_m]);
 
-  const label = pose.endpoint === 'broken' ? 'Broken spec, as loaded' : pose.endpoint === 'fixed' ? 'Fixed spec, as checked' : 'In between (illustration)';
+  const label = pose.endpoint === 'broken' ? 'Broken spec, as loaded' : pose.endpoint === 'fixed' ? (resolved ? 'Fixed spec, as checked' : 'Proposed fix, checks still fail') : 'In between (illustration)';
   const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const errs = (lines: string[]) => lines.filter((l) => l.startsWith('[ERROR]')).length;
   const warns = (lines: string[]) => lines.filter((l) => l.startsWith('[WARN]')).length;
@@ -226,7 +228,7 @@ export default function FixReplay3D({
         ) : (
           <div ref={hostRef} className="fixreplay-canvas" />
         )}
-        <span className={'fixreplay-tag ' + (pose.endpoint ?? 'mid')}>{label}</span>
+        <span className={'fixreplay-tag ' + (pose.endpoint === 'fixed' && !resolved ? 'broken' : pose.endpoint ?? 'mid')}>{label}</span>
       </div>
       <div className="fixreplay-side">
         {pose.readouts.map((r) => (
@@ -260,7 +262,7 @@ export default function FixReplay3D({
               aria-label="Scrub from broken to fixed"
               onChange={(e) => { setPlaying(false); setT(Number(e.target.value) / 1000); }}
             />
-            <span className="faint g-small">Fixed</span>
+            <span className="faint g-small">{resolved ? 'Fixed' : 'Proposed'}</span>
           </label>
         </div>
         <p className="faint g-small">

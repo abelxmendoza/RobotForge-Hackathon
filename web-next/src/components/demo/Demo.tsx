@@ -70,9 +70,11 @@ export default function Demo() {
   const [loop, setLoop] = useState<LoopResult | null>(null);
   const [saved, setSaved] = useState('');
   const runRef = useRef(0);
+  const [runId, setRunId] = useState(0);
 
   const run = async () => {
     const token = ++runRef.current;
+    setRunId(token);
     const mine = () => runRef.current === token;
     setStage('loading');
     setError('');
@@ -231,11 +233,13 @@ export default function Demo() {
 
       {broken && before.length > 0 && (
         <FixReplay3D
+          key={runId}
           before={broken}
           after={loop ? loop.finalSpec : null}
           beforeLines={before}
           afterLines={after}
           autoplay
+          resolved={loop ? loop.resolved : true}
         />
       )}
 
