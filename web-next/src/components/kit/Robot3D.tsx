@@ -64,6 +64,7 @@ export default function Robot3D({
   collisionIds = [], dragMode = false, snapDeck = true, ghostMount = false,
   quality = 'balanced',
   fov, comparison, replay = 1, playing = false, onMove, onPlaybackEnd,
+  teardown,
 }: {
   spec: RobotSpec;
   explode: number;
@@ -80,9 +81,13 @@ export default function Robot3D({
   replay?: number; playing?: boolean;
   onMove?: (id:string,position:[number,number,number])=>void;
   onPlaybackEnd?: ()=>void;
+  /* Optional step-by-step teardown: parts in `removed` lift off the
+   * robot and dim (the newest stays bright); `isolate` fades everything
+   * but that part. Omitted = the viewer behaves exactly as before. */
+  teardown?: { removed: string[]; isolate: string | null };
 }) {
-  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing});
-  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing};
+  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown});
+  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown};
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -324,6 +329,10 @@ export default function Robot3D({
         scene.add(axes);
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
         const clock=new THREE.Clock();
+        // Teardown pulls the camera back so lifted parts stay in frame, and returns it after.
+        let tdDolly:THREE_NS.Vector3|null=null,tdWas=false;
+        const TD_PULL=1.55;
+        (controls as unknown as {addEventListener:(e:string,f:()=>void)=>void}).addEventListener('start',()=>{tdDolly=null;});
         let playStart:number|null=null,playFinished=false;
         const fovMesh=new THREE.Mesh(new THREE.ConeGeometry(1,1,32,1,true),new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.12,side:THREE.DoubleSide,depthWrite:false}));
         // Cone tip at its origin, extending down local -Y; rotate toward local +X.
@@ -512,6 +521,15 @@ export default function Robot3D({
           else if(playStart===null)playStart=clock.elapsedTime;
           const progress=settings.playing?(effects?Math.min(1,(clock.elapsedTime-(playStart??0))/2):1):settings.replay;
           if(settings.playing&&progress>=1&&!playFinished){playFinished=true;cbRef.current.onPlaybackEnd?.();}
+          const tdNow=Boolean(settings.teardown);
+          if(tdNow!==tdWas){
+            tdWas=tdNow;
+            tdDolly=camera.position.clone().sub(controls.target).multiplyScalar(tdNow?TD_PULL:1/TD_PULL).add(controls.target);
+          }
+          if(tdDolly){
+            if(effects)camera.position.lerp(tdDolly,1-Math.exp(-delta*4));else camera.position.copy(tdDolly);
+            if(camera.position.distanceTo(tdDolly)<span*0.002)tdDolly=null;
+          }
           for(const g of groups){
             if(dragging?.group===g)continue;
             const target=(g.userData.target as THREE_NS.Vector3).clone();
@@ -527,12 +545,28 @@ export default function Robot3D({
             if(g.userData.tray)(g.userData.tray as THREE_NS.Group).visible=settings.ghostMount&&g.userData.part===st.selected;
             const halo=g.userData.halo as THREE_NS.Mesh|undefined;
             if(halo){halo.visible=g.userData.part===st.selected;(halo.material as THREE_NS.MeshBasicMaterial).opacity=effects?0.55+Math.sin(clock.elapsedTime*2.5)*0.12:0.6;}
-            if(effects) g.position.lerp(target,1-Math.exp(-delta*12)); else g.position.copy(target);
+            const td=settings.teardown;
+            if(td&&td.removed.includes(g.userData.part)){
+              // Lift the part off and out along its own explode direction.
+              const v=g.userData.explode as [number,number,number];
+              const h=Math.hypot(v[0],v[1]);
+              const out=h>0?span*0.5*Math.min(1,h)/h:0;
+              target.add(new THREE.Vector3(v[0]*out,v[1]*out,span*0.22));
+            }
+            if(effects) g.position.lerp(target,1-Math.exp(-delta*(td?6:12))); else g.position.copy(target);
           }
           for(const [id,material] of Object.entries(materials)){
             const isComponent=Boolean(instances?.some(c=>c.id===id));
             material.transparent=isComponent||(motionRef.current.xray&&!isComponent);
             material.opacity=isComponent?(motionRef.current.collisionIds.includes(id)?0.3:0.10):(material.transparent?0.18:1);
+            const td=motionRef.current.teardown;
+            if(td&&!isComponent){
+              const newest=td.removed[td.removed.length-1];
+              let o=1;
+              if(td.isolate) o=id===td.isolate?1:0.07;
+              else if(td.removed.includes(id)&&id!==newest) o=0.28;
+              if(o<1){material.transparent=true;material.opacity=Math.min(material.opacity,o);}
+            }
             material.depthWrite=!material.transparent;
             if(motionRef.current.collisionIds.includes(id)){
               material.color.setHex(0xef4444);material.emissive.setHex(0x7f1111);

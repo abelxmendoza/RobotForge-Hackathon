@@ -857,3 +857,7 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
  .inv-addspec{grid-template-columns:minmax(0,1fr)}
  .inv-specs li{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Step-by-step teardown bar (TakeApartViewer, 3D) */
+.ta-teardown{flex-wrap:wrap;gap:var(--s2);align-items:center}
+.ta-teardown-label{font-size:var(--fs-sm,13px);font-weight:600;margin-left:var(--s2)}
