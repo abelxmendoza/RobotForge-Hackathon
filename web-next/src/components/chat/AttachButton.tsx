@@ -1,6 +1,6 @@
 "use client";
 /* Paperclip for Wrench on every page: picks a file, works out which
- * ingestion flow it belongs to, and hands it to the Workspace (/forge/)
+ * ingestion flow it belongs to, and hands it to Wrench in the Workshop (/garage/)
  * with whatever was typed alongside it. */
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -41,7 +41,7 @@ export default function AttachButton({ text, className, onSent }: { text: string
           setErr("");
           setHandoff({ kind, file: f, text: text.trim() });
           onSent?.();
-          router.push("/forge/");
+          router.push("/garage/#wrench");
         }}
       />
     </>

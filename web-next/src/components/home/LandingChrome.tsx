@@ -8,7 +8,7 @@ import { BrandMark, REPO_URL, RESEARCH_URL } from "@/components/shell/AppShell";
 const SITE_NAV = [
   { label: "Home", href: "/" },
   { label: "Demo", href: "/demo/" },
-  { label: "App", href: "/forge/" },
+  { label: "App", href: "/garage/" },
   { label: "Evidence", href: "/evidence/" },
   { label: "Robots", href: "/robots/" },
   { label: "How it works", href: "/how-it-works/" },
@@ -42,7 +42,7 @@ export function LandingHeader() {
           <a href={RESEARCH_URL}>Research</a>
           <a href={REPO_URL}>GitHub</a>
         </nav>
-        <Link className="btn btn-app" href="/forge/">Open the app</Link>
+        <Link className="btn btn-app" href="/garage/">Open the app</Link>
         <Link className="btn btn-primary" href="/demo/">Run the demo &rarr;</Link>
         <details className="site-menu">
           <summary aria-label="Menu">

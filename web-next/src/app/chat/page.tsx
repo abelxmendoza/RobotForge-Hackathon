@@ -1,15 +1,13 @@
-/* /chat/ used to be a second, full-page copy of the chat. Wrench now
- * lives in the bottom bar on every page, and its full-size view is the
- * Workspace, so old links land there. */
+/* /chat/ was a second, full-page copy of the chat. Wrench now lives in
+ * the Workshop beside your robots (and in the bottom bar elsewhere). */
 import type { Metadata } from "next";
-import Redirect from "./Redirect";
+import Redirect from "@/components/shell/Redirect";
 
 export const metadata: Metadata = {
   title: "Wrench",
   robots: { index: false },
-  other: { refresh: "0; url=/forge/" },
 };
 
 export default function ChatRoute() {
-  return <Redirect />;
+  return <Redirect to="/garage/#wrench" label="the Workshop" />;
 }

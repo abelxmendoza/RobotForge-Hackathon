@@ -33,36 +33,11 @@ const NAV = [
 
 export interface Crumb { label: string; href?: string }
 
-/* The Workshop: your robots and Wrench full size are one place with
- * two tabs, not two sidebar entries that looked like the same thing. */
-const WORKSHOP_TABS = [
-  { id: "garage", label: "My robots", href: "/garage/" },
-  { id: "forge", label: "Wrench", href: "/forge/" },
-];
-
-function WorkshopTabs({ active }: { active: string }) {
-  return (
-    <nav className="workshop-tabs" aria-label="Workshop">
-      {WORKSHOP_TABS.map((t) => (
-        <Link key={t.id} href={t.href} aria-current={t.id === active ? "page" : undefined}>
-          {t.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-export default function AppShell({ active, crumbs = [], children }:
-  { active: string; crumbs?: Crumb[]; children: ReactNode }) {
+export default function AppShell({ active, crumbs = [], wide = false, children }:
+  { active: string; crumbs?: Crumb[]; wide?: boolean; children: ReactNode }) {
   /* Every trail starts at Home; pages still passing the old "App"
    * root crumb get it replaced. */
-  const inWorkshop = WORKSHOP_TABS.some((t) => t.id === active);
-  const navActive = inWorkshop ? "workshop" : active;
-  const trail: Crumb[] = [
-    { label: "Home", href: "/" },
-    ...(inWorkshop ? [{ label: "Workshop", href: "/garage/" }] : []),
-    ...crumbs.filter((c) => c.label !== "App"),
-  ];
+  const trail: Crumb[] = [{ label: "Home", href: "/" }, ...crumbs.filter((c) => c.label !== "App")];
   return (
     <div className="shell">
       <a className="skip-link" href="#content">Skip to content</a>
@@ -73,7 +48,7 @@ export default function AppShell({ active, crumbs = [], children }:
         <nav className="side-nav" aria-label="App">
           {NAV.map((n) => (
             <Link key={n.id} href={n.href} className={n.more ? "nav-more-item" : undefined}
-              aria-current={n.id === navActive ? "page" : undefined}>
+              aria-current={n.id === active ? "page" : undefined}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{n.icon}</svg>
               <span>{n.label}</span>
@@ -87,7 +62,7 @@ export default function AppShell({ active, crumbs = [], children }:
             </summary>
             <div className="nav-more-menu">
               {NAV.filter((n) => n.more).map((n) => (
-                <Link key={n.id} href={n.href} aria-current={n.id === navActive ? "page" : undefined}>{n.label}</Link>
+                <Link key={n.id} href={n.href} aria-current={n.id === active ? "page" : undefined}>{n.label}</Link>
               ))}
               <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
               <a href={RESEARCH_URL}>Research</a>
@@ -120,7 +95,7 @@ export default function AppShell({ active, crumbs = [], children }:
           </nav>
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>
-        <main className="content" id="content">{inWorkshop && <WorkshopTabs active={active} />}{children}</main>
+        <main className={wide ? "content content--wide" : "content"} id="content">{children}</main>
       </div>
       <RevealInit />
     </div>
