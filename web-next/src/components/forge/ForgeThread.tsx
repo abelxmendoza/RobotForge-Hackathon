@@ -328,9 +328,18 @@ export default function ForgeThread() {
     (node: ReactNode) => push({ kind: 'note', node }),
     [push],
   );
+  /* Messages already in the conversation when the Workspace opened
+   * came from Wrench's bottom bar ("Full size"); show their user side
+   * too, since this thread didn't push those itself. */
+  const carriedIds=useRef<Set<number>|null>(null);
+  if(carriedIds.current===null)carriedIds.current=new Set(assistant.messages.map(m=>m.id));
   useEffect(()=>{
     for(const message of assistant.messages){
-      if(message.who==='user')continue;
+      if(message.who==='user'){
+        if(!carriedIds.current?.has(message.id)||assistantEntryIds.current.has(message.id))continue;
+        assistantEntryIds.current.set(message.id,pushUser(<p>{message.text}</p>));
+        continue;
+      }
       const node=<div className="main-assistant-reply">
         {message.html&&<div dangerouslySetInnerHTML={{__html:message.html}}/>}
         {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
@@ -340,7 +349,7 @@ export default function ForgeThread() {
       if(entryId===undefined)assistantEntryIds.current.set(message.id,pushNote(node));
       else setEntries(current=>current.map(e=>e.id===entryId?{...e,node}:e));
     }
-  },[assistant.messages,pushNote]);
+  },[assistant.messages,pushNote,pushUser]);
   const pushStage = useCallback(
     (
       badge: Badge,
@@ -1251,13 +1260,16 @@ export default function ForgeThread() {
   useEffect(() => {
     if (initedRef.current) return;
     initedRef.current = true;
-    pushNote(
+    /* The welcome goes first, above any conversation carried in from
+     * the bottom bar (those entries were pushed by an earlier effect). */
+    const welcomeId = ++idRef.current;
+    setEntries((prev) => [{ kind: 'note', id: welcomeId, node: (
       <p>
         <strong>One workspace for your robot.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
         the live endpoint; spec files, scans and the recorded samples below
         always work.
-      </p>,
-    );
+      </p>
+    ) }, ...prev]);
     (async () => {
       if (!liveBase) {
         setMode({ mode: 'recorded', why: offReason(null, 'describe') });
