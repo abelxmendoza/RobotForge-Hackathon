@@ -27,6 +27,8 @@
  * contract. */
 import { ASSISTANT_NAME, HANDOFF_LABEL, takeHandoff } from '@/lib/handoff';
 import { elementText } from '@/lib/copytext';
+import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
+import { readStore, writeStore, uid } from '@/lib/store';
 import CopyButton from '@/components/chat/CopyButton';
 import {
   useCallback,
@@ -277,6 +279,34 @@ function downscale(dataUrl: string, maxDim: number): Promise<string> {
   });
 }
 
+/* Save a spec Wrench produced as a new robot in My robots. The list
+ * on the same page updates through the store's change event. */
+function SaveToRobots({ spec }: { spec: RobotSpec }) {
+  const [state, setState] = useState<'idle' | 'saved' | string>('idle');
+  if (state === 'saved') return <span className="faint">Saved to My robots.</span>;
+  return (
+    <>
+      <button
+        className="btn btn-sm btn-primary"
+        type="button"
+        onClick={() => {
+          const robots = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const at = new Date().toISOString();
+          const name = (spec as { name?: string }).name || 'New robot';
+          const err = writeStore(GARAGE_KEY, [
+            ...robots,
+            { id: uid('robot'), name, createdAt: at, versions: [{ id: uid('v'), label: 'Baseline', note: 'Saved from Wrench', source: 'upload', createdAt: at, spec }] },
+          ]);
+          setState(err ?? 'saved');
+        }}
+      >
+        Save to My robots
+      </button>
+      {state !== 'idle' && <span className="g-error"> {state}</span>}
+    </>
+  );
+}
+
 export default function ForgeThread() {
   const dispatch = useDispatch();
   const assistant = useForgeAssistant();
@@ -451,6 +481,16 @@ export default function ForgeThread() {
     (spec: RobotSpec, filename: string) => {
       pushStage('local', 'assembled in your browser', 'Take the outputs with you', (
         <ul className="outputs">
+          <li>
+            <strong>Keep it in My robots</strong>
+            <span>
+              Saves this spec as a new robot in this browser, with this
+              version as its baseline. It shows up in the list beside Wrench.
+            </span>
+            <p>
+              <SaveToRobots spec={spec} />
+            </p>
+          </li>
           <li>
             <strong>The spec itself</strong>
             <span>
@@ -1267,7 +1307,7 @@ export default function ForgeThread() {
     const welcomeId = ++idRef.current;
     setEntries((prev) => [{ kind: 'note', id: welcomeId, node: (
       <p>
-        <strong>Wrench, full size.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
+        <strong>Ask Wrench.</strong> Ask questions, manage inventory, or change a saved robot here; switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
         the live endpoint; spec files, scans and the recorded samples below
         always work.
       </p>

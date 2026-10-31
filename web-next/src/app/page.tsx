@@ -60,7 +60,7 @@ export default function HomePage() {
             anything.
           </p>
           <div className="ctas">
-            <Link className="btn btn-primary" href="/forge/">
+            <Link className="btn btn-primary" href="/garage/">
               Open the app →
             </Link>
             <Link className="btn" href="/demo/">
@@ -360,7 +360,7 @@ export default function HomePage() {
             </Link>
             <Link
               className="btn"
-              href="/forge/"
+              href="/garage/"
               style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
             >
               Open the app →

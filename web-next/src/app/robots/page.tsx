@@ -11,7 +11,7 @@ export default function RobotsPage() {
   return (
     <AppShell
       active="robots"
-      crumbs={[{ label: "App", href: "/forge/" }, { label: "Robots" }]}
+      crumbs={[{ label: "App", href: "/garage/" }, { label: "Robots" }]}
     >
       <RobotsIndex />
     </AppShell>

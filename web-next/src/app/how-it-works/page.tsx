@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function HowItWorksPage() {
   return (
-    <AppShell active="how" crumbs={[{ label: "App", href: "/forge/" }, { label: "How it works" }]}>
+    <AppShell active="how" crumbs={[{ label: "App", href: "/garage/" }, { label: "How it works" }]}>
       <section className="band">
         <div className="wrap">
           <HowItWorks />

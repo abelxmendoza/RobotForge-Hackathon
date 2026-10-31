@@ -7,8 +7,9 @@
  * way (collapsed = just the pill; expanded = a floating sheet that
  * never takes the whole screen).
  *
- * Same useForgeAssistant engine as the Workspace thread. Not mounted
- * on /forge, where the Workspace thread is the full-size Wrench. */
+ * Same useForgeAssistant engine as the Workshop's Wrench thread. Not
+ * mounted on /garage/ (the Workshop), where Wrench is docked beside
+ * your robots. */
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -43,7 +44,7 @@ export default function ChatBar() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [assistant.messages, open]);
 
-  if (pathname === "/forge" || pathname === "/forge/" || pathname === "/chat" || pathname === "/chat/") {
+  if (["/garage", "/garage/", "/forge", "/forge/", "/chat", "/chat/"].includes(pathname)) {
     return null;
   }
 
@@ -93,7 +94,7 @@ export default function ChatBar() {
                 getText={() => transcript(assistant.messages)}
               />
             )}
-            <Link className="chat-bar-full" href="/forge/" title="Open Wrench full size">
+            <Link className="chat-bar-full" href="/garage/#wrench" title="Open Wrench in the Workshop">
               Full size
             </Link>
             <button

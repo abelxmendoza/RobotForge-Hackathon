@@ -30,7 +30,7 @@ export default async function RobotPage(
     <AppShell
       active="robots"
       crumbs={[
-        { label: "App", href: "/forge/" },
+        { label: "App", href: "/garage/" },
         { label: "Robots", href: "/robots/" },
         { label: robot.name },
       ]}
