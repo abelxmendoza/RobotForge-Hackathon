@@ -133,7 +133,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       <label className="g-field"><span>Add a component by name</span><select value={componentId} onChange={e=>setComponentId(e.target.value)}>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <p className="faint">{componentById(componentId)?.note}</p>
       <button type="button" className="btn btn-primary btn-sm" onClick={add}>Preview component</button>
-      <p>Or tell the Guide: <code>add a Jetson Orin Nano to "{robot?.name}"</code></p>
+      <p>Or tell Wrench: <code>add a Jetson Orin Nano to "{robot?.name}"</code></p>
     </> : <>
       <h4>Planned component connections</h4>
       <p>NOT_CHECKED — these are component-to-component planning edges. Pin assignments, wire gauge, protection, voltage ranges and current ratings are not yet entered or checked. They do not alter the core harness report.</p>
@@ -142,7 +142,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       <ul className="assembly-wires">{saved.connections.map(c=><li key={c.id}>{c.from} → {c.to} · NOT_CHECKED <button type="button" className="chip" onClick={()=>propose({kind:'disconnect',instanceId:c.id})}>Remove connection</button></li>)}</ul>
     </>}
     <h4>Components ({preview.components.length})</h4>
-    {!preview.components.length && <p>No components yet. Add one above or through the Guide.</p>}
+    {!preview.components.length && <p>No components yet. Add one above or through Wrench.</p>}
     <ul className="assembly-parts">{preview.components.map(c=><li key={c.id}><button type="button" className="chip" aria-pressed={selected===c.id} onClick={()=>{setSelectedWire(null);setSelected(c.id);}}>{componentById(c.componentId)?.name} · {c.id}</button> <span className="faint">{c.positionM.map(v=>Math.round(v*1000)).join(', ')} mm · yaw {c.yawDeg}°</span></li>)}</ul>
     {instance && definition && <div className="card">
       <h4>{definition.name}</h4><p>{definition.note}</p>

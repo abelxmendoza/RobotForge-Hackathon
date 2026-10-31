@@ -25,6 +25,7 @@
  * imperative DOM log); the Redux forge slice tracks the current
  * run's stage position (step) and input kind (tab), per the store
  * contract. */
+import { ASSISTANT_NAME, HANDOFF_LABEL, takeHandoff } from '@/lib/handoff';
 import {
   useCallback,
   useEffect,
@@ -1295,6 +1296,35 @@ export default function ForgeThread() {
      * play the matching recorded sample. */
     const hm = /^#(words|photo|list|document)/.exec(window.location.hash);
     if (hm) void playSampleRef.current(hm[1]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* A file attached in Wrench on another page arrives here once and
+   * runs through the same flow as this composer's own attach button. */
+  const handoffRef = useRef(false);
+  useEffect(() => {
+    if (handoffRef.current) return;
+    handoffRef.current = true;
+    const h = takeHandoff();
+    if (!h) return;
+    pushNote(
+      <p>
+        <strong>From {ASSISTANT_NAME}:</strong> your {HANDOFF_LABEL[h.kind].toLowerCase()}{' '}
+        <em>{h.file.name}</em> is going through the Workspace below.
+      </p>,
+    );
+    void (async () => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      try {
+        if (h.kind === 'spec') await runSpec(h.file);
+        else if (h.kind === 'photo') await runPhoto(h.file, h.text);
+        else if (h.kind === 'doc') await runDoc(h.file, h.text);
+        else await runScan(h.file);
+      } finally {
+        busyRef.current = false;
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
