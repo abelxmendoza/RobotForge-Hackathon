@@ -6,7 +6,6 @@ import Redirect from "@/components/shell/Redirect";
 export const metadata: Metadata = {
   title: "Wrench",
   robots: { index: false },
-  other: { refresh: "0; url=/garage/#wrench" },
 };
 
 export default function ChatRoute() {

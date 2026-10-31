@@ -7,7 +7,6 @@ import Redirect from "@/components/shell/Redirect";
 export const metadata: Metadata = {
   title: "Workshop",
   robots: { index: false },
-  other: { refresh: "0; url=/garage/" },
 };
 
 export default function ForgeRoute() {
