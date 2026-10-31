@@ -1,34 +1,15 @@
-/* Chat: the Wrench conversation as its own page, so it has a tab
- * in the side nav next to the Workspace instead of living only inside
- * the Workspace thread. Same assistant engine, dedicated route. */
+/* /chat/ used to be a second, full-page copy of the chat. Wrench now
+ * lives in the bottom bar on every page, and its full-size view is the
+ * Workspace, so old links land there. */
 import type { Metadata } from "next";
-import AppShell from "@/components/shell/AppShell";
-import ChatPage from "@/components/chat/ChatPage";
-import Link from "next/link";
+import Redirect from "./Redirect";
 
 export const metadata: Metadata = {
-  title: "Chat",
-  description:
-    "Talk to Wrench: ask about the Robodex, the parts catalogue and the recorded gate evidence, or run validated operations on your saved robots and parts.",
+  title: "Wrench",
+  robots: { index: false },
+  other: { refresh: "0; url=/forge/" },
 };
 
 export default function ChatRoute() {
-  return (
-    <AppShell active="chat" crumbs={[{ label: "Chat" }]}>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Chat</div>
-          <h1>Talk to RobotForge</h1>
-          <p className="lede">
-            Wrench, full-size. Ask questions, look up robots and
-            parts, check the evidence, or ask it to change a saved robot —
-            every change is previewed before it applies. To design a new
-            robot or attach a photo, list, spec or scan, use the{" "}
-            <Link href="/forge/">Workspace</Link>.
-          </p>
-        </div>
-      </div>
-      <ChatPage />
-    </AppShell>
-  );
+  return <Redirect />;
 }

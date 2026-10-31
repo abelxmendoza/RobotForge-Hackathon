@@ -1440,7 +1440,7 @@ export default function ForgeThread() {
           htmlFor="forge-input"
           style={{ fontSize: 'var(--fs-xs)' }}
         >
-          Message your robot workspace
+          Message {ASSISTANT_NAME}
         </label>
         <textarea
           id="forge-input"
@@ -1454,7 +1454,7 @@ export default function ForgeThread() {
               (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
             }
           }}
-          placeholder="Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below."
+          placeholder={inputMode === 'design' ? 'Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below.' : `Ask ${ASSISTANT_NAME} about a robot or part, or tell it what to change… or attach a file below.`}
         />
         <div className="composer-row">
           <div className="attach-btns">
