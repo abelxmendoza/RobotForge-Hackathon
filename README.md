@@ -215,6 +215,23 @@ robotforge site
 
 `tests/test_site.py` fails if the committed pages are stale.
 
+### Recording the 3D shots for video
+
+`tools/capture_3d.cjs` records the Demo page's broken-to-fixed replay and a
+robot page's step-by-step teardown frame by frame. It freezes the page's
+clock and advances it exactly one frame at a time, so the clip never drops
+frames, however slow the GPU is. Serve the built site, then run:
+
+```bash
+cd web-next && npm run build && python3 -m http.server 8765 -d out &
+node tools/capture_3d.cjs --shot demo --out demo-replay.mp4 --sheet
+node tools/capture_3d.cjs --shot teardown --robot turtlebot3-burger --out teardown.mp4
+```
+
+The output is 1920×1080, 60 fps H.264 (yuv420p, faststart). `--sheet` also
+writes a contact sheet with one frame per second. It needs Node 20+,
+Playwright with Chromium, and ffmpeg.
+
 ## License
 
 Apache-2.0. See `LICENSE`.
