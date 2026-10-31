@@ -14,6 +14,8 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
+import AttachButton from "./AttachButton";
+import { ASSISTANT_NAME } from "@/lib/handoff";
 
 const STORE_KEY = "rf-chat-bar";
 
@@ -78,7 +80,7 @@ export default function ChatBar() {
         <section className="chat-bar-panel" aria-label="Chat conversation">
           <div className="fc-head">
             <div>
-              <strong>Forge Guide</strong>
+              <strong>{ASSISTANT_NAME}</strong>
               <span className="fc-sub">{assistant.subText}</span>
             </div>
             <button
@@ -122,6 +124,7 @@ export default function ChatBar() {
         >
           {open ? "▾" : "▴"}
         </button>
+        <AttachButton text={text} onSent={() => setText("")} />
         <textarea
           ref={taRef}
           rows={1}
@@ -137,8 +140,8 @@ export default function ChatBar() {
             }
             if (e.key === "Escape") setOpenPersist(false);
           }}
-          placeholder="Message the Forge Guide…"
-          aria-label="Message the Forge Guide"
+          placeholder={`Message ${ASSISTANT_NAME}, or attach a photo or file…`}
+          aria-label={`Message ${ASSISTANT_NAME}`}
         />
         <button
           type="submit"

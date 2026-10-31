@@ -13,7 +13,7 @@
  ],
  "topics": [
   {
-   "answer": "I'm the Forge Guide, a small guide built into this site. I am not a live AI and I don't call any model — every answer I give is assembled from RobotForge's recorded data in this repository: the Robodex (catalog/robots.json), the parts catalogue (catalog/parts.json) and the recorded gate reports (catalog/gate-reports.json).\n\nIf the data doesn't say it, I'll say so rather than guess.",
+   "answer": "I'm Wrench, the assistant built into RobotForge. I am not a live AI and I don't call any model — every answer I give is assembled from RobotForge's recorded data in this repository: the Robodex (catalog/robots.json), the parts catalogue (catalog/parts.json) and the recorded gate reports (catalog/gate-reports.json).\n\nIf the data doesn't say it, I'll say so rather than guess.",
    "id": "identity",
    "keywords": [
     "are you an ai",
@@ -22,6 +22,8 @@
     "are you real",
     "are you a robot",
     "who are you",
+   "who is wrench",
+   "what is wrench",
     "what are you",
     "chatgpt",
     "language model",

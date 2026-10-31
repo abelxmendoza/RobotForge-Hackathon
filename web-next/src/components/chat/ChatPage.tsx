@@ -1,5 +1,5 @@
 "use client";
-/* Dedicated Chat page: the Forge Guide conversation on its own route,
+/* Dedicated Chat page: the Wrench conversation on its own route,
  * driven by the same useForgeAssistant engine as the Workspace thread —
  * same recorded answers, same live-model fallback, same validated
  * operation proposals (assistant.actions). The Workspace keeps its
@@ -7,6 +7,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
+import AttachButton from "./AttachButton";
+import { ASSISTANT_NAME } from "@/lib/handoff";
 
 export default function ChatPage() {
   const assistant = useForgeAssistant();
@@ -30,7 +32,7 @@ export default function ChatPage() {
     <div className="chat-page">
       <div className="fc-head chat-page-head">
         <div>
-          <strong>Forge Guide</strong>
+          <strong>{ASSISTANT_NAME}</strong>
           <span className="fc-sub">{assistant.subText}</span>
         </div>
       </div>
@@ -62,7 +64,7 @@ export default function ChatPage() {
         }}
       >
         <label className="faint" htmlFor="chat-input" style={{ fontSize: "var(--fs-xs)" }}>
-          Message the Forge Guide
+          Message {ASSISTANT_NAME}
         </label>
         <textarea
           id="chat-input"
@@ -79,9 +81,10 @@ export default function ChatPage() {
         />
         <div className="composer-row">
           <p className="composer-note faint">
-            Enter to send, Shift+Enter for a new line. Design a robot or add
-            attachments in the Workspace.
+            Enter to send, Shift+Enter for a new line. Attach a photo, parts
+            list, spec or scan and it opens in the Workspace.
           </p>
+          <AttachButton text={text} className="btn btn-ghost chat-page-attach" onSent={() => setText("")} />
           <button type="submit" className="btn btn-primary" disabled={!text.trim()}>
             Send
           </button>

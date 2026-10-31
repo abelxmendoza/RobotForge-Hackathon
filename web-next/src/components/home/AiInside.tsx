@@ -17,7 +17,7 @@ const ROWS: { step: string; model: string; route: string; where: string; href: s
   { step: 'Failed check → proposed fix, up to 3 rounds', model: OPEN, route: 'fix', where: 'Demo, My robots', href: '/demo/' },
   { step: 'Part photo → identified part, label values read', model: VISION, route: 'part', where: 'My parts', href: '/inventory/' },
   { step: 'Confirm each part in a chat', model: OPEN, route: 'part_chat', where: 'My parts', href: '/inventory/' },
-  { step: 'Forge Guide follow-up questions', model: OPEN, route: 'chat', where: 'Every app page', href: '/forge/' },
+  { step: 'Wrench follow-up questions', model: OPEN, route: 'chat', where: 'Every app page', href: '/forge/' },
 ];
 
 const NOT_AI = [
