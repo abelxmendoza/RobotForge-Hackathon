@@ -17,7 +17,8 @@
  *   node tools/capture_3d.cjs --shot demo --out demo-replay.mp4
  *   node tools/capture_3d.cjs --shot teardown --robot turtlebot3-burger --out teardown.mp4
  * Options: --base http://localhost:8765  --fps 60  --width 1920 --height 1080
- *          --scale 1 (device pixel ratio)  --sheet (also write <out>.sheet.png)
+ *          --dpr 1|2 (page pixel ratio; teardown defaults to 2 for a sharp 3D view)
+ *          --sheet (also write <out>.sheet.png)
  * Needs: Node 20+, Playwright with Chromium, ffmpeg on PATH. */
 const { spawn, execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
@@ -34,12 +35,14 @@ const FPS = Number(args.fps || 60);
 const W = Number(args.width || 1920);
 const H = Number(args.height || 1080);
 const SCALE = Number(args.scale || 1);
+// Device pixel ratio for the page; 2 renders the 3D canvas at twice the pixels.
+const DPR = Number(args.dpr || (SHOT === 'teardown' ? 2 : 1));
 const OUT = String(args.out || `${SHOT}.mp4`);
 const ROBOT = String(args.robot || 'turtlebot3-burger');
 const STEP = 1000 / FPS;
 
 /* Hide page chrome that would sit on top of the shot. */
-const CLEAN_CSS = `.chat-bar{display:none!important}
+const CLEAN_CSS = `.chat-bar,.topbar{display:none!important}
 *{caret-color:transparent!important}`;
 
 async function settle(page, selector, { timeoutMs = 30000 } = {}) {
@@ -86,7 +89,7 @@ async function record(page, selector, seconds, label, cues = {}) {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const context = await browser.newContext({
     viewport: { width: Math.round(W / SCALE), height: Math.round(H / SCALE) },
-    deviceScaleFactor: SCALE,
+    deviceScaleFactor: SCALE * DPR,
     reducedMotion: 'no-preference',
   });
   const page = await context.newPage();
@@ -132,7 +135,7 @@ async function record(page, selector, seconds, label, cues = {}) {
     });
     // 0.4 s before the first part, 1.8 s per part, then a 2.5 s hold.
     const secs = Number(args.seconds || 0.4 + steps * 1.8 + 2.5);
-    await record(page, '.ta-stage', secs, `teardown ${ROBOT} (${steps} parts)`);
+    await record(page, '#ta-3d', secs, `teardown ${ROBOT} (${steps} parts)`);
   } else {
     throw new Error('unknown --shot ' + SHOT + ' (use demo or teardown)');
   }

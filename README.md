@@ -223,7 +223,9 @@ clock and advances it exactly one frame at a time, so the clip never drops
 frames, however slow the GPU is. Serve the built site, then run:
 
 ```bash
-cd web-next && npm run build && python3 -m http.server 8765 -d out &
+(cd web-next && npm run build)                       # build first, in the foreground
+python3 -m http.server 8765 -d web-next/out &        # then serve the static build
+until curl -sf http://localhost:8765/ >/dev/null; do sleep 1; done
 node tools/capture_3d.cjs --shot demo --out demo-replay.mp4 --sheet
 node tools/capture_3d.cjs --shot teardown --robot turtlebot3-burger --out teardown.mp4
 ```
