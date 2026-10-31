@@ -15,6 +15,8 @@ import Link from "next/link";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
 import AttachButton from "./AttachButton";
+import CopyButton from "./CopyButton";
+import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
 
 const STORE_KEY = "rf-chat-bar";
@@ -83,6 +85,14 @@ export default function ChatBar() {
               <strong>{ASSISTANT_NAME}</strong>
               <span className="fc-sub">{assistant.subText}</span>
             </div>
+            {assistant.messages.length > 0 && (
+              <CopyButton
+                className="copy-btn copy-all"
+                label="Copy all"
+                title="Copy the whole conversation"
+                getText={() => transcript(assistant.messages)}
+              />
+            )}
             <Link className="chat-bar-full" href="/forge/" title="Open Wrench full size in the Workspace">
               Full size
             </Link>

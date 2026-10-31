@@ -1,9 +1,9 @@
 "use client";
-/* Shared message list for the Forge Guide conversation — used by the
- * full Chat page and the collapsible rail so both render the
- * assistant's messages (recorded HTML, plain text, hit chips) the
- * exact same way. */
+/* Message list for Wrench's bottom bar: recorded HTML, plain text and
+ * hit chips, with a copy button on each response. */
 import type { Hit } from "./engine";
+import CopyButton from "./CopyButton";
+import { msgText } from "@/lib/copytext";
 
 export interface ChatMsg {
   id: number;
@@ -52,6 +52,7 @@ export default function ChatMessages({
               ))}
             </div>
           )}
+          {m.who === "bot" && msgText(m) && <CopyButton getText={() => msgText(m)} />}
         </div>
       ))}
     </>

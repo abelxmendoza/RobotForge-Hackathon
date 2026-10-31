@@ -211,6 +211,22 @@
 .chat-bar-full{flex:none;white-space:nowrap;margin-left:auto;margin-right:8px;font-size:var(--fs-xs);color:var(--text-muted);text-decoration:none;align-self:center}
 .chat-bar-full:hover{color:var(--accent)}
 
+/* Copy: one response, or the whole conversation */
+.copy-btn{
+  display:inline-flex;align-items:center;gap:5px;margin-top:8px;
+  background:transparent;border:1px solid transparent;border-radius:999px;
+  padding:3px 9px;font:500 var(--fs-xs)/1.2 var(--font);color:var(--text-faint);cursor:pointer;
+}
+.copy-btn:hover,.copy-btn:focus-visible{color:var(--accent);border-color:var(--border)}
+.fc-msg .copy-btn,.fmsg .copy-btn,.fstage .copy-btn{opacity:0;transition:opacity .15s}
+.fc-msg:hover .copy-btn,.fmsg:hover .copy-btn,.fstage:hover .copy-btn,
+.copy-btn:focus-visible{opacity:1}
+@media (hover:none){.fc-msg .copy-btn,.fmsg .copy-btn,.fstage .copy-btn{opacity:1}}
+.fstage .copy-btn{margin:0 0 10px 16px}
+.fc-head .copy-all{margin:0 4px 0 auto;align-self:center;flex:none;white-space:nowrap;opacity:1}
+.fc-head .copy-all + .chat-bar-full{margin-left:4px}
+.forge-copy-all{display:flex;justify-content:flex-end;margin-top:8px}
+
 /* Floating/docked legacy widgets are retired. The React assistant now renders
    within the primary Forge thread, using its single composer. */
 .forge-chat{display:none!important}

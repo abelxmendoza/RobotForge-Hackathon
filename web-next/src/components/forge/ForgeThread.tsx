@@ -26,6 +26,8 @@
  * run's stage position (step) and input kind (tab), per the store
  * contract. */
 import { ASSISTANT_NAME, HANDOFF_LABEL, takeHandoff } from '@/lib/handoff';
+import { elementText } from '@/lib/copytext';
+import CopyButton from '@/components/chat/CopyButton';
 import {
   useCallback,
   useEffect,
@@ -1340,6 +1342,16 @@ export default function ForgeThread() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* Text of one thread entry as the reader sees it; with a role label
+   * when it goes into a full-conversation copy. */
+  const entryText = (e: Entry, labelled = false): string => {
+    const body = elementText(elRefs.current.get(e.id));
+    if (!labelled || !body) return body;
+    if (e.kind === 'user') return 'You:\n' + body;
+    if (e.kind === 'stage') return body;
+    return ASSISTANT_NAME + ':\n' + body;
+  };
+
   return (
     <>
       <ModeBanner mode={mode.mode} reason={mode.why}>
@@ -1367,6 +1379,7 @@ export default function ForgeThread() {
                   <h3>{e.title}</h3>
                 </header>
                 <div className="fstage-body">{e.body}</div>
+                <CopyButton title="Copy this step" getText={() => entryText(e)} />
               </article>
             );
           }
@@ -1380,10 +1393,21 @@ export default function ForgeThread() {
               }}
             >
               {e.node}
+              {e.kind === 'note' && <CopyButton getText={() => entryText(e)} />}
             </div>
           );
         })}
       </div>
+      {entries.length > 1 && (
+        <div className="forge-copy-all">
+          <CopyButton
+            className="btn btn-sm btn-ghost copy-all"
+            label="Copy conversation"
+            title="Copy the whole conversation"
+            getText={() => entries.map((e) => entryText(e, true)).filter(Boolean).join('\n\n')}
+          />
+        </div>
+      )}
       <div className="forge-samples">
         <span className="faint">Recorded sample runs:</span>{' '}
         <button
