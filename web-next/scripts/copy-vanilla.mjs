@@ -11,7 +11,7 @@ const webNextDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoRoot = path.dirname(webNextDir);
 const destRoot = path.join(webNextDir, "public", "vanilla");
 
-const files = ["index.html", "kit.html", "parts.html", "problem-space.html", "reports.html", "robodex.html", "try.html"];
+const files = ["index.html", "kit.html", "parts.html", "reports.html", "robodex.html", "try.html"];
 const dirs = ["app", "assets", "catalog", "examples"];
 
 mkdirSync(destRoot, { recursive: true });

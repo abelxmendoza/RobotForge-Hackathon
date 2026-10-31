@@ -18,8 +18,6 @@ export function BrandMark() {
   );
 }
 
-export const RESEARCH_URL = "/problem-space";
-
 /* App navigation. `more` items fold into the phone bar's More menu;
  * every item shows in the desktop sidebar. */
 const NAV = [
@@ -67,14 +65,12 @@ export default function AppShell({ active, crumbs = [], children }:
                 <Link key={n.id} href={n.href} aria-current={n.id === active ? "page" : undefined}>{n.label}</Link>
               ))}
               <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
-              <a href={RESEARCH_URL}>Research</a>
               <a href={REPO_URL}>GitHub</a>
             </div>
           </details>
         </nav>
         <div className="side-foot">
           <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
-          <a href={RESEARCH_URL}>Research</a>
           <a href={REPO_URL}>GitHub</a>
         </div>
       </aside>
