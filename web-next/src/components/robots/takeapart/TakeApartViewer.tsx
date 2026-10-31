@@ -7,6 +7,7 @@ import type { RobotSpec as ForgeSpec } from "@/components/forge/model";
 
 const Robot3D = dynamic(() => import("@/components/kit/Robot3D"), { ssr: false });
 import { assetPath } from "@/components/home/asset";
+import { teardownSteps } from "@/lib/teardown";
 import {
   TA_SPOTS, elecBad, elecConnLabel, elecDepths, elecNodeMap, elecNodeStatus,
   elecStage, elecVolts, taBuildParts, taClass, taIsEstimated,
@@ -71,6 +72,11 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
   const [selWire, setSelWire] = useState<number | null>(null);
   const [wireInfo, setWireInfo] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  /* Step-by-step teardown (3D only): how many parts are off, autoplay, isolate. */
+  const [tdOn, setTdOn] = useState(false);
+  const [tdDone, setTdDone] = useState(0);
+  const [tdPlaying, setTdPlaying] = useState(false);
+  const [tdIsolate, setTdIsolate] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -97,6 +103,21 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
   const built = useMemo(() => (spec ? taBuildParts(spec) : null), [spec]);
   const cls = spec ? taClass(spec) : "ground";
   const wiring = spec?.wiring;
+  const td = useMemo(() => teardownSteps(built ? built.parts.map((p) => p.id) : []), [built]);
+
+  /* Play: one part off every 1.8 s until only the core is left. */
+  useEffect(() => {
+    if (!tdPlaying || mode !== "3d") return;
+    if (tdDone >= td.steps.length) { setTdPlaying(false); return; }
+    const id = setTimeout(() => {
+      const next = tdDone + 1;
+      setTdDone(next);
+      const part = td.steps[next - 1];
+      setSelected(part);
+      setDetail({ kind: "part", id: part });
+    }, tdDone === 0 ? 400 : 1800);
+    return () => clearTimeout(id);
+  }, [tdPlaying, tdDone, td.steps, mode]);
 
   if (failed) {
     return (
@@ -321,6 +342,30 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
     );
   };
 
+  const tdGo = (n: number) => {
+    const k = Math.max(0, Math.min(td.steps.length, n));
+    setTdDone(k);
+    setTdIsolate(false);
+    const part = k > 0 ? td.steps[k - 1] : td.core;
+    if (part) {
+      setSelected(part);
+      setDetail({ kind: "part", id: part });
+    }
+  };
+  const tdName = (id: string | null) => {
+    const p = parts.find((x) => x.id === id);
+    return p ? (p.qty > 1 ? `${p.name} ×${p.qty}` : p.name) : id ?? "";
+  };
+  const tdCurrent = tdDone > 0 ? td.steps[tdDone - 1] : null;
+  const tdLabel = !tdOn
+    ? ""
+    : tdDone === 0
+      ? `Assembled · ${td.steps.length} parts come off before the ${tdName(td.core).toLowerCase()} is left`
+      : tdDone >= td.steps.length
+        ? `Stripped down: only the ${tdName(td.core).toLowerCase()} is left`
+        : `Step ${tdDone} of ${td.steps.length}: ${tdName(tdCurrent)} off`;
+  const tdFocus = tdIsolate ? (tdCurrent ?? td.core) : null;
+
   const ground = cls === "ground";
   return (
     <>
@@ -373,7 +418,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
         <div className="tabs" role="tablist" aria-label="Take-apart view">
           <button
             className="tab" type="button" id="ta-view-2d" role="tab"
-            aria-selected={mode === "2d"} onClick={() => setMode("2d")}
+            aria-selected={mode === "2d"} onClick={() => { setTdPlaying(false); setMode("2d"); }}
           >
             2D views
           </button>
@@ -395,6 +440,28 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
           switch back to 2D views for those.
         </span>
       </p>
+      {mode === "3d" && td.steps.length > 0 ? (
+        <div className="ta-controls ta-teardown" id="ta-teardown">
+          {!tdOn ? (
+            <button className="btn btn-sm btn-primary" type="button" onClick={() => { setTdOn(true); setExplode(0); tdGo(0); setTdPlaying(true); }}>
+              Take it apart, step by step
+            </button>
+          ) : (
+            <>
+              <button className="btn btn-sm" type="button" onClick={() => { setTdPlaying(false); tdGo(tdDone - 1); }} disabled={tdDone === 0}>&larr; Put back</button>
+              <button className="btn btn-sm btn-primary" type="button" onClick={() => { setTdPlaying(false); tdGo(tdDone + 1); }} disabled={tdDone >= td.steps.length}>Next part &rarr;</button>
+              <button className="btn btn-sm" type="button" onClick={() => { if (tdDone >= td.steps.length) tdGo(0); setTdPlaying(!tdPlaying); }}>
+                {tdPlaying ? "Pause" : tdDone >= td.steps.length ? "Replay" : "Play"}
+              </button>
+              <button className="btn btn-sm ta-toggle" type="button" aria-pressed={tdIsolate} onClick={() => { setTdPlaying(false); setTdIsolate(!tdIsolate); }}>
+                Show only this part
+              </button>
+              <button className="btn btn-sm" type="button" onClick={() => { setTdPlaying(false); setTdOn(false); setTdDone(0); setTdIsolate(false); }}>Reassemble</button>
+              <span className="ta-teardown-label" role="status">{tdLabel}</span>
+            </>
+          )}
+        </div>
+      ) : null}
       <div className="ta-stage">
         <div>
           <div id="ta-2d" hidden={mode === "3d"}>
@@ -424,6 +491,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
                   spec={spec as unknown as ForgeSpec}
                   explode={explode}
                   selected={selected}
+                  teardown={tdOn ? { removed: td.steps.slice(0, tdDone), isolate: tdFocus } : undefined}
                   onSelect={(id) => {
                     setSelected(id);
                     setSelNode(null);
