@@ -7,14 +7,16 @@
  * way (collapsed = just the pill; expanded = a floating sheet that
  * never takes the whole screen).
  *
- * Same useForgeAssistant engine as the Chat page and the Workspace
- * thread. Not mounted on /chat (the page IS the chat) or /forge (the
- * Workspace thread already is the conversation there). */
+ * Same useForgeAssistant engine as the Workspace thread. Not mounted
+ * on /forge, where the Workspace thread is the full-size Wrench. */
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
 import AttachButton from "./AttachButton";
+import CopyButton from "./CopyButton";
+import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
 
 const STORE_KEY = "rf-chat-bar";
@@ -41,7 +43,7 @@ export default function ChatBar() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [assistant.messages, open]);
 
-  if (pathname === "/chat" || pathname === "/chat/" || pathname === "/forge" || pathname === "/forge/") {
+  if (pathname === "/forge" || pathname === "/forge/" || pathname === "/chat" || pathname === "/chat/") {
     return null;
   }
 
@@ -83,6 +85,17 @@ export default function ChatBar() {
               <strong>{ASSISTANT_NAME}</strong>
               <span className="fc-sub">{assistant.subText}</span>
             </div>
+            {assistant.messages.length > 0 && (
+              <CopyButton
+                className="copy-btn copy-all"
+                label="Copy all"
+                title="Copy the whole conversation"
+                getText={() => transcript(assistant.messages)}
+              />
+            )}
+            <Link className="chat-bar-full" href="/forge/" title="Open Wrench full size">
+              Full size
+            </Link>
             <button
               type="button"
               className="fc-close"

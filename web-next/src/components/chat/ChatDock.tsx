@@ -4,6 +4,7 @@
  * No floating launcher or separate chat panel is mounted. */
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -86,19 +87,43 @@ interface Msg {
 
 let nextId = 1;
 
+/* One conversation across the app. The bottom bar and the Workspace
+ * each mount their own hook, never both at once (the bar is hidden on
+ * /forge/), so the state is carried in module memory across client
+ * navigation: "Full size" continues the same conversation, pending
+ * proposal and undo included. */
+type Applied = { robotId: string; versionId: string; scope?: 'assembly' } | null;
+const carry: {
+  messages: Msg[];
+  chips: string[] | null;
+  proposal: Preview | null;
+  inventoryProposal: InventoryOperation | null;
+  assemblyProposal: AssemblyOperation | null;
+  lastApplied: Applied;
+} = { messages: [], chips: null, proposal: null, inventoryProposal: null, assemblyProposal: null, lastApplied: null };
+
 export function useForgeAssistant() {
   const router = useRouter();
   const pathname = usePathname();
   const engine = useMemo(buildEngine, []);
 
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [chips, setChipsState] = useState<string[]>(DEFAULT_CHIPS);
+  const [messages, setMessages] = useState<Msg[]>(() => carry.messages);
+  const [chips, setChipsState] = useState<string[]>(() => carry.chips ?? DEFAULT_CHIPS);
   const [subText, setSubText] = useState(SUB_RECORDED);
 
-  const [proposal, setProposal] = useState<Preview | null>(null);
-  const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(null);
-  const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(null);
-  const lastApplied = useRef<{ robotId: string; versionId: string; scope?: 'assembly' } | null>(null);
+  const [proposal, setProposal] = useState<Preview | null>(() => carry.proposal);
+  const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(() => carry.inventoryProposal);
+  const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(() => carry.assemblyProposal);
+  const lastApplied = useRef<Applied>(carry.lastApplied);
+  useEffect(() => {
+    carry.messages = messages;
+    carry.chips = chips;
+    carry.proposal = proposal;
+    carry.inventoryProposal = inventoryProposal;
+    carry.assemblyProposal = assemblyProposal;
+  }, [messages, chips, proposal, inventoryProposal, assemblyProposal]);
+  /* lastApplied is a ref, so copy it out when this instance unmounts. */
+  useEffect(() => () => { carry.lastApplied = lastApplied.current; }, []);
   const proposalRef = useRef<Preview | null>(null);
   proposalRef.current = proposal;
 

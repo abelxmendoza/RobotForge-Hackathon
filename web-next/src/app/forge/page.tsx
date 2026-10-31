@@ -13,14 +13,14 @@ export default function ForgePage() {
   return (
     <AppShell
       active="forge"
-      crumbs={[{ label: "Forge" }]}
+      crumbs={[{ label: "Wrench" }]}
     >
       <div className="page-head">
         <div>
-          <div className="eyebrow">Forge</div>
-          <h1>Your robot workspace</h1>
+          <h1>Ask, fix, or design a robot</h1>
           <p className="lede">
-            Ask questions, manage your parts, edit saved robots, or design a new one. Attach a photo, a parts list, a spec
+            Wrench full size: ask questions, change your saved robots and
+            parts, or design a new robot. Attach a photo, a parts list, a spec
             file or a 3D scan. Every step is labelled <strong>LIVE</strong>,{" "}
             <strong>LOCAL</strong> or <strong>RECORDED</strong>, so you always
             know what produced it.

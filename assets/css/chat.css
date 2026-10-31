@@ -208,30 +208,24 @@
   padding:6px 10px;font-size:var(--fs-xs);color:var(--text-muted);
 }
 .chat-bar-composer{position:relative}
-.chat-page-attach{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.chat-bar-full{flex:none;white-space:nowrap;margin-left:auto;margin-right:8px;font-size:var(--fs-xs);color:var(--text-muted);text-decoration:none;align-self:center}
+.chat-bar-full:hover{color:var(--accent)}
 
-/* ---------- dedicated Chat page (/chat) ----------
-   The same assistant as the Workspace thread, framed as a full page:
-   a bordered conversation panel, suggestions above the composer. */
-.chat-page{
-  display:flex;flex-direction:column;gap:var(--s3);
-  border:1px solid var(--border-strong);border-radius:var(--r-lg);
-  background:var(--surface);padding:var(--s4);min-width:0;
+/* Copy: one response, or the whole conversation */
+.copy-btn{
+  display:inline-flex;align-items:center;gap:5px;margin-top:8px;
+  background:transparent;border:1px solid transparent;border-radius:999px;
+  padding:3px 9px;font:500 var(--fs-xs)/1.2 var(--font);color:var(--text-faint);cursor:pointer;
 }
-.chat-page-head{
-  border:1px solid var(--border);border-radius:var(--r);
-  padding:12px 14px;
-}
-.chat-page-msgs{
-  border:1px solid var(--border);border-radius:var(--r);
-  background:var(--surface-2);min-height:300px;max-height:58dvh;
-}
-.chat-page-chips{border-top:0;padding:0}
-.chat-page-composer{margin-top:0}
-@media(max-width:600px){
-  .chat-page{padding:var(--s3)}
-  .chat-page-msgs{max-height:52dvh}
-}
+.copy-btn:hover,.copy-btn:focus-visible{color:var(--accent);border-color:var(--border)}
+.fc-msg .copy-btn,.fmsg .copy-btn,.fstage .copy-btn{opacity:0;transition:opacity .15s}
+.fc-msg:hover .copy-btn,.fmsg:hover .copy-btn,.fstage:hover .copy-btn,
+.copy-btn:focus-visible{opacity:1}
+@media (hover:none){.fc-msg .copy-btn,.fmsg .copy-btn,.fstage .copy-btn{opacity:1}}
+.fstage .copy-btn{margin:0 0 10px 16px}
+.fc-head .copy-all{margin:0 4px 0 auto;align-self:center;flex:none;white-space:nowrap;opacity:1}
+.fc-head .copy-all + .chat-bar-full{margin-left:4px}
+.forge-copy-all{display:flex;justify-content:flex-end;margin-top:8px}
 
 /* Floating/docked legacy widgets are retired. The React assistant now renders
    within the primary Forge thread, using its single composer. */

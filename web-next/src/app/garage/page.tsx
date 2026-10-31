@@ -14,7 +14,6 @@ export default function GaragePage() {
     <AppShell active="garage" crumbs={[{ label: "My robots" }]}>
       <div className="page-head">
         <div>
-          <div className="eyebrow">My robots</div>
           <h1>Your robots, and every upgrade you plan</h1>
           <p className="lede">
             Bring in the robot you have, even a broken one, and try upgrades before

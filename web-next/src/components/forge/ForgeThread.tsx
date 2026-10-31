@@ -26,6 +26,8 @@
  * run's stage position (step) and input kind (tab), per the store
  * contract. */
 import { ASSISTANT_NAME, HANDOFF_LABEL, takeHandoff } from '@/lib/handoff';
+import { elementText } from '@/lib/copytext';
+import CopyButton from '@/components/chat/CopyButton';
 import {
   useCallback,
   useEffect,
@@ -328,9 +330,18 @@ export default function ForgeThread() {
     (node: ReactNode) => push({ kind: 'note', node }),
     [push],
   );
+  /* Messages already in the conversation when the Workspace opened
+   * came from Wrench's bottom bar ("Full size"); show their user side
+   * too, since this thread didn't push those itself. */
+  const carriedIds=useRef<Set<number>|null>(null);
+  if(carriedIds.current===null)carriedIds.current=new Set(assistant.messages.map(m=>m.id));
   useEffect(()=>{
     for(const message of assistant.messages){
-      if(message.who==='user')continue;
+      if(message.who==='user'){
+        if(!carriedIds.current?.has(message.id)||assistantEntryIds.current.has(message.id))continue;
+        assistantEntryIds.current.set(message.id,pushUser(<p>{message.text}</p>));
+        continue;
+      }
       const node=<div className="main-assistant-reply">
         {message.html&&<div dangerouslySetInnerHTML={{__html:message.html}}/>}
         {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
@@ -340,7 +351,7 @@ export default function ForgeThread() {
       if(entryId===undefined)assistantEntryIds.current.set(message.id,pushNote(node));
       else setEntries(current=>current.map(e=>e.id===entryId?{...e,node}:e));
     }
-  },[assistant.messages,pushNote]);
+  },[assistant.messages,pushNote,pushUser]);
   const pushStage = useCallback(
     (
       badge: Badge,
@@ -1251,13 +1262,16 @@ export default function ForgeThread() {
   useEffect(() => {
     if (initedRef.current) return;
     initedRef.current = true;
-    pushNote(
+    /* The welcome goes first, above any conversation carried in from
+     * the bottom bar (those entries were pushed by an earlier effect). */
+    const welcomeId = ++idRef.current;
+    setEntries((prev) => [{ kind: 'note', id: welcomeId, node: (
       <p>
-        <strong>One workspace for your robot.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
+        <strong>Wrench, full size.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
         the live endpoint; spec files, scans and the recorded samples below
         always work.
-      </p>,
-    );
+      </p>
+    ) }, ...prev]);
     (async () => {
       if (!liveBase) {
         setMode({ mode: 'recorded', why: offReason(null, 'describe') });
@@ -1310,7 +1324,7 @@ export default function ForgeThread() {
     pushNote(
       <p>
         <strong>From {ASSISTANT_NAME}:</strong> your {HANDOFF_LABEL[h.kind].toLowerCase()}{' '}
-        <em>{h.file.name}</em> is going through the Workspace below.
+        <em>{h.file.name}</em> is being read below.
       </p>,
     );
     void (async () => {
@@ -1327,6 +1341,16 @@ export default function ForgeThread() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* Text of one thread entry as the reader sees it; with a role label
+   * when it goes into a full-conversation copy. */
+  const entryText = (e: Entry, labelled = false): string => {
+    const body = elementText(elRefs.current.get(e.id));
+    if (!labelled || !body) return body;
+    if (e.kind === 'user') return 'You:\n' + body;
+    if (e.kind === 'stage') return body;
+    return ASSISTANT_NAME + ':\n' + body;
+  };
 
   return (
     <>
@@ -1355,6 +1379,7 @@ export default function ForgeThread() {
                   <h3>{e.title}</h3>
                 </header>
                 <div className="fstage-body">{e.body}</div>
+                <CopyButton title="Copy this step" getText={() => entryText(e)} />
               </article>
             );
           }
@@ -1368,10 +1393,21 @@ export default function ForgeThread() {
               }}
             >
               {e.node}
+              {e.kind === 'note' && <CopyButton getText={() => entryText(e)} />}
             </div>
           );
         })}
       </div>
+      {entries.length > 1 && (
+        <div className="forge-copy-all">
+          <CopyButton
+            className="btn btn-sm btn-ghost copy-all"
+            label="Copy conversation"
+            title="Copy the whole conversation"
+            getText={() => entries.map((e) => entryText(e, true)).filter(Boolean).join('\n\n')}
+          />
+        </div>
+      )}
       <div className="forge-samples">
         <span className="faint">Recorded sample runs:</span>{' '}
         <button
@@ -1440,7 +1476,7 @@ export default function ForgeThread() {
           htmlFor="forge-input"
           style={{ fontSize: 'var(--fs-xs)' }}
         >
-          Message your robot workspace
+          Message {ASSISTANT_NAME}
         </label>
         <textarea
           id="forge-input"
@@ -1454,7 +1490,7 @@ export default function ForgeThread() {
               (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
             }
           }}
-          placeholder="Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below."
+          placeholder={inputMode === 'design' ? 'Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below.' : `Ask ${ASSISTANT_NAME} about a robot or part, or tell it what to change… or attach a file below.`}
         />
         <div className="composer-row">
           <div className="attach-btns">
