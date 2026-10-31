@@ -24,6 +24,7 @@
  * is a recorded run and is labelled RECORDED. */
 import { useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { Findings } from '@/components/forge/shared';
@@ -35,6 +36,8 @@ import { diffSpecs, fmtValue, GARAGE_KEY, type GarageRobot, type Spec } from '@/
 import { readStore, uid, writeStore } from '@/lib/store';
 import { gateReports } from '@/lib/data';
 import Term from '@/components/shell/Term';
+
+const FixReplay3D = dynamic(() => import('./FixReplay3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D replay…</p> });
 
 /* The robot the demo runs. Omega1 takes this slot once its measured
  * spec is in the repo; until then a repo rover with two real-world
@@ -67,9 +70,11 @@ export default function Demo() {
   const [loop, setLoop] = useState<LoopResult | null>(null);
   const [saved, setSaved] = useState('');
   const runRef = useRef(0);
+  const [runId, setRunId] = useState(0);
 
   const run = async () => {
     const token = ++runRef.current;
+    setRunId(token);
     const mine = () => runRef.current === token;
     setStage('loading');
     setError('');
@@ -224,6 +229,18 @@ export default function Demo() {
             {!loop.resolved && <> · the loop stopped: {loop.stop}</>}
           </span>
         </div>
+      )}
+
+      {broken && before.length > 0 && (
+        <FixReplay3D
+          key={runId}
+          before={broken}
+          after={loop ? loop.finalSpec : null}
+          beforeLines={before}
+          afterLines={after}
+          autoplay
+          resolved={loop ? loop.resolved : true}
+        />
       )}
 
       <div className="demo-panels">
