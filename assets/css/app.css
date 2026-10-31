@@ -861,3 +861,15 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 /* Step-by-step teardown bar (TakeApartViewer, 3D) */
 .ta-teardown{flex-wrap:wrap;gap:var(--s2);align-items:center}
 .ta-teardown-label{font-size:var(--fs-sm,13px);font-weight:600;margin-left:var(--s2)}
+
+/* Workshop: My robots and Wrench as two tabs of one place */
+.workshop-tabs{
+  display:inline-flex;gap:4px;padding:4px;margin:0 0 var(--s4);
+  border:1px solid var(--border);border-radius:999px;background:var(--surface);
+}
+.workshop-tabs a{
+  padding:7px 16px;border-radius:999px;text-decoration:none;
+  font:600 var(--fs-sm)/1.2 var(--font);color:var(--text-muted);
+}
+.workshop-tabs a:hover{color:var(--text)}
+.workshop-tabs a[aria-current="page"]{background:var(--surface-2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border-strong)}

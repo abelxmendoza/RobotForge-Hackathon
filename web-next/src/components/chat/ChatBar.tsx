@@ -93,7 +93,7 @@ export default function ChatBar() {
                 getText={() => transcript(assistant.messages)}
               />
             )}
-            <Link className="chat-bar-full" href="/forge/" title="Open Wrench full size in the Workspace">
+            <Link className="chat-bar-full" href="/forge/" title="Open Wrench full size">
               Full size
             </Link>
             <button

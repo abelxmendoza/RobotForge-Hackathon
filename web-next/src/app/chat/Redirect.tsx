@@ -7,5 +7,5 @@ export default function Redirect() {
   useEffect(() => {
     router.replace("/forge/");
   }, [router]);
-  return <p style={{ padding: 24 }}>Wrench lives in the <a href="/forge/">Workspace</a> now…</p>;
+  return <p style={{ padding: 24 }}>Opening <a href="/forge/">Wrench</a>…</p>;
 }

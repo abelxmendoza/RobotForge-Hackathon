@@ -1267,7 +1267,7 @@ export default function ForgeThread() {
     const welcomeId = ++idRef.current;
     setEntries((prev) => [{ kind: 'note', id: welcomeId, node: (
       <p>
-        <strong>One workspace for your robot.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
+        <strong>Wrench, full size.</strong> Ask questions, manage inventory, or edit a saved robot here. Switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
         the live endpoint; spec files, scans and the recorded samples below
         always work.
       </p>
@@ -1324,7 +1324,7 @@ export default function ForgeThread() {
     pushNote(
       <p>
         <strong>From {ASSISTANT_NAME}:</strong> your {HANDOFF_LABEL[h.kind].toLowerCase()}{' '}
-        <em>{h.file.name}</em> is going through the Workspace below.
+        <em>{h.file.name}</em> is being read below.
       </p>,
     );
     void (async () => {
