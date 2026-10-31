@@ -2,38 +2,62 @@
 
 import Link from "next/link";
 import Term from "@/components/shell/Term";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useRef, useState } from "react";
 import { families, parts, robotSlug, robots } from "@/lib/data";
 import { describeSignature } from "@/lib/grouping";
-import type { AppDispatch, RootState } from "@/store/store";
-import { setDrivetrain, setVerdict } from "@/store/catalogSlice";
-import { MOBILITY_CLASSES, VERDICT_LABEL, gateStatusOf } from "./shared";
+import { MOBILITY_CLASSES } from "./shared";
 import { assetPath } from "@/components/home/asset";
 import RobotCard from "./RobotCard";
+import GroupCard, { gateTally, groupSlug } from "./GroupCard";
 import LocalDexSightings from "./LocalDexSightings";
 
-/* render_robots_index + robots.js: verdict chips and class chips are
-   independent filters — a card shows only when it matches both. The
-   Redux catalog slice holds the two filters (verdict, and the class
-   filter the slice calls drivetrain) and the parts search query. */
+/* Robodex index (Abel, 2026-10-30): no filter chips. The index opens
+   on a grid of group cards — one per mobility class, in taxonomy
+   order — and opening a card swaps the view to that group's robot
+   grid. The open group lives in the URL hash (#group=legged) so a
+   group view is shareable and the browser Back button returns to
+   the groups grid. Gate verdicts are not a filter anymore; they stay
+   as the badge on each robot card and the tally on each group card. */
 
-const VERDICT_ORDER = ["PASS", "FAIL", "NOT_GATED"] as const;
+function groupFromHash(): string | null {
+  if (typeof window === "undefined") return null;
+  const m = window.location.hash.match(/^#group=([a-z0-9-]+)$/);
+  if (!m) return null;
+  return MOBILITY_CLASSES.find((cls) => groupSlug(cls) === m[1]) ?? null;
+}
 
 export default function RobotsIndex() {
-  const dispatch = useDispatch<AppDispatch>();
-  const verdict = useSelector((s: RootState) => s.catalog.verdict);
-  const mobility = useSelector((s: RootState) => s.catalog.drivetrain);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const groupHeadRef = useRef<HTMLHeadingElement>(null);
 
-  const counts: Record<string, number> = { PASS: 0, FAIL: 0, NOT_GATED: 0 };
-  for (const r of robots) {
-    const st = gateStatusOf(r).status;
-    if (st in counts) counts[st] += 1;
-  }
-  const classCounts = new Map<string, number>();
+  useEffect(() => {
+    const sync = () => setOpenGroup(groupFromHash());
+    sync();
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener("popstate", sync);
+    };
+  }, []);
+
+  const open = (cls: string) => {
+    setOpenGroup(cls);
+    window.history.pushState(null, "", `#group=${groupSlug(cls)}`);
+    requestAnimationFrame(() => groupHeadRef.current?.focus());
+  };
+  const close = () => {
+    setOpenGroup(null);
+    window.history.pushState(null, "", window.location.pathname + window.location.search);
+  };
+
+  const byClass = new Map<string, typeof robots>();
+  for (const cls of MOBILITY_CLASSES) byClass.set(cls, []);
   for (const r of robots) {
     const m = r.mobility_class ?? "";
-    classCounts.set(m, (classCounts.get(m) ?? 0) + 1);
+    if (byClass.has(m)) byClass.get(m)!.push(r);
   }
+  const openMembers = openGroup ? byClass.get(openGroup) ?? [] : [];
 
   return (
     <>
@@ -42,73 +66,60 @@ export default function RobotsIndex() {
           <div className="eyebrow">Robots</div>
           <h1><Term k="robodex">Robodex</Term></h1>
           <p className="lede">
-            Every robot RobotForge knows. A badge comes only from a recorded
+            Every robot RobotForge knows, shelved by how it moves — open a
+            group to see its robots. A badge comes only from a recorded
             gate run — untested robots are marked NOT GATED.{" "}
             <Link href="/#workflow">How the test works →</Link>
           </p>
         </div>
       </div>
 
-      <div className="toolbar" role="group" aria-label="Filter by verdict">
-        <button
-          className="chip" type="button" data-filter="all"
-          aria-pressed={verdict === "all"}
-          onClick={() => dispatch(setVerdict("all"))}
-        >
-          All ({robots.length})
-        </button>
-        {VERDICT_ORDER.filter((s) => counts[s] > 0).map((s) => (
-          <button
-            key={s}
-            className="chip" type="button" data-filter={s}
-            aria-pressed={verdict === s}
-            onClick={() => dispatch(setVerdict(s))}
-          >
-            {VERDICT_LABEL[s]} ({counts[s]})
+      {openGroup === null ? (
+        <div className="group-grid" id="group-grid">
+          {MOBILITY_CLASSES.map((cls) => (
+            <GroupCard
+              key={cls}
+              cls={cls}
+              members={byClass.get(cls) ?? []}
+              onOpen={open}
+            />
+          ))}
+        </div>
+      ) : (
+        <section aria-label={`${openGroup} robots`}>
+          <button className="btn btn-ghost" type="button" onClick={close}>
+            ← All groups
           </button>
-        ))}
-      </div>
+          <h2
+            ref={groupHeadRef}
+            tabIndex={-1}
+            style={{ marginTop: "var(--s4)" }}
+          >
+            {openGroup}
+          </h2>
+          <p className="sub">
+            {openMembers.length} robot{openMembers.length === 1 ? "" : "s"}
+            {gateTally(openMembers) ? ` — ${gateTally(openMembers)}` : ""}
+          </p>
+          <div className="robot-grid" id="robot-grid">
+            {[...openMembers]
+              .sort((a, b) => Number(a.number) - Number(b.number))
+              .map((r) => (
+                <RobotCard key={r.name} robot={r} />
+              ))}
+          </div>
+        </section>
+      )}
 
-      <div className="toolbar" role="group" aria-label="Filter by class">
-        <button
-          className="chip" type="button" data-cfilter="all"
-          aria-pressed={mobility === "all"}
-          onClick={() => dispatch(setDrivetrain("all"))}
-        >
-          All classes ({robots.length})
-        </button>
-        {MOBILITY_CLASSES.map((cls) => {
-          const n = classCounts.get(cls) ?? 0;
-          return n > 0 ? (
-            <button
-              key={cls}
-              className="chip" type="button" data-cfilter={cls}
-              aria-pressed={mobility === cls}
-              onClick={() => dispatch(setDrivetrain(cls))}
-            >
-              {cls} ({n})
-            </button>
-          ) : (
-            <button
-              key={cls}
-              className="chip" type="button" data-cfilter={cls}
-              aria-pressed="false" disabled
-            >
-              {cls} — none yet
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="robot-grid" id="robot-grid">
-        {robots.map((r) => {
-          const st = gateStatusOf(r).status;
-          const hidden =
-            (verdict !== "all" && st !== verdict) ||
-            (mobility !== "all" && (r.mobility_class ?? "") !== mobility);
-          return <RobotCard key={r.name} robot={r} hidden={hidden} />;
-        })}
-      </div>
+      <noscript>
+        <div className="robot-grid">
+          {[...robots]
+            .sort((a, b) => Number(a.number) - Number(b.number))
+            .map((r) => (
+              <RobotCard key={r.name} robot={r} />
+            ))}
+        </div>
+      </noscript>
 
       <p className="section-more">
         <Link href="/kit/#parts">Browse the parts catalogue →</Link>{" "}
