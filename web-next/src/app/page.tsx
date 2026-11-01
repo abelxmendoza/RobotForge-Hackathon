@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import RunDemoLink from "@/components/shell/RunDemoLink";
 import { robots } from "@/lib/data";
 import RobotCard from "@/components/home/RobotCard";
 import { AiInsideCards } from "@/components/home/AiInside";
 import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
-import DemoEntryButton from "@/components/shell/DemoEntryButton";
 import DemoVideoCard from "@/components/home/DemoVideoCard";
 
 /**
@@ -65,10 +65,9 @@ export default function HomePage() {
             <Link className="btn btn-primary" href="/garage/">
               Open the app →
             </Link>
-            <DemoEntryButton className="btn" label="Try the demo" />
-            <Link className="btn" href="/demo/">
+            <RunDemoLink className="btn">
               Run the demo
-            </Link>
+            </RunDemoLink>
           </div>
           <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
             Live AI in the app runs on your account — sign up with an
@@ -88,6 +87,45 @@ export default function HomePage() {
             <figcaption>
               AI illustration (muse-image-1.0). The real robots in the app
               carry real, credited photos.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      {/* ============ TRAILER — recorded from the live app in demo
+           mode (real screens, recorded data, no mockups). Tap-to-play:
+           preload="none" + poster, so nothing downloads until a
+           visitor asks for it. The video is silent; its text is on
+           screen. */}
+      <section className="band" id="trailer">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">Trailer</div>
+            <h2>Watch RobotForge work.</h2>
+            <p>
+              One minute inside the real app — the Workshop, the
+              Robodex, the take-apart Kit, and a broken robot caught
+              and fixed in one run.
+            </p>
+          </div>
+          <figure className="hero-art" style={{ marginTop: 0 }}>
+            <video
+              controls
+              preload="none"
+              poster={assetPath("assets/video/robotforge-trailer-poster.png")}
+              width={1920}
+              height={1080}
+              aria-label="RobotForge trailer — a recorded tour of the live app in demo mode"
+            >
+              <source
+                src={assetPath("assets/video/robotforge-trailer-v1.mp4")}
+                type="video/mp4"
+              />
+            </video>
+            <figcaption>
+              Recorded from the live app in demo mode, Nov 1, 2026 —
+              real screens, recorded data, no mockups. Silent; the
+              text is on screen.
             </figcaption>
           </figure>
         </div>
@@ -471,13 +509,9 @@ export default function HomePage() {
               flexWrap: "wrap",
             }}
           >
-            <Link
-              className="btn btn-primary"
-              href="/demo/"
-              style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
-            >
+            <RunDemoLink className="btn btn-primary" style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}>
               Run the demo →
-            </Link>
+            </RunDemoLink>
             <Link
               className="btn"
               href="/garage/"
