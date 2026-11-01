@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { physicsOf } from "@/lib/data";
 import { massAudit } from "@/lib/physicsMath";
 import { runPhysicsChecks, type PhysicsResult } from "@/lib/physicsEngine";
@@ -247,6 +247,14 @@ function Results({ result, catalogMassKg, catalogMassLabel }: {
 export default function PhysicsSection({ slug, robotName }: { slug: string; robotName: string }) {
   const entry = physicsOf(slug);
   const [state, setState] = useState<RunState>({ kind: "idle" });
+  /* The page renders client-side (behind the app gate), so the
+   * browser's own #physics jump fires before this section exists;
+   * the landing's Simulate card links here, so scroll once mounted. */
+  useEffect(() => {
+    if (window.location.hash === "#physics") {
+      document.getElementById("physics")?.scrollIntoView({ block: "start" });
+    }
+  }, []);
   if (!entry) return null;
 
   const run = async () => {

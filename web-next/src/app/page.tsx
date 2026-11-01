@@ -27,10 +27,43 @@ import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/L
 export const metadata: Metadata = {
   // Absolute: the vanilla landing's <title>, bypassing the layout's
   // "%s · RobotForge" template.
-  title: { absolute: "RobotForge — fix your robot before you spend a dollar" },
+  title: { absolute: "RobotForge — build, fix, modify, upgrade and simulate your robot before you spend a dollar" },
   description:
-    "RobotForge gives robot models a driving test before anyone trusts them. Describe a robot in words, a photo or a parts list — its simulated twin has to pass.",
+    "Build, fix, modify, upgrade and simulate your robot before you spend a dollar. Describe it in words, a photo or a parts list; RobotForge checks every change and its simulated twin has to pass a driving test.",
 };
+
+const VERBS: { verb: string; body: string; go: string; to: string }[] = [
+  {
+    verb: "Build",
+    body: "Start from words, a photo or a parts list, then watch the 3D model go together part by part.",
+    go: "Open the build bench",
+    to: "/garage/#tab=build",
+  },
+  {
+    verb: "Fix",
+    body: "The checks name what is wrong, Muse Spark proposes a fix, and the fix has to pass the same test.",
+    go: "Watch a broken robot get fixed",
+    to: "/demo/",
+  },
+  {
+    verb: "Modify",
+    body: "Change a wheel, a motor or the battery in the spec. Every edit is checked again.",
+    go: "Edit the spec",
+    to: "/garage/#tab=specs",
+  },
+  {
+    verb: "Upgrade",
+    body: "Save an upgrade as a new version, compare it with the robot you have, and check it before you buy parts.",
+    go: "Plan an upgrade",
+    to: "/garage/",
+  },
+  {
+    verb: "Simulate",
+    body: "The twin drives a test in the Gazebo simulator, and in-browser physics shows whether it stands, tilts or topples.",
+    go: "Run the physics checks",
+    to: "/robots/turtlebot3-burger/#physics",
+  },
+];
 
 export default function HomePage() {
   /* The first four catalogue robots; the rest are on /robots/. */
@@ -53,12 +86,15 @@ export default function HomePage() {
           <div className="eyebrow">
             Built with Meta&apos;s Muse Spark · Meta Global AI Developer Hackathon
           </div>
-          <h1>Fix your robot before you spend a dollar.</h1>
+          <h1 className="hero-verbs">
+            <span>Build</span>, <span>Fix</span>, <span>Modify</span>,{" "}
+            <span>Upgrade</span>, and <span>Simulate</span> your robot
+            before you spend a dollar.
+          </h1>
           <p className="lede">
-            RobotForge gives robot models a driving test before anyone
-            trusts them. Describe a robot in words, a photo or a parts
-            list — its simulated twin has to pass before you build or buy
-            anything.
+            Describe a robot in words, a photo or a parts list. RobotForge
+            checks every change, and its simulated twin has to pass a
+            driving test before you build or buy anything.
           </p>
           <div className="ctas">
             <Link className="btn btn-primary" href="/garage/">
@@ -73,6 +109,20 @@ export default function HomePage() {
             finishes you can explore the whole app with its sample data,
             which never touches your own robots or parts.
           </p>
+          {/* The five verbs from the headline, each a door into the
+               part of the app that does it (demo mode for visitors
+               with no account). */}
+          <ul className="verb-cards">
+            {VERBS.map((v) => (
+              <li key={v.verb}>
+                <RunDemoLink className="verb-card" to={v.to}>
+                  <span className="verb">{v.verb}</span>
+                  <span className="verb-body">{v.body}</span>
+                  <span className="verb-go">{v.go} →</span>
+                </RunDemoLink>
+              </li>
+            ))}
+          </ul>
           <figure className="hero-art">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

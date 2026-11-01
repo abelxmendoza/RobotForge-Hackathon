@@ -20,8 +20,6 @@ import CopyButton from "./CopyButton";
 import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
 
-const STORE_KEY = "rf-chat-bar";
-
 export default function ChatBar() {
   const pathname = usePathname();
   const assistant = useForgeAssistant();
@@ -30,14 +28,9 @@ export default function ChatBar() {
   const msgsRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  /* Remember whether the conversation was left open. */
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(STORE_KEY) === "open") setOpen(true);
-    } catch {
-      /* storage unavailable — stay collapsed */
-    }
-  }, []);
+  /* Every page starts with the conversation collapsed (Abel,
+   * 2026-11-01): it opens only when the person sends a message or
+   * presses the toggle, never by itself on arrival. */
 
   useEffect(() => {
     const el = msgsRef.current;
@@ -48,14 +41,7 @@ export default function ChatBar() {
     return null;
   }
 
-  const setOpenPersist = (v: boolean) => {
-    setOpen(v);
-    try {
-      window.localStorage.setItem(STORE_KEY, v ? "open" : "closed");
-    } catch {
-      /* ignore */
-    }
-  };
+  const setOpenPersist = (v: boolean) => setOpen(v);
 
   /* The oval grows with the message: one line, wrapping to more
    * lines as needed, capped — past the cap the field scrolls. */
