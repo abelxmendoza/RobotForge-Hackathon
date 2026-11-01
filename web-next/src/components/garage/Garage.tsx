@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import RobodexPicker from './RobodexPicker';
+import RobotAvatar from './RobotAvatar';
 import { robots as dexRobots } from '@/lib/data';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -48,6 +49,25 @@ const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'specs', label: 'Specs', icon: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5' },
   { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
 ];
+
+const ICON = {
+  mass: 'M6 20h12l-2-11H8zM9.5 9a2.5 2.5 0 1 1 5 0',
+  size: 'M3 17 17 3l4 4L7 21zM7.5 12.5l2 2M10.5 9.5l2 2M13.5 6.5l2 2',
+  battery: 'M2 8h16v8H2zM20 11v2M6 11v2M10 11v2',
+  wheel: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6',
+  drive: 'M4 12h14M13 6l6 6-6 6',
+  checks: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
+  field: 'M3 20l6-10 4 6 3-4 5 8z',
+  bench: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+  photo: 'M4 7h3l2-2h6l2 2h3v12H4zM12 10a3 3 0 1 0 0 6 3 3 0 1 0 0-6',
+  file: 'M6 3h8l4 4v14H6zM14 3v4h4',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  code: 'M9 7l-5 5 5 5M15 7l5 5-5 5',
+} as const;
+
+function Icon({ d, size = 18 }: { d: string; size?: number }) {
+  return <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+}
 
 function verdictOf(lines: string[]): { cls: string; label: string } {
   const c = counts(lines);
@@ -129,6 +149,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
 
   return (
     <div className="garage-add">
+      {firstRobot && <EmptyBench />}
       <h2>Bring a robot in</h2>
       <p className="sub">Start with the robot as it is today.</p>
       <label className="g-field">
@@ -136,8 +157,8 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
         <input id="garage-new-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Leave empty to keep the spec's own name" />
       </label>
       <div className="g-tabs" role="tablist" aria-label="How to bring it in">
-        {([['photo', 'Photo'], ['file', 'Spec file'], ['robodex', 'From the Robodex'], ['paste', 'Paste JSON']] as const).map(([id, label]) => (
-          <button key={id} type="button" className="chip" role="tab" aria-pressed={mode === id} onClick={() => { setMode(id); if (id === 'robodex') setDexOpen(true); }}>{label}</button>
+        {([['photo', 'Photo', ICON.photo], ['file', 'Spec file', ICON.file], ['robodex', 'From the Robodex', ICON.grid], ['paste', 'Paste JSON', ICON.code]] as const).map(([id, label, icon]) => (
+          <button key={id} type="button" className="chip g-addchip" role="tab" aria-pressed={mode === id} onClick={() => { setMode(id); if (id === 'robodex') setDexOpen(true); }}><Icon d={icon} size={16} />{label}</button>
         ))}
       </div>
       {mode === 'photo' && (
@@ -191,7 +212,30 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
 
 /* ------------------------------------------------------------------ */
 
-function FieldInput({ field, spec, onChange }: { field: Field; spec: Spec; onChange: (path: string, v: unknown) => void }) {
+/* Empty Workshop: a robot waiting on a workbench. Decorative only. */
+function EmptyBench() {
+  return (
+    <svg className="g-empty-art" viewBox="0 0 240 120" role="img" aria-label="An empty workbench, ready for your first robot">
+      <rect x="20" y="92" width="200" height="8" rx="3" fill="var(--surface-3)" />
+      <rect x="36" y="100" width="8" height="18" fill="var(--surface-3)" /><rect x="196" y="100" width="8" height="18" fill="var(--surface-3)" />
+      <g className="g-empty-bot">
+        <path d="M120 30v-8" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="120" cy="19" r="4" fill="var(--accent)" />
+        <rect x="94" y="30" width="52" height="36" rx="10" fill="var(--surface-2)" stroke="var(--border-strong)" strokeWidth="2" />
+        <circle cx="110" cy="48" r="5" fill="var(--accent)" /><circle cx="130" cy="48" r="5" fill="var(--accent)" />
+        <rect x="88" y="68" width="64" height="12" rx="6" fill="var(--surface-3)" />
+        <circle cx="100" cy="84" r="7" fill="var(--border-strong)" /><circle cx="140" cy="84" r="7" fill="var(--border-strong)" />
+      </g>
+      <path d="M44 86l10-22 6 4-10 22z" fill="var(--marginal)" opacity=".8" />
+      <rect x="168" y="74" width="30" height="18" rx="3" fill="var(--surface-2)" stroke="var(--border)" />
+      <circle cx="176" cy="83" r="2.5" fill="var(--pass)" /><circle cx="186" cy="83" r="2.5" fill="var(--fail)" />
+    </svg>
+  );
+}
+
+const ESTIMATED_TIP = 'ESTIMATED from the photo. Measure the real part and type it in.';
+
+function FieldInput({ field, spec, onChange, estimated = false }: { field: Field; spec: Spec; onChange: (path: string, v: unknown) => void; estimated?: boolean }) {
   const raw = getPath(spec, field.path);
   const id = 'g-' + field.path.replace(/\./g, '-');
   if (field.kind === 'select') {
@@ -216,8 +260,8 @@ function FieldInput({ field, spec, onChange }: { field: Field; spec: Spec; onCha
   const scale = field.scale ?? 1;
   const shown = typeof raw === 'number' ? String(parseFloat((raw * scale).toPrecision(6))) : '';
   return (
-    <label className="g-field">
-      <span>{field.label}{field.unit ? <em> {field.unit}</em> : null}</span>
+    <label className={'g-field' + (estimated ? ' is-est' : '')}>
+      <span>{field.label}{field.unit ? <em> {field.unit}</em> : null}{estimated && <i className="est-dot" title={ESTIMATED_TIP} aria-label="estimated" />}</span>
       <input id={id} inputMode="decimal" defaultValue={shown} key={shown} onBlur={(e) => {
         const t = e.target.value.trim();
         if (!t) { onChange(field.path, null); return; }
@@ -470,8 +514,9 @@ export default function Garage() {
           {robots.map((r) => (
             <li key={r.id}>
               <button type="button" className="g-robot" aria-current={r.id === selected ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); }}>
-                <strong>{r.name}</strong>
-                <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}</span>
+                <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
+                <span className="g-robot-text"><strong>{r.name}</strong>
+                <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}</span></span>
               </button>
             </li>
           ))}
@@ -498,17 +543,25 @@ export default function Garage() {
             `${roverCounts.fail} fail`,
             roverCounts.unchecked ? `${roverCounts.unchecked} not checked` : '',
           ].filter(Boolean).join(' · ') : '';
-          const tiles: { label: string; value: string; unit: string }[] = [
-            { label: 'Mass', value: num(draft.mass_kg, 1, 2), unit: 'kg' },
-            { label: 'Size', value: `${num(draft.length_m, 1000)} × ${num(draft.width_m, 1000)} × ${num(draft.height_m, 1000)}`, unit: 'mm' },
-            { label: 'Battery', value: `${num(getPath(draft, 'battery.voltage_v'), 1, 1)} V`, unit: `${num(getPath(draft, 'battery.capacity_mah'))} mAh` },
-            { label: 'Wheels', value: `${num(getPath(draft, 'wheel.count'))} × ${num(getPath(draft, 'wheel.diameter_m'), 1000)}`, unit: 'mm' },
-            { label: 'Drive', value: String(draft.drivetrain ?? '—').replace(/_/g, ' '), unit: '' },
+          /* A number still equal to what the photo draft guessed is ESTIMATED:
+           * it gets an amber dot until the owner types a measured value. */
+          const photoV = robot.versions.find((v) => v.source === 'photo');
+          const estimated = new Set<string>(photoV ? FIELD_GROUPS.flatMap((g) => g.fields)
+            .filter((f) => f.kind === 'number' || f.kind === 'integer')
+            .map((f) => f.path)
+            .filter((p) => { const v = getPath(draft, p); return v != null && JSON.stringify(v) === JSON.stringify(getPath(photoV.spec, p)); }) : []);
+          const tiles: { label: string; value: string; unit: string; icon: string; paths: string[] }[] = [
+            { label: 'Mass', value: num(draft.mass_kg, 1, 2), unit: 'kg', icon: ICON.mass, paths: ['mass_kg'] },
+            { label: 'Size', value: `${num(draft.length_m, 1000)} × ${num(draft.width_m, 1000)} × ${num(draft.height_m, 1000)}`, unit: 'mm', icon: ICON.size, paths: ['length_m', 'width_m', 'height_m'] },
+            { label: 'Battery', value: `${num(getPath(draft, 'battery.voltage_v'), 1, 1)} V`, unit: `${num(getPath(draft, 'battery.capacity_mah'))} mAh`, icon: ICON.battery, paths: ['battery.voltage_v', 'battery.capacity_mah'] },
+            { label: 'Wheels', value: `${num(getPath(draft, 'wheel.count'))} × ${num(getPath(draft, 'wheel.diameter_m'), 1000)}`, unit: 'mm', icon: ICON.wheel, paths: ['wheel.diameter_m'] },
+            { label: 'Drive', value: String(draft.drivetrain ?? '—').replace(/_/g, ' '), unit: '', icon: ICON.drive, paths: [] },
           ];
           return (
           <>
             <div className="g-head ws-head">
               <div className="ws-title">
+                <RobotAvatar names={[robot.name, String(draft.name ?? '')]} size={48} />
                 <h2>{draft.name || robot.name}</h2>
                 <span className="ws-vchip">v{robot.versions.length}</span>
                 <span className={'verdict ' + verdict.cls}>{verdict.label}</span>
@@ -554,30 +607,39 @@ export default function Garage() {
               <section className="ws-pane" aria-label="Overview">
                 <div className="ws-tiles">
                   {tiles.map((t) => (
-                    <div className="ws-tile" key={t.label}><span className="ws-tile-label">{t.label}</span><strong>{t.value}</strong>{t.unit && <span className="ws-tile-unit">{t.unit}</span>}</div>
+                    <div className="ws-tile" key={t.label}>
+                      <span className="ws-tile-icon"><Icon d={t.icon} size={18} /></span>
+                      <span className="ws-tile-label">{t.label}{t.paths.some((p) => estimated.has(p)) && <i className="est-dot" title={ESTIMATED_TIP} aria-label="estimated" />}</span>
+                      <strong>{t.value}</strong>{t.unit && <span className="ws-tile-unit">{t.unit}</span>}
+                    </div>
                   ))}
                 </div>
                 <div className="ws-cards">
                   <button type="button" className={'ws-card ' + verdict.cls} onClick={() => setTab('checks')}>
+                    <span className="ws-card-icon"><Icon d={ICON.checks} size={22} /></span>
                     <span className="ws-card-label">Engineering checks</span>
                     <strong>{verdict.label}</strong>
                     <span className="ws-card-go">See checks →</span>
                   </button>
                   {roverCounts && (
                     <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : (roverCounts.marginal || roverCounts.unchecked) ? 'marginal' : 'pass')} onClick={() => setTab('checks')}>
+                      <span className="ws-card-icon"><Icon d={ICON.field} size={22} /></span>
                       <span className="ws-card-label">Field checks</span>
                       <strong>{roverText}</strong>
                       <span className="ws-card-go">See checks →</span>
                     </button>
                   )}
                   <button type="button" className="ws-card" onClick={() => setTab('build')}>
+                    <span className="ws-card-icon"><Icon d={ICON.bench} size={22} /></span>
                     <span className="ws-card-label">Bench</span>
                     <strong>Add and place parts in 3D</strong>
                     <span className="ws-card-go">Open Build →</span>
                   </button>
                 </div>
-                {String(draft.description || '').startsWith('Photo draft') && (
-                  <p className="est">Photo draft · dimensions ESTIMATED · measure and edit them</p>
+                {estimated.size > 0 && (
+                  <button type="button" className="ws-estnote" onClick={() => setTab('specs')}>
+                    <i className="est-dot" aria-hidden="true" /> {estimated.size} number{estimated.size === 1 ? ' is' : 's are'} guessed from the photo. <span>Measure in Specs →</span>
+                  </button>
                 )}
                 <section className="g-versions" aria-label="Versions">
                   <h3>Versions</h3>
@@ -607,7 +669,7 @@ export default function Garage() {
                 {FIELD_GROUPS.map((g) => (
                   <fieldset key={g.title} className="g-group">
                     <legend>{g.title}</legend>
-                    {g.fields.map((f) => <FieldInput key={f.path} field={f} spec={draft} onChange={edit} />)}
+                    {g.fields.map((f) => <FieldInput key={f.path} field={f} spec={draft} onChange={edit} estimated={estimated.has(f.path)} />)}
                   </fieldset>
                 ))}
               </div>
