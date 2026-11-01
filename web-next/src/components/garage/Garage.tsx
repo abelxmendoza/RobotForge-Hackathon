@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
+import RobodexPicker from './RobodexPicker';
 import { robots as dexRobots } from '@/lib/data';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -50,6 +51,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
   const [mode, setMode] = useState<'photo' | 'file' | 'robodex' | 'paste'>('photo');
   const [paste, setPaste] = useState('');
   const [dex, setDex] = useState(dexRobots[0]?.spec_file ?? '');
+  const [dexOpen, setDexOpen] = useState(false);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -92,13 +94,13 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
     }
   };
 
-  const fromDex = async () => {
+  const fromDex = async (file: string = dex) => {
     setError('');
     try {
-      const r = await fetch(assetPath(dex));
+      const r = await fetch(assetPath(file));
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      const robot = dexRobots.find((x) => x.spec_file === dex);
-      finish(await r.json(), 'robodex', `Started from ${robot?.name ?? dex}`);
+      const robot = dexRobots.find((x) => x.spec_file === file);
+      finish(await r.json(), 'robodex', `Started from ${robot?.name ?? file}`);
     } catch (e) {
       setError('Could not load that spec: ' + (e as Error).message);
     }
@@ -114,7 +116,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
       </label>
       <div className="g-tabs" role="tablist" aria-label="How to bring it in">
         {([['photo', 'Photo'], ['file', 'Spec file'], ['robodex', 'From the Robodex'], ['paste', 'Paste JSON']] as const).map(([id, label]) => (
-          <button key={id} type="button" className="chip" role="tab" aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>
+          <button key={id} type="button" className="chip" role="tab" aria-pressed={mode === id} onClick={() => { setMode(id); if (id === 'robodex') setDexOpen(true); }}>{label}</button>
         ))}
       </div>
       {mode === 'photo' && (
@@ -141,15 +143,17 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
       {mode === 'robodex' && (
         <div className="g-pane">
           <p className="muted">Start from a known robot and change it into yours.</p>
-          <label className="g-field">
-            <span>Robot</span>
-            <select id="garage-dex" value={dex} onChange={(e) => setDex(e.target.value)}>
-              {dexRobots.filter((r) => r.spec_file).map((r) => <option key={r.spec_file} value={r.spec_file}>{r.name}</option>)}
-            </select>
-          </label>
-          <button type="button" className="btn btn-primary" onClick={fromDex}>Use this robot</button>
+          <button type="button" className="btn btn-primary" onClick={() => setDexOpen(true)}>Open the Robodex</button>
         </div>
       )}
+      <RobodexPicker
+        open={dexOpen}
+        onClose={() => setDexOpen(false)}
+        onPick={(r) => {
+          setDexOpen(false);
+          if (r.spec_file) { setDex(r.spec_file); void fromDex(r.spec_file); }
+        }}
+      />
       {mode === 'paste' && (
         <div className="g-pane">
           <textarea id="garage-paste" className="g-json" rows={8} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder='{"name": "Omega1", "drivetrain": "skid_steer", ...}' />
