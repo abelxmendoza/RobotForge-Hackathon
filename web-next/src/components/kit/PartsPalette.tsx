@@ -29,6 +29,8 @@ import {
 } from '@/lib/palette';
 import { partClassLabel } from '../robots/shared';
 import PropThumb from './PropThumb';
+import PartPhoto from '@/components/parts/PartPhoto';
+import { verifiedPhoto } from '@/lib/partPhoto';
 
 const partsById = new Map<string, Part>(parts.map((p) => [p.id, p]));
 const propsById = new Map(simReadyProps.map((p) => [p.id, p]));
@@ -65,6 +67,8 @@ function PaletteCard({
           <PropThumb file={item.prop.file} label={item.name} />
           <div className="pcard-cap">Live render of the actual model</div>
         </>
+      ) : verifiedPhoto(item.part) ? (
+        <PartPhoto photo={verifiedPhoto(item.part)} name={item.name} variant="card" />
       ) : (
         <div className="palette-thumb palette-noimg">
           <span className="palette-thumb-note">
