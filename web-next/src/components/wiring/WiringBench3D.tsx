@@ -361,8 +361,9 @@ export default function WiringBench3D({ wiring }: { wiring: Wiring }) {
             if (state && !still) for (const s of p.spinner) {
               if (p.kind === 'lidar') s.rotation.y += dt * 9; else s.rotation.x += dt * 14;
             }
+            // CSS2DRenderer sets each label's display from .visible on every render.
+            p.label.visible = st.labels;
             const el = (p.label as unknown as { element: HTMLElement }).element;
-            el.style.display = st.labels ? '' : 'none';
             el.classList.toggle('sel', st.selected === p.id);
             el.classList.toggle('bad', state === 'bad');
           });
