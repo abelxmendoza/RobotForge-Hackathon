@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type * as THREE_NS from 'three';
 import { ROOT, fetchJSON } from '../forge/model';
+import { cableControlPoints, type Point3 } from '@/lib/wire3d';
 import type { SimReadyManifest, SpecimenDoc, SpecimenPart } from './burger';
 
 /* A bench prop the user placed from the Parts palette: one build
@@ -21,6 +22,38 @@ export interface PlacedProp {
   file: string;
   pos: [number, number];
   yaw: number;
+}
+
+/* The wiring view-model (lib/buildWiring.ts computes it): devices
+ * are schematic blocks for build-list entries that expose ports,
+ * anchors are world-space points on the blocks' faces, cables are
+ * the resolved connections between anchors. Routing and port
+ * positions are diagrammatic — the panel badges it verbatim. */
+export type SceneWireType = 'power' | 'data' | 'signal';
+export interface SceneWirePort {
+  key: string;
+  type: SceneWireType;
+  anchor: Point3;
+}
+export interface SceneWireDevice {
+  uid: string;
+  name: string;
+  center: [number, number];
+  size: [number, number, number];
+  ports: SceneWirePort[];
+}
+export interface SceneWireConn {
+  id: string;
+  type: SceneWireType;
+  a: Point3;
+  b: Point3;
+  lane: number;
+}
+export interface WiringSceneView {
+  devices: SceneWireDevice[];
+  conns: SceneWireConn[];
+  pendingPort: string | null;
+  selectedConn: string | null;
 }
 
 type ThreeModule = typeof THREE_NS;
@@ -50,6 +83,7 @@ interface SceneState {
   specimenGroup: THREE_NS.Group;
   propsGroup: THREE_NS.Group;
   dropsGroup: THREE_NS.Group;
+  wiringGroup: THREE_NS.Group;
   ground: THREE_NS.Mesh;
   grid: THREE_NS.Object3D;
   groups: Record<string, THREE_NS.Group>;
@@ -70,6 +104,7 @@ export default function KitScene({
   real,
   propsOn,
   placedProps,
+  wiring,
   selectedSpecimen,
   onReady,
   onFail,
@@ -81,6 +116,8 @@ export default function KitScene({
   onPropsError,
   onExplodeCur,
   onCanvasDrop,
+  onPortClick,
+  onWireClick,
 }: {
   explodeTarget: number;
   spin: boolean;
@@ -88,6 +125,7 @@ export default function KitScene({
   real: boolean;
   propsOn: boolean;
   placedProps: PlacedProp[];
+  wiring: WiringSceneView | null;
   selectedSpecimen: string | null;
   onReady: () => void;
   onFail: () => void;
@@ -99,6 +137,8 @@ export default function KitScene({
   onPropsError: () => void;
   onExplodeCur: (v: number) => void;
   onCanvasDrop: (itemKey: string, pos: [number, number]) => void;
+  onPortClick: (portKey: string) => void;
+  onWireClick: (connId: string | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cbRef = useRef({
@@ -112,6 +152,8 @@ export default function KitScene({
     onPropsError,
     onExplodeCur,
     onCanvasDrop,
+    onPortClick,
+    onWireClick,
   });
   cbRef.current = {
     onReady,
@@ -124,6 +166,8 @@ export default function KitScene({
     onPropsError,
     onExplodeCur,
     onCanvasDrop,
+    onPortClick,
+    onWireClick,
   };
   const [sceneReady, setSceneReady] = useState(false);
   const glbCacheRef = useRef<Map<string, THREE_NS.Object3D>>(new Map());
@@ -132,6 +176,8 @@ export default function KitScene({
   targetRef.current = explodeTarget;
   const realRef = useRef(real);
   realRef.current = real;
+  const wiringRef = useRef(wiring);
+  wiringRef.current = wiring;
   const sceneRef = useRef<SceneState | null>(null);
   const specimenRef = useRef<Map<string, SpecimenRec>>(new Map());
   const specimenStateRef = useRef({ loaded: false, loading: false });
@@ -338,6 +384,16 @@ export default function KitScene({
         const dropsGroup = new THREE.Group();
         scene.add(dropsGroup);
 
+        /* The wiring layer: schematic device blocks, port markers
+         * and cable tubes for the build list — rebuilt wholesale
+         * by the effect below whenever the view-model changes.
+         * Independent of the kit groups: explode and CAD mode
+         * never touch it, and its picking is checked before the
+         * robot's while wiring mode is on. */
+        const wiringGroup = new THREE.Group();
+        wiringGroup.visible = false;
+        scene.add(wiringGroup);
+
         const st: SceneState = {
           THREE,
           renderer,
@@ -348,6 +404,7 @@ export default function KitScene({
           specimenGroup,
           propsGroup,
           dropsGroup,
+          wiringGroup,
           ground,
           grid,
           groups,
@@ -420,6 +477,24 @@ export default function KitScene({
             -((e.clientY - r.top) / r.height) * 2 + 1,
           );
           ray.setFromCamera(ptr, camera);
+          /* Wiring mode takes the click first: a port marker, a
+           * cable, or — on empty space — a background click that
+           * clears the pending selection. The robot/specimen
+           * picking below stays out of the way while it's on. */
+          if (wiringRef.current) {
+            const hits = ray.intersectObjects(wiringGroup.children, true);
+            let o: THREE_NS.Object3D | null = hits.length ? hits[0].object : null;
+            let portKey: string | null = null;
+            let connId: string | null = null;
+            while (o) {
+              if (o.userData.portKey) { portKey = o.userData.portKey as string; break; }
+              if (o.userData.connId) { connId = o.userData.connId as string; break; }
+              o = o.parent;
+            }
+            if (portKey) cbRef.current.onPortClick(portKey);
+            else cbRef.current.onWireClick(connId);
+            return;
+          }
           if (realRef.current) {
             const hits = ray.intersectObjects(specimenGroup.children, true);
             if (hits.length && hits[0].object.userData.partId) {
@@ -780,6 +855,122 @@ export default function KitScene({
       cancelled = true;
     };
   }, [placedProps, sceneReady]);
+
+  /* Wiring layer: rebuild the group from the view-model. Devices
+   * are small enough (a build list, not a world) that a wholesale
+   * rebuild per change beats incremental sync — and it can never
+   * drift from the stored connections. Blocks are translucent
+   * with edge lines and a name sprite: schematic furniture, not
+   * pretend hardware. Cables are tubes over the shared harness
+   * curve (lib/wire3d.ts), coloured by type. */
+  useEffect(() => {
+    const st = sceneRef.current;
+    if (!st || !sceneReady) return;
+    const THREE = st.THREE;
+    const group = st.wiringGroup;
+    group.traverse((m) => {
+      const mesh = m as THREE_NS.Mesh;
+      if ((mesh as { isMesh?: boolean }).isMesh) {
+        mesh.geometry?.dispose();
+        const mat = mesh.material as THREE_NS.Material;
+        if (mat) {
+          const sm = mat as THREE_NS.SpriteMaterial;
+          if (sm.map) sm.map.dispose();
+          mat.dispose();
+        }
+      }
+    });
+    group.clear();
+    group.visible = !!wiring;
+    if (!wiring) return;
+
+    const COLORS: Record<SceneWireType, number> = {
+      power: 0xef4444,
+      data: 0x38bdf8,
+      signal: 0xfacc15,
+    };
+    const labelSprite = (text: string) => {
+      const cv = document.createElement('canvas');
+      cv.width = 256;
+      cv.height = 52;
+      const ctx = cv.getContext('2d');
+      if (ctx) {
+        ctx.font = '600 25px -apple-system, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#e8eaed';
+        const label = text.length > 24 ? text.slice(0, 23) + '…' : text;
+        ctx.fillText(label, 128, 27);
+      }
+      const tex = new THREE.CanvasTexture(cv);
+      const spr = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: tex, transparent: true }),
+      );
+      spr.scale.set(0.115, 0.023, 1);
+      return spr;
+    };
+
+    for (const dev of wiring.devices) {
+      const [cx, cy] = dev.center;
+      const [w, d, h] = dev.size;
+      const holder = new THREE.Group();
+      holder.position.set(cx, cy, 0);
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(w, d, h),
+        new THREE.MeshStandardMaterial({
+          color: 0x39424f,
+          roughness: 0.75,
+          metalness: 0.1,
+          transparent: true,
+          opacity: 0.88,
+        }),
+      );
+      block.position.z = h / 2;
+      block.castShadow = true;
+      holder.add(block);
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(block.geometry),
+        new THREE.LineBasicMaterial({ color: 0x8b95a5 }),
+      );
+      edges.position.z = h / 2;
+      holder.add(edges);
+      const label = labelSprite(dev.name);
+      label.position.set(0, 0, h + 0.02);
+      holder.add(label);
+      for (const port of dev.ports) {
+        const marker = new THREE.Mesh(
+          new THREE.SphereGeometry(
+            wiring.pendingPort === port.key ? 0.009 : 0.0058,
+            14,
+            10,
+          ),
+          new THREE.MeshBasicMaterial({ color: COLORS[port.type] }),
+        );
+        marker.position.set(...port.anchor);
+        marker.userData.portKey = port.key;
+        group.add(marker);
+      }
+      group.add(holder);
+    }
+    for (const conn of wiring.conns) {
+      const pts = cableControlPoints(conn.a, conn.b, conn.lane).map(
+        (p) => new THREE.Vector3(...p),
+      );
+      const tube = new THREE.Mesh(
+        new THREE.TubeGeometry(
+          new THREE.CatmullRomCurve3(pts),
+          24,
+          wiring.selectedConn === conn.id ? 0.0038 : 0.0023,
+          6,
+        ),
+        new THREE.MeshBasicMaterial({ color: COLORS[conn.type] }),
+      );
+      tube.userData.connId = conn.id;
+      group.add(tube);
+    }
+  }, [wiring, sceneReady]);
 
   return <canvas id="view3d" ref={canvasRef} />;
 }
