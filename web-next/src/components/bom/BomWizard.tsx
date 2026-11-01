@@ -5,6 +5,7 @@ import { parts, partsKits, partTemplates, simReadyProps } from "@/lib/data";
 import type { Part, SimReadyPropEntry } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { BUILD_KEY } from "@/lib/buildList";
+import BuildPlanPanel from "./BuildPlanPanel";
 import { buildListToBomLines, type BuildEntry } from "@/lib/palette";
 import {
   catalogBomLine, kitBomLines, localMatchParts, mergeBomLines,
@@ -516,6 +517,11 @@ export default function BomWizard() {
                   {copied ? "Copied ✓" : "Copy as text"}
                 </button>
               </p>
+              <BuildPlanPanel
+                lines={lines}
+                title={title}
+                kitSlug={start.kind === "kit" ? start.slug : undefined}
+              />
             </>
           ) : (
             <p className="state-box">
