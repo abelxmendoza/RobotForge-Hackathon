@@ -218,8 +218,26 @@ function makeEnv(overrides = {}) {
   };
 }
 
-async function call(env, path, { method = 'GET', body, origin = SITE, ip = '203.0.113.7', headers: extraHeaders = {} } = {}) {
+/* The model routes are account-gated: scenarios that exercise
+ * them pass `auth: true` and the harness registers a throwaway
+ * account in that env (once per env) and attaches its session
+ * token, the way the signed-in site does. Registration is local
+ * to the Worker — it makes no upstream call and spends no model
+ * budget, so upstream-call and budget assertions are unaffected. */
+const envTokens = new WeakMap();
+async function tokenFor(env) {
+  if (envTokens.has(env)) return envTokens.get(env);
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'gate@example.com', password: 'gate-password-123', name: 'Gate User' } });
+  assert.strictEqual(reg.status, 201,
+    'gate helper register failed: ' + JSON.stringify(reg.body));
+  envTokens.set(env, reg.body.token);
+  return reg.body.token;
+}
+
+async function call(env, path, { method = 'GET', body, origin = SITE, ip = '203.0.113.7', headers: extraHeaders = {}, auth = false } = {}) {
   const headers = { 'CF-Connecting-IP': ip, ...extraHeaders };
+  if (auth) headers.Authorization = 'Bearer ' + await tokenFor(env);
   if (origin) headers.Origin = origin;
   let payload;
   if (body !== undefined) {
@@ -268,7 +286,7 @@ await scenario('allowed origin gets its CORS header', async () => {
 await scenario('describe happy path returns the parsed spec', async () => {
   basetenMode = 'spec';
   const r = await call(makeEnv(), '/describe',
-    { method: 'POST', body: { description: 'a small differential rover' } });
+    { method: 'POST', auth: true, body: { description: 'a small differential rover' } });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
   assert.deepStrictEqual(r.body.spec, GOOD_SPEC);
   assert.strictEqual(r.body.model, 'meta-models/muse-spark-open');
@@ -277,7 +295,7 @@ await scenario('describe happy path returns the parsed spec', async () => {
 await scenario('describe survives a fenced model reply', async () => {
   basetenMode = 'fenced';
   const r = await call(makeEnv(), '/describe',
-    { method: 'POST', body: { description: 'a rover' } });
+    { method: 'POST', auth: true, body: { description: 'a rover' } });
   assert.strictEqual(r.status, 200);
   assert.deepStrictEqual(r.body.spec, GOOD_SPEC);
 });
@@ -285,7 +303,7 @@ await scenario('describe survives a fenced model reply', async () => {
 await scenario('malformed model output is a 502, never passthrough', async () => {
   basetenMode = 'junk';
   const r = await call(makeEnv(), '/describe',
-    { method: 'POST', body: { description: 'a rover' } });
+    { method: 'POST', auth: true, body: { description: 'a rover' } });
   assert.strictEqual(r.status, 502);
   assert.strictEqual(r.body.code, 'bad_model_output');
   assert.ok(!('spec' in r.body));
@@ -294,7 +312,7 @@ await scenario('malformed model output is a 502, never passthrough', async () =>
 await scenario('chat happy path returns the answer', async () => {
   basetenMode = 'chat';
   const r = await call(makeEnv(), '/chat',
-    { method: 'POST', body: { message: 'What is RobotForge?' } });
+    { method: 'POST', auth: true, body: { message: 'What is RobotForge?' } });
   assert.strictEqual(r.status, 200);
   assert.strictEqual(r.body.answer, 'A concise live answer.');
 });
@@ -303,7 +321,7 @@ await scenario('client cannot override the model settings', async () => {
   basetenMode = 'chat';
   const before = upstreamCalls.length;
   const r = await call(makeEnv(), '/chat', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { message: 'hi', model: 'something-else', temperature: 9, max_tokens: 99999 },
   });
   assert.strictEqual(r.status, 200);
@@ -316,10 +334,10 @@ await scenario('client cannot override the model settings', async () => {
 await scenario('budget exhausted is a 503 before any model call', async () => {
   const env = makeEnv({ DAILY_LIMIT: '1' });
   basetenMode = 'chat';
-  const ok = await call(env, '/chat', { method: 'POST', body: { message: 'one' } });
+  const ok = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'one' } });
   assert.strictEqual(ok.status, 200);
   const before = upstreamCalls.length;
-  const r = await call(env, '/chat', { method: 'POST', body: { message: 'two' } });
+  const r = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'two' } });
   assert.strictEqual(r.status, 503);
   assert.strictEqual(r.body.code, 'budget_exhausted');
   assert.strictEqual(upstreamCalls.length, before, 'over-budget call reached the model');
@@ -330,19 +348,19 @@ await scenario('budget exhausted is a 503 before any model call', async () => {
 await scenario('per-IP limit is a 429', async () => {
   const env = makeEnv({ PER_IP_DAILY_LIMIT: '1' });
   basetenMode = 'chat';
-  const ok = await call(env, '/chat', { method: 'POST', body: { message: 'one' } });
+  const ok = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'one' } });
   assert.strictEqual(ok.status, 200);
-  const r = await call(env, '/chat', { method: 'POST', body: { message: 'two' } });
+  const r = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'two' } });
   assert.strictEqual(r.status, 429);
   assert.strictEqual(r.body.code, 'rate_limited');
   const other = await call(env, '/chat',
-    { method: 'POST', body: { message: 'different visitor' }, ip: '198.51.100.9' });
+    { method: 'POST', auth: true, body: { message: 'different visitor' }, ip: '198.51.100.9' });
   assert.strictEqual(other.status, 200);
 });
 
 await scenario('kill switch turns live calls away', async () => {
   const env = makeEnv({ LIVE_ENABLED: '0' });
-  const r = await call(env, '/chat', { method: 'POST', body: { message: 'hi' } });
+  const r = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'hi' } });
   assert.strictEqual(r.status, 503);
   assert.strictEqual(r.body.code, 'disabled');
   const h = await call(env, '/health');
@@ -352,10 +370,10 @@ await scenario('kill switch turns live calls away', async () => {
 await scenario('oversized inputs are rejected before the model', async () => {
   const before = upstreamCalls.length;
   const r = await call(makeEnv(), '/chat',
-    { method: 'POST', body: { message: 'x'.repeat(2001) } });
+    { method: 'POST', auth: true, body: { message: 'x'.repeat(2001) } });
   assert.strictEqual(r.status, 413);
   const r2 = await call(makeEnv(), '/describe',
-    { method: 'POST', body: { description: 'x'.repeat(4001) } });
+    { method: 'POST', auth: true, body: { description: 'x'.repeat(4001) } });
   assert.strictEqual(r2.status, 413);
   assert.strictEqual(upstreamCalls.length, before);
 });
@@ -364,7 +382,7 @@ await scenario('missing key is a plain 500, no call attempted', async () => {
   const env = makeEnv();
   delete env.BASETEN_API_KEY;
   const before = upstreamCalls.length;
-  const r = await call(env, '/chat', { method: 'POST', body: { message: 'hi' } });
+  const r = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'hi' } });
   assert.strictEqual(r.status, 500);
   assert.strictEqual(r.body.code, 'not_configured');
   assert.strictEqual(upstreamCalls.length, before);
@@ -388,7 +406,7 @@ await scenario('health reports which routes are configured', async () => {
 await scenario('photo without the Meta key is a 501, no call attempted', async () => {
   const before = upstreamCalls.length;
   const r = await call(makeEnv(), '/photo', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA' },
   });
   assert.strictEqual(r.status, 501);
@@ -401,7 +419,7 @@ await scenario('photo happy path enforces the ESTIMATED framing', async () => {
   const env = makeEnv({ META_API_KEY: 'meta-key-456' });
   const before = upstreamCalls.length;
   const r = await call(env, '/photo', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA', note: 'my rover' },
   });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
@@ -421,7 +439,7 @@ await scenario('photo happy path enforces the ESTIMATED framing', async () => {
 await scenario('photo malformed model output is a 502', async () => {
   metaMode = 'junk';
   const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/photo', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { image_data_url: 'data:image/png;base64,AAAA' },
   });
   assert.strictEqual(r.status, 502);
@@ -434,7 +452,7 @@ await scenario('document mode transcribes, prefixes and drops unbacked numbers',
   const env = makeEnv({ META_API_KEY: 'meta-key-456' });
   const before = upstreamCalls.length;
   const r = await call(env, '/photo', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { image_data_url: 'data:image/png;base64,AAAA', mode: 'document' },
   });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
@@ -461,7 +479,7 @@ await scenario('document mode transcribes, prefixes and drops unbacked numbers',
 await scenario('document mode rejects a mistyped printed value', async () => {
   metaMode = 'document-bad';
   const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/photo', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { image_data_url: 'data:image/png;base64,AAAA', mode: 'document' },
   });
   assert.strictEqual(r.status, 502);
@@ -472,10 +490,10 @@ await scenario('document mode rejects a mistyped printed value', async () => {
 await scenario('photo counts against the same daily budget', async () => {
   const env = makeEnv({ META_API_KEY: 'meta-key-456', DAILY_LIMIT: '1' });
   basetenMode = 'chat';
-  const ok = await call(env, '/chat', { method: 'POST', body: { message: 'one' } });
+  const ok = await call(env, '/chat', { method: 'POST', auth: true, body: { message: 'one' } });
   assert.strictEqual(ok.status, 200);
   const r = await call(env, '/photo', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA' },
   });
   assert.strictEqual(r.status, 503);
@@ -485,7 +503,7 @@ await scenario('photo counts against the same daily budget', async () => {
 await scenario('list happy path sanitizes invented catalogue ids', async () => {
   basetenMode = 'list';
   const r = await call(makeEnv(), '/list', {
-    method: 'POST',
+    method: 'POST', auth: true,
     body: { text: 'LiPo battery 4S 5200 mAh\nMystery gadget 3000' },
   });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
@@ -500,7 +518,7 @@ await scenario('list happy path sanitizes invented catalogue ids', async () => {
 await scenario('list drops an invalid draft spec with a note', async () => {
   basetenMode = 'list-bad-draft';
   const r = await call(makeEnv(), '/list', {
-    method: 'POST', body: { text: 'LiPo battery 4S 5200 mAh' },
+    method: 'POST', auth: true, body: { text: 'LiPo battery 4S 5200 mAh' },
   });
   assert.strictEqual(r.status, 200);
   assert.strictEqual(r.body.import.draft_spec, null);
@@ -510,7 +528,7 @@ await scenario('list drops an invalid draft spec with a note', async () => {
 await scenario('list malformed model output is a 502', async () => {
   basetenMode = 'junk';
   const r = await call(makeEnv(), '/list', {
-    method: 'POST', body: { text: 'some parts' },
+    method: 'POST', auth: true, body: { text: 'some parts' },
   });
   assert.strictEqual(r.status, 502);
   assert.strictEqual(r.body.code, 'bad_model_output');
@@ -525,7 +543,7 @@ await scenario('the Vercel site origin is allowed', async () => {
 
 await scenario('fix keeps only allowed, well-typed changes', async () => {
   basetenMode = 'fix';
-  const r = await call(makeEnv(), '/fix', { method: 'POST', body: {
+  const r = await call(makeEnv(), '/fix', { method: 'POST', auth: true, body: {
     spec: GOOD_SPEC, findings: ['[ERROR] geometry.clearance_vs_wheel: too high'] } });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
   assert.deepStrictEqual(r.body.changes.map(c => c.path), ['ground_clearance_m']);
@@ -535,28 +553,28 @@ await scenario('fix keeps only allowed, well-typed changes', async () => {
 });
 
 await scenario('fix without findings is a 400', async () => {
-  const r = await call(makeEnv(), '/fix', { method: 'POST', body: { spec: GOOD_SPEC, findings: [] } });
+  const r = await call(makeEnv(), '/fix', { method: 'POST', auth: true, body: { spec: GOOD_SPEC, findings: [] } });
   assert.strictEqual(r.status, 400);
   assert.strictEqual(r.body.code, 'missing_findings');
 });
 
 await scenario('fix malformed model output is a 502', async () => {
   basetenMode = 'junk';
-  const r = await call(makeEnv(), '/fix', { method: 'POST', body: {
+  const r = await call(makeEnv(), '/fix', { method: 'POST', auth: true, body: {
     spec: GOOD_SPEC, findings: ['[ERROR] x: y'] } });
   assert.strictEqual(r.status, 502);
   assert.strictEqual(r.body.code, 'bad_model_output');
 });
 
 await scenario('part without the Meta key is a 501', async () => {
-  const r = await call(makeEnv(), '/part', { method: 'POST',
+  const r = await call(makeEnv(), '/part', { method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA' } });
   assert.strictEqual(r.status, 501);
 });
 
 await scenario('part identifies and sanitizes', async () => {
   metaMode = 'part';
-  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/part', { method: 'POST',
+  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/part', { method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA', note: 'from my shelf' } });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
   assert.strictEqual(r.body.part.catalog_part_id, 'lipo_4s_5200');
@@ -567,7 +585,7 @@ await scenario('part identifies and sanitizes', async () => {
 
 await scenario('part-chat returns a sanitized update', async () => {
   basetenMode = 'part-chat';
-  const r = await call(makeEnv(), '/part-chat', { method: 'POST', body: {
+  const r = await call(makeEnv(), '/part-chat', { method: 'POST', auth: true, body: {
     part: { name: 'motor?' }, message: 'it is a 37mm 12V gearmotor',
     history: [{ role: 'assistant', text: 'What voltage is it?' }] } });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
@@ -578,7 +596,7 @@ await scenario('part-chat returns a sanitized update', async () => {
 
 await scenario('part-chat plain-text reply changes nothing', async () => {
   basetenMode = 'chat';
-  const r = await call(makeEnv(), '/part-chat', { method: 'POST', body: {
+  const r = await call(makeEnv(), '/part-chat', { method: 'POST', auth: true, body: {
     part: {}, message: 'what is this?' } });
   assert.strictEqual(r.status, 200);
   assert.strictEqual(r.body.update, null);
@@ -590,7 +608,7 @@ await scenario('Meta direct answers when Baseten fails, and says so', async () =
   const env = makeEnv({ META_API_KEY: 'meta-key-456' });
   const before = upstreamCalls.length;
   const r = await call(env, '/describe',
-    { method: 'POST', body: { description: 'a small rover' } });
+    { method: 'POST', auth: true, body: { description: 'a small rover' } });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
   assert.strictEqual(r.body.model, 'muse-spark-1.3');
   const hosts = upstreamCalls.slice(before).map(c => new URL(c.url).host);
@@ -601,7 +619,7 @@ await scenario('a pinned provider is the only one attempted', async () => {
   basetenMode = 'chat'; metaMode = 'chat';
   const env = makeEnv({ META_API_KEY: 'meta-key-456' });
   const before = upstreamCalls.length;
-  const r = await call(env, '/chat', { method: 'POST',
+  const r = await call(env, '/chat', { method: 'POST', auth: true,
     body: { message: 'hi', provider: 'meta' } });
   assert.strictEqual(r.status, 200);
   assert.strictEqual(r.body.answer, 'A concise Meta answer.');
@@ -613,7 +631,7 @@ await scenario('a pinned provider is the only one attempted', async () => {
 
 await scenario('pinning an unconfigured provider fails honestly', async () => {
   basetenMode = 'chat';
-  const r = await call(makeEnv(), '/chat', { method: 'POST',
+  const r = await call(makeEnv(), '/chat', { method: 'POST', auth: true,
     body: { message: 'hi', provider: 'meta' } });
   assert.strictEqual(r.status, 502);
   assert.strictEqual(r.body.code, 'upstream_error');
@@ -624,7 +642,7 @@ await scenario('transcribe happy path returns the transcript', async () => {
   const wav = new Uint8Array(48);
   wav.set([0x52, 0x49, 0x46, 0x46], 0); // 'RIFF'
   wav.set([0x57, 0x41, 0x56, 0x45], 8); // 'WAVE'
-  const r = await call(env, '/transcribe', { method: 'POST',
+  const r = await call(env, '/transcribe', { method: 'POST', auth: true,
     body: { audio_b64: Buffer.from(wav).toString('base64') } });
   assert.strictEqual(r.status, 200, JSON.stringify(r.body));
   assert.strictEqual(r.body.transcript, 'a small indoor rover with four wheels');
@@ -634,7 +652,7 @@ await scenario('transcribe happy path returns the transcript', async () => {
 
 await scenario('transcribe without the Meta key is a 501', async () => {
   const before = upstreamCalls.length;
-  const r = await call(makeEnv(), '/transcribe', { method: 'POST',
+  const r = await call(makeEnv(), '/transcribe', { method: 'POST', auth: true,
     body: { audio_b64: 'UklGRg==' } });
   assert.strictEqual(r.status, 501);
   assert.strictEqual(r.body.code, 'transcribe_not_configured');
@@ -643,7 +661,7 @@ await scenario('transcribe without the Meta key is a 501', async () => {
 
 await scenario('transcribe rejects non-WAV audio', async () => {
   const env = makeEnv({ META_API_KEY: 'meta-key-456' });
-  const r = await call(env, '/transcribe', { method: 'POST',
+  const r = await call(env, '/transcribe', { method: 'POST', auth: true,
     body: { audio_b64: Buffer.from('not a wav file at all........').toString('base64') } });
   assert.strictEqual(r.status, 400);
   assert.strictEqual(r.body.code, 'bad_audio');
@@ -976,6 +994,92 @@ await scenario('auth is a 503 when the JWT secret is missing', async () => {
   assert.strictEqual(r.body.code, 'auth_not_configured');
   const h = await call(env, '/health');
   assert.strictEqual(h.body.auth, false);
+});
+
+/* ---------------- the account gate on the model routes -------- */
+
+await scenario('live routes refuse anonymous callers with a 401', async () => {
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const before = upstreamCalls.length;
+  const attempts = [
+    ['/describe', { description: 'a rover' }],
+    ['/chat', { message: 'hi' }],
+    ['/list', { text: 'a battery' }],
+    ['/photo', { image_data_url: 'data:image/jpeg;base64,AAAA' }],
+    ['/fix', { spec: GOOD_SPEC, findings: ['[ERROR] x: y'] }],
+    ['/part', { image_data_url: 'data:image/jpeg;base64,AAAA' }],
+    ['/part-chat', { part: {}, message: 'what is this?' }],
+    ['/transcribe', { audio_b64: 'UklGRg==' }],
+  ];
+  for (const [path, body] of attempts) {
+    const r = await call(env, path, { method: 'POST', body });
+    assert.strictEqual(r.status, 401, path + ' answered ' + r.status);
+    assert.strictEqual(r.body.code, 'auth_required', path);
+  }
+  assert.strictEqual(upstreamCalls.length, before,
+    'an anonymous call reached a model upstream');
+  const h = await call(env, '/health');
+  assert.strictEqual(h.body.budget.used, 0,
+    'anonymous calls must not spend the daily budget');
+});
+
+await scenario('live routes pass with a valid account token', async () => {
+  const env = makeEnv();
+  basetenMode = 'spec';
+  const r = await call(env, '/describe', { method: 'POST', auth: true,
+    body: { description: 'a small differential rover' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.deepStrictEqual(r.body.spec, GOOD_SPEC);
+  basetenMode = 'chat';
+  const c = await call(env, '/chat', { method: 'POST', auth: true,
+    body: { message: 'What is RobotForge?' } });
+  assert.strictEqual(c.status, 200);
+  assert.strictEqual(c.body.answer, 'A concise live answer.');
+});
+
+await scenario('live routes refuse a tampered account token', async () => {
+  const env = makeEnv();
+  const token = await tokenFor(env);
+  const parts = token.split('.');
+  const tampered = parts[0] + '.' + parts[1] + '.' +
+    (parts[2][0] === 'A' ? 'B' : 'A') + parts[2].slice(1);
+  const before = upstreamCalls.length;
+  const r = await call(env, '/describe', { method: 'POST',
+    headers: { Authorization: 'Bearer ' + tampered },
+    body: { description: 'a rover' } });
+  assert.strictEqual(r.status, 401);
+  assert.strictEqual(r.body.code, 'auth_required');
+  assert.strictEqual(upstreamCalls.length, before);
+});
+
+await scenario('health, login and operator routes are not session-gated', async () => {
+  const env = makeEnv();
+  const h = await call(env, '/health');
+  assert.strictEqual(h.status, 200);
+  await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'pub@example.com', password: 'password-123' } });
+  const login = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'pub@example.com', password: 'password-123' } });
+  assert.strictEqual(login.status, 200, 'login must stay public');
+  /* The operator gate is unchanged: a session token is not an
+   * operator token, and the operator token needs no session. */
+  const asUser = await call(env, '/admin/users',
+    { headers: { Authorization: 'Bearer ' + login.body.token } });
+  assert.strictEqual(asUser.status, 401);
+  const asOperator = await call(env, '/admin/users',
+    { headers: { 'X-Operator-Token': 'mock-operator-token' } });
+  assert.strictEqual(asOperator.status, 200);
+});
+
+await scenario('live routes fail closed when accounts are not configured', async () => {
+  const env = makeEnv();
+  delete env.AUTH_JWT_SECRET;
+  const before = upstreamCalls.length;
+  const r = await call(env, '/describe', { method: 'POST',
+    body: { description: 'a rover' } });
+  assert.strictEqual(r.status, 503);
+  assert.strictEqual(r.body.code, 'auth_not_configured');
+  assert.strictEqual(upstreamCalls.length, before);
 });
 
 const failed = results.filter(r => r.startsWith('FAIL'));

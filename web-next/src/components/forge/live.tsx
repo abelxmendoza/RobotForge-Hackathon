@@ -88,15 +88,39 @@ export function LiveOffReason({
   return <>that live route isn’t configured on the endpoint</>;
 }
 
+/* The Worker's model routes are account-gated: they verify the
+ * session Bearer token (see live/worker.js requireAccount). The
+ * session lives in localStorage under the key lib/auth.ts owns;
+ * it is read here directly because lib/auth.ts imports liveBase
+ * from this module — importing it back would be a cycle. With no
+ * stored session the call goes out anonymous and the Worker
+ * answers 401 auth_required, which callers already handle as a
+ * live-off fallback. Demo mode never reaches this: postJSON
+ * refuses above, before any token is read. */
+export function sessionToken(): string | null {
+  try {
+    const raw = window.localStorage.getItem('rf.auth.v1');
+    if (!raw) return null;
+    const s = JSON.parse(raw) as { token?: unknown };
+    return typeof s.token === 'string' && s.token ? s.token : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function postJSON<T>(path: string, payload: unknown): Promise<T> {
   if (isDemoMode()) {
     const e = new Error(DEMO_LIVE_MESSAGE) as Error & { code?: string };
     e.code = 'demo_mode';
     throw e;
   }
+  const token = sessionToken();
   const r = await fetch(liveBase + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+    },
     body: JSON.stringify(payload),
   });
   let body: { error?: string; code?: string } | null = null;

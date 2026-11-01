@@ -148,6 +148,7 @@ def test_worker_guardrails_and_routes_present():
                 "/auth/<provider>/start", "/auth/<provider>/callback",
                 "(meta|github|google)", "/admin/users", "/admin/seed-founder",
                 "auth_not_configured", "reserved_email", "pbkdf2",
+                "auth_required", "requireAccount", "MODEL_PATHS",
                 "AUTH_JWT_SECRET", "OPERATOR_TOKEN", "metaLogin",
                 "githubLogin", "googleLogin", "providers",
                 "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET",
@@ -208,6 +209,11 @@ def test_worker_mock_suite():
                  "auth google login happy path",
                  "auth google login fails when the email is unverified",
                  "auth oauth same email lands in the existing account",
+                 "live routes refuse anonymous callers with a 401",
+                 "live routes pass with a valid account token",
+                 "live routes refuse a tampered account token",
+                 "health, login and operator routes are not session-gated",
+                 "live routes fail closed when accounts are not configured",
                  "malformed model output is a 502"):
         assert "PASS " + name.split(" is a 501")[0] in r.stdout or \
             name in r.stdout, name

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function DataDeletionPage() {
   return (
-    <AppShell active="" crumbs={[{ label: "Data Deletion" }]}>
+    <AppShell active="" gate={false} crumbs={[{ label: "Data Deletion" }]}>
       <div className="page-head">
         <div>
           <div className="eyebrow">Fine print</div>

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <AppShell active="" crumbs={[{ label: "Privacy Policy" }]}>
+    <AppShell active="" gate={false} crumbs={[{ label: "Privacy Policy" }]}>
       <div className="page-head">
         <div>
           <div className="eyebrow">Fine print</div>
