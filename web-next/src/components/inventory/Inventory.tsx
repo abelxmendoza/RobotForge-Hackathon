@@ -14,7 +14,7 @@ import { readInventoryPhoto, saveInventoryPhoto } from '@/lib/inventoryPhotos';
 import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
 import { preparePhoto } from '@/lib/image';
 import {
-  importedPart, countedPart, matchesInventory, INVENTORY_KEY, mergeUpdate, offlinePartReply, PART_CATEGORIES, PART_SPEC_KEYS, SPEC_KEY_LABEL,
+  importedPart, countedPart, matchesInventory, partReality, partSection, REALITY_LABEL, INVENTORY_KEY, mergeUpdate, offlinePartReply, PART_CATEGORIES, PART_SPEC_KEYS, SPEC_KEY_LABEL,
   type ChatLine, type InventoryPart,
 } from '@/lib/inventory';
 
@@ -23,7 +23,7 @@ const label = (c: string) => c.replace(/_/g, ' ');
 
 function blankPart(source: 'photo' | 'manual', photo: string | null): InventoryPart {
   return {
-    id: uid('part'), name: source === 'photo' ? 'Identifying…' : 'New part', category: 'other', quantity: 1,
+    id: uid('part'), name: source === 'photo' ? 'Identifying…' : 'New part', category: 'other', reality: 'real', section: 'parts', quantity: 1,
     catalog_part_id: null, specs: {}, read_from_label: [], condition: 'unknown',
     confidence: source === 'manual' ? 'owner' : 'low', status: source === 'manual' ? 'confirmed' : 'needs_confirmation',
     question: '', photo, chat: [], createdAt: now(), source,
@@ -37,6 +37,7 @@ function PartCard({ p, robotName, active, onOpen }: { robotName?:string; p: Inve
       <span className="inv-card-body">
         <strong>{p.name}</strong>
         <span className="faint">{label(p.category)} · ×{p.quantity} · {robotName||'Shared / unassigned'}</span>
+        <span className={'verdict ' + (partReality(p) === 'real' ? 'pass' : 'marginal')}>{REALITY_LABEL[partReality(p)]}</span>{' '}
         <span className={'verdict ' + (p.status === 'confirmed' ? 'pass' : 'marginal')}>{p.status === 'confirmed' ? 'Confirmed' : 'Needs confirmation'}</span>
       </span>
     </button>
@@ -107,11 +108,23 @@ function PartDetail({ p, robots, health, onChange, onPatch, onDelete, onLive }: 
           <label className="g-field"><span>Name</span><input id={'inv-name-' + p.id} value={p.name} onChange={(e) => onChange({ ...p, name: e.target.value })} /></label>
           <div className="inv-row">
             <label className="g-field"><span>Category</span>
-              <select id={'inv-cat-' + p.id} value={p.category} onChange={(e) => onChange({ ...p, category: e.target.value })}>
+              <select id={'inv-cat-' + p.id} value={p.category} onChange={(e) => { const category = e.target.value; onChange({ ...p, category, section: category === 'tool' ? 'tools' : p.category === 'tool' ? 'parts' : partSection(p) }); }}>
                 {PART_CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
               </select>
             </label>
-            <label className="g-field"><span>Quantity</span><input id={'inv-qty-' + p.id} type="number" min={0} value={p.quantity} onChange={(e) => onChange({ ...p, quantity: Math.max(0, parseInt(e.target.value, 10) || 0) })} /></label>
+            <label className="g-field"><span>Real or sim only</span>
+              <select id={'inv-reality-' + p.id} value={partReality(p)} onChange={(e) => onChange({ ...p, reality: e.target.value as InventoryPart['reality'] })}>
+                <option value="real">Real — I have it</option>
+                <option value="sim_only">Sim only — not on my shelf</option>
+              </select>
+            </label>
+            <label className="g-field"><span>Section</span>
+              <select id={'inv-section-' + p.id} value={partSection(p)} onChange={(e) => onChange({ ...p, section: e.target.value as InventoryPart['section'] })}>
+                <option value="parts">Parts</option>
+                <option value="tools">Tools</option>
+              </select>
+            </label>
+            <label className="g-field"><span>{partReality(p) === 'real' ? 'Quantity' : 'Virtual quantity'}</span><input id={'inv-qty-' + p.id} type="number" min={0} value={p.quantity} onChange={(e) => onChange({ ...p, quantity: Math.max(0, parseInt(e.target.value, 10) || 0) })} /></label>
             <label className="g-field"><span>Condition</span>
               <select id={'inv-cond-' + p.id} value={p.condition} onChange={(e) => onChange({ ...p, condition: e.target.value as InventoryPart['condition'] })}>
                 {['new', 'used', 'damaged', 'unknown'].map((c) => <option key={c} value={c}>{c}</option>)}
@@ -272,6 +285,10 @@ export default function Inventory() {
     return Object.entries(by).sort((a, b) => b[1] - a[1]);
   }, [parts]);
   const pending = parts.filter((p) => p.status !== 'confirmed').length;
+  const realQty = parts.filter((p) => partReality(p) === 'real').reduce((a, p) => a + p.quantity, 0);
+  const simQty = parts.filter((p) => partReality(p) === 'sim_only').reduce((a, p) => a + p.quantity, 0);
+  const shownParts = shown.filter((p) => partSection(p) === 'parts');
+  const shownTools = shown.filter((p) => partSection(p) === 'tools');
   const open = parts.find((p) => p.id === openId) ?? null;
 
   if (!ready) return <p className="muted">Loading your inventory…</p>;
@@ -288,6 +305,7 @@ export default function Inventory() {
         <input ref={photoRef} type="file" accept="image/*" capture="environment" multiple hidden onChange={(e) => { addPhotos(e.target.files); e.target.value = ''; }} />
         <button type="button" className="btn btn-primary" onClick={() => photoRef.current?.click()}>Photograph parts</button>
         <button type="button" className="btn" onClick={() => { const p = {...blankPart('manual', null),robot_id:intakeRobot||null}; commit([p, ...readStore<InventoryPart[]>(INVENTORY_KEY,[])]); setOpenId(p.id); }}>Add by hand</button>
+        <button type="button" className="btn" onClick={() => { const p = {...blankPart('manual', null),name:'New sim-only part',reality:'sim_only' as const,robot_id:intakeRobot||null}; commit([p, ...readStore<InventoryPart[]>(INVENTORY_KEY,[])]); setOpenId(p.id); }}>Add sim-only part</button>
         <span className="inv-spacer" />
         <button type="button" className="btn btn-sm" disabled={!parts.length||exporting} onClick={exportInventory}>{exporting?'Exporting…':'Export photos & inventory'}</button>
         <input ref={importRef} type="file" accept=".json,application/json" hidden onChange={(e) => { importFile(e.target.files?.[0]); e.target.value = ''; }} />
@@ -303,7 +321,8 @@ export default function Inventory() {
 
       {parts.length > 0 && (
         <div className="inv-summary">
-          <span><strong>{parts.reduce((a, p) => a + p.quantity, 0)}</strong> parts</span>
+          <span><strong>{realQty}</strong> real on the shelf</span>
+          <span><strong>{simQty}</strong> sim only (virtual)</span>
           <span><strong>{pending}</strong> to confirm</span>
           {summary.slice(0, 6).map(([c, n]) => <span key={c} className="faint">{label(c)} ×{n}</span>)}
         </div>
@@ -322,14 +341,25 @@ export default function Inventory() {
       </div>
       <p className="faint">Showing {shown.length} inventory record(s). Quantity zero means out of stock.</p>
       <div className="inv-layout">
-        <div className="inv-grid">
+        <div>
           {shown.length === 0 && (
             <div className="inv-empty">
               <h3>{parts.length ? 'Nothing in this filter' : 'Start with what’s on your shelf'}</h3>
-              <p className="muted">Photograph one part per image, or select several images at once. Muse Spark reads the labels, guesses the rest, and asks you one question to confirm. Confirmed batteries, motors and wheels can be fitted to a robot in <Link href="/garage/">My robots</Link>.</p>
+              <p className="muted">Photograph one part per image, or select several images at once. Muse Spark reads the labels, guesses the rest, and asks you one question to confirm. Confirmed batteries, motors and wheels can be fitted to a robot in <Link href="/garage/">My robots</Link>. Something you only have in simulation? Add it as a sim-only part — it stays visibly separate from the real stock on your shelf.</p>
             </div>
           )}
-          {shown.map((p) => <PartCard key={p.id} p={p} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
+          {shownParts.length > 0 && (<>
+            <h3 className="inv-section-title">Parts <span className="faint">({shownParts.length})</span></h3>
+            <div className="inv-grid">
+              {shownParts.map((p) => <PartCard key={p.id} p={p} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
+            </div>
+          </>)}
+          {shownTools.length > 0 && (<>
+            <h3 className="inv-section-title">Tools <span className="faint">({shownTools.length})</span></h3>
+            <div className="inv-grid">
+              {shownTools.map((p) => <PartCard key={p.id} p={p} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
+            </div>
+          </>)}
         </div>
         {open && (
           <PartDetail key={open.id} p={open} robots={robots} health={health} onChange={update} onPatch={patch} onDelete={() => { commit(readStore<InventoryPart[]>(INVENTORY_KEY,[]).filter((x) => x.id !== open.id)); setOpenId(null); }} onLive={onLive} />

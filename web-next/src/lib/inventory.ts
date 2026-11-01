@@ -1,7 +1,22 @@
 /* The parts inventory: one record per kind of part on the shelf.
  * A photo-identified part starts as "needs confirmation"; it becomes
  * "confirmed" only when its owner says so (in the part's chat or with
- * the Confirm button). The model's guess never confirms itself. */
+ * the Confirm button). The model's guess never confirms itself.
+ *
+ * Every record also says whether it is REAL or SIM-ONLY, and which
+ * section it lives in:
+ * - reality 'real': a physical item the owner actually has. Its
+ *   quantity is a shelf count.
+ * - reality 'sim_only': the item exists only in simulation / the
+ *   catalogue. Its quantity is virtual — it must never be counted
+ *   as owned stock, and fitting it to a robot is a simulation fit,
+ *   not a claim that the hardware is on the bench.
+ * - section 'parts' vs 'tools': tools (soldering irons, drivers,
+ *   cutters…) are equipment used to build, not components fitted
+ *   to a robot. Category 'tool' defaults to the tools section.
+ * Records saved before these fields existed are physical shelf
+ * items by construction (photo or manual entry), so they read
+ * back as 'real', sectioned by their category. */
 
 export const PART_CATEGORIES = ['battery', 'motor', 'motor_driver', 'controller', 'computer', 'sensor', 'wheel', 'servo', 'power', 'radio', 'frame', 'cable', 'tool', 'other'] as const;
 export const PART_SPEC_KEYS = ['voltage_v', 'capacity_mah', 'current_a', 'stall_torque_nm', 'rpm', 'diameter_mm', 'width_mm', 'mass_g', 'cells', 'chemistry', 'interface', 'range_m', 'model_number'] as const;
@@ -15,6 +30,9 @@ export const SPEC_KEY_LABEL: Record<string, string> = {
 
 export interface ChatLine { role: 'user' | 'assistant'; text: string; live?: boolean }
 
+export type InventoryReality = 'real' | 'sim_only';
+export type InventorySection = 'parts' | 'tools';
+
 export interface InventoryPart {
   robot_id?: string | null;
   stock_location?: string;
@@ -25,6 +43,8 @@ export interface InventoryPart {
   id: string;
   name: string;
   category: string;
+  reality: InventoryReality;
+  section: InventorySection;
   quantity: number;
   catalog_part_id: string | null;
   specs: Record<string, string | number>;
@@ -41,6 +61,20 @@ export interface InventoryPart {
 
 export const INVENTORY_KEY = 'rf.inventory.v1';
 
+/* Reality/section accessors that also normalise legacy records
+ * (saved before the fields existed): photo/manual records were
+ * physical shelf items, and a 'tool' category lives in Tools. */
+export function partReality(p: Pick<InventoryPart, 'reality'>): InventoryReality {
+  return p.reality === 'sim_only' ? 'sim_only' : 'real';
+}
+export function sectionForCategory(category: string): InventorySection {
+  return category === 'tool' ? 'tools' : 'parts';
+}
+export function partSection(p: Pick<InventoryPart, 'section' | 'category'>): InventorySection {
+  return p.section === 'tools' || p.section === 'parts' ? p.section : sectionForCategory(p.category);
+}
+export const REALITY_LABEL: Record<InventoryReality, string> = { real: 'Real', sim_only: 'Sim only' };
+
 export function applyUpdate(part: InventoryPart, u: Partial<InventoryPart> | null): InventoryPart {
   if (!u) return part;
   return {
@@ -49,6 +83,8 @@ export function applyUpdate(part: InventoryPart, u: Partial<InventoryPart> | nul
     ...(u.category ? { category: u.category } : {}),
     ...(typeof u.quantity === 'number' && Number.isInteger(u.quantity) && u.quantity >= 0 ? { quantity: u.quantity } : {}),
     ...(u.condition ? { condition: u.condition } : {}),
+    ...(u.reality ? { reality: u.reality } : {}),
+    ...(u.section ? { section: u.section } : {}),
     specs: { ...part.specs, ...(u.specs || {}) },
   };
 }
@@ -60,7 +96,7 @@ export function applyUpdate(part: InventoryPart, u: Partial<InventoryPart> | nul
 export function mergeUpdate(latest: InventoryPart, snapshot: InventoryPart, u: Partial<InventoryPart> | null): InventoryPart {
   if (!u) return latest;
   const next = { ...latest, specs: { ...latest.specs } };
-  for (const k of ['name', 'category', 'quantity', 'condition'] as const) {
+  for (const k of ['name', 'category', 'quantity', 'condition', 'reality', 'section'] as const) {
     if (u[k] !== undefined && latest[k] === snapshot[k]) (next as Record<string, unknown>)[k] = u[k];
   }
   for (const [k, v] of Object.entries(u.specs || {})) {
@@ -105,11 +141,11 @@ export function offlinePartReply(part: InventoryPart, message: string): { reply:
 /* Filename classification is a hint only; photo drafts remain unconfirmed. */
 export function categoryHint(name: string): string {
   const n=name.toLowerCase().replace(/[_-]/g,' ');
-  const rules: [string,RegExp][]=[['motor_driver',/motor driver|tb6612|l298/],['computer',/jetson|raspberry|rpi/],['battery',/battery|lipo|li ion|lifepo/],['power',/buck|boost|converter|regulator|bms/],['servo',/servo/],['motor',/motor/],['sensor',/lidar|camera|realsense|imu|ultrasonic|sensor/],['wheel',/wheel/],['controller',/esp32|arduino|pico/],['cable',/cable|harness|connector/],['frame',/frame|chassis|mount/]];
+  const rules: [string,RegExp][]=[['motor_driver',/motor driver|tb6612|l298/],['computer',/jetson|raspberry|rpi/],['battery',/battery|lipo|li ion|lifepo/],['power',/buck|boost|converter|regulator|bms/],['servo',/servo/],['motor',/motor/],['sensor',/lidar|camera|realsense|imu|ultrasonic|sensor/],['wheel',/wheel/],['controller',/esp32|arduino|pico/],['cable',/cable|harness|connector/],['frame',/frame|chassis|mount/],['tool',/soldering|screwdriver|pliers|multimeter|caliper|wire cutter|hex key|allen key|crimper|heat gun/]];
   return rules.find(([,re])=>re.test(n))?.[0]??'other';
 }
 export function matchesInventory(part: InventoryPart, query: string, category: string, robot: string): boolean {
-  const text=[part.name,part.category,part.stock_location,part.notes,part.filename,...Object.values(part.specs)].join(' ').toLowerCase();
+  const text=[part.name,part.category,partSection(part),partReality(part)==='sim_only'?'sim only simulation':'real',part.stock_location,part.notes,part.filename,...Object.values(part.specs)].join(' ').toLowerCase();
   return (!query.trim()||query.toLowerCase().trim().split(/\s+/).every(t=>text.includes(t))) &&
     (category==='all'||part.category===category) && (robot==='all'||(robot==='unassigned'?!part.robot_id:part.robot_id===robot));
 }
@@ -125,7 +161,7 @@ export function importedPart(raw: unknown): InventoryPart {
   const safe={...p};delete (safe as Record<string,unknown>).photo_full;
   const image=(v:unknown)=>typeof v==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(v)?v:null;
   const specs=Object.fromEntries(Object.entries(p.specs??{}).filter(([,v])=>typeof v==='string'||(typeof v==='number'&&Number.isFinite(v))));
-  return {...safe,id:p.id,name:p.name,category:p.category!,quantity:p.quantity!,specs,photo:image(p.photo),photo_asset_id:null,catalog_part_id:typeof p.catalog_part_id==='string'?p.catalog_part_id:null,read_from_label:Array.isArray(p.read_from_label)?p.read_from_label.filter(x=>typeof x==='string'):[],condition:['new','used','damaged','unknown'].includes(p.condition??'')?p.condition!:'unknown',confidence:'owner',status:p.status==='confirmed'?'confirmed':'needs_confirmation',question:typeof p.question==='string'?p.question:'',chat:Array.isArray(p.chat)?p.chat.filter(c=>c&&(c.role==='user'||c.role==='assistant')&&typeof c.text==='string'):[],createdAt:typeof p.createdAt==='string'?p.createdAt:new Date().toISOString(),source:p.source==='photo'?'photo':'manual',robot_id:typeof p.robot_id==='string'?p.robot_id:null,stock_location:typeof p.stock_location==='string'?p.stock_location:'',notes:typeof p.notes==='string'?p.notes:''};
+  return {...safe,id:p.id,name:p.name,category:p.category!,quantity:p.quantity!,specs,photo:image(p.photo),photo_asset_id:null,catalog_part_id:typeof p.catalog_part_id==='string'?p.catalog_part_id:null,read_from_label:Array.isArray(p.read_from_label)?p.read_from_label.filter(x=>typeof x==='string'):[],condition:['new','used','damaged','unknown'].includes(p.condition??'')?p.condition!:'unknown',confidence:'owner',status:p.status==='confirmed'?'confirmed':'needs_confirmation',question:typeof p.question==='string'?p.question:'',chat:Array.isArray(p.chat)?p.chat.filter(c=>c&&(c.role==='user'||c.role==='assistant')&&typeof c.text==='string'):[],createdAt:typeof p.createdAt==='string'?p.createdAt:new Date().toISOString(),source:p.source==='photo'?'photo':'manual',reality:p.reality==='sim_only'?'sim_only':'real',section:p.section==='tools'||p.section==='parts'?p.section:sectionForCategory(p.category!),robot_id:typeof p.robot_id==='string'?p.robot_id:null,stock_location:typeof p.stock_location==='string'?p.stock_location:'',notes:typeof p.notes==='string'?p.notes:''};
 }
 
 export type InventoryCommand = {kind:'list';robotName?:string}|{kind:'quantity';name:string;quantity:number}|{kind:'assign';name:string;robotName:string};

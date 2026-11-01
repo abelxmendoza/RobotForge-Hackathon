@@ -613,6 +613,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .inv-summary{display:flex;gap:var(--s4);flex-wrap:wrap;font-size:var(--fs-sm)}
 .inv-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:var(--s5);align-items:start}
 .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s3)}
+.inv-section-title{margin:var(--s4) 0 var(--s2);font-size:var(--fs-base)}
 .inv-card{display:flex;gap:var(--s3);text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px;color:var(--text);cursor:pointer;font:inherit;align-items:flex-start}
 .inv-card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .inv-card img,.inv-noimg{width:64px;height:64px;border-radius:8px;object-fit:cover;flex:none}

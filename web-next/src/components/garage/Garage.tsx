@@ -26,7 +26,7 @@ import {
   diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
-import { INVENTORY_KEY, type InventoryPart } from '@/lib/inventory';
+import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 
 const now = () => new Date().toISOString();
 
@@ -460,7 +460,10 @@ export default function Garage() {
   const roverOn = draft && isRover(draft);
   const roverDraft = useMemo(() => (draft && isRover(draft) ? checkRover(draft, rover).checks : null), [draft, rover]);
   const roverBase = useMemo(() => (base && isRover(base.spec) ? checkRover(base.spec, rover).checks : null), [base, rover]);
-  const usableParts = inventory.filter((p) => p.status === 'confirmed' && p.quantity > 0 && (!p.robot_id || p.robot_id === robot?.id) && partToChanges(p).length);
+  /* Tools are equipment, not components — they live in the inventory's
+   * Tools section and are never fitted to a robot. Sim-only parts CAN
+   * be fitted (the fit is a simulation fit, and usePart says so). */
+  const usableParts = inventory.filter((p) => p.status === 'confirmed' && p.quantity > 0 && partSection(p) === 'parts' && (!p.robot_id || p.robot_id === robot?.id) && partToChanges(p).length);
   const dc = counts(draftLines);
   const fixable = dc.errors > 0 || (withWarnings && dc.warns > 0);
 
@@ -501,7 +504,7 @@ export default function Garage() {
     let d = draft;
     for (const c of partToChanges(p)) d = setPath(d, c.path, c.value);
     setDraft(d);
-    setDraftNote((n) => [...n, `Fitted ${p.name} from inventory`]);
+    setDraftNote((n) => [...n, partReality(p) === 'sim_only' ? `Fitted ${p.name} from inventory (sim only — not on your shelf)` : `Fitted ${p.name} from inventory`]);
     if (!label) setLabel(`Fit ${p.name}`);
   };
 
@@ -709,7 +712,7 @@ export default function Garage() {
                     {usableParts.map((p) => (
                       <li key={p.id}>
                         {p.photo && <img src={p.photo} alt="" width={40} height={40} />}
-                        <span><strong>{p.name}</strong> <span className="faint g-small">{partToChanges(p).map((c) => c.path).join(', ')}</span></span>
+                        <span><strong>{p.name}</strong> <span className="faint g-small">{partReality(p) === 'sim_only' ? 'sim only · ' : ''}{partToChanges(p).map((c) => c.path).join(', ')}</span></span>
                         <button type="button" className="btn btn-sm" onClick={() => usePart(p)}>Fit</button>
                       </li>
                     ))}
