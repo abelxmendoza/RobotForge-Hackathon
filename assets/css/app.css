@@ -1442,10 +1442,52 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .ws-hist-changes{list-style:none;margin:var(--s3) 0 0;padding:0;display:grid;gap:4px;font-size:var(--fs-sm)}
 .ws-hist-field{color:var(--text-muted)}
 .ws-hist-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--s3)}
-/* Phones: six Workshop tabs in a 3 x 2 grid, so History and Checks are
-   never hidden off the right edge of a scrolling strip. */
+/* Phones: the eight Workshop tabs in a 4 x 2 grid, so none is ever
+   hidden off the right edge of a scrolling strip. */
 @media (max-width:560px){
-  .ws-tabs{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible}
+  .ws-tabs{display:grid;grid-template-columns:repeat(4,1fr);overflow:visible}
   .ws-tabs button{justify-content:center;padding:10px 6px}
   .ws-tabs button svg{display:none}
+}
+
+/* Workshop Simulate tab: animated test runs acted out from lib/rover.ts */
+.sim-opts{margin-bottom:var(--s3)}
+.sim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--s4);margin:var(--s4) 0}
+.sim-scene{margin:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.sim-scene svg{display:block;width:100%;height:auto;background:linear-gradient(180deg,rgba(66,214,196,.06),transparent 70%)}
+.sim-scene figcaption{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:var(--s3) var(--s4);border-top:1px solid var(--border);font-size:var(--fs-sm)}
+.sim-scene figcaption .faint{flex-basis:100%;font-size:var(--fs-xs)}
+.sim-scene figcaption .chip{margin-left:auto}
+.sim-ground{fill:#1b2b3a;stroke:var(--border-strong);stroke-width:1.5}
+.sim-floor{stroke:var(--border-strong);stroke-width:2}
+.sim-angle{fill:none;stroke:var(--accent);stroke-width:1.5}
+.sim-label{fill:var(--text-muted);font:600 12px var(--font)}
+.sim-big{fill:var(--text);font-size:16px}
+.sim-warn{fill:#ff6b6b}
+.sim-body{fill:#2a4256;stroke:var(--accent);stroke-width:1.5}
+.sim-body.fail{stroke:#ff6b6b}.sim-body.marginal{stroke:#f5b942}.sim-body.unchecked{stroke:var(--border-strong)}
+.sim-sensor{fill:var(--accent)}
+.sim-wheel{fill:#101820;stroke:#8aa3b8;stroke-width:2}
+.sim-spoke{stroke:#8aa3b8;stroke-width:1.5}
+.sim-batt{fill:none;stroke:#8aa3b8;stroke-width:2}
+.sim-charge{fill:var(--accent)}
+.sim-charge.fail{fill:#ff6b6b}.sim-charge.marginal{fill:#f5b942}.sim-charge.unchecked{fill:var(--border-strong)}
+.sim-target{stroke:var(--text);stroke-width:2;stroke-dasharray:4 3}
+.sim-more{margin-top:var(--s4)}
+
+/* Workshop BOM tab */
+.bom-summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:var(--s3)}
+.bom-list{list-style:none;margin:0 0 var(--s3);padding:0;display:grid;gap:8px}
+.bom-row{display:grid;grid-template-columns:44px 1fr auto;gap:var(--s3);align-items:start;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border-strong);border-radius:var(--r);padding:var(--s3) var(--s4)}
+.bom-row.have{border-left-color:var(--accent)}
+.bom-row.sim{border-left-color:#f5b942}
+.bom-row.need{border-left-color:#ff6b6b}
+.bom-qty{font:700 var(--fs-md)/1.4 var(--mono);color:var(--text-muted)}
+.bom-main{display:grid;gap:2px;min-width:0}
+.bom-main .prov{margin-top:4px!important;font-size:var(--fs-xs)}
+.bom-have{font-size:var(--fs-xs);font-weight:600;max-width:220px;text-align:right}
+.bom-have.have{color:var(--accent)}.bom-have.sim{color:#f5b942}.bom-have.need{color:#ff6b6b}
+@media (max-width:560px){
+  .bom-row{grid-template-columns:36px 1fr}
+  .bom-have{grid-column:2;text-align:left;max-width:none}
 }
