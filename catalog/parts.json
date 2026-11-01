@@ -561,14 +561,137 @@
       "part_class": "materials",
       "source": "generic PLA filament",
       "specs": {
-        "density_g_cm3": 1.24,
-        "print_temp_c": "190-220"
+        "density_g_cm3": 1.19,
+        "print_temp_c": "190-220",
+        "filament_diameter_mm": 1.75,
+        "spool_weight_g": 1000.0
       },
       "blurb": "The standard easy-print 3D printing plastic, on a 1 kg spool.",
       "used_for": "Chassis plates, brackets and mounts (like this catalogue's CAD-kit parts).",
       "robot_types": [],
       "notes": "PLA is stiff and easy but softens in a hot car; PETG is the tougher choice for parts near motors. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "gather_history": [
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "density_g_cm3",
+          "prior": 1.24,
+          "new": 1.19,
+          "source_url": "https://shop.polymaker.com/products/polylite-pla"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "filament_diameter_mm",
+          "prior": null,
+          "new": 1.75,
+          "source_url": "https://shop.polymaker.com/products/polylite-pla"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "spool_weight_g",
+          "prior": null,
+          "new": 1000.0,
+          "source_url": "https://shop.polymaker.com/products/polylite-pla"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "price_estimate",
+          "prior": null,
+          "new": {
+            "unit_price": 19.99,
+            "currency": "USD",
+            "price_breaks": [
+              {
+                "qty": 1,
+                "unit_price": 19.99
+              }
+            ],
+            "stock_wording": "Sold out",
+            "source_kind": "web_gathered",
+            "supplier_url": "https://shop.polymaker.com/products/polylite-pla",
+            "fetched_at": "2026-11-01T18:23:35Z",
+            "expires_at": "2026-11-02T18:23:35Z",
+            "quote": "$19.99",
+            "basis": "1.75mm / 1kg"
+          },
+          "source_url": "https://shop.polymaker.com/products/polylite-pla"
+        }
+      ],
+      "provenance_gathered": {
+        "density_g_cm3": {
+          "value": 1.19,
+          "source_url": "https://shop.polymaker.com/products/polylite-pla",
+          "fetched_at": "2026-11-01T18:23:35Z",
+          "quote": "Density: 1.19g/cm³",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "filament_diameter_mm": {
+          "value": 1.75,
+          "source_url": "https://shop.polymaker.com/products/polylite-pla",
+          "fetched_at": "2026-11-01T18:23:35Z",
+          "quote": "1.75mm",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "spool_weight_g": {
+          "value": 1000.0,
+          "source_url": "https://shop.polymaker.com/products/polylite-pla",
+          "fetched_at": "2026-11-01T18:23:35Z",
+          "quote": "1kg",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "price_estimate": {
+          "value": {
+            "unit_price": 19.99,
+            "currency": "USD",
+            "price_breaks": [
+              {
+                "qty": 1,
+                "unit_price": 19.99
+              }
+            ],
+            "stock_wording": "Sold out",
+            "source_kind": "web_gathered",
+            "supplier_url": "https://shop.polymaker.com/products/polylite-pla",
+            "fetched_at": "2026-11-01T18:23:35Z",
+            "expires_at": "2026-11-02T18:23:35Z",
+            "quote": "$19.99",
+            "basis": "1.75mm / 1kg"
+          },
+          "source_url": "https://shop.polymaker.com/products/polylite-pla",
+          "fetched_at": "2026-11-01T18:23:35Z",
+          "quote": "$19.99",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        }
+      },
+      "price_estimate": {
+        "unit_price": 19.99,
+        "currency": "USD",
+        "price_breaks": [
+          {
+            "qty": 1,
+            "unit_price": 19.99
+          }
+        ],
+        "stock_wording": "Sold out",
+        "source_kind": "web_gathered",
+        "supplier_url": "https://shop.polymaker.com/products/polylite-pla",
+        "fetched_at": "2026-11-01T18:23:35Z",
+        "expires_at": "2026-11-02T18:23:35Z",
+        "quote": "$19.99",
+        "basis": "1.75mm / 1kg"
+      }
     },
     {
       "id": "petg_filament",
@@ -578,14 +701,209 @@
       "part_class": "materials",
       "source": "generic PETG filament",
       "specs": {
-        "density_g_cm3": 1.27,
-        "print_temp_c": "230-250"
+        "density_g_cm3": 1.3,
+        "print_temp_c": "230-250",
+        "bed_temp_c_max": 70.0,
+        "bed_temp_c_min": 60.0,
+        "filament_diameter_mm": 1.75,
+        "nozzle_temp_c_max": 260.0,
+        "nozzle_temp_c_min": 240.0,
+        "spool_weight_g": 1000.0
       },
       "blurb": "A tougher, slightly flexible printing filament.",
       "used_for": "Functional brackets and parts that take knocks.",
       "robot_types": [],
       "notes": "Prints hotter than PLA and strings more; a dried spool prints noticeably better. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "gather_history": [
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "bed_temp_c_max",
+          "prior": null,
+          "new": 70.0,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "bed_temp_c_min",
+          "prior": null,
+          "new": 60.0,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "density_g_cm3",
+          "prior": 1.27,
+          "new": 1.3,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "filament_diameter_mm",
+          "prior": null,
+          "new": 1.75,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "nozzle_temp_c_max",
+          "prior": null,
+          "new": 260.0,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "nozzle_temp_c_min",
+          "prior": null,
+          "new": 240.0,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "spool_weight_g",
+          "prior": null,
+          "new": 1000.0,
+          "source_url": "https://shop.polymaker.com/products/petg"
+        },
+        {
+          "run_id": "20261101T182331Z-7a731d",
+          "applied_at": "2026-11-01T19:12:00Z",
+          "field": "price_estimate",
+          "prior": null,
+          "new": {
+            "unit_price": 18.99,
+            "currency": "USD",
+            "price_breaks": [
+              {
+                "qty": 1,
+                "unit_price": 18.99
+              }
+            ],
+            "stock_wording": "backordered",
+            "source_kind": "web_gathered",
+            "supplier_url": "https://shop.polymaker.com/products/petg",
+            "fetched_at": "2026-11-01T18:23:54Z",
+            "expires_at": "2026-11-02T18:23:54Z",
+            "quote": "$18.99",
+            "basis": "1kg"
+          },
+          "source_url": "https://shop.polymaker.com/products/petg"
+        }
+      ],
+      "provenance_gathered": {
+        "bed_temp_c_max": {
+          "value": 70.0,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "Bed temperature should be set between 60-70 °C.",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "bed_temp_c_min": {
+          "value": 60.0,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "Bed temperature should be set between 60-70 °C.",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "density_g_cm3": {
+          "value": 1.3,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "1.3",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "filament_diameter_mm": {
+          "value": 1.75,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "1.75mm",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "nozzle_temp_c_max": {
+          "value": 260.0,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "Recommended printing temperature is 240-260 °C.",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "nozzle_temp_c_min": {
+          "value": 240.0,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "Recommended printing temperature is 240-260 °C.",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "spool_weight_g": {
+          "value": 1000.0,
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "1kg",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        },
+        "price_estimate": {
+          "value": {
+            "unit_price": 18.99,
+            "currency": "USD",
+            "price_breaks": [
+              {
+                "qty": 1,
+                "unit_price": 18.99
+              }
+            ],
+            "stock_wording": "backordered",
+            "source_kind": "web_gathered",
+            "supplier_url": "https://shop.polymaker.com/products/petg",
+            "fetched_at": "2026-11-01T18:23:54Z",
+            "expires_at": "2026-11-02T18:23:54Z",
+            "quote": "$18.99",
+            "basis": "1kg"
+          },
+          "source_url": "https://shop.polymaker.com/products/petg",
+          "fetched_at": "2026-11-01T18:23:54Z",
+          "quote": "$18.99",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T182331Z-7a731d"
+        }
+      },
+      "price_estimate": {
+        "unit_price": 18.99,
+        "currency": "USD",
+        "price_breaks": [
+          {
+            "qty": 1,
+            "unit_price": 18.99
+          }
+        ],
+        "stock_wording": "backordered",
+        "source_kind": "web_gathered",
+        "supplier_url": "https://shop.polymaker.com/products/petg",
+        "fetched_at": "2026-11-01T18:23:54Z",
+        "expires_at": "2026-11-02T18:23:54Z",
+        "quote": "$18.99",
+        "basis": "1kg"
+      }
     },
     {
       "id": "fuse_inline",
