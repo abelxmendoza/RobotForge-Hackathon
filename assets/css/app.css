@@ -687,6 +687,29 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .demo-bar-welcome{max-width:1200px;margin:0 auto;padding:0 14px 12px}
 .demo-bar-welcome p{margin:0 0 10px;color:var(--text-muted);max-width:72ch}
 .demo-bar-welcome strong{color:var(--text)}
+/* The bar's ×: hides the strip for this demo session. The DEMO
+ * pill (below) takes over the labeling while the bar is hidden. */
+.demo-bar-dismiss{flex:none;width:44px;height:44px;display:grid;place-items:center;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-muted);font-size:20px;line-height:1;cursor:pointer}
+.demo-bar-dismiss:hover{border-color:var(--border-strong);background:var(--surface-2);color:var(--text)}
+/* DEMO pill: the persistent topbar marker while the bar is
+ * dismissed (shell/DemoBar.tsx's DemoPill). Same tag language as
+ * the bar itself; its menu carries the exit. */
+.demo-pill{position:relative;flex:none}
+.demo-pill-btn{font:700 11px/1 var(--mono);letter-spacing:.08em;padding:5px 8px;border:1px solid var(--accent);border-radius:5px;background:var(--accent);color:var(--accent-ink);text-transform:uppercase;cursor:pointer;min-height:32px}
+.demo-pill-menu{position:absolute;right:0;top:calc(100% + 10px);z-index:80;width:min(300px,calc(100vw - 24px));display:grid;gap:var(--s2);padding:var(--s4);border:1px solid var(--border-strong);border-radius:14px;background:var(--surface);box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.demo-pill-note{margin:0;color:var(--text-muted);font-size:var(--fs-sm)}
+.demo-pill-menu button{padding:8px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer;text-align:left}
+.demo-pill-menu button:hover{border-color:var(--text-faint);background:var(--surface-3)}
+/* The demo persona chip (shell/DemoIdentity.tsx): whose sample
+ * shelf this is, next to the real Sign in control. */
+.demo-identity{display:inline-flex;align-items:center;gap:8px;flex:none}
+.demo-identity-avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent-soft);border:1px solid var(--accent);color:var(--text);font:700 11px/1 var(--mono)}
+.demo-identity-text{display:grid;line-height:1.15}
+.demo-identity-name{font-size:var(--fs-sm);color:var(--text)}
+.demo-identity-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:720px){.demo-identity-text{display:none}}
+/* The sign-in card's demo entry sits under the guest note. */
+.acct-guest-demo{margin-top:10px}
 .live-progress{margin:var(--s2) 0}
 .lp-steps{list-style:none;margin:0 0 var(--s2);padding:0;display:grid;gap:4px;font-size:var(--fs-sm)}
 .lp-steps li{padding-left:22px;position:relative;color:var(--text-faint)}

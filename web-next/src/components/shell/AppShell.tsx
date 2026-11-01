@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
 import AccountControl from "./AccountControl";
 import DemoEntryButton from "./DemoEntryButton";
+import { DemoPill } from "./DemoBar";
+import DemoIdentity from "./DemoIdentity";
 import AppGate, { GateProvider, GatedChatBar } from "./AppGate";
 import { assetPath } from "@/components/home/asset";
 
@@ -94,6 +96,8 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
             })}
           </nav>
           <DemoEntryButton className="btn btn-sm" label="Try the demo" />
+          <DemoIdentity />
+          <DemoPill />
           <AccountControl />
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>

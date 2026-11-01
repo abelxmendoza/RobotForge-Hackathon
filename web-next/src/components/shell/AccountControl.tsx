@@ -3,9 +3,17 @@
  * and the landing header. It owns the session (restore + validate
  * on mount, sign out) and shows the shared SignInCard in a modal;
  * the card itself (form, providers, copy) lives in SignInCard.tsx
- * so the app gate presents the identical surface. */
+ * so the app gate presents the identical surface.
+ *
+ * Demo polish (2026-11-01): the signed-in panel also carries the
+ * demo door — "Start demo" enters the same isolated sandbox the
+ * anonymous entries open (seed + rf.demo.v1, real keys untouched),
+ * and while the demo flag is on this control makes no Worker
+ * calls: a stored session is adopted for display as-is and only
+ * revalidates after the demo exits. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   AUTH_EVENT,
   authLogout,
@@ -17,7 +25,10 @@ import {
   type AuthSession,
 } from "@/lib/auth";
 import { liveHealth } from "@/components/forge/live";
+import { isDemoMode, setDemoMode, useDemoMode } from "@/lib/demoMode";
+import { seedDemoStores } from "@/lib/demoSeed";
 import SignInCard, { PROVIDER_LABELS } from "./SignInCard";
+import { useDemoExit } from "./DemoBar";
 
 function roleBadge(role: string) {
   if (role === "founder") return <span className="fbadge live">FOUNDER</span>;
@@ -33,6 +44,20 @@ export default function AccountControl() {
   const [mounted, setMounted] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const inDemo = useDemoMode();
+  const exitDemo = useDemoExit();
+
+  /* Enter the demo from the account panel: the same seed + flag
+   * as the anonymous entries, so there is exactly one sandbox.
+   * The session is never touched — rf.auth.v1 is not a demo-twin
+   * key, and coming back restores this panel exactly as it was. */
+  const startDemo = useCallback(() => {
+    seedDemoStores();
+    setDemoMode(true);
+    setOpen(false);
+    router.push("/garage/");
+  }, [router]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -57,6 +82,17 @@ export default function AccountControl() {
           ? `${label} login didn't complete — try again or use email.`
           : "That login didn't complete — try again or use email.");
         setOpen(true);
+      }
+      /* The demo makes no Worker calls (lib/demoMode.ts), and that
+       * includes this control: with the flag on and no fresh login
+       * landing, adopt the stored session for display exactly as
+       * it was left and skip the /auth/me refresh — the token is
+       * untouched and revalidates on the next non-demo load. A
+       * fragment token (a social login completing) still validates
+       * below: signing in is the demo's exit ramp. */
+      if (isDemoMode() && !frag.token) {
+        if (!cancelled) setSession(loadSession());
+        return;
       }
       const token = frag.token || loadSession()?.token;
       if (token) {
@@ -201,6 +237,25 @@ export default function AccountControl() {
             Accounts are identity + role for now. Your robots and inventory stay on
             this device — no cloud sync yet.
           </p>
+          {inDemo ? (
+            <>
+              <p className="acct-note">
+                You&apos;re in the demo — sample data and recorded answers. Your
+                account and your own robots and inventory are untouched.
+              </p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => { setOpen(false); exitDemo(); }}
+              >
+                Exit demo
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn" onClick={startDemo}>
+              Start demo
+            </button>
+          )}
           <button type="button" className="btn" onClick={signOut}>
             Sign out
           </button>

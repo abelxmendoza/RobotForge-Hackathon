@@ -22,6 +22,7 @@ import {
   type AuthSession,
   type OAuthProviderId,
 } from "@/lib/auth";
+import DemoEntryButton from "./DemoEntryButton";
 
 /* ---- field + provider glyphs (inline, no icon dependency) ---- */
 
@@ -272,6 +273,9 @@ export default function SignInCard({
         Your robots and inventory stay on this device either way —
         no cloud sync yet, and no email verification or password
         reset in this version.
+        <div className="acct-guest-demo">
+          <DemoEntryButton label="Try the demo" />
+        </div>
       </div>
 
       <p className="acct-legal">
