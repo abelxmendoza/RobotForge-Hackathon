@@ -40,6 +40,27 @@ function counts(lines: string[]) {
   };
 }
 
+type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'checks';
+const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
+  { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
+  { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
+  { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
+  { id: 'specs', label: 'Specs', icon: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5' },
+  { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
+];
+
+function verdictOf(lines: string[]): { cls: string; label: string } {
+  const c = counts(lines);
+  if (c.errors) return { cls: 'fail', label: `${c.errors} problem${c.errors === 1 ? '' : 's'}` };
+  if (c.warns) return { cls: 'marginal', label: `${c.warns} warning${c.warns === 1 ? '' : 's'}` };
+  return { cls: 'pass', label: 'Checks pass' };
+}
+
+function num(v: unknown, scale = 1, digits = 0): string {
+  const n = Number(v);
+  return Number.isFinite(n) && v !== null && v !== '' ? (n * scale).toFixed(digits) : '—';
+}
+
 const STATUS_CLASS: Record<string, string> = { PASS: 'pass', MARGINAL: 'marginal', FAIL: 'fail', NOT_CHECKED: 'norun' };
 
 /* ------------------------------------------------------------------ */
@@ -109,7 +130,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
   return (
     <div className="garage-add">
       <h2>Bring a robot in</h2>
-      <p className="sub">Start with the robot as it is today. That becomes its baseline, and every upgrade after it is saved as a new version.</p>
+      <p className="sub">Start with the robot as it is today.</p>
       <label className="g-field">
         <span>Robot name</span>
         <input id="garage-new-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Leave empty to keep the spec's own name" />
@@ -209,6 +230,9 @@ function FieldInput({ field, spec, onChange }: { field: Field; spec: Spec; onCha
 }
 
 function Findings({ lines }: { lines: string[] }) {
+  if (lines.length === 1 && lines[0].startsWith('[INFO] all:')) {
+    return <p className="g-findings-ok"><span className="verdict pass">All checks pass</span></p>;
+  }
   return (
     <ul className="g-findings">
       {lines.map((l, i) => (
@@ -293,6 +317,20 @@ export default function Garage() {
   const [rover, setRover] = useState({ terrain: 'outdoor', slopeDeg: 15, stepM: 0.05, targetMin: 30 });
   const [saveError, setSaveError] = useState('');
   const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState<WorkTab>('overview');
+  /* #assembly (Wrench's assembly proposals link there) opens Build. */
+  useEffect(() => {
+    const check = (hash: string) => { if (hash === '#assembly') setTab('build'); };
+    check(window.location.hash);
+    const onHash = () => check(window.location.hash);
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href*='#assembly']") as HTMLAnchorElement | null;
+      if (a) check(a.hash);
+    };
+    window.addEventListener('hashchange', onHash);
+    document.addEventListener('click', onClick, true);
+    return () => { window.removeEventListener('hashchange', onHash); document.removeEventListener('click', onClick, true); };
+  }, []);
 
   useEffect(() => { liveHealth().then(setHealth); }, []);
   const lm = useLiveMode('fix', 'mock');
@@ -369,6 +407,9 @@ export default function Garage() {
   const draftLines = useMemo(() => (draft ? forgeValidateSpec(draft).lines : []), [draft]);
   const baseLines = useMemo(() => (base ? forgeValidateSpec(base.spec).lines : []), [base]);
   const diff = useMemo(() => (base && draft ? diffSpecs(base.spec, draft) : []), [base, draft]);
+  /* Unsaved = the draft against the latest saved version (diff compares
+   * against whichever version is picked on the timeline). */
+  const unsaved = useMemo(() => (latest && draft ? diffSpecs(latest.spec, draft) : []), [latest, draft]);
   const roverOn = draft && isRover(draft);
   const roverDraft = useMemo(() => (draft && isRover(draft) ? checkRover(draft, rover).checks : null), [draft, rover]);
   const roverBase = useMemo(() => (base && isRover(base.spec) ? checkRover(base.spec, rover).checks : null), [base, rover]);
@@ -421,13 +462,10 @@ export default function Garage() {
 
   return (
     <>
-    <ModeBanner mode={lm.mode} reason={lm.reason}>
-      {lm.mode === 'mock' ? 'Fix with Muse Spark uses offline textbook rules until live is back; the validator still decides every change.' : null}
-    </ModeBanner>
     <div className="garage">
       <aside className="garage-list" aria-label="Your robots">
         <h2>Your robots</h2>
-        {robots.length === 0 && <p className="faint g-small">No robots yet. Bring one in to start.</p>}
+        {robots.length === 0 && <p className="faint g-small">No robots yet.</p>}
         <ul hidden={!robots.length}>
           {robots.map((r) => (
             <li key={r.id}>
@@ -439,52 +477,125 @@ export default function Garage() {
           ))}
         </ul>
         {robots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>+ Add a robot</button>}
-        <p className="faint g-small">Saved in this browser only. Use Export to keep a copy.</p>
+        <p className="faint g-small" title="Saved in this browser only. Use Export to keep a copy.">Saved in this browser</p>
       </aside>
 
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
         {(adding || robots.length === 0) && <AddRobot onAdd={addRobot} health={health} firstRobot={robots.length === 0} />}
 
-        {!adding && robot && draft && (
+        {!adding && robot && draft && (() => {
+          const verdict = verdictOf(draftLines);
+          const roverCounts = roverDraft ? {
+            pass: roverDraft.filter((c) => c.status === 'PASS').length,
+            fail: roverDraft.filter((c) => c.status === 'FAIL').length,
+            other: roverDraft.filter((c) => c.status !== 'PASS' && c.status !== 'FAIL').length,
+          } : null;
+          const tiles: { label: string; value: string; unit: string }[] = [
+            { label: 'Mass', value: num(draft.mass_kg, 1, 2), unit: 'kg' },
+            { label: 'Size', value: `${num(draft.length_m, 1000)} × ${num(draft.width_m, 1000)} × ${num(draft.height_m, 1000)}`, unit: 'mm' },
+            { label: 'Battery', value: `${num(getPath(draft, 'battery.voltage_v'), 1, 1)} V`, unit: `${num(getPath(draft, 'battery.capacity_mah'))} mAh` },
+            { label: 'Wheels', value: `${num(getPath(draft, 'wheel.count'))} × ${num(getPath(draft, 'wheel.diameter_m'), 1000)}`, unit: 'mm' },
+            { label: 'Drive', value: String(draft.drivetrain ?? '—').replace(/_/g, ' '), unit: '' },
+          ];
+          return (
           <>
-            <div className="g-head">
-              <div>
-                <div className="eyebrow">My robots</div>
+            <div className="g-head ws-head">
+              <div className="ws-title">
                 <h2>{draft.name || robot.name}</h2>
+                <span className="ws-vchip">v{robot.versions.length}</span>
+                <span className={'verdict ' + verdict.cls}>{verdict.label}</span>
+                <ModeBanner compact mode={lm.mode} reason={lm.reason} />
               </div>
               <div className="g-head-actions">
-                <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export spec</button>
-                <button type="button" className="btn btn-sm" onClick={() => downloadJSON('garage.json', robot)}>Export history</button>
+                <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
                 <button type="button" className="btn btn-sm btn-ghost" onClick={removeRobot}>Remove</button>
               </div>
             </div>
 
-            <p><Link className="btn btn-sm" href={'/inventory/?robot='+encodeURIComponent(robot.id)}>Manage photos & parts for {robot.name}</Link></p>
-            <AssemblyWorkspace key={robot.id} robotId={robot.id} />
+            <ol className="ws-timeline" aria-label="Versions (pick one to compare with the draft)">
+              {robot.versions.map((v, i) => (
+                <li key={v.id}>
+                  <button type="button" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title={`${v.label} · ${SOURCE_LABEL[v.source]} · ${new Date(v.createdAt).toLocaleDateString()}${v.note ? ' · ' + v.note : ''}`}>
+                    <span className="ws-dot" aria-hidden="true" />v{i + 1} <span className="ws-vlabel">{v.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
 
-            <section className="g-versions" aria-label="Versions">
-              <h3>Versions</h3>
-              <ol>
-                {robot.versions.map((v, i) => (
-                  <li key={v.id}>
-                    <button type="button" className="g-version" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title="Compare the draft with this version">
-                      <span className="g-vnum">v{i + 1}</span>
-                      <span><strong>{v.label}</strong><span className="g-small faint">{SOURCE_LABEL[v.source]} · {new Date(v.createdAt).toLocaleDateString()}</span></span>
+            <div className="ws-tabs" role="tablist" aria-label="Workshop">
+              {WORK_TABS.map((t) => (
+                <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
+                  {t.label}
+                  {t.id === 'checks' && <span className={'ws-dotbadge ' + verdict.cls} aria-label={verdict.label} />}
+                </button>
+              ))}
+            </div>
+
+            {unsaved.length > 0 && (
+              <div className="ws-savebar" role="region" aria-label="Unsaved changes">
+                <span><strong>{unsaved.length} unsaved change{unsaved.length === 1 ? '' : 's'}</strong></span>
+                <input id="garage-label" aria-label="Version name" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name this version" />
+                <input id="garage-note" aria-label="Note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
+                <button type="button" className="btn btn-primary btn-sm" onClick={() => saveVersion(draftNote.some((n) => n.startsWith('Muse')) ? 'muse-fix' : draftNote.some((n) => n.startsWith('Fitted')) ? 'inventory' : 'edit')}>Save version</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(JSON.parse(JSON.stringify(latest!.spec))); setDraftNote([]); }}>Discard</button>
+              </div>
+            )}
+
+            {tab === 'overview' && (
+              <section className="ws-pane" aria-label="Overview">
+                <div className="ws-tiles">
+                  {tiles.map((t) => (
+                    <div className="ws-tile" key={t.label}><span className="ws-tile-label">{t.label}</span><strong>{t.value}</strong>{t.unit && <span className="ws-tile-unit">{t.unit}</span>}</div>
+                  ))}
+                </div>
+                <div className="ws-cards">
+                  <button type="button" className={'ws-card ' + verdict.cls} onClick={() => setTab('checks')}>
+                    <span className="ws-card-label">Engineering checks</span>
+                    <strong>{verdict.label}</strong>
+                    <span className="ws-card-go">See checks →</span>
+                  </button>
+                  {roverCounts && (
+                    <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : roverCounts.other ? 'marginal' : 'pass')} onClick={() => setTab('checks')}>
+                      <span className="ws-card-label">Field checks</span>
+                      <strong>{roverCounts.pass} pass · {roverCounts.fail} fail{roverCounts.other ? ` · ${roverCounts.other} not checked` : ''}</strong>
+                      <span className="ws-card-go">See checks →</span>
                     </button>
-                    {v.note && <p className="g-small faint">{v.note}</p>}
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDraft(JSON.parse(JSON.stringify(v.spec)))}>Load into editor</button>
-                  </li>
-                ))}
-              </ol>
-              {String(draft.description || '').startsWith('Photo draft') && (
-                <p className="est">Photo draft · dimensions ESTIMATED · measure and edit them</p>
-              )}
-            </section>
+                  )}
+                  <button type="button" className="ws-card" onClick={() => setTab('build')}>
+                    <span className="ws-card-label">Bench</span>
+                    <strong>Add and place parts in 3D</strong>
+                    <span className="ws-card-go">Open Build →</span>
+                  </button>
+                </div>
+                {String(draft.description || '').startsWith('Photo draft') && (
+                  <p className="est">Photo draft · dimensions ESTIMATED · measure and edit them</p>
+                )}
+                <section className="g-versions" aria-label="Versions">
+                  <h3>Versions</h3>
+                  <ol>
+                    {robot.versions.map((v, i) => (
+                      <li key={v.id}>
+                        <button type="button" className="g-version" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title="Compare the draft with this version">
+                          <span className="g-vnum">v{i + 1}</span>
+                          <span><strong>{v.label}</strong><span className="g-small faint">{SOURCE_LABEL[v.source]} · {new Date(v.createdAt).toLocaleDateString()}</span></span>
+                        </button>
+                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDraft(JSON.parse(JSON.stringify(v.spec)))}>Load</button>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+                <p><Link className="btn btn-sm" href={'/inventory/?robot=' + encodeURIComponent(robot.id)}>Photos & parts for {robot.name}</Link> <button type="button" className="btn btn-sm btn-ghost" onClick={() => downloadJSON('garage.json', robot)}>Export history</button></p>
+              </section>
+            )}
 
-            <section className="g-editor" aria-label="Editor">
-              <h3>Edit the draft</h3>
-              <p className="sub">Change what you would change on the bench. Nothing is saved until you save it as a version.</p>
+            {(tab === 'build' || tab === 'wiring') && (
+              <AssemblyWorkspace key={robot.id} robotId={robot.id} view={tab === 'build' ? 'components' : 'wiring'} onView={(v) => setTab(v === 'components' ? 'build' : 'wiring')} />
+            )}
+
+            {tab === 'specs' && (
+            <section className="g-editor ws-pane" aria-label="Specs">
               <div className="g-groups">
                 {FIELD_GROUPS.map((g) => (
                   <fieldset key={g.title} className="g-group">
@@ -494,7 +605,7 @@ export default function Garage() {
                 ))}
               </div>
               <details className="g-raw" open={rawOpen} onToggle={(e) => { const o = (e.target as HTMLDetailsElement).open; setRawOpen(o); if (o) { setRawText(JSON.stringify(draft, null, 2)); setRawError(''); } }}>
-                <summary>Edit the full spec as JSON (sensors, wiring, part masses)</summary>
+                <summary>Edit as JSON</summary>
                 <textarea id="garage-raw" className="g-json" rows={14} value={rawText} onChange={(e) => setRawText(e.target.value)} />
                 <button type="button" className="btn btn-sm" onClick={() => {
                   try { setDraft(JSON.parse(rawText)); setRawError(''); } catch { setRawError('That is not valid JSON; the draft was not changed.'); }
@@ -516,21 +627,13 @@ export default function Garage() {
                   </ul>
                 </div>
               )}
-              {usableParts.length === 0 && (
-                <p className="faint g-small">Confirmed batteries, motors and wheels in your <Link href="/inventory/">parts inventory</Link> can be fitted here with one click.</p>
-              )}
-
-              <div className="g-save">
-                <label className="g-field"><span>Version name</span><input id="garage-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. 4S battery upgrade" /></label>
-                <label className="g-field"><span>Note</span><input id="garage-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="why, cost, where the part came from" /></label>
-                <button type="button" className="btn btn-primary" disabled={!diff.length} onClick={() => saveVersion(draftNote.some((n) => n.startsWith('Muse')) ? 'muse-fix' : draftNote.some((n) => n.startsWith('Fitted')) ? 'inventory' : 'edit')}>Save as new version</button>
-                <button type="button" className="btn btn-ghost btn-sm" disabled={!diff.length} onClick={() => { setDraft(JSON.parse(JSON.stringify(latest!.spec))); setDraftNote([]); }}>Discard changes</button>
-              </div>
             </section>
+            )}
 
-            <section className="g-compare" aria-label="Compare">
-              <h3>Compare: {base?.label} → draft</h3>
-              {diff.length === 0 ? <p className="faint">The draft matches {base?.label}. Edit a field to see the difference.</p> : (
+            {tab === 'checks' && (
+            <section className="g-compare ws-pane" aria-label="Checks">
+              <h3>{base?.label} → draft</h3>
+              {diff.length === 0 ? <p className="faint">No changes yet. Edit a spec to compare.</p> : (
                 <div className="g-tablewrap">
                   <table className="g-table">
                     <thead><tr><th>Field</th><th>{base?.label}</th><th>Draft</th></tr></thead>
@@ -541,11 +644,11 @@ export default function Garage() {
 
               <div className="g-checks">
                 <div>
-                  <h4>Engineering checks · {base?.label}</h4>
+                  <h4>Engineering · {base?.label}</h4>
                   <Findings lines={baseLines} />
                 </div>
                 <div>
-                  <h4>Engineering checks · draft <span className="fbadge local">LOCAL</span></h4>
+                  <h4>Engineering · draft <span className="fbadge local">LOCAL</span></h4>
                   <Findings lines={draftLines} />
                 </div>
               </div>
@@ -555,10 +658,10 @@ export default function Garage() {
                   <h4>Fix with Muse Spark</h4>
                   <label className="g-check"><input type="checkbox" id="garage-warnings" checked={withWarnings} onChange={(e) => setWithWarnings(e.target.checked)} /> include warnings</label>
                 </div>
-                <p className="g-small muted">Muse Spark proposes field changes for the findings, the checks re-run, up to three rounds. The model only proposes. The validator decides, and you decide whether to keep it.</p>
+                <p className="g-small muted" title="Muse Spark proposes field changes for the findings, the checks re-run, up to three rounds. The validator decides, and you decide whether to keep it.">Proposes fixes. The checks decide, then you do.</p>
                 <button type="button" className="btn btn-primary" disabled={!fixable || looping} onClick={runLoop}>{fixable ? 'Run the Forge loop' : 'Nothing to fix'}</button>
                 {health !== undefined && !routeOn(health ?? null, 'fix') && fixable && (
-                  <p className="faint g-small">Live fixes are off right now (<LiveOffReason h={health ?? null} route="fix" />), so the loop uses the offline textbook rules.</p>
+                  <p className="faint g-small">Offline: uses textbook rules (<LiveOffReason h={health ?? null} route="fix" />).</p>
                 )}
                 {(looping || loop) && <LoopView res={loop} rounds={loopRounds} running={looping} live={lm.mode === 'live'} />}
                 {loop && loop.rounds.length > 0 && !looping && (
@@ -568,7 +671,7 @@ export default function Garage() {
 
               {roverOn && (
                 <div className="g-rover">
-                  <h4>Rover field checks <span className="g-small faint">estimates, with their assumptions</span></h4>
+                  <h4>Field checks <span className="g-small faint">estimates</span></h4>
                   <div className="g-rover-opts">
                     <label className="g-field"><span>Terrain</span>
                       <select id="garage-terrain" value={rover.terrain} onChange={(e) => setRover({ ...rover, terrain: e.target.value })}>
@@ -584,8 +687,10 @@ export default function Garage() {
                 </div>
               )}
             </section>
+            )}
           </>
-        )}
+          );
+        })()}
       </div>
     </div>
     </>

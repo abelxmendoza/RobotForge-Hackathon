@@ -20,10 +20,14 @@ function PoseEditor({ instance, onMove }: {instance: ComponentInstance; onMove: 
   </fieldset>;
 }
 
-export default function AssemblyWorkspace({robotId}: {robotId: string}) {
+export default function AssemblyWorkspace({robotId, view, onView}: {robotId: string; view?: 'components'|'wiring'; onView?: (v: 'components'|'wiring') => void}) {
   const [robots] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const [all,,ready] = useStore<Assemblies>(ASSEMBLY_KEY, {});
-  const [tab,setTab] = useState<'components'|'wiring'>('components');
+  /* The Workshop's Build and Wiring tabs pick the view; standalone, the
+   * workbench keeps its own sub-tabs. */
+  const [tabState,setTabState] = useState<'components'|'wiring'>(view ?? 'components');
+  const tab = view ?? tabState;
+  const setTab = (t: 'components'|'wiring') => { setTabState(t); onView?.(t); };
   const [componentId,setComponentId] = useState(COMPONENTS[0].id);
   const [selected,setSelected] = useState<string|null>(null);
   const [selectedWire,setSelectedWire] = useState<string|null>(null);
@@ -84,12 +88,27 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     const part = componentById(componentId)!;
     propose({kind:'add',instanceId:uid('part'),componentId,positionM:[0,0,Number(spec.ground_clearance_m ?? 0)+0.003+part.sizeM[2]/2]});
   };
+  const wiringOrParts = tab==='components' ? <>
+      <label className="g-field"><span>Add a component by name</span><select value={componentId} onChange={e=>setComponentId(e.target.value)}>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+      <p className="faint">{componentById(componentId)?.note}</p>
+      <button type="button" className="btn btn-primary btn-sm" onClick={add}>Preview component</button>
+      <p>Or tell Wrench: <code>add a Jetson Orin Nano to "{robot?.name}"</code></p>
+    </> : <>
+      <h4>Planned connections <span className="verdict norun" title="Component-to-component planning edges. Pin assignments, wire gauge, protection, voltage ranges and current ratings are not yet entered or checked. They do not alter the core harness report.">NOT CHECKED</span></h4>
+      {[['From',from,setFrom],['To',to,setTo]].map(([label,value,setter])=><label className="g-field" key={String(label)}><span>{String(label)}</span><select value={String(value)} onChange={e=>(setter as (s:string)=>void)(e.target.value)}><option value="">Select component</option>{saved.components.map(c=><option value={c.id} key={c.id}>{componentById(c.componentId)?.name} ({c.id})</option>)}</select></label>)}
+      <button type="button" className="btn btn-sm" disabled={!from||!to} onClick={()=>propose({kind:'connect',instanceId:from,targetId:to})}>Preview connection</button>
+      <ul className="assembly-wires">{saved.connections.map(c=><li key={c.id}>{c.from} → {c.to} · NOT_CHECKED <button type="button" className="chip" onClick={()=>propose({kind:'disconnect',instanceId:c.id})}>Remove connection</button></li>)}</ul>
+    </>;
   return <section className="g-editor assembly-workbench" id="assembly" aria-label="Robot assembly">
-    <h3>Assembly workbench</h3>
-    <p className="sub">This uses the latest saved robot spec. Added parts, placement and planned connections save separately from the CLI spec. These added parts are not yet included in mass, electrical or Gazebo checks. Your unsaved spec draft stays in the editor below.</p>
+    {!view && <h3>Assembly workbench</h3>}
+    <details className="g-howto"><summary>How the bench works</summary>
+      <p>This uses the latest saved robot spec. Added parts, placement and planned connections save separately from the CLI spec. These added parts are not yet included in mass, electrical or Gazebo checks. Your unsaved spec draft stays in the editor.</p>
+      <p>Drag placement: move a part in XY on a 5 mm grid, release to preview, Cancel the preview to discard a move; Escape cancels an active drag. Deck snap uses the schematic plate surface. Disable explode and finish playback before dragging.</p>
+      <p>Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Stylized component details are visual proxies, not manufacturer CAD. Cable arcs and pulses show planned connectivity, not electrical current or verified routing.</p>
+    </details>
     <div className="g-tabs" aria-label="Workbench views">
-      <button type="button" className="chip" aria-pressed={tab==='components'} onClick={()=>setTab('components')}>Components & placement</button>
-      <button type="button" className="chip" aria-pressed={tab==='wiring'} onClick={()=>setTab('wiring')}>Wiring ({saved.connections.length})</button>
+      {!view && <><button type="button" className="chip" aria-pressed={tab==='components'} onClick={()=>setTab('components')}>Components & placement</button>
+      <button type="button" className="chip" aria-pressed={tab==='wiring'} onClick={()=>setTab('wiring')}>Wiring ({saved.connections.length})</button></>}
       <button type="button" className="chip" onClick={()=>downloadJSON('robot-assembly.json',{format:'robotforge-assembly-v1',robotId,spec,versions:all[robotId]??[]})}>Export assembly</button>
       <button type="button" className="chip" disabled={!saved.id} onClick={()=>{
         try { const fresh=readStore<Assemblies>(ASSEMBLY_KEY,{}); const next=undoAssembly(fresh,robotId,saved.id,uid('assembly'),new Date().toISOString()); const error=writeStore(ASSEMBLY_KEY,next); if(error) throw new Error(error); setProposal(null); setNotice('Previous assembly restored as a new version.'); } catch(e) {setNotice((e as Error).message);}
@@ -118,8 +137,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
     {ghostMount && <p className="faint">Ghost tray is an illustrative mounting concept with corner support proxies. Hole locations and fasteners are unverified; it is not printable CAD.</p>}
     {showFov && <fieldset className="g-group"><legend>Illustrative FOV on selected component · local +X forward</legend><label className="g-field"><span>Full cone angle (degrees)</span><input type="number" min="5" max="150" value={fovDeg} onChange={e=>setFovDeg(Math.max(5,Math.min(150,Number(e.target.value)||60)))}/></label><label className="g-field"><span>Range (m)</span><input type="number" min="0.05" max="5" step="0.05" value={fovRange} onChange={e=>setFovRange(Math.max(0.05,Math.min(5,Number(e.target.value)||0.5)))}/></label><p>Assumed visualization inputs, not a sensor datasheet or an obstruction test.</p></fieldset>}
     {previousVersion && <fieldset className="g-group"><legend>Upgrade playback · previous assembly → latest preview</legend><input aria-label="Upgrade playback progress" type="range" min="0" max="100" value={Math.round(replay*100)} onChange={e=>{setPlaying(false);setReplay(Number(e.target.value)/100);}}/><button type="button" className="chip" onClick={()=>{setReplay(0);setPlaying(true);setDragMode(false);}}>Play upgrade</button><button type="button" className="chip" onClick={()=>{setPlaying(false);setReplay(1);}}>Latest pose</button><p>Component-pose comparison only; cables show the latest planned connections. Scrubbing does not change saved versions. Motion respects reduced-motion preferences.</p></fieldset>}
-    <p className="faint">Drag placement: move a part in XY on a 5 mm grid, release to preview, Cancel the preview to discard a move; Escape cancels an active drag. Deck snap uses the schematic plate surface. Disable explode and finish playback before dragging.</p>
-    <p className="faint">Orbit: drag · Zoom: scroll or pinch · Select: click a part or cable. Stylized component details are visual proxies, not manufacturer CAD. Cable arcs and pulses show planned connectivity, not electrical current or verified routing.</p>
+    {view==='wiring' && wiringOrParts}
     {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
       const wire=preview.connections.find(c=>c.id===id);
       if(wire){setSelectedWire(id);setTab('wiring');setFrom(wire.from);setTo(wire.to);setNotice('Selected planned connection · NOT_CHECKED');}
@@ -129,18 +147,7 @@ export default function AssemblyWorkspace({robotId}: {robotId: string}) {
       ghostMount={ghostMount} fov={showFov?{angleDeg:fovDeg,rangeM:fovRange}:undefined}
       comparison={previousVersion?.components} replay={replay} playing={playing} onPlaybackEnd={()=>{setPlaying(false);setReplay(1);}}
       onMove={(id,positionM)=>{const current=preview.components.find(c=>c.id===id);if(current){setSelected(id);propose({kind:'move',instanceId:id,positionM,yawDeg:current.yawDeg});}}}/> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
-    {tab==='components' ? <>
-      <label className="g-field"><span>Add a component by name</span><select value={componentId} onChange={e=>setComponentId(e.target.value)}>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-      <p className="faint">{componentById(componentId)?.note}</p>
-      <button type="button" className="btn btn-primary btn-sm" onClick={add}>Preview component</button>
-      <p>Or tell Wrench: <code>add a Jetson Orin Nano to "{robot?.name}"</code></p>
-    </> : <>
-      <h4>Planned component connections</h4>
-      <p>NOT_CHECKED — these are component-to-component planning edges. Pin assignments, wire gauge, protection, voltage ranges and current ratings are not yet entered or checked. They do not alter the core harness report.</p>
-      {[['From',from,setFrom],['To',to,setTo]].map(([label,value,setter])=><label className="g-field" key={String(label)}><span>{String(label)}</span><select value={String(value)} onChange={e=>(setter as (s:string)=>void)(e.target.value)}><option value="">Select component</option>{saved.components.map(c=><option value={c.id} key={c.id}>{componentById(c.componentId)?.name} ({c.id})</option>)}</select></label>)}
-      <button type="button" className="btn btn-sm" disabled={!from||!to} onClick={()=>propose({kind:'connect',instanceId:from,targetId:to})}>Preview connection</button>
-      <ul className="assembly-wires">{saved.connections.map(c=><li key={c.id}>{c.from} → {c.to} · NOT_CHECKED <button type="button" className="chip" onClick={()=>propose({kind:'disconnect',instanceId:c.id})}>Remove connection</button></li>)}</ul>
-    </>}
+    {view!=='wiring' && wiringOrParts}
     <h4>Components ({preview.components.length})</h4>
     {!preview.components.length && <p>No components yet. Add one above or through Wrench.</p>}
     <ul className="assembly-parts">{preview.components.map(c=><li key={c.id}><button type="button" className="chip" aria-pressed={selected===c.id} onClick={()=>{setSelectedWire(null);setSelected(c.id);}}>{componentById(c.componentId)?.name} · {c.id}</button> <span className="faint">{c.positionM.map(v=>Math.round(v*1000)).join(', ')} mm · yaw {c.yawDeg}°</span></li>)}</ul>
