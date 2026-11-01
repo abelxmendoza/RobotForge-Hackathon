@@ -5,7 +5,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Spec = any;
 
-export type VersionSource = 'upload' | 'robodex' | 'starter' | 'photo' | 'edit' | 'muse-fix' | 'inventory';
+export type VersionSource = 'upload' | 'robodex' | 'starter' | 'photo' | 'edit' | 'muse-fix' | 'inventory' | 'repo';
 
 export interface RobotVersion {
   id: string;
@@ -28,6 +28,10 @@ export interface GarageRobot {
   name: string;
   createdAt: string;
   versions: RobotVersion[];
+  /* Set when this robot was imported from a GitHub repo (lib/repoImport.ts):
+   * the full specimen record — provenance, hardware, parts, images —
+   * travels with the robot so its Garage card can badge and link it. */
+  repoImport?: import('./repoImport').RepoSpecimen;
 }
 
 export const GARAGE_KEY = 'rf.garage.v1';
@@ -40,6 +44,7 @@ export const SOURCE_LABEL: Record<VersionSource, string> = {
   edit: 'Edited by hand',
   'muse-fix': 'Fix proposed by Muse Spark',
   inventory: 'Part from inventory',
+  repo: 'From a GitHub repo',
 };
 
 /* The editable fields, grouped the way a builder thinks about them.
