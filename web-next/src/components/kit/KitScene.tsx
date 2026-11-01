@@ -13,7 +13,6 @@ import { ROOT, fetchJSON } from '../forge/model';
 import { cableControlPoints, type Point3 } from '@/lib/wire3d';
 import type { SimReadyManifest, SpecimenDoc, SpecimenPart } from './burger';
 import type { FlowPath } from '@/lib/stageAnimation';
-import { cableControlPoints } from '@/lib/wire3d';
 
 /* Living Build Stage state for this scene, computed by the parent
  * from recorded data (lib/stageAnimation): whether each clock may
