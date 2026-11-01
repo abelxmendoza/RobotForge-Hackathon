@@ -145,9 +145,13 @@ def test_worker_guardrails_and_routes_present():
                 "photo_not_configured", "routes", "/transcribe",
                 "transcribe_not_configured", "muse-voice-transcribe-1.0",
                 "/auth/register", "/auth/login", "/auth/me",
-                "/auth/meta/start", "/admin/users", "/admin/seed-founder",
+                "/auth/<provider>/start", "/auth/<provider>/callback",
+                "(meta|github|google)", "/admin/users", "/admin/seed-founder",
                 "auth_not_configured", "reserved_email", "pbkdf2",
-                "AUTH_JWT_SECRET", "OPERATOR_TOKEN", "metaLogin"):
+                "AUTH_JWT_SECRET", "OPERATOR_TOKEN", "metaLogin",
+                "githubLogin", "googleLogin", "providers",
+                "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET",
+                "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"):
         assert bit in WORKER, bit
     # photo is the optional route: 501 when its secret is absent
     assert "501" in WORKER and "env.META_API_KEY" in WORKER
@@ -195,6 +199,15 @@ def test_worker_mock_suite():
                  "auth seed founder then founder login works",
                  "auth admin users lists public fields only",
                  "auth meta routes are a 501 while unconfigured",
+                 "auth config reports providers on when their secrets exist",
+                 "auth github and google routes are a 501 while unconfigured",
+                 "auth meta login happy path still works",
+                 "auth github login happy path",
+                 "auth github login works with a hidden profile email",
+                 "auth github login fails without a verified primary email",
+                 "auth google login happy path",
+                 "auth google login fails when the email is unverified",
+                 "auth oauth same email lands in the existing account",
                  "malformed model output is a 502"):
         assert "PASS " + name.split(" is a 501")[0] in r.stdout or \
             name in r.stdout, name

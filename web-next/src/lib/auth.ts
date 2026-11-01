@@ -11,6 +11,7 @@ export interface AuthUser {
   name: string;
   role: string; // "user" | "admin" | "founder"
   provider?: string;
+  providerId?: string;
   createdAt?: string;
 }
 
@@ -79,19 +80,39 @@ async function post(path: string, body: unknown, token?: string): Promise<any> {
   return data;
 }
 
-export async function authConfig(): Promise<{ metaLogin: boolean }> {
+export type OAuthProviderId = "meta" | "github" | "google";
+
+export interface AuthConfig {
+  metaLogin: boolean;
+  providers: Record<OAuthProviderId, boolean>;
+}
+
+const NO_PROVIDERS: AuthConfig = {
+  metaLogin: false,
+  providers: { meta: false, github: false, google: false },
+};
+
+export async function authConfig(): Promise<AuthConfig> {
   /* Demo mode makes no Worker calls on its own (see demoMode.ts).
    * This config probe is automatic, so it is skipped in the demo;
    * an explicit sign-in/register from the account panel is the
    * visitor's own action — the demo's exit ramp — and still works. */
-  if (isDemoMode()) return { metaLogin: false };
+  if (isDemoMode()) return NO_PROVIDERS;
   try {
     const r = await fetch(liveBase + "/auth/config", { cache: "no-cache" });
-    if (!r.ok) return { metaLogin: false };
+    if (!r.ok) return NO_PROVIDERS;
     const data = await r.json();
-    return { metaLogin: Boolean(data.metaLogin) };
+    const p = (data && data.providers) || {};
+    return {
+      metaLogin: Boolean(data.metaLogin ?? p.meta),
+      providers: {
+        meta: Boolean(p.meta ?? data.metaLogin),
+        github: Boolean(p.github),
+        google: Boolean(p.google),
+      },
+    };
   } catch {
-    return { metaLogin: false };
+    return NO_PROVIDERS;
   }
 }
 
@@ -125,6 +146,10 @@ export async function authLogout(token: string): Promise<void> {
   } catch {
     /* stateless: dropping the local token is the real logout */
   }
+}
+
+export function oauthStartUrl(provider: OAuthProviderId): string {
+  return liveBase + "/auth/" + provider + "/start";
 }
 
 export const META_START_URL = liveBase + "/auth/meta/start";

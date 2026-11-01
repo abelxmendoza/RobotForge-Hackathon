@@ -1270,7 +1270,10 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 @media (prefers-reduced-motion:reduce){.dex-src-grid .robot-card{animation:none}.dex-tab{transition:none}}
 
 /* ==== Accounts (v1): sign-in control in the topbar / landing header ====
-   Identity + role only; the panel states the no-cloud-sync scope.
+   Identity + role only; the card states the no-cloud-sync scope.
+   The sign-in surface is a centered card over a dimmed, softly
+   glowing backdrop (the LoreBook login pattern), in RobotForge's
+   own palette; the signed-in menu stays a small dropdown panel.
    Appended last so these rules win the cascade at equal specificity. */
 .acct{position:relative;display:inline-flex;align-items:center}
 .topbar .acct{margin-left:auto}
@@ -1284,11 +1287,73 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   background:var(--surface);box-shadow:0 18px 44px rgba(0,0,0,.55);
   color:var(--text);text-align:left;
 }
-.acct-tabs{width:100%}
-.acct-tabs .tab{flex:1}
+.acct-overlay{
+  position:fixed;inset:0;z-index:200;overflow-y:auto;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:6vh 16px 40px;
+  background:
+    radial-gradient(620px 320px at 50% -40px,var(--accent-soft),transparent 70%),
+    rgba(4,8,14,.74);
+}
+.acct-card{
+  position:relative;width:min(400px,100%);display:grid;gap:var(--s3);
+  padding:28px 28px 24px;border:1px solid var(--border-strong);
+  border-radius:18px;background:var(--surface);color:var(--text);
+  text-align:left;box-shadow:0 24px 60px rgba(0,0,0,.6),0 0 44px rgba(66,214,196,.07);
+}
+.acct-close{
+  position:absolute;top:8px;right:10px;width:32px;height:32px;
+  border:0;border-radius:8px;background:transparent;color:var(--text-faint);
+  font-size:22px;line-height:1;cursor:pointer;
+}
+.acct-close:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.acct-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:var(--fs-lg)}
+.acct-brand img{border-radius:8px}
+.acct-card h2{margin:0;font-size:22px;line-height:1.25}
+.acct-sub{margin:4px 0 0;color:var(--text-muted);font-size:var(--fs-sm)}
 .acct-form{display:grid;gap:var(--s3)}
-.acct-form .btn{width:100%}
-.acct-meta{width:100%;justify-content:center}
+.acct-field{position:relative;display:block}
+.acct-field svg{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;color:var(--text-faint);pointer-events:none;
+}
+.acct-field input{
+  width:100%;padding:10px 14px 10px 38px;border-radius:var(--r);
+  border:1px solid var(--border-strong);background:rgba(255,255,255,.04);
+  color:var(--text);font:inherit;font-size:var(--fs-sm);
+}
+.acct-field input::placeholder{color:var(--text-faint)}
+.acct-field input:focus{outline:2px solid var(--accent);outline-offset:1px;background:rgba(255,255,255,.06)}
+.acct-cta{width:100%;justify-content:center;gap:8px;min-height:42px;border-radius:var(--r)}
+.acct-errorbox{
+  margin:0;border:1px solid var(--fail);background:var(--fail-soft);
+  color:var(--fail);border-radius:var(--r);padding:10px 12px;
+  font-size:var(--fs-sm);line-height:1.5;
+}
+.acct-divider{display:flex;align-items:center;gap:12px;color:var(--text-faint)}
+.acct-divider::before,.acct-divider::after{content:"";flex:1;height:1px;background:var(--border)}
+.acct-divider span{font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+.acct-providers{display:grid;gap:10px}
+.acct-provider{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  min-height:42px;padding:9px 14px;border-radius:var(--r);
+  border:1px solid var(--border-strong);background:rgba(255,255,255,.05);
+  color:var(--text);font-size:var(--fs-sm);font-weight:600;text-decoration:none;
+}
+.acct-provider:hover{background:rgba(255,255,255,.09)}
+.acct-provider svg{width:18px;height:18px;flex:none}
+.acct-switch{margin:0;text-align:center;font-size:var(--fs-sm);color:var(--text-muted)}
+.acct-switch button{
+  background:none;border:0;padding:0;color:var(--accent);font:inherit;
+  cursor:pointer;text-decoration:underline;
+}
+.acct-guest{
+  border:1px solid var(--border);border-radius:var(--r);
+  background:var(--surface-2);padding:12px 14px;
+  font-size:var(--fs-xs);color:var(--text-muted);line-height:1.55;
+}
+.acct-guest strong{color:var(--text)}
+.acct-legal{margin:0;text-align:center;font-size:11px;color:var(--text-faint);line-height:1.6}
 .acct-id{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0;font-size:var(--fs-sm)}
 .acct-email{display:block;width:100%;color:var(--text-faint);font-size:var(--fs-xs);overflow-wrap:anywhere}
 .acct-founder{border:1px solid var(--border);border-radius:var(--r);padding:var(--s3);background:var(--surface-2);display:grid;gap:4px}

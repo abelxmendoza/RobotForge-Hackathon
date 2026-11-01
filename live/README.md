@@ -57,27 +57,55 @@ verification and no password reset yet.
 | `POST /auth/login` | `{email, password}` → `{token, user}`; wrong credentials are a generic 401 | `AUTH_JWT_SECRET` |
 | `GET /auth/me` | Bearer token → `{user}` (role re-read from the record) | `AUTH_JWT_SECRET` |
 | `POST /auth/logout` | `{ok}` — stateless; the client drops the token | — |
-| `GET /auth/config` | `{metaLogin}` — whether Meta login is switched on | — |
+| `GET /auth/config` | `{metaLogin, providers: {meta, github, google}}` — which social logins are switched on (`metaLogin` is the original alias for `providers.meta`) | — |
 | `GET /auth/meta/start` · `GET /auth/meta/callback` | Meta (Facebook) login: OAuth round trip, find-or-create by email, 302 back to the site with the session token in the URL fragment. Answers `501 meta_not_configured` until the app secrets exist | `META_APP_ID` + `META_APP_SECRET` |
+| `GET /auth/github/start` · `GET /auth/github/callback` | GitHub login. Scopes `read:user user:email`; the account keys on the primary **verified** email from `/user/emails` (the profile email can be hidden or unverified, so it is never trusted). Answers `501 github_not_configured` until the secrets exist | `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` |
+| `GET /auth/google/start` · `GET /auth/google/callback` | Google login (OpenID Connect: `openid email profile`); the account keys on the userinfo email only when `email_verified` is true. Answers `501 google_not_configured` until the secrets exist | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` |
 | `GET /admin/users` | Operator: list accounts (public fields only — never hashes) | `OPERATOR_TOKEN` |
 | `POST /admin/seed-founder` | Operator: create/update the founder account (`abelxmendoza@gmail.com`, role `founder`) with the given password | `OPERATOR_TOKEN` |
 | `POST /admin/grant-role` | Operator: set a user's role (`user` / `admin` / `founder`) | `OPERATOR_TOKEN` |
 
 Users are KV records `auth:user:<email-lowercase>` in `RF_LIVE_KV`.
-Passwords are PBKDF2-HMAC-SHA256 (WebCrypto, per-user salt,
+Social-login records also carry the provider's stable user ID
+(`providerId`: Meta ID, GitHub numeric ID, Google `sub`). A social
+login find-or-creates **by verified email only** and lands in the
+existing account when that email already has one — there is no
+cross-provider linking UI in v1. Passwords are PBKDF2-HMAC-SHA256 (WebCrypto, per-user salt,
 100k iterations); sessions are HS256 JWTs signed with
 `AUTH_JWT_SECRET` (7-day expiry, signature + expiry verified on
 every protected route). The founder address is **reserved** — the
 public register route refuses it (403); only the operator route
 can seed it. Operator routes take the `X-Operator-Token` header;
 that is how Muse administers accounts from the owner's
-machines. `/health` reports `auth` and `metaLogin` booleans.
+machines. `/health` reports `auth` plus `metaLogin`, `githubLogin`
+and `googleLogin` booleans.
 
 To switch Meta login on: create an app at developers.facebook.com
 (Facebook Login), set its Valid OAuth Redirect URI to this
 Worker's `/auth/meta/callback` URL, and add `META_APP_ID` and
 `META_APP_SECRET` as Worker secrets. The button on the site
 appears by itself once `/auth/config` reports `metaLogin: true`.
+
+To switch GitHub login on: create an OAuth App at
+github.com/settings/developers (homepage
+`https://robot-forge-hackathon.vercel.app`, authorization
+callback URL this Worker's `/auth/github/callback`), and add
+`GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` as Worker secrets.
+
+To switch Google login on: in a Google Cloud project, configure
+the OAuth consent screen (External; scopes `openid`, `email`,
+`profile` only — no verification needed for those), create a Web
+application OAuth client with this Worker's
+`/auth/google/callback` as an authorized redirect URI, publish
+the consent screen, and add `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET` as Worker secrets.
+
+Each provider's button appears by itself once `/auth/config`
+reports that provider on. Secrets are **additive only** —
+`wrangler secret put` one at a time; any full script deploy must
+preserve the existing secret bindings (`keep_bindings`), or
+`AUTH_JWT_SECRET` (every session) and `BASETEN_API_KEY` (the
+live demo) are lost.
 
 ## Document mode (`/photo` with `mode: "document"`)
 
