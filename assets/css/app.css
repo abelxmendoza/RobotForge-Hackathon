@@ -1198,3 +1198,35 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
     position: sticky; left: 0; background: var(--surface);
   }
 }
+
+.jump-context { display: none; }
+
+/* ==== Mobile UX Phase 2 (2026-10-31) ====
+   The More menu becomes a sheet, and the robot detail rail carries
+   its robot's name + verdict. Same scoping rules as Phase 0+1. */
+@media (max-width: 900px) {
+  .nav-more-menu {
+    right: -4px; bottom: calc(100% + 12px);
+    width: min(400px, calc(100vw - 24px));
+    padding: 10px; gap: 2px; border-radius: 16px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .6);
+  }
+  .nav-more-menu a {
+    min-height: 48px; display: flex; align-items: center;
+    padding: 10px 12px; border-radius: 10px; font-size: var(--fs-md);
+  }
+  .jump-context {
+    display: flex; align-items: center; flex: none;
+    position: sticky; left: 0; z-index: 1;
+    font-weight: 700; color: var(--text); white-space: nowrap;
+    background: rgba(8, 16, 26, .94); padding-right: 10px;
+    box-shadow: 12px 0 12px -6px rgba(8, 16, 26, .94);
+  }
+}
+/* When the chat composer is mounted it floats above the tab bar and
+   would cover the More sheet's lower rows — lift the sheet above it.
+   (ChatBar is absent on Workshop/Forge/Chat routes; there the sheet
+   keeps its normal 12px offset.) */
+@media (max-width: 900px) {
+  .shell:has(.chat-bar) .nav-more-menu { bottom: calc(100% + 88px); }
+}

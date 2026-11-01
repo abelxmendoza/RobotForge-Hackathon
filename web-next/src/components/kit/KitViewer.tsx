@@ -11,6 +11,7 @@
  * be repeated here; they now live once each, in PartsCatalogue (below
  * this viewer on /kit/) and on the robot pages. */
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { parts as libParts } from '../forge/data';
 import type { CatalogPart } from '../forge/data';
 import {
@@ -24,7 +25,18 @@ import {
   partScad,
 } from './burger';
 import type { GeneratedKey, SpecimenDoc, SpecimenPart } from './burger';
-import KitScene from './KitScene';
+
+/* Code-split (mobile UX Phase 2, 2026-10-31): the Three.js scene is
+ * its own chunk, downloaded only when the scene actually mounts —
+ * on phones it doesn't mount at all until the reader taps Load. */
+const KitScene = dynamic(() => import('./KitScene'), {
+  ssr: false,
+  loading: () => (
+    <div className="kit-load">
+      <p>Loading the 3D kit…</p>
+    </div>
+  ),
+});
 
 const KIT_CSS = `
 .kitpage{background:#14161a;color:#e8eaed;
@@ -59,6 +71,10 @@ const KIT_CSS = `
 .kitpage .box td:first-child{color:#9aa3ad;white-space:nowrap}
 .kitpage pre{background:#0e1013;border:1px solid #2c313a;border-radius:10px;padding:12px;
   overflow:auto;font-size:11.5px;line-height:1.5;max-height:300px}
+.kitpage .kit-load{display:grid;place-items:center;align-content:center;gap:10px;
+  height:520px;text-align:center;padding:24px;color:#9aa3ad}
+.kitpage .kit-load p{max-width:420px;margin:0}
+@media(max-width:560px){.kitpage .kit-load{height:340px}}
 .kitpage .cls{margin:26px 0 6px;text-transform:capitalize}
 .kitpage .layer{width:78%;margin:3px auto;text-align:center;background:#21252e;
   border:1px solid #2c313a;border-radius:10px;padding:9px;cursor:pointer;font-weight:600}
@@ -96,14 +112,29 @@ export default function KitViewer() {
   const [fallback, setFallback] = useState(false);
   const readyRef = useRef(false);
 
-  /* The vanilla 6-second watchdog: if the 3D module never starts,
-   * show the flat kit stack. */
+  /* Mobile UX Phase 2 (2026-10-31): on phone-width screens the 3D
+   * scene waits for a tap — mounting Three.js + WebGL up front made
+   * /kit the heaviest page on mobile while most readers only need
+   * the catalogue below. Larger screens mount it as before. */
+  const [sceneOn, setSceneOn] = useState(false);
   useEffect(() => {
+    if (!window.matchMedia('(max-width: 700px)').matches) setSceneOn(true);
+  }, []);
+  const loadScene = () => {
+    readyRef.current = false;
+    setFallback(false);
+    setSceneOn(true);
+  };
+
+  /* The vanilla 6-second watchdog: if the 3D module never starts,
+   * show the flat kit stack. Runs only once the scene is mounted. */
+  useEffect(() => {
+    if (!sceneOn) return;
     const t = setTimeout(() => {
       if (!readyRef.current) setFallback(true);
     }, 6000);
     return () => clearTimeout(t);
-  }, []);
+  }, [sceneOn]);
 
   const specimenById = (id: string): SpecimenPart | undefined =>
     specimenDoc?.parts.find((p) => p.id === id);
@@ -142,6 +173,19 @@ export default function KitViewer() {
         </header>
 
         <div id="stage">
+          {!sceneOn && (
+            <div className="kit-load">
+              <p>
+                On a small screen the 3D kit loads only when you ask —
+                it keeps this page fast. The parts catalogue below works
+                without it, and the flat kit is right under the viewer.
+              </p>
+              <button type="button" className="primary" onClick={loadScene}>
+                Load the 3D kit
+              </button>
+            </div>
+          )}
+          {sceneOn && (
           <KitScene
             explodeTarget={slider / 100}
             spin={spin}
@@ -170,10 +214,13 @@ export default function KitViewer() {
             onSpecimenError={() => setDetail({ kind: 'specimenError' })}
             onExplodeCur={setExplodeCur}
           />
-          <div className="hud">
-            <b>Drag</b> orbit · <b>Pinch</b> zoom · <b>Tap</b>{' '}
-            {real ? 'a real part to inspect it' : 'a part to inspect'}
-          </div>
+          )}
+          {sceneOn && (
+            <div className="hud">
+              <b>Drag</b> orbit · <b>Pinch</b> zoom · <b>Tap</b>{' '}
+              {real ? 'a real part to inspect it' : 'a part to inspect'}
+            </div>
+          )}
         </div>
         <div className="bar3d">
           <label htmlFor="explode">Explode</label>
@@ -233,11 +280,12 @@ export default function KitViewer() {
             ) : null}
           </div>
         )}
-        {fallback && (
+        {(fallback || !sceneOn) && (
           <div id="fallback2d" style={{ display: 'block' }}>
             <p className="dim">
-              The 3D viewer couldn't start (WebGL or CDN unavailable) — the
-              kit, flat:
+              {fallback
+                ? "The 3D viewer couldn't start (WebGL or CDN unavailable) — the kit, flat:"
+                : 'The kit, flat — tap a layer to inspect it:'}
             </p>
             <div id="stack2d">
               {GENERATED_KEYS.map((k) => (

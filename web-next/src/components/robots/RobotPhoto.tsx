@@ -3,7 +3,7 @@
  * from the maker's site or Wikimedia; if one fails to load (blocked,
  * moved, offline) the card shows a RobotForge illustration when one
  * exists, or a plain robot outline with the name, never an empty box. */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { assetPath } from '@/components/home/asset';
 
 const ILLUSTRATIONS: Record<string, string> = {
@@ -13,8 +13,14 @@ const ILLUSTRATIONS: Record<string, string> = {
   'mini-pupper': 'mini-pupper.svg',
 };
 
-export default function RobotPhoto({ src, alt, slug, name }: { src: string; alt: string; slug: string; name: string }) {
+export default function RobotPhoto({ src, alt, slug, name, onFallback }:
+  { src: string; alt: string; slug: string; name: string; onFallback?: () => void }) {
   const [stage, setStage] = useState<'photo' | 'drawing' | 'outline'>('photo');
+  /* Lets a parent (the detail hero) fix its caption when the credited
+   * photo is not what is actually on screen. */
+  useEffect(() => {
+    if (stage !== 'photo') onFallback?.();
+  }, [stage, onFallback]);
   const drawing = ILLUSTRATIONS[slug];
   if (stage === 'outline' || (stage === 'drawing' && !drawing)) {
     return (
