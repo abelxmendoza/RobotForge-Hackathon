@@ -1,0 +1,40 @@
+{
+  "name": "Omega1",
+  "description": "Omega1 — Abel's own robot, a Freenove FNK0043 4WD Raspberry Pi car (ordinary wheels), skid-steer. Every MEASURE_ME value must come from a tape measure, calipers or a scale on the real robot before this file is renamed and validated.",
+  "drivetrain": "skid_steer",
+  "length_m": "MEASURE_ME — chassis plate length, not the 0.21 m vendor envelope",
+  "width_m": "MEASURE_ME — chassis plate width, not the 0.15 m vendor envelope",
+  "height_m": "MEASURE_ME — floor to top of the tallest fixed part (vendor envelope says 0.125 m)",
+  "ground_clearance_m": "MEASURE_ME — floor to the lowest point of the chassis plate",
+  "mass_kg": "MEASURE_ME — whole robot on a kitchen scale, batteries in",
+  "component_mass_kg": {
+    "_note": "Optional. Weigh parts only if you take them off anyway; otherwise delete this block."
+  },
+  "wheel": {
+    "count": 4,
+    "driven": true,
+    "diameter_m": "MEASURE_ME — calipers across the tyre",
+    "width_m": "MEASURE_ME — tyre width"
+  },
+  "motor": {
+    "count": 4,
+    "kind": "dc_gearmotor",
+    "voltage_v": "LOOK_UP — the yellow gearmotor's rated voltage from its label or the kit datasheet; leave the spec unfinished rather than guess",
+    "stall_torque_nm": "LOOK_UP or null if no datasheet value exists"
+  },
+  "battery": {
+    "chemistry": "liion",
+    "voltage_v": 7.4,
+    "capacity_mah": "READ_OFF — printed mAh on your 18650 cells"
+  },
+  "sensors": [
+    {"kind": "ultrasonic", "position": "front", "range_m": "LOOK_UP — HC-SR04 datasheet range"},
+    {"kind": "rgb_camera", "position": "front", "range_m": null}
+  ],
+  "_provenance": {
+    "drivetrain": "DOCUMENTED — Freenove ordinary-wheel code turns with opposing left/right commands (four-wheel skid-steer); see RobotForge docs/freenove-evidence.md",
+    "battery.voltage_v": "DOCUMENTED — kit takes two 3.7 V 18650 cells in series (Freenove FNK0043 listing); 7.4 V nominal",
+    "sensors": "DOCUMENTED — kit ships an HC-SR04 ultrasonic module and a camera",
+    "everything_marked_MEASURE_ME": "MEASURED on the real robot by Abel — record the date when you fill it in"
+  }
+}
