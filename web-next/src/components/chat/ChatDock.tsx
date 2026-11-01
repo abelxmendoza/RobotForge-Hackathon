@@ -48,6 +48,7 @@ import { readStore, writeStore, uid } from '@/lib/store';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT } from "@/components/forge/live";
+import { isDemoMode, useDemoMode } from "@/lib/demoMode";
 
 
 const DEFAULT_CHIPS = [
@@ -63,6 +64,8 @@ const SUB_RECORDED =
   "Answers from RobotForge's recorded data (not a live AI) — the Robodex, the parts catalogue and the recorded gate reports.";
 const SUB_LIVE =
   "Recorded data first — the Robodex, the parts catalogue and the recorded gate reports. Questions they can’t answer go to a live model, badged LIVE MODEL.";
+const SUB_DEMO =
+  "Demo mode — answers are recorded from real runs: the Robodex, the parts catalogue and the recorded gate reports. Nothing here calls the live model; sign in for live AI.";
 
 const LIVE_BADGE =
   "LIVE MODEL — not from recorded RobotForge data; check numbers on the Evidence page";
@@ -138,6 +141,16 @@ export function useForgeAssistant() {
     () => carry.chips ?? wrench.contextChips(pathname || "", carry.memory)
   );
   const [subText, setSubText] = useState(SUB_RECORDED);
+  /* Demo mode: the subtitle says so, and every live path below
+   * short-circuits before any fetch (see checkLive / ask /
+   * proposeViaLive). The ref mirrors the state for the callbacks. */
+  const demo = useDemoMode();
+  const demoRef = useRef(false);
+  demoRef.current = demo;
+  useEffect(() => {
+    if (demo) setSubText(SUB_DEMO);
+    else setSubText((prev) => (prev === SUB_DEMO ? SUB_RECORDED : prev));
+  }, [demo]);
 
   const [proposal, setProposal] = useState<Preview | null>(() => carry.proposal);
   const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(() => carry.inventoryProposal);
@@ -188,7 +201,10 @@ export function useForgeAssistant() {
     /* Cached /health probe: resolves to the health JSON when the
      * endpoint is configured AND answering AND able to run chat;
      * resolves to null otherwise. With no endpoint configured (the
-     * shipped site) it resolves null immediately — no network call. */
+     * shipped site) it resolves null immediately — no network call.
+     * Demo mode likewise resolves null immediately: the demo never
+     * probes the Worker. */
+    if (isDemoMode()) return Promise.resolve(null);
     if (!liveBase()) return Promise.resolve(null);
     if (!healthRef.current) {
       healthRef.current = fetch(liveBase() + "/health", { cache: "no-cache" })
@@ -456,6 +472,10 @@ export function useForgeAssistant() {
         prev.map((m) => (m.id === waitId ? { ...m, html: undefined, text } : m))
       );
     };
+    if (isDemoMode()) {
+      settle('Demo mode: free-form operations are translated by the live model, and the demo never calls it — nothing was changed. The built-in commands still run here against the demo robots (type “operations”), or exit the demo and sign in for live AI.');
+      return;
+    }
     const health = await checkLive();
     if (!liveUsable(health)) {
       settle('That operation is not in my built-in commands, and the live model is not available to translate it, so nothing was changed. Type “operations” for the commands I can execute directly.');
@@ -534,9 +554,20 @@ export function useForgeAssistant() {
         memoryRef.current = turn.memory || {};
         const ans: AnswerResult & { sources?: SourceRef[] } = turn;
         /* Recorded answers stay the default and stay instant: only
-         * the engine's honest fallback may go live. */
-        if (!ans.fallback || !liveBase()) {
-          done(ans);
+         * the engine's honest fallback may go live. In demo mode the
+         * fallback stays recorded too, with the demo note attached —
+         * no /health probe, no /chat call. */
+        if (!ans.fallback || !liveBase() || demoRef.current) {
+          done(
+            demoRef.current && ans.fallback
+              ? {
+                  ...ans,
+                  html:
+                    ans.html +
+                    '<p class="fc-live-note">Demo mode: that answer is from the recorded data only — the demo never calls the live model. Exit the demo and sign in for live AI.</p>',
+                }
+              : ans
+          );
           return;
         }
         void checkLive().then((h) => {

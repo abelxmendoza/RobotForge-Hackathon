@@ -9,13 +9,24 @@
  * Set LIVE_ENDPOINT to the deployed Worker base URL (see
  * live/README.md) to light up live describe / photo / list steps. */
 import type { LiveHealth } from './model';
+import { isDemoMode } from '@/lib/demoMode';
 
 export const LIVE_ENDPOINT = 'https://robotforge-live.abelxmendoza.workers.dev';
 
 export const liveBase = LIVE_ENDPOINT.replace(/\/+$/, '');
 
+/* Demo mode never touches the Worker (see lib/demoMode.ts): the
+ * health probe resolves null WITHOUT a network call and live POSTs
+ * refuse with a demo error, so every consumer falls back to its
+ * recorded/offline path and says why. The demo check runs before
+ * the health cache on purpose — a probe cached before the visitor
+ * entered the demo must not leak live behavior into it. */
+export const DEMO_LIVE_MESSAGE =
+  'Live features are off in demo mode — exit the demo and sign in to use live AI.';
+
 let healthCache: LiveHealth | null | undefined; // undefined = not probed yet
 export async function liveHealth(): Promise<LiveHealth | null> {
+  if (isDemoMode()) return null;
   if (!liveBase) return null;
   if (healthCache !== undefined) return healthCache;
   try {
@@ -45,6 +56,14 @@ export function LiveOffReason({
   h: LiveHealth | null;
   route: string;
 }) {
+  if (isDemoMode()) {
+    return (
+      <>
+        you&apos;re exploring the demo — live features are off here and
+        answers are recorded; exit the demo and sign in for live AI
+      </>
+    );
+  }
   if (!liveBase) {
     return (
       <>
@@ -70,6 +89,11 @@ export function LiveOffReason({
 }
 
 export async function postJSON<T>(path: string, payload: unknown): Promise<T> {
+  if (isDemoMode()) {
+    const e = new Error(DEMO_LIVE_MESSAGE) as Error & { code?: string };
+    e.code = 'demo_mode';
+    throw e;
+  }
   const r = await fetch(liveBase + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

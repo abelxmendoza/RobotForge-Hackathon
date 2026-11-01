@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
 import AccountControl from "./AccountControl";
+import DemoEntryButton from "./DemoEntryButton";
 import ChatBar from "@/components/chat/ChatBar";
 import { assetPath } from "@/components/home/asset";
 
@@ -90,6 +91,7 @@ export default function AppShell({ active, crumbs = [], wide = false, children }
               );
             })}
           </nav>
+          <DemoEntryButton className="btn btn-sm" label="Try the demo" />
           <AccountControl />
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import RevealInit from "@/components/shell/RevealInit";
 import AccountControl from "@/components/shell/AccountControl";
+import DemoEntryButton from "@/components/shell/DemoEntryButton";
 import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
 
 /* One set of names, each always the same page (see AppShell's NAV). */
@@ -41,6 +42,7 @@ export function LandingHeader() {
         </nav>
         <nav className="site-nav site-nav-aside" aria-label="More">
           <a href={REPO_URL}>GitHub</a>
+          <DemoEntryButton className="btn btn-sm" label="Try the demo" />
           <AccountControl />
         </nav>
         <Link className="btn btn-app" href="/garage/">Open the app</Link>

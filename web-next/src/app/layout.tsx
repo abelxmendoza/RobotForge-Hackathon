@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import Providers from "@/store/Providers";
+import DemoBar from "@/components/shell/DemoBar";
 import "@/styles/tokens.css";
 import "@/styles/app.css";
 import "@/styles/site.css";
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <DemoBar />
+          {children}
+        </Providers>
       </body>
     </html>
   );

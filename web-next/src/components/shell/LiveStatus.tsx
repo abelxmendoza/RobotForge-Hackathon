@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { liveBase, liveHealth, routeOn } from '@/components/forge/live';
+import { isDemoMode } from '@/lib/demoMode';
 import type { LiveHealth } from '@/components/forge/model';
 
 export type LiveMode = 'checking' | 'live' | 'recorded' | 'mock';
@@ -33,6 +34,7 @@ const HEADLINE: Record<LiveMode, string> = {
 
 /* Why the live route is not in use, in plain words. */
 export function offReason(h: LiveHealth | null, route: string): string {
+  if (isDemoMode()) return 'you’re exploring the demo — live features are off here; exit the demo and sign in for live AI';
   if (!liveBase) return 'no live endpoint is configured in this deployment';
   if (!h || !h.ok) return 'the live endpoint isn’t answering';
   if (h.mode === 'off') return 'live mode is switched off at the endpoint';
