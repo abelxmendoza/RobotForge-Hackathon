@@ -351,6 +351,7 @@ export default function Garage() {
   const [draft, setDraft] = useState<Spec | null>(null);
   const [draftNote, setDraftNote] = useState<string[]>([]);
   const [label, setLabel] = useState('');
+  const [plannedDraft, setPlannedDraft] = useState(false);
   const [note, setNote] = useState('');
   const [rawOpen, setRawOpen] = useState(false);
   const [rawText, setRawText] = useState('');
@@ -443,11 +444,20 @@ export default function Garage() {
     const v: RobotVersion = {
       id: uid('v'), label: label.trim() || `Upgrade ${robot.versions.length}`,
       note: [note.trim(), ...draftNote].filter(Boolean).join(' · '), source, createdAt: now(), spec: draft,
+      ...(plannedDraft ? { planned: true } : {}),
     };
     persist(robots.map((r) => (r.id === robot.id ? { ...r, name: draft.name || r.name, versions: [...r.versions, v] } : r)));
     setLabel('');
     setNote('');
     setDraftNote([]);
+    setPlannedDraft(false);
+  };
+
+  const togglePlanned = (versionId: string) => {
+    if (!robot) return;
+    persist(robots.map((r) => (r.id === robot.id
+      ? { ...r, versions: r.versions.map((v) => (v.id === versionId ? { ...v, planned: !v.planned } : v)) }
+      : r)));
   };
 
   const removeRobot = () => {
@@ -540,7 +550,7 @@ export default function Garage() {
               <button type="button" className="g-robot" aria-current={r.id === selected ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); }}>
                 <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
                 <span className="g-robot-text"><strong>{r.name}</strong>
-                <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}</span></span>
+                <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}{r.versions[r.versions.length - 1]?.planned ? ' · planned' : ''}</span></span>
               </button>
             </li>
           ))}
@@ -590,6 +600,7 @@ export default function Garage() {
                 <RobotAvatar names={[robot.name, String(draft.name ?? '')]} size={48} />
                 <h2>{draft.name || robot.name}</h2>
                 <span className="ws-vchip">v{robot.versions.length}</span>
+                {latest?.planned && <span className="fbadge planned" title="The current version is a plan — not built yet, and its parts may not be owned.">PLANNED — not built yet</span>}
                 <span key={verdict.cls} className={'verdict ws-verdict ' + verdict.cls}>{verdict.label}</span>
                 <ModeBanner compact mode={lm.mode} reason={lm.reason} />
               </div>
@@ -603,7 +614,7 @@ export default function Garage() {
               {robot.versions.map((v, i) => (
                 <li key={v.id}>
                   <button type="button" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title={`${v.label} · ${SOURCE_LABEL[v.source]} · ${new Date(v.createdAt).toLocaleDateString()}${v.note ? ' · ' + v.note : ''}`}>
-                    <span className="ws-dot" aria-hidden="true" />v{i + 1} <span className="ws-vlabel">{v.label}</span>
+                    <span className="ws-dot" aria-hidden="true" />v{i + 1} <span className="ws-vlabel">{v.label}</span>{v.planned && <span className="fbadge planned">PLANNED</span>}
                   </button>
                 </li>
               ))}
@@ -624,6 +635,9 @@ export default function Garage() {
                 <span><strong>{unsaved.length} unsaved change{unsaved.length === 1 ? '' : 's'}</strong></span>
                 <input id="garage-label" aria-label="Version name" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name this version" />
                 <input id="garage-note" aria-label="Note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
+                <label className="ws-planned-toggle" title="A planned version is an upgrade or build that is not built yet — its parts may not be owned. It keeps a plan from being read as the as-built robot.">
+                  <input type="checkbox" checked={plannedDraft} onChange={(e) => setPlannedDraft(e.target.checked)} /> Planned — not built yet
+                </label>
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => saveVersion(draftNote.some((n) => n.startsWith('Muse')) ? 'muse-fix' : draftNote.some((n) => n.startsWith('Fitted')) ? 'inventory' : 'edit')}>Save version</button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(JSON.parse(JSON.stringify(latest!.spec))); setDraftNote([]); }}>Discard</button>
               </div>
@@ -674,8 +688,9 @@ export default function Garage() {
                       <li key={v.id}>
                         <button type="button" className="g-version" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title="Compare the draft with this version">
                           <span className="g-vnum">v{i + 1}</span>
-                          <span><strong>{v.label}</strong><span className="g-small faint">{SOURCE_LABEL[v.source]} · {new Date(v.createdAt).toLocaleDateString()}</span></span>
+                          <span><strong>{v.label}</strong><span className="g-small faint">{SOURCE_LABEL[v.source]} · {new Date(v.createdAt).toLocaleDateString()}</span></span>{v.planned && <span className="fbadge planned">PLANNED</span>}
                         </button>
+                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => togglePlanned(v.id)} title={v.planned ? 'Mark this version as built (it records the robot as it is)' : 'Mark this version as planned (not built yet — a plan, not the as-built record)'}>{v.planned ? 'Mark built' : 'Mark planned'}</button>
                         <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDraft(JSON.parse(JSON.stringify(v.spec)))}>Load</button>
                       </li>
                     ))}

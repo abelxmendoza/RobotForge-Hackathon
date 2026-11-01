@@ -41,6 +41,7 @@ import dynamic from 'next/dynamic';
 import { useForgeAssistant } from '@/components/chat/ChatDock';
 import { conversationalAnswer } from '@/components/chat/engine';
 import PartPhotoIntake from '@/components/inventory/PartPhotoIntake';
+import VoiceButton from '@/components/chat/VoiceButton';
 import { useDispatch } from 'react-redux';
 import { setStep, setTab } from '@/store/forgeSlice';
 import { BADGE_LABEL, downloadJSON } from './model';
@@ -1589,6 +1590,19 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
               <path d="M21 11.5 12.6 19.9a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" />
             </svg>
           </button>
+          <VoiceButton
+            onText={(t) => {
+              setText((prev) => (prev.trim() ? prev.replace(/\s+$/, '') + ' ' + t : t));
+              const ta = inputRef.current;
+              if (ta) {
+                ta.focus();
+                requestAnimationFrame(() => {
+                  ta.style.height = 'auto';
+                  ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+                });
+              }
+            }}
+          />
           <textarea
             id="forge-input"
             ref={inputRef}

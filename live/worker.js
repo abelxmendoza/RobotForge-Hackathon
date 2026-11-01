@@ -25,17 +25,32 @@
  *   POST /part     -> { image_data_url, note? }  => { part, model }
  *                     one inventory part identified from a photo
  *                     (Meta vision; needs the optional Meta key).
+ *   POST /transcribe -> { audio_b64 }    => { transcript, model }
+ *                     one spoken robot description, transcribed by
+ *                     Muse Voice Transcribe on the Meta Model API
+ *                     (key: META_API_KEY; WAV audio, client-encoded).
  *   POST /part-chat-> { part, message, history? } => { reply, update,
  *                     confirmed, model } — talk a part through until
  *                     the owner confirms what it is.
  *
- * /describe, /chat and /list proxy Baseten (key: BASETEN_API_KEY
- * secret), with Fireworks as an optional fallback provider for the
- * same Muse Spark Open model (key: FIREWORKS_API_KEY secret — used
- * only when the Baseten attempt fails; either key lights the text
- * routes). /photo proxies the Meta Model API vision model (key:
- * META_API_KEY secret — OPTIONAL: without it /photo answers 501 and
- * the site falls back to its recorded photo sample, by design).
+ * The text routes (describe/chat/list/fix/part-chat) run a
+ * three-provider chain in MEASURED order (fixed 24-description
+ * sweep, Oct 2026): Baseten serving Muse Spark Open (24/24, key:
+ * BASETEN_API_KEY secret), then the Meta Model API direct serving
+ * the hosted muse-spark-1.3 (23/24, key: META_API_KEY secret),
+ * then Fireworks serving Muse Spark Open (21/24, re-measured
+ * 18/24; key: FIREWORKS_API_KEY secret). A provider is attempted
+ * only when its key is set and every earlier attempt failed; any
+ * one key lights the text routes. Responses report the model that
+ * actually answered, because the Meta attempt is a different model
+ * (hosted Spark 1.3), not the same model on another host. A request
+ * may pin one provider with { "provider": "baseten"|"meta"|
+ * "fireworks" } — the site never sends it; it exists so the sweep
+ * can be re-measured through this endpoint. /photo and /part proxy
+ * the Meta Model API vision model (key: META_API_KEY secret —
+ * OPTIONAL: without it they answer 501 and the site falls back to
+ * its recorded photo sample, by design). /transcribe uses the same
+ * Meta key.
  *
  * Guardrails (these spend the owner's API credits):
  *   - CORS locked to the site's origins (Vercel production, the
@@ -57,6 +72,9 @@
 const MODEL = 'meta-models/muse-spark-open';
 const BASETEN_URL = 'https://inference.baseten.co/v1/chat/completions';
 const PHOTO_MODEL = 'muse-spark-1.3';
+const META_TEXT_MODEL = 'muse-spark-1.3';
+const TRANSCRIBE_MODEL = 'muse-voice-transcribe-1.0';
+const TRANSCRIBE_URL = 'https://api.meta.ai/v1/asr/transcribe';
 const META_URL = 'https://api.meta.ai/v1/chat/completions';
 const FIREWORKS_MODEL = 'accounts/fireworks/models/muse-spark-open';
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
@@ -70,6 +88,8 @@ const ALLOWED_ORIGINS = [
 ];
 const MAX_BODY_BYTES = 16384;
 const PHOTO_MAX_BODY_BYTES = 3000000; // a downscaled photo data URL
+const TRANSCRIBE_MAX_BODY_BYTES = 6000000; // base64 of a <=60 s WAV clip
+const TRANSCRIBE_MAX_AUDIO_BYTES = 4000000; // decoded WAV cap (~80 s at 24 kHz mono)
 const DESCRIBE_MAX_CHARS = 4000;
 const CHAT_MAX_CHARS = 2000;
 const LIST_MAX_CHARS = 8000;
@@ -410,24 +430,40 @@ async function callModelOn(url, apiKey, model, label, messages, temperature, max
   return messageContent(payload);
 }
 
-/* Text routes (describe/chat/list) run on Muse Spark Open with a
- * two-provider chain: Baseten is primary; Fireworks is the fallback,
- * used only when its FIREWORKS_API_KEY secret is set AND the Baseten
- * attempt fails (HTTP error, network failure, empty reply). Both
- * providers serve the same Meta model, so a fallback answer is the
- * same product behavior on a different host — resilience for the
- * live demo, not a model swap. Worst case is two slow upstreams in
- * sequence (each bounded by UPSTREAM_TIMEOUT_MS); the common outage
- * mode (fast 5xx / refused) fails over in seconds. */
-async function callModel(env, messages, temperature, maxTokens) {
+/* A request may pin a single provider (measurement sweeps through
+ * the production endpoint). Anything else is ignored. */
+function providerOnly(data) {
+  const p = data && data.provider;
+  return (p === 'baseten' || p === 'meta' || p === 'fireworks') ? p : undefined;
+}
+
+/* Text routes run a three-provider chain in the order the fixed
+ * 24-description sweep measured (Oct 2026): Baseten / Muse Spark
+ * Open 24/24, Meta Model API direct / hosted muse-spark-1.3 23/24,
+ * Fireworks / Muse Spark Open 21/24 (re-measured 18/24). An attempt
+ * runs only when its key is set (and, when a provider is pinned,
+ * only that one). Returns { content, model } with the model that
+ * ACTUALLY answered — the Meta attempt serves a different model
+ * than the other two, so callers report it verbatim. Worst case is
+ * three slow upstreams in sequence (each bounded by
+ * UPSTREAM_TIMEOUT_MS); the common outage mode (fast 5xx / refused)
+ * fails over in seconds. */
+async function callModel(env, messages, temperature, maxTokens, only) {
   const attempts = [];
-  if (env.BASETEN_API_KEY) {
-    attempts.push(() => callModelOn(BASETEN_URL, env.BASETEN_API_KEY,
-      MODEL, 'Baseten', messages, temperature, maxTokens));
+  if (env.BASETEN_API_KEY && (!only || only === 'baseten')) {
+    attempts.push(async () => ({ content: await callModelOn(BASETEN_URL,
+      env.BASETEN_API_KEY, MODEL, 'Baseten', messages, temperature,
+      maxTokens), model: MODEL }));
   }
-  if (env.FIREWORKS_API_KEY) {
-    attempts.push(() => callModelOn(FIREWORKS_URL, env.FIREWORKS_API_KEY,
-      FIREWORKS_MODEL, 'Fireworks', messages, temperature, maxTokens));
+  if (env.META_API_KEY && (!only || only === 'meta')) {
+    attempts.push(async () => ({ content: await callModelOn(META_URL,
+      env.META_API_KEY, META_TEXT_MODEL, 'Meta', messages, temperature,
+      maxTokens), model: META_TEXT_MODEL }));
+  }
+  if (env.FIREWORKS_API_KEY && (!only || only === 'fireworks')) {
+    attempts.push(async () => ({ content: await callModelOn(FIREWORKS_URL,
+      env.FIREWORKS_API_KEY, FIREWORKS_MODEL, 'Fireworks', messages,
+      temperature, maxTokens), model: MODEL }));
   }
   let lastError = new Error('no model provider is configured');
   for (const attempt of attempts) {
@@ -598,7 +634,7 @@ async function readJsonBody(request, maxBytes) {
 }
 
 async function handleDescribe(request, env) {
-  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY && !env.META_API_KEY) {
     return err(request, 500, 'not_configured',
       'The endpoint has no model provider key configured (see live/README.md).');
   }
@@ -616,11 +652,12 @@ async function handleDescribe(request, env) {
   const gate = await gateBudget(env, request);
   if (gate) return gate;
   let content;
+  let model = MODEL;
   try {
-    content = await callModel(env, [
+    ({ content, model } = await callModel(env, [
       { role: 'system', content: DESCRIBE_SYSTEM_PROMPT },
       { role: 'user', content: description },
-    ], 0.2, 4000);
+    ], 0.2, 4000, providerOnly(data)));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The model call failed (' + e.message + '). Nothing was recorded; the recorded runs still work.');
@@ -637,7 +674,7 @@ async function handleDescribe(request, env) {
     return err(request, 502, 'bad_model_output',
       'The model\'s spec failed the schema check (' + problem + '). Nothing was saved; try rephrasing the description.');
   }
-  return json(request, 200, { spec, model: MODEL });
+  return json(request, 200, { spec, model });
 }
 
 /* Tier-1 operator mode for /chat: when the client sends op_context, the
@@ -695,7 +732,7 @@ function parseOpReply(content) {
 }
 
 async function handleChat(request, env) {
-  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY && !env.META_API_KEY) {
     return err(request, 500, 'not_configured',
       'The endpoint has no model provider key configured (see live/README.md).');
   }
@@ -714,24 +751,25 @@ async function handleChat(request, env) {
   if (gate) return gate;
   const opContext = sanitizeOpContext(data && data.op_context);
   let content;
+  let model = MODEL;
   try {
-    content = await callModel(env, opContext ? [
+    ({ content, model } = await callModel(env, opContext ? [
       { role: 'system', content: OP_SYSTEM_PROMPT },
       { role: 'user', content: 'Context: ' + JSON.stringify(opContext) + '\nRequest: ' + message },
     ] : [
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
       { role: 'user', content: message },
-    ], opContext ? 0.1 : 0.4, 2000);
+    ], opContext ? 0.1 : 0.4, 2000, providerOnly(data)));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The model call failed (' + e.message + '). The recorded answers still work.');
   }
   if (opContext) {
     const op = parseOpReply(content);
-    if (op) return json(request, 200, { answer: op.answer, command: op.command, model: MODEL });
-    return json(request, 200, { answer: content.trim(), command: null, model: MODEL });
+    if (op) return json(request, 200, { answer: op.answer, command: op.command, model });
+    return json(request, 200, { answer: content.trim(), command: null, model });
   }
-  return json(request, 200, { answer: content.trim(), model: MODEL });
+  return json(request, 200, { answer: content.trim(), model });
 }
 
 const ESTIMATED_PREFIX = 'Photo draft (all dimensions ESTIMATED): ';
@@ -892,7 +930,7 @@ async function handlePhoto(request, env) {
 }
 
 async function handleList(request, env) {
-  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY && !env.META_API_KEY) {
     return err(request, 500, 'not_configured',
       'The endpoint has no model provider key configured (see live/README.md).');
   }
@@ -910,11 +948,12 @@ async function handleList(request, env) {
   const gate = await gateBudget(env, request);
   if (gate) return gate;
   let content;
+  let model = MODEL;
   try {
-    content = await callModel(env, [
+    ({ content, model } = await callModel(env, [
       { role: 'system', content: LIST_SYSTEM_PROMPT },
       { role: 'user', content: text },
-    ], 0.2, 4000);
+    ], 0.2, 4000, providerOnly(data)));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The model call failed (' + e.message + '). The recorded list run still works.');
@@ -970,7 +1009,7 @@ async function handleList(request, env) {
     import: { items, missing, wiring, draft_spec: draft },
     draft_note: draftNote,
     model_generated: true,
-    model: MODEL,
+    model,
   });
 }
 
@@ -1038,7 +1077,7 @@ function sanitizeChanges(raw, spec) {
 }
 
 async function handleFix(request, env) {
-  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY && !env.META_API_KEY) {
     return err(request, 500, 'not_configured',
       'The endpoint has no model provider key configured (see live/README.md).');
   }
@@ -1058,12 +1097,13 @@ async function handleFix(request, env) {
   const gate = await gateBudget(env, request);
   if (gate) return gate;
   let content;
+  let model = MODEL;
   try {
-    content = await callModel(env, [
+    ({ content, model } = await callModel(env, [
       { role: 'system', content: FIX_SYSTEM_PROMPT },
       { role: 'user', content: 'Spec:\n' + JSON.stringify(spec) +
         '\n\nFindings:\n' + lines.join('\n') },
-    ], 0.2, 3000);
+    ], 0.2, 3000, providerOnly(data)));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The model call failed (' + e.message + '). Your spec was not changed.');
@@ -1079,7 +1119,7 @@ async function handleFix(request, env) {
   return json(request, 200, {
     changes,
     summary: String((parsed && parsed.summary) || '').slice(0, 600),
-    model: MODEL,
+    model,
   });
 }
 
@@ -1205,8 +1245,88 @@ async function handlePart(request, env) {
   return json(request, 200, { part: sanitizePart(parsed), model: PHOTO_MODEL });
 }
 
+/* One Muse Voice Transcribe call. The batch endpoint takes
+ * multipart form data: a 'request' JSON part naming the model and
+ * audio encoding, and an 'audio' part with the bytes. Verified
+ * against the live API 2026-10-31: WAV is accepted; MP3 and WebM
+ * containers are rejected as malformed, which is why the SITE
+ * encodes WAV (WebAudio decode + PCM encode) and this route only
+ * accepts WAV. */
+async function handleTranscribe(request, env) {
+  /* Same optional-key posture as /photo: no Meta key -> the route
+   * is off (501) and the site hides the mic. Not an error state. */
+  if (!env.META_API_KEY) {
+    return err(request, 501, 'transcribe_not_configured',
+      'Voice transcription is not configured on this endpoint (no Meta API key). Typing still works.');
+  }
+  const { data, error } = await readJsonBody(request, TRANSCRIBE_MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  const b64 = data && data.audio_b64;
+  if (typeof b64 !== 'string' || !b64) {
+    return err(request, 400, 'missing_audio',
+      'Send { "audio_b64": "<base64 WAV audio>" }.');
+  }
+  let bytes;
+  try {
+    const bin = atob(b64.replace(/\s+/g, ''));
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  } catch (e) {
+    return err(request, 400, 'bad_audio', 'audio_b64 is not valid base64.');
+  }
+  if (bytes.length > TRANSCRIBE_MAX_AUDIO_BYTES) {
+    return err(request, 413, 'too_large',
+      'Audio is over ' + TRANSCRIBE_MAX_AUDIO_BYTES + ' bytes decoded.');
+  }
+  if (bytes.length < 44 || bytes[0] !== 0x52 || bytes[1] !== 0x49 ||
+      bytes[2] !== 0x46 || bytes[3] !== 0x46) {
+    return err(request, 400, 'bad_audio',
+      'Audio must be a WAV file (the site encodes recordings to WAV).');
+  }
+  const gate = await gateBudget(env, request);
+  if (gate) return gate;
+  const form = new FormData();
+  form.append('request', new Blob(
+    [JSON.stringify({ model: TRANSCRIBE_MODEL, audioEncoding: 'WAV' })],
+    { type: 'application/json' }));
+  form.append('audio', new Blob([bytes], { type: 'audio/wav' }), 'audio.wav');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
+  let payload;
+  try {
+    const res = await fetch(TRANSCRIBE_URL, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + env.META_API_KEY },
+      body: form,
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => '')).slice(0, 300);
+      throw new Error('The Meta Model API returned HTTP ' + res.status +
+        (detail ? ': ' + detail : ''));
+    }
+    payload = await res.json();
+  } catch (e) {
+    return err(request, 502, 'upstream_error',
+      'The transcription call failed (' + e.message + '). Your audio was not stored anywhere.');
+  } finally {
+    clearTimeout(timer);
+  }
+  const transcript = payload && payload.transcript;
+  if (typeof transcript !== 'string' || !transcript.trim()) {
+    return err(request, 502, 'bad_model_output',
+      'The transcription came back empty. Nothing was saved; try again closer to the mic.');
+  }
+  return json(request, 200, {
+    transcript: transcript.trim(),
+    model: TRANSCRIBE_MODEL,
+    audio_duration_ms: typeof payload.audioDurationMs === 'number'
+      ? payload.audioDurationMs : null,
+  });
+}
+
 async function handlePartChat(request, env) {
-  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
+  if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY && !env.META_API_KEY) {
     return err(request, 500, 'not_configured',
       'The endpoint has no model provider key configured (see live/README.md).');
   }
@@ -1226,13 +1346,14 @@ async function handlePartChat(request, env) {
   const gate = await gateBudget(env, request);
   if (gate) return gate;
   let content;
+  let model = MODEL;
   try {
-    content = await callModel(env, [
+    ({ content, model } = await callModel(env, [
       { role: 'system', content: PART_CHAT_SYSTEM_PROMPT },
       { role: 'user', content: 'Part record:\n' + JSON.stringify(sanitizePart(part)) },
       ...history,
       { role: 'user', content: message },
-    ], 0.3, 1500);
+    ], 0.3, 1500, providerOnly(data)));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The model call failed (' + e.message + '). Your inventory was not changed.');
@@ -1243,13 +1364,13 @@ async function handlePartChat(request, env) {
   } catch (e) {
     /* A plain-text answer is still an answer; it just changes nothing. */
     return json(request, 200, { reply: content.trim().slice(0, 1200), update: null,
-      confirmed: false, model: MODEL });
+      confirmed: false, model });
   }
   return json(request, 200, {
     reply: String(parsed.reply || '').slice(0, 1200),
     update: sanitizePartUpdate(parsed.update),
     confirmed: parsed.confirmed === true,
-    model: MODEL,
+    model,
   });
 }
 
@@ -1279,21 +1400,22 @@ async function handle(request, env) {
     }
     const baseten = Boolean(env.BASETEN_API_KEY);
     const fireworks = Boolean(env.FIREWORKS_API_KEY);
-    const textProvider = baseten || fireworks;
+    const textProvider = baseten || fireworks || Boolean(env.META_API_KEY);
     return json(request, 200, {
       ok: true,
       mode: String(env.LIVE_ENABLED ?? '1') === '0' ? 'off' : 'live',
       configured: textProvider,
       kv: Boolean(env.RF_LIVE_KV),
       budget,
-      /* Which providers hold keys: describe/chat/list run on Baseten
-       * with Fireworks as fallback (either key lights them); photo
-       * needs the optional Meta key. */
+      /* Which providers hold keys: the text routes run the
+       * Baseten -> Meta -> Fireworks chain (any one key lights
+       * them); photo/part/transcribe need the Meta key. */
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY) },
       routes: {
         describe: textProvider, chat: textProvider, list: textProvider,
         fix: textProvider, part_chat: textProvider,
         photo: Boolean(env.META_API_KEY), part: Boolean(env.META_API_KEY),
+        transcribe: Boolean(env.META_API_KEY),
       },
     });
   }
@@ -1318,7 +1440,10 @@ async function handle(request, env) {
   if (url.pathname === '/part-chat' && request.method === 'POST') {
     return handlePartChat(request, env);
   }
-  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part or /part-chat.');
+  if (url.pathname === '/transcribe' && request.method === 'POST') {
+    return handleTranscribe(request, env);
+  }
+  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat or /transcribe.');
 }
 
 export default { fetch: handle };

@@ -14,6 +14,13 @@ export interface RobotVersion {
   source: VersionSource;
   createdAt: string;
   spec: Spec;
+  /* A PLANNED version describes a robot or upgrade that is not
+   * built yet — its parts may not be owned at all. It exists so a
+   * plan (an upgrade being shopped for, a known Robodex robot being
+   * played with) is never confused with the as-built record.
+   * Absent/false = the version records the robot as it is.
+   * Mirrors the inventory reality split (real vs sim_only). */
+  planned?: boolean;
 }
 
 export interface GarageRobot {

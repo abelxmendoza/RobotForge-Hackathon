@@ -142,7 +142,8 @@ def test_worker_guardrails_and_routes_present():
     for bit in ("abelxmendoza.github.io", "budget_exhausted",
                 "rate_limited", "guardrail_error", "LIVE_ENABLED",
                 "RF_LIVE_KV", "/describe", "/chat", "/list", "/photo",
-                "photo_not_configured", "routes"):
+                "photo_not_configured", "routes", "/transcribe",
+                "transcribe_not_configured", "muse-voice-transcribe-1.0"):
         assert bit in WORKER, bit
     # photo is the optional route: 501 when its secret is absent
     assert "501" in WORKER and "env.META_API_KEY" in WORKER
