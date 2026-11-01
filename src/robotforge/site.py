@@ -306,6 +306,11 @@ def app_shell(*, active: str, title: str, depth: int, body: str,
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{e(title)} · RobotForge</title>{desc}
 <meta name="theme-color" content="#0f1115">
+<link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png">
 <link rel="stylesheet" href="{root}assets/css/tokens.css">
 <link rel="stylesheet" href="{root}assets/css/app.css">
 <link rel="stylesheet" href="{root}assets/css/chat.css">
@@ -352,6 +357,11 @@ def redirect_page(target: str, title: str) -> str:
 <title>{e(title)} — moved</title>
 <meta http-equiv="refresh" content="0; url={t}">
 <link rel="canonical" href="{t}">
+<link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png">
 <script>location.replace({target!r} + location.hash);</script>
 </head>
 <body style="background:#0f1115;color:#eceef2;font-family:system-ui,sans-serif;padding:40px">
