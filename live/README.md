@@ -1,7 +1,7 @@
 # RobotForge live endpoint — deploy runbook
 
-The RobotForge site is static (GitHub Pages) and cannot hold an API
-key. This folder is the one server-side piece: a single-file
+The RobotForge site is a static Next.js export deployed on Vercel and cannot
+hold an API key. This folder is the one server-side piece: a single-file
 Cloudflare Worker (`worker.js`) that proxies the site's live calls
 and holds the keys as Worker **secrets**. With no endpoint deployed,
 the site is exactly the recorded site — the Forge Guide answers from
@@ -190,17 +190,18 @@ never paste it into chat, a file, or a commit).
 5. **Deploy:** from this folder, `wrangler deploy`.
    Note the URL it prints, e.g.
    `https://robotforge-live.<your-subdomain>.workers.dev`.
-6. **Verify:** open `<that URL>/health` in a browser. You want
+6. **Verify:** run `python ../tools/check_live_health.py <that URL>` (or open
+   `<that URL>/health` in a browser). The checker is read-only, sends no
+   credentials and requires
    `{"ok": true, "mode": "live", "configured": true, "kv": true, …}`
-   and a `routes` object showing which routes the keys you added
-   enable (`photo` stays `false` until step 4's optional secret).
-7. **Light up the site:** set the one constant in
-   `src/robotforge/site.py` —
-   `LIVE_ENDPOINT = "https://robotforge-live.<your-subdomain>.workers.dev"`
-   — then regenerate and publish (`robotforge site`, commit, push).
-   Torque can do this step for you once you share the workers.dev
-   URL (the URL is not a secret; the keys are, and they never leave
-   Cloudflare).
+   with working budget state, authentication and the required text routes.
+   Optional routes such as `photo` stay `false` until their provider secret is
+   configured.
+7. **Light up the site:** set `LIVE_ENDPOINT` in
+   `web-next/src/components/forge/live.tsx` to the deployed Worker base URL,
+   run `npm run build` from `web-next/`, then commit and deploy the static
+   export through Vercel. The workers.dev URL is public configuration; provider
+   keys remain encrypted in Cloudflare.
 
 ## Cost & abuse posture, in plain language
 
