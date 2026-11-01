@@ -96,7 +96,7 @@ import {
   pickFiles, detectLicense, imageGate, parseBomCsv, parseBomMarkdown,
   parseUrdf, matchCatalogPart, validateHardwareItems, buildSpecimen,
   withCatalogMatches, physicsEntryFor, parseRepoInput, readmeImages,
-  buildImportedSdfBundle, gatherRequestFor,
+  buildImportedSdfBundle, gatherRequestFor, filterVendored,
 } from "./repoImport.ts";
 import { repoImportFixture } from "./repoImportFixture.ts";
 import { buildGazeboLaunch } from "./gazebo.ts";
@@ -138,6 +138,13 @@ try {
     out.readmeImgs = readmeImages(
       repoImportFixture.texts.readme,
       repoImportFixture.ref, repoImportFixture.headSha, "README.md").length;
+  } else if (scenario === "vendored") {
+    out.kept = filterVendored(job.tree);
+  } else if (scenario === "readme_parts") {
+    const parts = parseBomMarkdown(job.md, "README.md (part list)");
+    const spec = withCatalogMatches({ parts: parts.map((p) => ({ ...p, catalogId: null })) }, job.catalog);
+    out.parts = spec.parts;
+    out.picked = pickFiles(job.tree);
   } else if (scenario === "gazebo") {
     const pfUrl = "urdf/pathfinder.urdf";
     const pf = fs.readFileSync(
@@ -254,6 +261,7 @@ def test_tree_scan_picks(tmp_path):
     })
     picked = out["picked"]
     assert picked["readme"] == "README.md"
+
     assert picked["license"] == "LICENSE"
     assert picked["bom"] == "hardware/bom.csv"  # CSV preferred over MD
     assert picked["primaryModel"] == {
@@ -523,3 +531,125 @@ def test_gazebo_bundles(tmp_path):
     py_compile.compile(str(launch), doraise=True)
     assert "generated scaffolding" in by_rel["launch/launch.py"].lower()
     assert "gz sim" in sdf["gz"]
+
+
+# --------------------------------------------------------------------- #
+# Omega1 regressions (abelxmendoza/Omega-Code @ 1d7bb60)
+# --------------------------------------------------------------------- #
+# Running the import on the real Omega1 repo found three problems: the
+# committed virtualenvs (~8,000 files) pushed the robot's own files past
+# the 3,000-path cap, the README's REST-route tables were read as parts
+# ("Start the simulation loop"), and bare role words matched the wrong
+# catalogue parts ("Camera" -> RealSense D435, "Controller" -> a flight
+# controller stack). These excerpts are verbatim from that README.
+
+OMEGA1_README = """## Hardware
+
+| Component | Details |
+|---|---|
+| Compute | Raspberry Pi 4B (4 GB) |
+| Motor driver | PCA9685 PWM hat (I2C 0x40) |
+| Ultrasonic | HC-SR04 (GPIO 27 trig / GPIO 22 echo) |
+| Camera | CSI OV5647 (via libcamera + GStreamer) |
+| Controller | Xbox One S/X wireless (via xpad or Bluetooth) |
+
+### Simulation API
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/sim/start` | Start the simulation loop |
+| POST | `/sim/stop` | Stop the simulation loop |
+"""
+
+
+def test_omega1_readme_parts_and_matches(tmp_path):
+    tree = (
+        ["README.md", "LICENSE", "image/README/omega1.png"]
+        + [f"venv/lib/python3.11/site-packages/pkg{i}/img/x.png" for i in range(5)]
+        + ["servers/backend/controllers/lighting/omega1_venv/lib/a.py",
+           "servers/backend/.direnv/python-3.11.2/lib/README.md",
+           "ui/node_modules/left-pad/README.md"]
+    )
+    out = run_node(tmp_path, "readme_parts",
+                   {"md": OMEGA1_README, "catalog": catalog(), "tree": tree})
+    parts = out["parts"]
+    # Only the hardware table: the route table is not a part list.
+    assert [p["name"] for p in parts] == [
+        "Compute", "Motor driver", "Ultrasonic", "Camera", "Controller"]
+    by = {p["name"]: p["catalogId"] for p in parts}
+    # The real part sits in the Details cell, and it still matches.
+    assert by["Ultrasonic"] == "ultrasonic_hcsr04"
+    # Role words alone never match: no RealSense for an OV5647.
+    assert by["Camera"] is None
+    assert by["Controller"] is None
+    assert by["Motor driver"] is None
+    assert by["Compute"] is None  # a Pi 4B is not the catalogue's Pi 5
+    # Vendored trees are not the robot.
+    picked = out["picked"]
+    assert picked["images"] == ["image/README/omega1.png"]
+    assert picked["readme"] == "README.md"
+
+
+def test_generic_words_never_match(tmp_path):
+    names = ["Camera", "Controller", "Motor driver", "Chassis", "Sensors",
+             "Ultrasonic", "HC-SR04", "Ultrasonic HC-SR04"]
+    out = run_node(tmp_path, "match", {"names": names, "catalog": catalog()})
+    m = out["matches"]
+    for generic in names[:6]:
+        assert m[generic] is None, generic
+    assert m["HC-SR04"] == "ultrasonic_hcsr04"
+    assert m["Ultrasonic HC-SR04"] == "ultrasonic_hcsr04"
+
+
+def test_bom_tables_with_link_or_status_columns_survive(tmp_path):
+    # Codex review on #96: a "Part | Qty | URL" BOM must not be dropped
+    # as a non-part table. Route tables are still skipped.
+    md = (
+        "| Part | Qty | URL |\n|---|---|---|\n"
+        "| HC-SR04 | 1 | https://example.com/hcsr04 |\n\n"
+        "| Component | Status | Port |\n|---|---|---|\n"
+        "| RPLIDAR A1 | working | /dev/ttyUSB0 |\n\n"
+        "| Part | Qty | Command |\n|---|---|---|\n"
+        "| BNO055 | 1 | i2cdetect -y 1 |\n\n"
+        "| Method | Path | Description |\n|---|---|---|\n"
+        "| POST | /sim/start | Start the simulation loop |\n"
+    )
+    out = run_node(tmp_path, "readme_parts",
+                   {"md": md, "catalog": catalog(), "tree": ["README.md"]})
+    names = [p["name"] for p in out["parts"]]
+    assert names == ["HC-SR04", "RPLIDAR A1", "BNO055"]
+
+
+def test_notes_never_rename_a_named_part(tmp_path):
+    # Codex review on #96: the Details fallback is for role names only.
+    md = (
+        "| Part | Qty | Notes |\n|---|---|---|\n"
+        "| OV5647 | 1 | Raspberry Pi 5 (CSI connector) |\n"
+        "| Ultrasonic | 1 | HC-SR04 |\n"
+    )
+    out = run_node(tmp_path, "readme_parts",
+                   {"md": md, "catalog": catalog(), "tree": ["README.md"]})
+    by = {p["name"]: p["catalogId"] for p in out["parts"]}
+    assert by["OV5647"] is None  # NOT the Pi it plugs into
+    assert by["Ultrasonic"] == "ultrasonic_hcsr04"
+
+
+def test_third_party_source_trees_are_vendored(tmp_path):
+    # Omega-Code carries a full libcamera checkout under its backend; it
+    # pushed the robot's files past the 3,000-path cap. A ROS package with
+    # its own LICENSE + CMakeLists.txt is far smaller and must stay.
+    lib = "servers/backend/libcamera"
+    tree = (
+        ["README.md", "LICENSE", "meson.build",  # root never dropped
+         f"{lib}/COPYING.rst", f"{lib}/meson.build"]
+        + [f"{lib}/src/f{i}.cpp" for i in range(400)]
+        + ["ros/src/omega_robot/LICENSE", "ros/src/omega_robot/CMakeLists.txt",
+           "ros/src/omega_robot/package.xml", "ros/src/omega_robot/node.py",
+           "venv/lib/x.py"]
+    )
+    out = run_node(tmp_path, "vendored", {"tree": tree})
+    kept = out["kept"]
+    assert not any(p.startswith(lib) for p in kept)
+    assert "ros/src/omega_robot/node.py" in kept
+    assert {"README.md", "LICENSE", "meson.build"} <= set(kept)
+    assert "venv/lib/x.py" not in kept

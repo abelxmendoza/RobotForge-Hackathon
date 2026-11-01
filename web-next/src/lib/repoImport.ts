@@ -215,6 +215,50 @@ function base(path: string): string {
   return path.split("/").pop() || path;
 }
 
+/** Vendored dependency trees (committed virtualenvs, node_modules,
+ *  pip caches). They are not the robot, and on a real repo they can be
+ *  most of the tree: Omega-Code commits ~8,000 venv files, which used
+ *  to push its own robot files past the 3,000-path cap. */
+const VENDORED_SEG = /^(node_modules|\.?venv|[\w.-]+_venv|\.direnv|site-packages|__pycache__|\.tox|\.git)$/i;
+
+export function isVendoredPath(path: string): boolean {
+  return path.split("/").some((seg) => VENDORED_SEG.test(seg) || seg.endsWith(".dist-info"));
+}
+
+const LICENSE_FILE = /^(licen[cs]e|copying)([._-].*)?$/i;
+const BUILD_ROOT_FILE = /^(meson\.build|CMakeLists\.txt|configure(\.ac)?|Makefile\.am|setup\.py|pyproject\.toml|package\.json|Cargo\.toml|BUILD(\.bazel)?|WORKSPACE)$/;
+/** A nested source tree this big, with its own license and build root,
+ *  is a third-party project copied into the repo, not the robot. */
+export const THIRD_PARTY_MIN_FILES = 300;
+
+/** Drop vendored files: dependency trees (isVendoredPath) and nested
+ *  third-party source trees. Omega-Code carries a full libcamera checkout
+ *  (2,606 files, own COPYING.rst + meson.build) under its backend; a ROS
+ *  package with a LICENSE and CMakeLists.txt stays, being far smaller. */
+export function filterVendored(paths: string[]): string[] {
+  const own = paths.filter((p) => !isVendoredPath(p));
+  const hasLicense = new Set<string>();
+  const hasBuild = new Set<string>();
+  for (const p of own) {
+    const i = p.lastIndexOf("/");
+    if (i < 0) continue; // the repo root is never third-party
+    const dir = p.slice(0, i);
+    const b = p.slice(i + 1);
+    if (LICENSE_FILE.test(b)) hasLicense.add(dir);
+    if (BUILD_ROOT_FILE.test(b)) hasBuild.add(dir);
+  }
+  const candidates = [...hasLicense].filter((d) => hasBuild.has(d))
+    .sort((a, b) => a.length - b.length);
+  const roots: string[] = [];
+  for (const dir of candidates) {
+    if (roots.some((r) => dir.startsWith(r + "/"))) continue;
+    const n = own.reduce((k, p) => k + (p.startsWith(dir + "/") ? 1 : 0), 0);
+    if (n >= THIRD_PARTY_MIN_FILES) roots.push(dir);
+  }
+  if (!roots.length) return own;
+  return own.filter((p) => !roots.some((r) => p.startsWith(r + "/")));
+}
+
 function isImagePath(path: string): boolean {
   const lower = path.toLowerCase();
   return IMAGE_EXTS.some((e) => lower.endsWith(e));
@@ -238,7 +282,7 @@ function modelScore(path: string, repoHint?: string): number {
 /** Pick the candidate files the import reads, from tree paths.
  *  Pure: the same picker runs on the live tree and on fixtures. */
 export function pickFiles(paths: string[], repoHint?: string): PickedFiles {
-  const files = paths.filter((p) => !p.endsWith("/"));
+  const files = filterVendored(paths.filter((p) => !p.endsWith("/")));
   const byDepth = (a: string, b: string) =>
     a.split("/").length - b.split("/").length || (a < b ? -1 : 1);
 
@@ -464,6 +508,12 @@ function parseQty(s: string): number | null {
 const NAME_COL = /^(part|component|item|name|description|material)s?$/i;
 const QTY_COL = /^(qty|quantity|count|no\.?|#|amount)$/i;
 const NOTES_COL = /^(notes?|comments?|details?|specs?|type)$/i;
+/** Header cells that mark a table as something other than a part list
+ *  (API routes, ROS topics, CLI flags, launch parameters). A README's
+ *  "Method | Path | Description" table is not hardware. Only headers
+ *  that never describe hardware are here: URL, status and port columns
+ *  do appear in real BOMs ("Part | Qty | URL"). */
+const NOT_PARTS_COL = /^(method|path|endpoint|route|topic|parameter|param|argument|flag|option|command|variable|env|default)s?$/i;
 
 /** Parse a markdown document's part tables (also used on READMEs —
  *  a "Part list" table is a BOM by another name). */
@@ -478,6 +528,14 @@ export function parseBomMarkdown(md: string, sourceFile: string): BomPart[] {
     if (!/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1] || "")) continue;
     const qtyIdx = header.findIndex((c) => QTY_COL.test(c));
     const notesIdx = header.findIndex((c) => NOTES_COL.test(c));
+    // A quantity column is a part list whatever else the table has.
+    if (qtyIdx < 0 && header.some((c) => NOT_PARTS_COL.test(c))) {
+      // Skip the whole non-part table, not just its header row.
+      let j = i + 2;
+      while (j < lines.length && lines[j].includes("|")) j++;
+      i = j;
+      continue;
+    }
     for (let j = i + 2; j < lines.length; j++) {
       if (!lines[j].includes("|")) break;
       const cells = lines[j].split("|").map((c) => cleanCell(c));
@@ -642,15 +700,35 @@ function nameTokens(s: string): string[] {
     .filter((t) => t.length >= 2 || /^\d$/.test(t));
 }
 
+/** Words that name a kind of part, not a part. A name made only of
+ *  these ("Camera", "Motor driver", "Controller") says nothing about
+ *  which part it is, so it must not match the first catalogue entry
+ *  that happens to contain the word. */
+const GENERIC_PART_WORDS = new Set([
+  "adc", "battery", "board", "cable", "camera", "chassis", "compute",
+  "computer", "controller", "driver", "drivers", "encoder", "encoders",
+  "frame", "gimbal", "hat", "imu", "kit", "lidar", "line", "module",
+  "motor", "motors", "pack", "pan", "plate", "power", "sensor", "sensors",
+  "servo", "servos", "shield", "tilt", "tracking", "ultrasonic", "wheel",
+  "wheels",
+]);
+
+/** True when a name is only a role ("Camera", "Motor driver"), not a part. */
+export function isGenericPartName(name: string): boolean {
+  const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return !words.length || words.every((w) => GENERIC_PART_WORDS.has(w));
+}
+
 /** Match a free-text part name against the catalogue: squashed
  *  substring, or all-token containment, over ids and names. No fuzzy
- *  matching — near-misses (BNO085 vs BNO055, Pi 4 vs Pi 5) miss. */
+ *  matching — near-misses (BNO085 vs BNO055, Pi 4 vs Pi 5) miss, and
+ *  a bare category word ("Camera") matches nothing. */
 export function matchCatalogPart(
   name: string,
   catalog: { id: string; name: string }[],
 ): string | null {
   const sq = squashName(name);
-  if (!sq) return null;
+  if (!sq || isGenericPartName(name)) return null;
   for (const part of catalog) {
     if (sq.length >= 3 &&
       (squashName(part.id).includes(sq) || squashName(part.name).includes(sq))) {
@@ -823,7 +901,15 @@ export function withCatalogMatches(
     ...specimen,
     parts: specimen.parts.map((p) => ({
       ...p,
-      catalogId: matchCatalogPart(p.name, catalog),
+      // A "Role | Details" hardware table puts the actual part in the
+      // details ("Ultrasonic | HC-SR04 (GPIO 27…)"), so when the name is
+      // only a role, try the head of the details. A named part
+      // ("OV5647 | Raspberry Pi 5 (CSI connector)") never takes its
+      // identity from the notes, which may describe something else.
+      catalogId: matchCatalogPart(p.name, catalog) ??
+        (p.notes && isGenericPartName(p.name)
+          ? matchCatalogPart(p.notes.split(/[(\u2014\u2013,;]/)[0].trim(), catalog)
+          : null),
     })),
   };
 }
