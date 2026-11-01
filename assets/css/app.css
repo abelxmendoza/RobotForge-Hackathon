@@ -1534,3 +1534,19 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .sim-physics-head p{margin:0;max-width:60ch}
 .sim-physics .sim-grid{margin-bottom:var(--s3)}
 .sim-err{color:#ff6b6b}
+/* ---- Evidence in plain words (2026-11-01) ---- */
+.ev-steps{list-style:none;margin:var(--s4) 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ev-steps li{display:flex;gap:10px;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.ev-steps b{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--bg);font-size:var(--fs-sm)}
+.ev-steps span{font-size:var(--fs-sm);color:var(--text-muted)}
+.ev-steps strong{color:var(--text)}
+.ev-rule{font-size:var(--fs-xs);margin-top:10px}
+.ev-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.ev-told{display:grid;gap:4px;padding:12px;border-radius:10px;border:1px solid var(--border);border-left-width:4px;background:var(--surface-2)}
+.ev-told.pass{border-left-color:var(--pass,#3ec98a)}.ev-told.marginal{border-left-color:var(--marginal,#e0a73a)}.ev-told.fail{border-left-color:var(--fail,#e5604d)}
+.ev-told-label{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)}
+.ev-told-main{font-weight:700}
+.ev-told-off{font-size:var(--fs-xs);color:var(--text-muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ev-fix{margin-top:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--fail,#e5604d);background:color-mix(in srgb,var(--fail,#e5604d) 8%,transparent)}
+.ev-fix ul{margin:6px 0 0;padding-left:18px}
+@media (max-width:720px){.ev-steps,.ev-summary{grid-template-columns:1fr}}

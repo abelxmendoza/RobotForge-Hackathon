@@ -15,10 +15,9 @@ import AppShell from "@/components/shell/AppShell";
 import ReportCard from "@/components/evidence/ReportCard";
 import ReportStrip from "@/components/evidence/ReportStrip";
 import HashScroller from "@/components/evidence/HashScroller";
-import Term from "@/components/shell/Term";
 
 export const metadata: Metadata = {
-  title: "Evidence",
+  title: "Simulator test drives",
   description:
     "RobotForge gate reports: measured against ground truth at locked thresholds.",
 };
@@ -28,77 +27,34 @@ export default function EvidencePage() {
   return (
     <AppShell
       active="evidence"
-      crumbs={[{ label: "App", href: "/garage/" }, { label: "Evidence" }]}
+      crumbs={[{ label: "App", href: "/garage/" }, { label: "Test drives" }]}
     >
       <HashScroller />
       <div className="page-head">
         <div>
-          <div className="eyebrow">Evidence</div>
-          <h1>Measured, not believed</h1>
+          <div className="eyebrow">Simulator test drives</div>
+          <h1>Did the robot really do what it was told?</h1>
           <p className="lede">
-            The gate&apos;s own reports from real runs in Gazebo Sim, each
-            graded against simulator ground truth.{" "}
-            <Link href="/#workflow">How the test works →</Link>
+            Every robot gets the same test in the Gazebo simulator. Two
+            robots passed, and the test caught two that didn&apos;t, even
+            though their own sensors said everything was fine.
           </p>
         </div>
       </div>
 
-      <div className="cols">
-        <div className="card">
-          <div className="card-head">
-            <h3 style={{ fontSize: "var(--fs-md)" }}>Locked thresholds</h3>
-          </div>
-          <div className="table-scroll" style={{ marginTop: 12 }}>
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>Measurement</th>
-                  <th>Pass</th>
-                  <th>Marginal</th>
-                  <th>Fail</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Distance error</td>
-                  <td className="num">≤ 5%</td>
-                  <td className="num">5–10%</td>
-                  <td className="num">&gt; 10%</td>
-                </tr>
-                <tr>
-                  <td>Heading error</td>
-                  <td className="num">≤ 5°</td>
-                  <td className="num">5–10°</td>
-                  <td className="num">&gt; 10°</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="faint" style={{ fontSize: "var(--fs-xs)", marginTop: 12 }}>
-            Printed on every report and never quietly loosened.
-          </p>
-        </div>
-        <div className="card">
-          <div className="card-head">
-            <h3 style={{ fontSize: "var(--fs-md)" }}>How a run is graded</h3>
-          </div>
-          <p className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
-            The twin is commanded to drive 1 m and turn 90°. Drive and turn are
-            graded against the simulator&apos;s true pose. Odometry is graded
-            against that same truth, so a robot whose sensors are wrong about
-            itself can&apos;t pass. When something is off, the gate names the
-            spec field to look at first.
-          </p>
-        </div>
-      </div>
+      <ol className="ev-steps" aria-label="How the test works">
+        <li><b>1</b><span><strong>Drive 1 m</strong> straight ahead.</span></li>
+        <li><b>2</b><span><strong>Turn 90°</strong> on the spot.</span></li>
+        <li><b>3</b><span><strong>Compare</strong> where it really ended up with where it was told to go, and with where it thinks it is.</span></li>
+      </ol>
+      <p className="faint ev-rule">
+        It passes when it lands within 5% of the distance and 5° of the
+        turn. Between 5 and 10 is marginal, beyond 10 fails. These limits
+        are fixed and never loosened.
+      </p>
 
       <section className="section" id="reports">
-        <h2><Term k="gate">Gate</Term> reports</h2>
-        <p className="sub">
-          Two clean passes and two failures the gate caught. Each report shows
-          every check, the raw measurements, the ground-truth path, and any
-          suspects the gate named.
-        </p>
+        <h2>The four test drives</h2>
         <div className="report-strip" id="report-strip">
           <ReportStrip runs={runs} />
         </div>
