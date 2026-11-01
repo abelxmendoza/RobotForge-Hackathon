@@ -1523,7 +1523,7 @@ export default function ForgeThread() {
             className="chat-bar-attach"
             onClick={() => fileRefs.any.current?.click()}
             aria-label="Attach a photo, parts list, spec file or scan"
-            title="Attach a photo, parts list (.txt/.csv), spec (.json) or scan (.ply)"
+            title="Attach a photo, parts list (.txt/.csv), spec (.json) or scan (.ply). Files stay in your browser unless you run a live step."
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 11.5 12.6 19.9a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" />
