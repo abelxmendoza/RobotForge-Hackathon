@@ -169,3 +169,15 @@ footer.site-footer p{max-width:60ch}
   .flow-4{grid-template-columns:1fr}
   .site-header:has(.site-menu) .btn-primary{padding:10px 12px;font-size:var(--fs-xs)}
 }
+
+/* Mobile UX pass (2026-10-31): hero — see app.css header note. */
+/* ---------- home hero: headline in the first viewport ----------
+   The logo lockup was min(540px, 88%) — most of a phone's first
+   screen before the headline appeared. Cap it on phones so the
+   headline and CTAs land in the first viewport. */
+@media (max-width: 700px) {
+  .hero { padding-top: var(--s6); }
+  .hero-logo { width: min(208px, 54vw); margin-bottom: var(--s4); }
+  .hero .lede { font-size: var(--fs-md); }
+}
+

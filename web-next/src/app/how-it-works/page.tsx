@@ -26,6 +26,16 @@ export const metadata: Metadata = {
 export default function HowItWorksPage() {
   return (
     <AppShell active="how" crumbs={[{ label: "App", href: "/garage/" }, { label: "How it works" }]}>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Fine print</div>
+          <h1>How it works</h1>
+          <p className="lede">
+            What a PASS proves, what it doesn&apos;t, where Muse Spark
+            works, and the words on this site in plain English.
+          </p>
+        </div>
+      </div>
       <section className="band">
         <div className="wrap">
           <HowItWorks />

@@ -335,13 +335,17 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
             </p>
           ) : null}
           <p className="desc">{robot.description}</p>
-          <nav className="jump" aria-label="On this page">
-            {jump.map((j) => (
-              <a key={j.href} className="chip" href={j.href}>{j.label}</a>
-            ))}
-          </nav>
         </div>
       </div>
+
+      {/* The jump rail sits outside the hero so it can stick on
+          phones (mobile-ux.css): inside the hero it could only
+          stick within the hero's own box. */}
+      <nav className="jump" aria-label="On this page">
+        {jump.map((j) => (
+          <a key={j.href} className="chip" href={j.href}>{j.label}</a>
+        ))}
+      </nav>
 
       <section className="section" id="spec">
         <h2>Spec</h2>
