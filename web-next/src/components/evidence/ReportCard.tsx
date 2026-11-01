@@ -36,8 +36,8 @@ interface GateDoc {
   checks: GateCheck[];
   suspects?: GateSuspect[];
   measurements: {
-    drive: { truth_m: number; measured_m: number };
-    turn: { truth_deg: number; measured_deg: number };
+    drive: { truth_m: number; measured_m: number; commanded_m?: number };
+    turn: { truth_deg: number; measured_deg: number; commanded_deg?: number };
     injected_wheel_radius_scale?: number;
   };
 }
@@ -92,6 +92,27 @@ function Meter({ check }: { check: GateCheck }) {
 
 const f3 = (n: number, d?: number) => Number(n).toFixed(d == null ? 3 : d);
 
+/* Plain words for the gate's suspects (2026-11-01: the page is read
+ * by judges and new builders, not only by robotics people). The
+ * original field name stays in the technical details below. */
+const SUSPECT_PLAIN: Record<string, string> = {
+  "wheel.diameter_m": "The wheel size in the spec doesn't match the real wheels.",
+  "wheel_separation (robot width / wheel track)":
+    "The distance between the wheels is off, or the wheels slip when it turns.",
+};
+
+function Told({ label, told, did, off, verdict }: {
+  label: string; told: string; did: string; off: string; verdict: string;
+}) {
+  return (
+    <div className={"ev-told " + (VERDICT_CLASS[verdict] ?? "norun")}>
+      <span className="ev-told-label">{label}</span>
+      <span className="ev-told-main">Told {told} · did {did}</span>
+      <span className="ev-told-off">{off} off · <VerdictBadge status={verdict} /></span>
+    </div>
+  );
+}
+
 export default function ReportCard({
   run,
   index,
@@ -101,6 +122,10 @@ export default function ReportCard({
 }) {
   const d = run.doc as unknown as GateDoc;
   const m = d.measurements;
+  const check = (name: string) => d.checks.find((c) => c.name === name);
+  const sensorsOk = d.checks
+    .filter((c) => c.name.startsWith("odometry_"))
+    .every((c) => c.verdict === "PASS");
   const [title, sub] = run.title.split(" — ");
   const head = sub ? sub.charAt(0).toUpperCase() + sub.slice(1) : title;
   const injected =
@@ -123,10 +148,35 @@ export default function ReportCard({
         <VerdictBadge status={d.verdict} lg />
       </div>
       <p className="story">{run.story}</p>
-      {/* Only the first report opens by default; the rest fold to their
-          verdict and story, one tap from the full measurements. */}
-      <details className="report-more" open={index === 0}>
-      <summary>Measurements, path and suspects</summary>
+      {/* The plain summary: what it was told, what it really did (the
+          simulator's ground truth), and whether its own sensors knew. */}
+      <div className="ev-summary">
+        <Told label="Drive" told={f3(m.drive.commanded_m ?? 1, 0) + " m"}
+          did={f3(m.drive.truth_m, 2) + " m"}
+          off={f3(check("drive_distance")?.error ?? 0, 1) + "%"}
+          verdict={check("drive_distance")?.verdict ?? ""} />
+        <Told label="Turn" told={f3(m.turn.commanded_deg ?? 90, 0) + "°"}
+          did={f3(m.turn.truth_deg, 0) + "°"}
+          off={f3(check("turn_heading")?.error ?? 0, 1) + "°"}
+          verdict={check("turn_heading")?.verdict ?? ""} />
+        <div className={"ev-told " + (sensorsOk ? "pass" : "fail")}>
+          <span className="ev-told-label">Its own sensors</span>
+          <span className="ev-told-main">{sensorsOk ? "Knew where it was" : "Thought it was somewhere else"}</span>
+          <span className="ev-told-off">{sensorsOk ? "agreed with reality" : "the robot couldn't tell anything was wrong"}</span>
+        </div>
+      </div>
+      {(d.suspects || []).length ? (
+        <div className="ev-fix">
+          <strong>What to fix</strong>
+          <ul>
+            {(d.suspects || []).map((s) => (
+              <li key={s.field}>{SUSPECT_PLAIN[s.field] ?? s.reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <details className="report-more">
+      <summary>Technical details: measurements, path and suspects</summary>
       <div className="report-grid">
         <div>
           <div className="checks">

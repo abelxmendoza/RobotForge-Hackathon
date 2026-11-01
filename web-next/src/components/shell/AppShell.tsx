@@ -28,8 +28,6 @@ const NAV = [
   { id: "workshop", label: "Workshop", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
   { id: "inventory", label: "My parts", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
   { id: "robots", more: true, label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
-  { id: "bom", more: true, label: "BOM wizard", href: "/bom/", icon: (<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></>) },
-  { id: "evidence", more: true, label: "Evidence", href: "/evidence/", icon: (<><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>) },
 ];
 
 export interface Crumb { label: string; href?: string }

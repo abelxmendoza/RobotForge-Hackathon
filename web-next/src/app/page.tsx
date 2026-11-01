@@ -395,9 +395,6 @@ export default function HomePage() {
               Bars run 0–15: green passes, yellow is marginal, past it
               fails. Recorded in Gazebo Sim, headless, Oct 26, 2026.
             </p>
-            <Link className="btn" href="/evidence/">
-              All gate reports →
-            </Link>
           </div>
         </div>
       </section>
@@ -494,8 +491,8 @@ export default function HomePage() {
                 The catalogue&apos;s 50 parts carry datasheet specs
                 and vendor search links — no prices are shown,
                 because none are verified. Drag parts onto the kit
-                stage or add them by chat; the build list feeds a
-                BOM wizard that exports a CSV. Every kit part is
+                stage or add them by chat; each robot&apos;s BOM tab
+                in the Workshop exports a CSV. Every kit part is
                 parametric CAD: OpenSCAD on the kit page, with a
                 build123d back end in the project&apos;s tooling.
               </p>

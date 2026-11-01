@@ -39,7 +39,7 @@ def test_palette_is_wired_into_the_kit_viewer():
     palette = (WEB / "src/components/kit/PartsPalette.tsx").read_text()
     assert "buildPaletteItems" in palette
     assert "Your build list" in palette
-    assert "/bom/?start=build" in palette
+    assert "/bom/" not in palette  # BOM wizard retired 2026-11-01
 
 
 def test_scene_places_dropped_props_at_the_drop_point():
@@ -75,9 +75,6 @@ def test_chat_and_wizard_share_the_build_list():
     assert "BUILD_KEY" in dock
     build_list = (LIB / "buildList.ts").read_text()
     assert 'BUILD_KEY = "rf.build.v1"' in build_list
-    wizard = (WEB / "src/components/bom/BomWizard.tsx").read_text()
-    assert "buildListToBomLines" in wizard
-    assert '"build"' in wizard
     sync = (WEB / "scripts/sync-data.mjs").read_text()
     assert "simready-props.json" in sync
 

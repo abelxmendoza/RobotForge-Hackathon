@@ -1,5 +1,5 @@
 """Demo polish (web-next): the dismissable demo bar + DEMO pill,
-demo entry from a signed-in account, and the lived-in demo seed.
+demo entry from a signed-in account, and the fresh, guided demo seed.
 
 Two layers, following the repo's node-test pattern:
 
@@ -40,8 +40,9 @@ def test_side_menu_has_no_demo_entry_but_the_real_doors_stay():
     assert '"/demo/"' not in nav
     # The rest of the nav is unchanged, in order.
     ids = re.findall(r'id: "(\w+)"', nav)
-    assert ids == ["home", "workshop", "inventory", "robots", "bom",
-                   "evidence"], ids
+    # BOM wizard and Evidence left the nav on 2026-11-01; /evidence/
+    # stays reachable from robot pages, the demo and Wrench.
+    assert ids == ["home", "workshop", "inventory", "robots"], ids
     landing = (WEB / "src/app/page.tsx").read_text()
     assert "RunDemoLink" in landing
     chrome = (WEB / "src/components/home/LandingChrome.tsx").read_text()
@@ -64,13 +65,15 @@ def test_demo_bar_is_dismissable_and_the_pill_keeps_the_exit():
     assert "setDemoBarDismissed(false)" in bar
 
 
-def test_demo_welcome_describes_the_deepened_seed_and_wrench():
+def test_demo_welcome_is_a_short_guided_path():
     bar = (SHELL / "DemoBar.tsx").read_text()
-    assert "planned upgrade" in bar
-    assert "build history" in bar
-    assert "already in" in bar and "progress" in bar  # the Wrench thread
-    # Abel's copy correction (2026-11-01): Wrench is the workshop's
-    # build partner, not "just a guide".
+    # Fresh and guided (2026-11-01): four steps with links, not a
+    # wall of text about a lived-in workspace.
+    assert 'className="demo-steps"' in bar
+    for href in ('"/garage/"', '"/garage/#tab=simulate"', '"/garage/#tab=bom"'):
+        assert href in bar, href
+    assert "lived-in" not in bar
+    # Abel's copy correction: Wrench is the build partner, not a guide.
     assert "build partner" in bar
     assert "Wrench, the guide" not in bar
 
@@ -128,30 +131,27 @@ def test_seed_labels_survive_the_deepening():
     assert "sim-only" in seed
 
 
-def test_seed_garage_has_two_robots_and_a_planned_version():
+def test_seed_garage_is_two_fresh_turtlebots():
     seed = _seed_source()
     assert "demo-turtlebot3-burger" in seed
-    assert "demo-pathfinder" in seed
-    # The Burger's second version is a plan, flagged with the
-    # garage's own planned marker — never a fake build.
-    assert "planned: true" in seed
-    assert "PLANNED" in seed
-    # Pathfinder's history: the current version is the recorded
-    # spec; only the first build's wheel diameter differs.
-    assert "diameter_m: 0.066" in seed
-    assert "pathfinder.json" in seed
-    spec = json.loads((REPO / "examples" / "pathfinder.json").read_text())
-    assert spec["wheel"]["diameter_m"] == 0.1
+    assert "demo-turtlebot3-waffle-pi" in seed
+    assert "turtlebot3-burger.json" in seed and "photo-turtlebot.json" in seed
+    # No invented history: no planned versions, no Pathfinder, and
+    # the photo draft says its numbers are estimates.
+    assert "planned: true" not in seed
+    assert "demo-pathfinder" not in seed
+    assert "ESTIMATED" in seed
+    # Every entry starts fresh.
+    assert "resetDemoSandbox()" in seed
 
 
-def test_seed_inventory_reads_used_not_factory_round():
+def test_seed_inventory_is_a_small_starter_shelf():
     seed = _seed_source()
-    # The 18650 pack is down a cell and used; the Pi is used too.
-    assert re.search(r"demo-sample-18650[\s\S]{0,200}?quantity: 5", seed)
-    assert seed.count("condition: 'used'") >= 3
-    # Dates are spread (a returning user's shelf), not one stamp.
+    # No fake wear or spread-out dates: the visitor makes the history.
+    assert "condition: 'used'" not in seed
+    assert "retired" not in seed.lower()
     dates = set(re.findall(r"createdAt: '(\d{4}-\d{2}-\d{2})", seed))
-    assert len(dates) >= 5
+    assert len(dates) <= 1
 
 
 def test_seed_catalogue_ids_all_exist():
@@ -164,16 +164,12 @@ def test_seed_catalogue_ids_all_exist():
     assert referenced <= ids, f"seed names missing catalogue parts: {referenced - ids}"
 
 
-def test_demo_thread_is_preplayed_through_the_recorded_engine():
+def test_demo_thread_starts_empty_and_never_leaks():
     dock = (WEB / "src/components/chat" / "ChatDock.tsx").read_text()
-    assert "DEMO_THREAD_QUESTIONS" in dock
+    assert "DEMO_THREAD_QUESTIONS" not in dock
+    # The visitor's real thread is still snapshotted and restored.
     assert "demoThreadRef" in dock
-    # The answers are the engine's own output — the seed calls the
-    # same answerTurn a typed question hits, never canned HTML.
-    assert "wrench.answerTurn(q, mem)" in dock
-    for q in ("Tell me about the TurtleBot3 Burger", "And its battery?",
-              "Which robots passed the gate?"):
-        assert q in dock
+    assert "setMessages(snapshot.messages)" in dock
 
 
 # ---------------------------------------------------------------- node units

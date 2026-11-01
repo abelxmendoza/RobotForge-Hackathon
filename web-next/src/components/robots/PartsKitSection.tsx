@@ -31,9 +31,9 @@ export default function PartsKitSection({ slug }: { slug: string }) {
         <em>assumption</em> numbers are typical values the spec does not
         carry. The search links under each part open vendor searches
         for it — search links only: this site never shows a price, a
-        stock level or an availability claim. To turn a kit into a
-        shopping-ready list, run it through the{" "}
-        <Link href={kit ? `/bom/?kit=${slug}` : "/bom/"}>BOM wizard</Link>.
+        stock level or an availability claim. For a shopping list of your
+        own build, use the <Link href="/garage/#tab=bom">BOM tab in the
+        Workshop</Link>.
       </p>
       {kit ? (
         <>

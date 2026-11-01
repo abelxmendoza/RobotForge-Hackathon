@@ -61,12 +61,13 @@ def test_sourcing_vendors_and_no_price_surface():
     assert '"Octopart", "Digi-Key", "McMaster-Carr", "Amazon", "AliExpress"' in bom
 
 
-def test_bom_wizard_uses_live_and_local_paths():
-    wiz = (WEB / "src/components/bom/BomWizard.tsx").read_text()
-    assert "suggestPartsLive" in wiz
-    assert "localMatchParts" in wiz
+def test_bom_wizard_is_retired():
+    # 2026-11-01: the Workshop BOM tab replaced the wizard; /bom/ only redirects.
+    assert not (WEB / "src/components/bom/BomWizard.tsx").exists()
     shell = (WEB / "src/components/shell/AppShell.tsx").read_text()
-    assert '"/bom/"' in shell
+    assert '"/bom/"' not in shell
+    page = (WEB / "src/app/bom/BomRedirect.tsx").read_text()
+    assert "/garage/#tab=bom" in page
 
 
 # ---------------------------------------------------------------- node units

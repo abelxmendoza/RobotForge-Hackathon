@@ -8,11 +8,11 @@
  * It never shows a stock level or an availability claim.
  *
  * Prices (re-gated 2026-11-01): the tab reads the SAME build-plan
- * price store the BOM wizard writes (lib/buildPlan.ts, key
+ * build-plan price store (lib/buildPlan.ts, key
  * rf.buildplan.v1, through the store layer — so demo mode reads its
  * ".demo" twin and nothing here ever touches the network). A line
  * shows a price only when a record backs it, resolved by
- * resolvedPrice() under the exact key the wizard stores: a line
+ * resolvedPrice() under the exact key the price input below writes: a line
  * reaches a catalogue price record ONLY through its matched shelf
  * part's recorded catalogue id (`part:<id>`, the wizard's own key
  * for a catalogue line) — never through a name match, the same
@@ -139,7 +139,16 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
   /* The wizard's build-plan profile, through the store layer: in
    * demo mode this reads the profile's ".demo" twin, and no read
    * here ever leaves the browser. */
-  const [profile] = useStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE);
+  const [profile, saveProfile] = useStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE);
+  /* Record (or clear) the builder's own price for one line. It goes in
+   * the same build-plan store, under the same key the row reads, so the
+   * badge and the total pick it up and label it "your entered price". */
+  const setPrice = (key: string, raw: string) => {
+    const n = raw.trim() === '' ? null : Number(raw);
+    const prices = { ...profile.prices };
+    if (n === null || !Number.isFinite(n) || n < 0) delete prices[key]; else prices[key] = n;
+    saveProfile({ ...profile, prices });
+  };
   const rows: Row[] = useMemo(() => {
     const pool = inventory.filter((p) => partSection(p) === 'parts' && p.quantity > 0 && (!p.robot_id || p.robot_id === robotId));
     const left = new Map(pool.map((p) => [p.id, p.quantity]));
@@ -222,7 +231,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
     <section className="ws-pane ws-bom" aria-label="Bill of materials">
       <div className="ws-history-head">
         <h3>Bill of materials</h3>
-        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it in the BOM wizard&apos;s build plan — your own price, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>
+        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it — the price you type in, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>
       </div>
       {rows.length === 0 ? (
         <p className="faint">The spec has no battery, motors, wheels or wiring yet, so there is nothing to list. Add them in Specs.</p>
@@ -274,6 +283,16 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
                   ) : (
                     <span className="faint g-small">Unpriced — no price recorded in your build plan</span>
                   )}
+                  <label className="bom-price faint g-small">
+                    Your price $
+                    <input type="number" min={0} step={0.01} inputMode="decimal"
+                      aria-label={`Your price for one ${r.line.name}`}
+                      key={r.priceItem.key + ':' + (profile.prices[r.priceItem.key] ?? '')}
+                      defaultValue={profile.prices[r.priceItem.key] ?? ''}
+                      onBlur={(e) => setPrice(r.priceItem.key, e.currentTarget.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
+                    each
+                  </label>
                   {(r.have.state === 'need' || r.have.state === 'check') && <SourcingLinks query={r.line.searchQuery} />}
                 </div>
                 <span className={'bom-have ' + r.have.state} title={r.have.part ? r.have.part.name : undefined}>
@@ -292,13 +311,12 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
             </p>
           ) : (
             <p className="g-small faint">
-              No prices are recorded for these lines in your build plan, so no total is shown — record a price or a sourced estimate in the BOM wizard and it will appear here with its source. Shipping, tax and stock are unknown — not included in any total.
+              No prices are recorded for these lines in your build plan, so no total is shown — type the price you find next to a line and it will appear here as your price. Shipping, tax and stock are unknown — not included in any total.
             </p>
           )}
           <p className="ws-hist-actions">
             <button type="button" className="btn btn-sm" onClick={exportCsv}>Export CSV</button>
             <Link className="btn btn-sm btn-ghost" href={'/inventory/?robot=' + encodeURIComponent(robotId)}>Open My parts</Link>
-            <Link className="btn btn-sm btn-ghost" href="/bom/">Full BOM wizard</Link>
           </p>
         </>
       )}

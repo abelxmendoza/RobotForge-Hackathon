@@ -475,7 +475,7 @@ export function buildConfirmationText(req: BuildRequest): string {
     );
   }
   out.push(
-    "The build list lives in the Parts palette on the Kit page and in the BOM wizard.",
+    "The build list lives in the Parts palette on the Kit page.",
   );
   return out.join("\n");
 }

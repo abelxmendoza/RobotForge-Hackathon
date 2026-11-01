@@ -1,32 +1,27 @@
 'use client';
 /* Demo seed data — what a visitor finds inside demo mode.
  *
- * Honesty rules (the repo's, applied to seeds):
- * - Sim-only entries ARE real catalogue parts, copied from
- *   catalog/parts.json with their datasheet specs and their
- *   catalog id attached. Sim-only is the truth for them: they are
- *   in the catalogue, not on anybody's shelf.
- * - "Real" entries are stand-ins so the real-vs-sim split reads
- *   properly; every one carries "(demo sample)" in its name and a
- *   note saying it is sample data, never a claim about a real
- *   shelf.
- * - The demo Garage holds demo copies of Robodex robots with
- *   their recorded specs: the TurtleBot3 Burger (a saved baseline
- *   plus a PLANNED version — the garage's own planned flag, spec
- *   still the baseline, because a plan is not a build) and the
- *   Pathfinder (a two-version build history whose current version
- *   is the recorded spec, unchanged). Dates, quantities and wear
- *   are sample dressing so the workspace reads as a returning
- *   user's; they live only in the demo twins and every label
- *   still says so.
- * Seeds write ONLY the ".demo" storage twins (see demoMode.ts)
- * and only when a twin is absent, so a returning visitor's demo
- * sandbox is never reset under them. */
+ * Fresh and guided (Abel, 2026-11-01): demo mode is the showcase for
+ * visitors who won't sign in, so it opens like a first visit, not
+ * like someone else's half-used workshop. Every entry resets the
+ * demo sandbox and seeds:
+ * - two TurtleBots in the Workshop, each a single version straight
+ *   from its recorded Robodex spec: the TurtleBot3 Burger (published
+ *   spec) and the TurtleBot3 Waffle Pi (a photo draft, so every
+ *   dimension is ESTIMATED and its note says so);
+ * - a small starter shelf so My parts and the BOM have something to
+ *   match: sim-only entries ARE real catalogue parts (datasheet specs,
+ *   catalogue id attached), and the few "real" entries are stand-ins
+ *   that carry "(demo sample)" in their name and a note saying so.
+ * No invented history, wear or dates: the visitor makes the history.
+ * Seeds write ONLY the ".demo" storage twins (see demoMode.ts); the
+ * visitor's own data is never read or written. */
 import { parts } from '@/lib/data';
 import type { Part } from '@/lib/types';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { INVENTORY_KEY, type InventoryPart } from '@/lib/inventory';
 import { assetPath } from '@/components/home/asset';
+import { DEMO_DATA_KEYS } from '@/lib/demoMode';
 
 const SEED_AT = '2026-11-01T00:00:00.000Z';
 const SIM_NOTE = 'Demo seed: a catalogue part shown as sim-only — virtual stock, not a shelf item.';
@@ -87,65 +82,42 @@ function simFromCatalog(
 function demoInventory(): InventoryPart[] {
   return [
     /* Parts · sim-only — the real catalogue, virtual stock. */
-    simFromCatalog('jetson_orin_nano', 'computer', 1, {
-      note: ' Earmarked for the demo Burger\u2019s planned version \u2014 not fitted.',
-      createdAt: '2026-10-27T11:20:00.000Z',
-    }),
-    simFromCatalog('rplidar_a1', 'sensor', 1, {
-      note: ' Earmarked for the demo Burger\u2019s planned version \u2014 not fitted.',
-      createdAt: '2026-10-27T11:20:00.000Z',
-    }),
-    simFromCatalog('lipo_4s_5200', 'battery', 2, {
-      createdAt: '2026-10-19T08:40:00.000Z',
-    }),
-    simFromCatalog('driver_tb6612fng', 'motor_driver', 1, {
-      createdAt: '2026-10-18T10:15:00.000Z',
-    }),
-    simFromCatalog('gearmotor_12v', 'motor', 2, {
-      createdAt: '2026-10-18T10:15:00.000Z',
-    }),
-    simFromCatalog('wheel_100mm', 'wheel', 4, {
-      note: ' Fitted to the demo Pathfinder\u2019s current version (demo sample history).',
-      createdAt: '2026-10-25T16:45:00.000Z',
-    }),
-    /* Parts · real — labeled demo samples. */
+    simFromCatalog('rplidar_a1', 'sensor', 1),
+    simFromCatalog('gearmotor_12v', 'motor', 2),
+    simFromCatalog('driver_tb6612fng', 'motor_driver', 1),
+    simFromCatalog('lipo_4s_5200', 'battery', 1),
+    /* Parts · real — one labeled demo sample, so the real-vs-sim
+     * split shows. */
     base({
       id: 'demo-sample-pi5', name: 'Raspberry Pi 5 (demo sample)', category: 'computer',
-      reality: 'real', quantity: 1, condition: 'used', stock_location: 'Demo shelf',
-      createdAt: '2026-10-14T13:05:00.000Z',
+      reality: 'real', quantity: 1, stock_location: 'Demo shelf',
       specs: { ...(catalogPart('raspberry_pi_5').specs as Record<string, string | number>) },
-      notes: SAMPLE_NOTE + ' Currently running the demo bench rig (demo sample).',
+      notes: SAMPLE_NOTE,
     }),
-    base({
-      id: 'demo-sample-18650', name: '18650 Li-ion cells (demo sample)', category: 'battery',
-      reality: 'real', quantity: 5, condition: 'used', stock_location: 'Demo shelf',
-      createdAt: '2026-10-09T09:30:00.000Z',
-      specs: { chemistry: 'liion', voltage_v: 3.7 },
-      notes: SAMPLE_NOTE + ' One cell retired early (demo sample history).',
-    }),
-    /* Tools · sim-only + real samples, so both sections show the split. */
-    simFromCatalog('lipo_balance_charger', 'tool', 1, {
-      createdAt: '2026-10-19T08:40:00.000Z',
-    }),
+    /* Tools · one sim-only, two real samples. */
+    simFromCatalog('lipo_balance_charger', 'tool', 1),
     base({
       id: 'demo-sample-soldering', name: 'Soldering station (demo sample)', category: 'tool',
-      reality: 'real', quantity: 1, condition: 'used', stock_location: 'Demo bench',
-      createdAt: '2026-09-28T15:10:00.000Z',
+      reality: 'real', quantity: 1, stock_location: 'Demo bench',
       notes: SAMPLE_NOTE,
     }),
     base({
       id: 'demo-sample-calipers', name: 'Digital calipers (demo sample)', category: 'tool',
-      reality: 'real', quantity: 1, condition: 'used', stock_location: 'Demo bench',
-      createdAt: '2026-10-21T12:00:00.000Z',
-      notes: SAMPLE_NOTE,
-    }),
-    base({
-      id: 'demo-sample-gluegun', name: 'Hot glue gun (demo sample)', category: 'tool',
-      reality: 'real', quantity: 1, condition: 'used', stock_location: 'Demo bench',
-      createdAt: '2026-10-05T17:25:00.000Z',
+      reality: 'real', quantity: 1, stock_location: 'Demo bench',
       notes: SAMPLE_NOTE,
     }),
   ];
+}
+
+/* The demo twins a fresh entry clears, plus the once-per-entry
+ * welcome flag so the guide shows again. */
+function resetDemoSandbox(): void {
+  try {
+    for (const k of DEMO_DATA_KEYS) window.localStorage.removeItem(k + '.demo');
+    window.sessionStorage.removeItem('rf.demo.welcomed');
+  } catch {
+    /* storage blocked: nothing to reset */
+  }
 }
 
 function writeIfAbsent(key: string, value: unknown): void {
@@ -172,20 +144,13 @@ async function fetchSpec(file: string): Promise<GarageRobot['versions'][number][
   return null;
 }
 
-/* Seed every demo twin. The Garage robots are demo copies of
- * Robodex robots with their recorded specs (static assets — no
- * Worker call); a spec that can't load just means that robot
- * isn't seeded. */
+/* Reset and seed every demo twin. Each entry into the demo starts
+ * fresh. The Garage robots are demo copies of Robodex robots with
+ * their recorded specs (static assets — no Worker call); a spec that
+ * can't load just means that robot isn't seeded. */
 export async function seedDemoStores(): Promise<void> {
+  resetDemoSandbox();
   writeIfAbsent(INVENTORY_KEY + '.demo', demoInventory());
-  const garageKey = GARAGE_KEY + '.demo';
-  let garageAbsent = false;
-  try {
-    garageAbsent = window.localStorage.getItem(garageKey) === null;
-  } catch {
-    return;
-  }
-  if (!garageAbsent) return;
   const robots: GarageRobot[] = [];
 
   const burgerSpec = await fetchSpec('turtlebot3-burger.json');
@@ -193,63 +158,34 @@ export async function seedDemoStores(): Promise<void> {
     robots.push({
       id: 'demo-turtlebot3-burger',
       name: 'TurtleBot3 Burger (demo)',
-      createdAt: '2026-10-12T09:00:00.000Z',
-      versions: [
-        {
-          id: 'demo-turtlebot3-burger-v1',
-          label: 'Baseline',
-          note: 'Demo copy of the Robodex catalogue robot, with its recorded spec. Play freely — your real robots are untouched.',
-          source: 'robodex',
-          createdAt: '2026-10-12T09:00:00.000Z',
-          spec: burgerSpec,
-        },
-        {
-          id: 'demo-turtlebot3-burger-v2',
-          label: 'Planned — RPLIDAR + Jetson upgrade',
-          note: 'PLANNED — not built, and nothing here is fitted. The plan: add the RPLIDAR A1 and swap the controller for a Jetson Orin Nano, both sim-only catalogue parts in the demo inventory. The spec is still the baseline robot, because the upgrade exists only on this list.',
-          source: 'edit',
-          planned: true,
-          createdAt: '2026-10-30T18:30:00.000Z',
-          spec: burgerSpec,
-        },
-      ],
+      createdAt: SEED_AT,
+      versions: [{
+        id: 'demo-turtlebot3-burger-v1',
+        label: 'From the Robodex',
+        note: 'Demo copy of the Robodex catalogue robot, with its recorded spec. Change anything — your real robots are untouched.',
+        source: 'robodex',
+        createdAt: SEED_AT,
+        spec: burgerSpec,
+      }],
     });
   }
 
-  const pathfinderSpec = await fetchSpec('pathfinder.json');
-  if (pathfinderSpec) {
-    /* Build history: the first version is the same recorded spec
-     * with the one field the story changes — the wheels it was
-     * first built on. The current version is the recorded spec
-     * itself, untouched. */
-    const firstBuildSpec = {
-      ...pathfinderSpec,
-      wheel: { ...(pathfinderSpec.wheel as Record<string, unknown>), diameter_m: 0.066 },
-    };
+  const waffleSpec = await fetchSpec('photo-turtlebot.json');
+  if (waffleSpec) {
     robots.push({
-      id: 'demo-pathfinder',
-      name: 'Pathfinder (demo)',
-      createdAt: '2026-10-18T10:15:00.000Z',
-      versions: [
-        {
-          id: 'demo-pathfinder-v1',
-          label: 'First build — 66 mm wheels',
-          note: 'Demo sample build history: as first put together, on 66 mm wheels.',
-          source: 'edit',
-          createdAt: '2026-10-18T10:15:00.000Z',
-          spec: firstBuildSpec,
-        },
-        {
-          id: 'demo-pathfinder-v2',
-          label: '100 mm wheels',
-          note: 'Swapped to the 100 mm catalogue wheels — the four sim-only Wheel 100 mm in the demo inventory. This version is the recorded Robodex spec, unchanged.',
-          source: 'robodex',
-          createdAt: '2026-10-25T16:45:00.000Z',
-          spec: pathfinderSpec,
-        },
-      ],
+      id: 'demo-turtlebot3-waffle-pi',
+      name: 'TurtleBot3 Waffle Pi (demo)',
+      createdAt: SEED_AT,
+      versions: [{
+        id: 'demo-turtlebot3-waffle-pi-v1',
+        label: 'Photo draft',
+        note: 'Demo copy of the Robodex entry. Its spec is a photo draft, so every dimension is ESTIMATED until measured.',
+        source: 'robodex',
+        createdAt: SEED_AT,
+        spec: waffleSpec,
+      }],
     });
   }
 
-  writeIfAbsent(garageKey, robots);
+  writeIfAbsent(GARAGE_KEY + '.demo', robots);
 }

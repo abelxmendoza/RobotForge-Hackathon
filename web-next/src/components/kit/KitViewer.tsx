@@ -144,7 +144,6 @@ const KIT_CSS = `
 .kitpage .buildrow-qty{display:flex;gap:6px;align-items:center;font-weight:600}
 .kitpage .buildrow-qty button,.kitpage .buildrow>button{padding:3px 9px;font-size:12.5px}
 .kitpage .buildlist-foot{margin-top:10px;font-size:13px}
-.kitpage .palette-bomlink{font-weight:700}
 .kitpage .wire-badge{font-size:13px;color:#c8cdd4;line-height:1.55;max-width:760px}
 .kitpage .wire-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:13px;margin:8px 0}
 .kitpage .wire-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
