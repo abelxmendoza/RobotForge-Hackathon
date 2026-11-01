@@ -16,20 +16,54 @@ import sys
 import tempfile
 from pathlib import Path
 
-from .validate import ALLOWED_FIELDS
+from .validate import allowed_fields
 
 MODEL = "muse-spark-1.3"
 DEFAULT_HELPER = Path(
     "~/workspace/custom-connectors/custom.meta-model-api/bin/meta_api.py"
 ).expanduser()
 
-INSTRUCTIONS = """You extract structured facts from a robot-part product page or datasheet.
-Return ONLY a JSON object, no prose, in exactly this shape:
-{
-  "fields": [{"field": "<name>", "value": <number or [min, max]>, "unit": "<unit as printed>", "quote": "<exact text copied from the page>"}],
-  "price_breaks": [{"qty": <int>, "unit_price": <number>, "currency": "USD", "quote": "<exact text copied from the page>"}],
-  "stock_wording": {"value": "<short stock phrase>", "quote": "<exact text copied from the page>"} or null
+_KIND_NOUN = {"part": "robot-part", "material": "material (filament or sheet stock)",
+              "tool": "workshop tool"}
+
+# Kind-specific guidance appended to the shared instructions. The field
+# schema itself is enforced deterministically in validate.py — this only
+# tells the model what to look for.
+_KIND_NOTES = {
+    "part": "",
+    "material": """
+Material specifics:
+- "price_basis" says what one unit price buys, as printed (e.g. "1 kg spool",
+  "per sheet", "300 x 300 mm sheet"). A material price without its basis is
+  useless, so report it whenever the page states the package size.
+- density_g_cm3 feeds mass math: only report it when the page prints a density.
+- Process window: nozzle_temp_c and bed_temp_c as [min, max] ranges when the
+  page prints a recommended range.
+- Sizes: spool_weight_g for filament spools; sheet_length_mm / sheet_width_mm /
+  sheet_thickness_mm for sheet stock, each with its own quote.
+""",
+    "tool": """
+Tool specifics (report only the specs the page actually prints for THIS
+tool type — an absent spec stays absent, never inferred from the tool class):
+- 3D printers: build_volume_x_mm / build_volume_y_mm / build_volume_z_mm from
+  the printed build volume (each value may share one quote), and
+  "supported_materials" as a list of the filament/material names the page
+  lists as supported, with a quote covering the list.
+- Soldering stations: power_w and temp_range_c as a [min, max] range.
+- Oscilloscopes: bandwidth_mhz, sample_rate_gsps, channels.
+- Calipers: measuring_range_mm as a [min, max] range and resolution_mm.
+- "price_basis" for a tool is normally "each"; report it only if printed.
+""",
 }
+
+INSTRUCTIONS = """You extract structured facts from a {noun} product page or datasheet.
+Return ONLY a JSON object, no prose, in exactly this shape:
+{{
+  "fields": [{{"field": "<name>", "value": <number or [min, max] or string or list of strings>, "unit": "<unit as printed>", "quote": "<exact text copied from the page>"}}],
+  "price_breaks": [{{"qty": <int>, "unit_price": <number>, "currency": "USD", "quote": "<exact text copied from the page>"}}],
+  "stock_wording": {{"value": "<short stock phrase>", "quote": "<exact text copied from the page>"}} or null,
+  "price_basis": {{"value": "<what the unit price buys, as printed>", "quote": "<exact text copied from the page>"}} or null
+}}
 Rules:
 - "field" must be one of the allowed field names listed in the request.
 - "quote" must be copied CHARACTER-FOR-CHARACTER from the page text given to you,
@@ -38,12 +72,15 @@ Rules:
 - A price break is a quantity tier (e.g. buy 10+ at a lower unit price). The
   single-unit price is a break with qty 1.
 - Never invent, round, or infer a value that is not printed on the page.
-"""
+{notes}"""
 
 _WINDOW_KEYWORDS = (
     "voltage", "current", "torque", "price", "$", "in stock", "out of stock",
     "weight", "mass", "dimensions", "range", "capacity", "operating",
     "supply", "vdc", " v ", " a ", " mm", " kg", " g ",
+    "density", "build volume", "nozzle", "bed temp", "bandwidth",
+    "sample rate", "resolution", "spool", "wattage", "filament",
+    "supported materials", "sheet",
 )
 
 
@@ -89,9 +126,11 @@ class ExtractionUnavailable(RuntimeError):
 
 
 class Extractor:
-    """Interface: extract(part_context, page_text) -> raw model JSON dict."""
+    """Interface: extract(item_context, page_text, source_url, kind)
+    -> raw model JSON dict."""
 
-    def extract(self, part: dict, page_text: str, source_url: str) -> dict:  # pragma: no cover
+    def extract(self, part: dict, page_text: str, source_url: str,
+                kind: str = "part") -> dict:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -103,22 +142,26 @@ class MetaModelExtractor(Extractor):
         self.timeout = timeout
         self.calls = 0
 
-    def extract(self, part: dict, page_text: str, source_url: str) -> dict:
+    def extract(self, part: dict, page_text: str, source_url: str,
+                kind: str = "part") -> dict:
         if not self.helper.exists():
             raise ExtractionUnavailable(
                 f"Meta API helper not found at {self.helper} "
                 "(set META_API_HELPER to the meta_api.py path)")
-        allowed = sorted(ALLOWED_FIELDS)
+        allowed = sorted(allowed_fields(kind))
         user = (
-            f"Part: {part.get('name', part['part_id'])} "
+            f"Item ({kind}): {part.get('name', part['part_id'])} "
             f"(catalog id {part['part_id']}, MPN {part.get('mpn') or 'unknown'})\n"
             f"Source URL: {source_url}\n"
             f"Allowed field names: {', '.join(allowed)}\n\n"
             f"PAGE TEXT:\n{window_text(page_text)}"
         )
+        instructions = INSTRUCTIONS.format(
+            noun=_KIND_NOUN.get(kind, "robot-part"),
+            notes=_KIND_NOTES.get(kind, ""))
         with tempfile.NamedTemporaryFile(
                 "w", suffix=".md", delete=False) as sf:
-            sf.write(INSTRUCTIONS)
+            sf.write(instructions)
             system_file = sf.name
         try:
             self.calls += 1
@@ -161,7 +204,8 @@ class MockExtractor(Extractor):
         self.calls = 0
         self.called_urls: list[str] = []
 
-    def extract(self, part: dict, page_text: str, source_url: str) -> dict:
+    def extract(self, part: dict, page_text: str, source_url: str,
+                kind: str = "part") -> dict:
         self.calls += 1
         self.called_urls.append(source_url)
         result = self.canned.get(source_url, {})

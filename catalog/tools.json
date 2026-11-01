@@ -1,0 +1,190 @@
+{
+ "comment": "Gathered tool records (Forge Engine §10): workshop equipment (printers, soldering, test gear, measuring tools) with headline specs. Every gathered value carries provenance_gathered (source URL, fetched-at, literal quote, state) and stays web_gathered until a human confirms it. Seeded by the gather pipeline's apply step; see tools/gather/.",
+ "tools": [
+  {
+   "id": "printer_prusa_mk4s",
+   "name": "Prusa MK4S 3D printer",
+   "specs": {
+    "build_volume_x_mm": 250.0,
+    "build_volume_y_mm": 210.0,
+    "build_volume_z_mm": 220.0,
+    "supported_materials": [
+     "PLA",
+     "PETG",
+     "Flex",
+     "PVA",
+     "PC",
+     "PP",
+     "CPE",
+     "PVB",
+     "ABS",
+     "ASA",
+     "HIPS",
+     "PA"
+    ]
+   },
+   "kind": "tool",
+   "gather_history": [
+    {
+     "run_id": "20261101T182851Z-cd8c25",
+     "applied_at": "2026-11-01T18:29:18Z",
+     "field": "build_volume_x_mm",
+     "prior": null,
+     "new": 250.0,
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/"
+    },
+    {
+     "run_id": "20261101T182851Z-cd8c25",
+     "applied_at": "2026-11-01T18:29:18Z",
+     "field": "build_volume_y_mm",
+     "prior": null,
+     "new": 210.0,
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/"
+    },
+    {
+     "run_id": "20261101T182851Z-cd8c25",
+     "applied_at": "2026-11-01T18:29:18Z",
+     "field": "build_volume_z_mm",
+     "prior": null,
+     "new": 220.0,
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/"
+    },
+    {
+     "run_id": "20261101T182851Z-cd8c25",
+     "applied_at": "2026-11-01T18:29:18Z",
+     "field": "supported_materials",
+     "prior": null,
+     "new": [
+      "PLA",
+      "PETG",
+      "Flex",
+      "PVA",
+      "PC",
+      "PP",
+      "CPE",
+      "PVB",
+      "ABS",
+      "ASA",
+      "HIPS",
+      "PA"
+     ],
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/"
+    },
+    {
+     "run_id": "20261101T182851Z-cd8c25",
+     "applied_at": "2026-11-01T18:29:18Z",
+     "field": "price_estimate",
+     "prior": null,
+     "new": {
+      "unit_price": 925.0,
+      "currency": "USD",
+      "price_breaks": [
+       {
+        "qty": 1,
+        "unit_price": 925.0
+       }
+      ],
+      "stock_wording": "In stock",
+      "source_kind": "web_gathered",
+      "supplier_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+      "fetched_at": "2026-11-01T18:28:55Z",
+      "expires_at": "2026-11-02T18:28:55Z",
+      "quote": "Assembled$925"
+     },
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/"
+    }
+   ],
+   "provenance_gathered": {
+    "build_volume_x_mm": {
+     "value": 250.0,
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+     "fetched_at": "2026-11-01T18:28:55Z",
+     "quote": "Build Volume250 x 210 x 220 mm | 9.84 x 8.3 x 8.6 in",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182851Z-cd8c25"
+    },
+    "build_volume_y_mm": {
+     "value": 210.0,
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+     "fetched_at": "2026-11-01T18:28:55Z",
+     "quote": "Build Volume250 x 210 x 220 mm | 9.84 x 8.3 x 8.6 in",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182851Z-cd8c25"
+    },
+    "build_volume_z_mm": {
+     "value": 220.0,
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+     "fetched_at": "2026-11-01T18:28:55Z",
+     "quote": "Build Volume250 x 210 x 220 mm | 9.84 x 8.3 x 8.6 in",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182851Z-cd8c25"
+    },
+    "supported_materials": {
+     "value": [
+      "PLA",
+      "PETG",
+      "Flex",
+      "PVA",
+      "PC",
+      "PP",
+      "CPE",
+      "PVB",
+      "ABS",
+      "ASA",
+      "HIPS",
+      "PA"
+     ],
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+     "fetched_at": "2026-11-01T18:28:55Z",
+     "quote": "Supported materialsPLA, PETG, Flex, PVA, PC, PP, CPE, PVB and when using the Original Prusa Enclosure with filtration add-on ABS, ASA, HIPS, PA",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182851Z-cd8c25"
+    },
+    "price_estimate": {
+     "value": {
+      "unit_price": 925.0,
+      "currency": "USD",
+      "price_breaks": [
+       {
+        "qty": 1,
+        "unit_price": 925.0
+       }
+      ],
+      "stock_wording": "In stock",
+      "source_kind": "web_gathered",
+      "supplier_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+      "fetched_at": "2026-11-01T18:28:55Z",
+      "expires_at": "2026-11-02T18:28:55Z",
+      "quote": "Assembled$925"
+     },
+     "source_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+     "fetched_at": "2026-11-01T18:28:55Z",
+     "quote": "Assembled$925",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182851Z-cd8c25"
+    }
+   },
+   "price_estimate": {
+    "unit_price": 925.0,
+    "currency": "USD",
+    "price_breaks": [
+     {
+      "qty": 1,
+      "unit_price": 925.0
+     }
+    ],
+    "stock_wording": "In stock",
+    "source_kind": "web_gathered",
+    "supplier_url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/",
+    "fetched_at": "2026-11-01T18:28:55Z",
+    "expires_at": "2026-11-02T18:28:55Z",
+    "quote": "Assembled$925"
+   }
+  }
+ ]
+}
