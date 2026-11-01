@@ -10,6 +10,9 @@
  *                     — no model call
  *   POST /describe -> { description }      => { spec, model }
  *   POST /chat     -> { message }          => { answer, model }
+ *                     with { op_context }  => { answer, command, model }
+ *                     (Tier-1 operator translation; the client validates
+ *                     and applies the command, never the worker)
  *   POST /list     -> { text }             => { import, model_generated, model }
  *   POST /photo    -> { image_data_url, mode? }   => { draft, ... }
  *                     mode "photo" (default): ESTIMATED robot-photo
@@ -637,6 +640,60 @@ async function handleDescribe(request, env) {
   return json(request, 200, { spec, model: MODEL });
 }
 
+/* Tier-1 operator mode for /chat: when the client sends op_context, the
+ * model acts as a TRANSLATOR from a free-form operation request into ONE
+ * command in the app's built-in command grammar. The worker only ever
+ * returns the command as text — the client runs it through the same
+ * validators, preview card and Apply tap as a typed command, so a bad or
+ * stale proposal changes nothing. Without op_context, /chat is unchanged. */
+const OP_SYSTEM_PROMPT = `You translate a RobotForge user's operation request into ONE command in the app's command grammar, using ONLY the robots, fields, components and inventory parts listed in the context JSON the user message carries.
+
+Output ONLY a JSON object, no prose, no markdown fences:
+{"answer": "<one short sentence: what the command does, or why no command fits>", "command": "<one command>" or null}
+
+Grammar (match it exactly; robot names in double quotes):
+- set "<RobotName>" <field.path> to <value>   — spec edit. Values use SPEC UNITS: metres, kilograms, volts, mAh. Convert what the user said (120 mm diameter -> wheel.diameter_m to 0.12; 2 lb -> mass_kg to 0.907). Text/select fields take the bare word.
+- add a <component name> to "<RobotName>"
+- move "<component>" on "<RobotName>" to <x> <y> <z> mm   — positions stay in millimetres; append "yaw <degrees>" only if the user gave a rotation.
+- connect "<component A>" to "<component B>" on "<RobotName>"
+- remove "<component>" from "<RobotName>"
+- set inventory "<PartName>" quantity to <whole number>
+- assign inventory "<PartName>" to "<RobotName>"
+
+Rules:
+- Only use robot names, field paths, component names and part names from the context. If the request names something not in the context, or is not an operation you can express in this grammar, set "command": null and say why in "answer".
+- Never invent a robot, field, component or part. Never claim the change has been applied — the user still reviews and applies it in the app.
+- One command only. If the request needs two changes, translate the first and say so in "answer".`;
+
+function sanitizeOpContext(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const list = (v, cap, len) => Array.isArray(v)
+    ? v.filter((x) => typeof x === 'string' && x.trim()).slice(0, cap).map((x) => x.slice(0, len))
+    : [];
+  const ctx = {
+    robots: list(raw.robots, 50, 120),
+    fields: list(raw.fields, 40, 80),
+    components: list(raw.components, 120, 120),
+    inventory: list(raw.inventory, 100, 120),
+  };
+  return ctx.robots.length || ctx.inventory.length ? ctx : null;
+}
+
+/* Parse a Tier-1 model reply: a JSON object with a string answer and a
+ * string-or-null command. Anything else returns null and the caller
+ * falls back to treating the reply as a plain answer. */
+function parseOpReply(content) {
+  try {
+    const parsed = JSON.parse(stripFences(content));
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.answer !== 'string') return null;
+    const command = typeof parsed.command === 'string' && parsed.command.trim()
+      ? parsed.command.trim().slice(0, 300) : null;
+    return { answer: parsed.answer.trim(), command };
+  } catch {
+    return null;
+  }
+}
+
 async function handleChat(request, env) {
   if (!env.BASETEN_API_KEY && !env.FIREWORKS_API_KEY) {
     return err(request, 500, 'not_configured',
@@ -655,15 +712,24 @@ async function handleChat(request, env) {
   }
   const gate = await gateBudget(env, request);
   if (gate) return gate;
+  const opContext = sanitizeOpContext(data && data.op_context);
   let content;
   try {
-    content = await callModel(env, [
+    content = await callModel(env, opContext ? [
+      { role: 'system', content: OP_SYSTEM_PROMPT },
+      { role: 'user', content: 'Context: ' + JSON.stringify(opContext) + '\nRequest: ' + message },
+    ] : [
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
       { role: 'user', content: message },
-    ], 0.4, 2000);
+    ], opContext ? 0.1 : 0.4, 2000);
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The model call failed (' + e.message + '). The recorded answers still work.');
+  }
+  if (opContext) {
+    const op = parseOpReply(content);
+    if (op) return json(request, 200, { answer: op.answer, command: op.command, model: MODEL });
+    return json(request, 200, { answer: content.trim(), command: null, model: MODEL });
   }
   return json(request, 200, { answer: content.trim(), model: MODEL });
 }

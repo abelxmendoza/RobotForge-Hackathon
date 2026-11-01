@@ -23,7 +23,11 @@ import {
   type RobotData,
   type TemplateData,
 } from "./engine";
-import { gateReports, parts, robots } from "@/lib/data";
+import { gateReports, parts, robotSlug, robots } from "@/lib/data";
+import { parseNavCommand, type NavAction } from "@/lib/nav";
+import { MOBILITY_CLASSES } from "@/components/robots/shared";
+import { groupSlug } from "@/components/robots/GroupCard";
+import { COMPONENTS } from "@/lib/components";
 import partsDoc from "@/data/parts.json";
 import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
@@ -31,7 +35,7 @@ import InventoryProposal from './InventoryProposal';
 import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,type InventoryOperation} from '@/lib/inventory';
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
-import { GARAGE_KEY, fmtValue, type GarageRobot } from '@/lib/garage';
+import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -42,6 +46,7 @@ const DEFAULT_CHIPS = [
   "Which robots passed the gate?",
   "List my robots",
   "Operations",
+  "Go to wiring",
   "Tell me about Andino",
   "How does RobotForge work?",
 ];
@@ -286,16 +291,14 @@ export function useForgeAssistant() {
     [dispatchFocusPart, filterPartsHere, noteBubble, onPartsPage]
   );
 
-  /* ---------------- asking ---------------- */
+  /* ---------------- commands ---------------- */
 
-  const ask = useCallback(
-    (question: string) => {
-      const q = String(question || "").trim();
-      if (!q) return;
-      appendMsg({ who: "user", text: q });
-      setProposal(null);
-      setAssemblyProposal(null);
-      setInventoryProposal(null);
+  /* Run the built-in command grammars (inventory, assembly, spec edits).
+   * Returns true when the text was a command — handled, or refused with a
+   * bubble. Typed commands and live-model proposals share this one path,
+   * so a model proposal gets exactly the validation a typed command gets,
+   * and nothing applies until the user taps Apply on the preview. */
+  const runCommands = (q: string): boolean => {
       const stockCommand=parseInventoryCommand(q);
       if(stockCommand){
         try{
@@ -307,7 +310,7 @@ export function useForgeAssistant() {
             noteBubble(shown.length?shown.map(p=>`${p.name}: ×${p.quantity} · ${p.category} · ${robots.find(r=>r.id===p.robot_id)?.name??'shared/unassigned'} · ${p.stock_location||'no shelf location'}`).join('\n'):'No matching parts saved in this browser. Add photos in My parts or attach a part photo in Forge.');
           }else setInventoryProposal(proposeInventory(stock,robots,stockCommand));
         }catch(e){noteBubble((e as Error).message);}
-        return;
+        return true;
       }
       try {
         const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
@@ -317,15 +320,15 @@ export function useForgeAssistant() {
           previewAssembly(saved, assemblies, assembly);
           setAssemblyProposal(assembly);
           noteBubble('Review the assembly action below. Apply saves it as a new assembly version, visible in My robots.');
-          return;
+          return true;
         }
-      } catch (e) { noteBubble((e as Error).message); return; }
+      } catch (e) { noteBubble((e as Error).message); return true; }
       const command = parseCommand(q);
       if (command) {
         try {
           const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
           if (command.kind === 'help') {
-            noteBubble('Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Mount generation and simulation jobs remain planned.');
+            noteBubble('Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Navigation: open "TurtleBot3 Burger"; go to wiring; show the legged robots. Free-form operation requests (for example “make Omega1’s wheels bigger”) go to the live model when it is available: it proposes a command in this same grammar, the app validates it, and you still tap Apply. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
             noteBubble(saved.length ? saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') : 'No robots saved in this browser yet. Add one in My robots.');
           } else if (command.kind === 'undo') {
@@ -337,7 +340,7 @@ export function useForgeAssistant() {
               const error = writeStore(ASSEMBLY_KEY,next); if(error) throw new Error(error);
               lastApplied.current = null;
               noteBubble('Previous assembly restored as a new version.');
-              return;
+              return true;
             }
             const next = undoOperation(saved, last.robotId, last.versionId, uid('v'), new Date().toISOString());
             const error = writeStore(GARAGE_KEY, next);
@@ -350,12 +353,137 @@ export function useForgeAssistant() {
             noteBubble('Proposed change to the latest saved version. Your unsaved editor draft is separate. Review the preview below.');
           }
         } catch (e) { noteBubble((e as Error).message); }
+        return true;
+      }
+      return false;
+  };
+
+  /* ---------------- Tier 0: navigation ---------------- */
+
+  const navContext = () => ({
+    saved: readStore<GarageRobot[]>(GARAGE_KEY, []).map((r) => ({ id: r.id, name: r.name })),
+    dex: robots.map((r) => ({ name: r.name, slug: robotSlug(r) })),
+    groups: MOBILITY_CLASSES.map((cls) => ({ cls, slug: groupSlug(cls) })),
+  });
+
+  const goWorkshop = useCallback(
+    (hash: string) => {
+      if (pathname && pathname.startsWith("/garage")) {
+        window.location.hash = hash.slice(1);
+      } else {
+        router.push("/garage/" + hash);
+      }
+    },
+    [pathname, router]
+  );
+
+  const doNav = useCallback(
+    (nav: NavAction) => {
+      if (nav.kind === 'page') {
+        router.push(nav.route);
+        noteBubble("Opening " + nav.label + ".");
+      } else if (nav.kind === 'dex-robot') {
+        router.push("/robots/" + nav.slug + "/");
+        noteBubble("Opening “" + nav.name + "” in the Robodex.");
+      } else if (nav.kind === 'saved-robot') {
+        goWorkshop("#robot=" + nav.id);
+        noteBubble("Opening your robot “" + nav.name + "” in the Workshop.");
+      } else if (nav.kind === 'tab') {
+        goWorkshop("#tab=" + nav.tab);
+        noteBubble("Opening the Workshop’s " + nav.tab + " tab.");
+      } else if (nav.kind === 'group') {
+        if (pathname && pathname.startsWith("/robots")) {
+          window.location.hash = "group=" + nav.slug;
+        } else {
+          router.push("/robots/#group=" + nav.slug);
+        }
+        noteBubble("Showing the " + nav.cls + " robots in the Robodex.");
+      }
+    },
+    [goWorkshop, noteBubble, pathname, router]
+  );
+
+  /* ---------------- Tier 1: model-proposed operations ---------------- */
+
+  const buildOpContext = () => {
+    const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const stock = readStore<InventoryPart[]>(INVENTORY_KEY, []);
+    return {
+      robots: saved.map((r) => r.name),
+      fields: FIELD_GROUPS.flatMap((g) => g.fields.map((f) => f.path)),
+      components: COMPONENTS.flatMap((c) => [c.name, ...(c.aliases || [])]),
+      inventory: stock.map((p) => p.name),
+    };
+  };
+
+  /* A free-form operation request the grammar missed goes to the live
+   * model as a TRANSLATION task: the worker answers with one command in
+   * the built-in grammar, which then runs through runCommands — the same
+   * validators, preview card and Apply tap as a typed command. The model
+   * never touches state itself, and a proposal that fails validation
+   * changes nothing. When the live model is unavailable the old honest
+   * refusal stands. */
+  const proposeViaLive = async (q: string) => {
+    const waitId = appendMsg({
+      who: "bot",
+      html: '<p class="fc-dim">Asking the live model to translate that into a command I can run&hellip;</p>',
+    });
+    const settle = (text: string) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === waitId ? { ...m, html: undefined, text } : m))
+      );
+    };
+    const health = await checkLive();
+    if (!liveUsable(health)) {
+      settle('That operation is not in my built-in commands, and the live model is not available to translate it, so nothing was changed. Type “operations” for the commands I can execute directly.');
+      return;
+    }
+    try {
+      const res = await fetch(liveBase() + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: q, op_context: buildOpContext() }),
+      });
+      const body = (await res.json().catch(() => null)) as
+        | { answer?: unknown; command?: unknown }
+        | null;
+      if (!res.ok || !body) throw new Error("endpoint -> " + res.status);
+      const cmd = typeof body.command === "string" ? body.command.trim() : "";
+      if (cmd) {
+        settle("The live model proposed this command: “" + cmd + "” — it goes through the same checks as a typed command, and nothing is applied until you tap Apply.");
+        if (!runCommands(cmd)) {
+          noteBubble("That proposed command did not pass the app’s checks, so nothing was changed.");
+        }
         return;
       }
-      // Unknown operational requests are never sent to an answer-only model
-      // that could claim an action happened without executing it.
-      if (/^(?:add|remove|delete|move|place|mount|connect|wire|disconnect|generate|export|run|save|set|undo)\b/i.test(q)) {
-        noteBubble('That operation is not supported yet. Type “operations” for the commands I can execute. Nothing was changed.');
+      const ans = typeof body.answer === "string" ? body.answer.trim() : "";
+      settle(ans
+        ? ans + " Nothing was changed — I could not turn that into a supported command."
+        : "The live model could not turn that into a supported command, so nothing was changed.");
+    } catch {
+      settle("The live endpoint isn’t answering, so nothing was changed. Type “operations” for the commands I can execute directly.");
+    }
+  };
+
+  /* ---------------- asking ---------------- */
+
+  const ask = useCallback(
+    (question: string) => {
+      const q = String(question || "").trim();
+      if (!q) return;
+      appendMsg({ who: "user", text: q });
+      setProposal(null);
+      setAssemblyProposal(null);
+      setInventoryProposal(null);
+      if (runCommands(q)) return;
+      const nav = parseNavCommand(q, navContext());
+      if (nav) { doNav(nav); return; }
+      /* Operation verbs the grammar missed: never send them to an
+       * answer-only path that could claim an action happened. They go to
+       * the Tier-1 translator, which can only propose a validated
+       * command, or they are refused plainly. */
+      if (/^(?:add|remove|delete|move|place|mount|connect|wire|disconnect|generate|export|run|save|set|undo|make|change|increase|decrease|bigger|smaller|heavier|lighter)\b/i.test(q)) {
+        void proposeViaLive(q);
         return;
       }
       const waitId = appendMsg({
@@ -443,7 +571,7 @@ export function useForgeAssistant() {
         });
       }, 0);
     },
-    [appendMsg, autoAction, checkLive, engine, liveBase, liveChat, setChips, noteBubble]
+    [appendMsg, autoAction, checkLive, doNav, engine, liveBase, liveChat, proposeViaLive, runCommands, setChips, noteBubble]
   );
 
   const onHitClick = (h: Hit) => {
