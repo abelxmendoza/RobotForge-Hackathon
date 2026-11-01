@@ -15,8 +15,26 @@ import { addComponentSkin } from './componentSkin';
 import { snapPlacement, shortestYaw } from '@/lib/spatial';
 import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
+import { swayAt } from '@/lib/stageAnimation';
 import type { RobotSpec } from '../forge/model';
 import { taBuildParts, taGeom3d } from './takeapart';
+
+/* Living Build Stage (Layer 0) for this viewer, computed by the
+ * parent from recorded data (lib/stageAnimation's capability map):
+ * whether the life clock may advance, its speed, whether the
+ * sensor layer shows, whether this frame hovers (aerial frames
+ * with recorded rotors), and the gripper's safe travel amplitude
+ * in metres (a safe subset of the recorded prismatic limits) —
+ * or null when no travel may be shown. Omitted entirely, the
+ * viewer behaves exactly as before. */
+export interface RobotLife {
+  playing: boolean;
+  speed: number;
+  sensors: boolean;
+  hover: boolean;
+  lidarSweep: boolean;
+  gripperTravelM: number | null;
+}
 
 type ThreeModule = typeof THREE_NS;
 
@@ -53,6 +71,7 @@ interface Session {
 
 export default function Robot3D({
   spec,
+  life,
   explode,
   selected,
   onSelect,
@@ -68,6 +87,7 @@ export default function Robot3D({
   autoRotate = false,
 }: {
   spec: RobotSpec;
+  life?: RobotLife;
   explode: number;
   selected: string | null;
   onSelect: (id: string) => void;
@@ -100,6 +120,10 @@ export default function Robot3D({
   cbRef.current = { onSelect, onFail, onMove, onPlaybackEnd };
   const stateRef = useRef({ explode, selected });
   stateRef.current = { explode, selected };
+  /* The stage-life bundle rides its own ref (same pattern as
+   * motionRef): the frame loop reads the latest render's life. */
+  const lifeRef = useRef(life);
+  lifeRef.current = life;
 
   useEffect(() => {
     let disposed = false;
@@ -218,7 +242,8 @@ export default function Robot3D({
         const materials: Session['materials'] = {};
         const pickMeshes: THREE_NS.Mesh[] = [];
         const groups: THREE_NS.Group[] = [];
-        units.forEach((u) => {
+        const markerMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+        units.forEach((u, unitIndex) => {
           if (!materials[u.part]) {
             materials[u.part] = new THREE.MeshPhysicalMaterial({
               color: PALETTE[u.part] || 0x167f83,
@@ -243,6 +268,35 @@ export default function Robot3D({
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             mesh.userData.part = u.part;
+            /* Stage-life tagging: cylinders that recorded data
+             * licenses to turn (driven wheels, prop discs, the
+             * lidar disc) get a rim marker so their spin reads,
+             * and spin about their own geometry axis in the loop.
+             * Rotors alternate direction like real quad pairs.
+             * Gripper fingers record their home offset for the
+             * recorded-limits travel. Nothing else is tagged:
+             * untagged meshes never move. */
+            if (m.kind === 'cyl' && (u.part === 'wheel' || u.part === 'lidar')) {
+              mesh.userData.spin = u.part;
+              mesh.userData.spinDir = 1;
+            }
+            if (m.kind === 'cyl' && u.part === 'rotor' && m.size[1] <= 0.004) {
+              mesh.userData.spin = 'rotor';
+              mesh.userData.spinDir = unitIndex % 2 === 0 ? 1 : -1;
+            }
+            if (mesh.userData.spin) {
+              const r = m.size[0];
+              const marker = new THREE.Mesh(
+                new THREE.BoxGeometry(r * 0.55, Math.max(m.size[1] * 1.1, 0.003), r * 0.2),
+                markerMat,
+              );
+              marker.position.set(r * 0.6, 0, 0);
+              mesh.add(marker);
+            }
+            if (u.part === 'gripper') {
+              mesh.userData.homeY = m.center[1];
+              mesh.userData.gripSign = Math.sign(m.center[1]) || 1;
+            }
             const component=renderInstances.find(c=>c.id===u.part);
             if(component){
               mesh.castShadow=false;
@@ -309,6 +363,40 @@ export default function Robot3D({
             return anchor;
           });
           cables.push({curve,mesh,pulse,anchors,a,b,index,last:''});
+        }
+        /* Stage-life sensor layer: a sweep wedge at the lidar
+         * disc, built only when the parent's capability map says
+         * this robot's lidar range is recorded (life.lidarSweep).
+         * Drawn to the stage edge like the kit scene's — a scan
+         * direction indicator; the recorded range is stated in
+         * the controls panel, not plotted to scale. It lives in
+         * the lidar's own group so explode carries it along. */
+        let lifeSweep: THREE_NS.Group | null = null;
+        if (life?.lidarSweep) {
+          const li = units.findIndex((u) => u.part === 'lidar');
+          const lu = li >= 0 ? units[li] : undefined;
+          const lg = li >= 0 ? groups[li] : undefined;
+          if (lu && lg) {
+            const disc = lu.meshes[lu.meshes.length - 1];
+            lifeSweep = new THREE.Group();
+            lifeSweep.position.set(disc.center[0], disc.center[1], disc.center[2]);
+            const disc2 = new THREE.Mesh(
+              new THREE.CircleGeometry(span * 1.4, 48),
+              new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide }),
+            );
+            const wedge = new THREE.Mesh(
+              new THREE.CircleGeometry(span * 1.4, 24, 0, 0.55),
+              new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }),
+            );
+            const edge = new THREE.Mesh(
+              new THREE.BoxGeometry(span * 1.4, 0.0025, 0.001),
+              new THREE.MeshBasicMaterial({ color: 0xffc46b, transparent: true, opacity: 0.85, depthWrite: false }),
+            );
+            edge.position.set(span * 0.7, 0, 0);
+            lifeSweep.add(disc2, wedge, edge);
+            lifeSweep.visible = false;
+            lg.add(lifeSweep);
+          }
         }
         // A restrained bloom pass catches the bright cable markers and selection glow.
         let composer: import('three/addons/postprocessing/EffectComposer.js').EffectComposer|undefined;
@@ -517,10 +605,13 @@ export default function Robot3D({
         window.addEventListener('resize', resize);
         window.visualViewport?.addEventListener('resize',resize);
 
+        let lifeTime = 0;
         renderer.setAnimationLoop(() => {
           const delta=Math.min(clock.getDelta(),0.05);
           const effects=motionRef.current.animate&&!reducedMotion.matches;
           const settings=motionRef.current;
+          const lifeNow=lifeRef.current;
+          if(lifeNow?.playing) lifeTime+=delta*lifeNow.speed;
           if(!settings.playing){playStart=null;playFinished=false;}
           else if(playStart===null)playStart=clock.elapsedTime;
           const progress=settings.playing?(effects?Math.min(1,(clock.elapsedTime-(playStart??0))/2):1):settings.replay;
@@ -563,7 +654,36 @@ export default function Robot3D({
                 target.add(new THREE.Vector3(v[0]*out,v[1]*out,v[2]<0?0:span*0.22));
               }
             }
+            if(lifeNow?.hover&&lifeNow.playing) target.z+=Math.sin(lifeTime*2.2)*span*0.02;
             if(effects) g.position.lerp(target,1-Math.exp(-delta*(td?6:12))); else g.position.copy(target);
+          }
+          /* Stage life: spin the tagged cylinders about their own
+           * axes, travel the gripper fingers inside the recorded
+           * safe amplitude, and turn the lidar sweep with the
+           * disc. All of it runs on lifeTime, which only advances
+           * while the parent's gates allow — hidden tab, offscreen
+           * stage or Wiring mode freeze every track together. */
+          if(lifeNow){
+            const spinAxis=new THREE.Vector3(0,1,0);
+            for(const g of groups){
+              for(const child of g.children){
+                if(!(child instanceof THREE.Mesh))continue;
+                const spin=child.userData.spin as string|undefined;
+                if(spin&&lifeNow.playing){
+                  const rate=spin==='rotor'?16:spin==='lidar'?2.2:3.2;
+                  child.rotateOnAxis(spinAxis,delta*lifeNow.speed*rate*((child.userData.spinDir as number)??1));
+                }
+                if(child.userData.homeY!==undefined&&lifeNow.gripperTravelM!==null){
+                  const home=child.userData.homeY as number;
+                  const sign=child.userData.gripSign as number;
+                  child.position.y=home+(lifeNow.playing?sign*swayAt(lifeNow.gripperTravelM,lifeTime*1.5):0);
+                }
+              }
+            }
+            if(lifeSweep){
+              lifeSweep.visible=lifeNow.sensors;
+              lifeSweep.rotation.z=lifeTime*2.2;
+            }
           }
           for(const [id,material] of Object.entries(materials)){
             const isComponent=Boolean(instances?.some(c=>c.id===id));

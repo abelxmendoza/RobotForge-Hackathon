@@ -1,0 +1,2559 @@
+{
+ "note": "Recorded source data for the Living Build Stage animation capability map. URDF joints were parsed by tools/extract_stage_animation.py from each robot's official URDF at the same pinned commit catalog/physics.json records; spec fields (drivetrain, wheel, rotors, sensors, wiring) are verbatim from the robot's recorded spec file. Nothing here is estimated: fields the sources do not carry are absent, and the animation layer abstains where they are absent.",
+ "robots": {
+  "andino": {
+   "name": "Andino",
+   "mobility_class": "Ground \u2014 wheeled",
+   "class": "Differential-drive ground robot",
+   "spec": {
+    "file": "examples/andino.json",
+    "drivetrain": "differential",
+    "wheel": {
+     "count": 2,
+     "diameter_m": 0.0662,
+     "driven": true,
+     "width_m": 0.025
+    },
+    "rotors": null,
+    "motor": {
+     "count": 2,
+     "kind": "dc_gearmotor",
+     "stall_torque_nm": null,
+     "voltage_v": 9.0
+    },
+    "sensors": [
+     {
+      "kind": "lidar_2d",
+      "position": "top",
+      "range_m": 12.0
+     },
+     {
+      "kind": "rgb_camera",
+      "position": "front",
+      "range_m": null
+     },
+     {
+      "kind": "imu",
+      "position": "internal",
+      "range_m": null
+     },
+     {
+      "kind": "encoder",
+      "position": "wheels",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail",
+       "to": "driver",
+       "volts": 11.1
+      },
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail",
+       "to": "regulator",
+       "volts": 11.1
+      },
+      {
+       "from": "regulator",
+       "kind": "power",
+       "label": "5 V rail",
+       "to": "controller",
+       "volts": 5.0
+      },
+      {
+       "from": "controller",
+       "kind": "power",
+       "label": "5 V from the Pi",
+       "to": "nano",
+       "volts": 5.0
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "serial link",
+       "to": "nano",
+       "volts": null
+      },
+      {
+       "from": "nano",
+       "kind": "data",
+       "label": "PWM + direction",
+       "to": "driver",
+       "volts": null
+      },
+      {
+       "from": "driver",
+       "kind": "power",
+       "label": "PWM output \u2014 duty-limited, not a fixed rail",
+       "to": "motors",
+       "volts": null
+      },
+      {
+       "from": "motors",
+       "kind": "data",
+       "label": "encoder feedback",
+       "to": "nano",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "power",
+       "label": "power (rail not specified in the data)",
+       "to": "lidar",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "UART/USB",
+       "to": "lidar",
+       "volts": null
+      },
+      {
+       "cable": {
+        "connector": "CSI ribbon cable",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "from": "controller",
+       "kind": "data",
+       "label": "CSI ribbon (carries power + data)",
+       "to": "camera",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "I2C (carries power + data)",
+       "to": "imu",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "Battery \u2014 3\u00d7 18650 Li-ion",
+       "rated_max_v": null,
+       "req_label": "11.1 V"
+      },
+      {
+       "deck": true,
+       "id": "regulator",
+       "kit": null,
+       "label": "5 V buck converter",
+       "output_current_a": 5.0,
+       "rated_max_v": 24,
+       "req_label": "out 5 V \u00b7 in \u2264 24 V"
+      },
+      {
+       "deck": true,
+       "id": "driver",
+       "kit": null,
+       "label": "L298N motor driver",
+       "logic_v": 5.0,
+       "output_current_a": 4.0,
+       "rated_max_v": 35,
+       "req_label": "in \u2264 35 V"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": "mount",
+       "label": "DG01D-E gearmotors \u00d72",
+       "rated_max_v": 9,
+       "req_label": "3\u20139 V"
+      },
+      {
+       "deck": true,
+       "id": "controller",
+       "kit": null,
+       "label": "Raspberry Pi 4",
+       "logic_v": 3.3,
+       "rated_max_v": null,
+       "req_label": "5 V"
+      },
+      {
+       "deck": true,
+       "id": "nano",
+       "kit": null,
+       "label": "Arduino Nano",
+       "logic_v": 5.0,
+       "rated_max_v": null,
+       "req_label": "5 V"
+      },
+      {
+       "current_a": 0.4,
+       "deck": false,
+       "id": "lidar",
+       "kit": "lidar",
+       "label": "RPLIDAR A1M8 lidar",
+       "logic_v": 3.3,
+       "rated_max_v": null,
+       "req_label": "not specified"
+      },
+      {
+       "deck": false,
+       "id": "camera",
+       "kit": "camera",
+       "label": "Pi Camera V2",
+       "rated_max_v": null,
+       "req_label": "powered over CSI"
+      },
+      {
+       "deck": true,
+       "id": "imu",
+       "kit": null,
+       "label": "BNO055 IMU",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      }
+     ],
+     "note": "Andino's documented build, wired the standard way: the battery bus feeds the L298N driver (parts-catalog max 35 V in) and a 5 V buck converter \u2014 the catalog part whose stated job is powering 'the computer and logic from the main battery' \u2014 which feeds the Raspberry Pi 4 at 5 V. The Arduino Nano sits between the Pi and the driver and reads the motor encoders. Driver output to the motors is PWM: duty-limited, not a fixed rail, so that connection carries no voltage and is never voltage-checked. Voltages are the spec's battery voltage, the motors' recorded 3-9 V rating (SparkFun, via the official BOM) and catalog datasheet values; anything unsourced is 'not specified'. Harness-check data (2026-10-27): the buck converter's 5 A rated output is the parts catalog's record for that part; the L298N's 4 A total rated output and 5 V TTL logic are from the ST L298 datasheet; the Nano's 5 V TTL serial is from the Arduino Nano datasheet; the Pi 4's 3.3 V GPIO logic is from the Raspberry Pi documentation; the RPLIDAR A1M8's 3.3 V TTL UART and 0.4 A typical work-mode draw (300 mA scanner + 100 mA motor at 5 V) are from the SLAMTEC A1M8 datasheet. The Pi-to-Nano serial link therefore crosses 3.3 V and 5 V logic with no level shifter recorded \u2014 the harness checks flag it, as they should."
+    }
+   },
+   "physics_status": "none",
+   "physics_reason": "Andino's official model ships as xacro (andino.urdf.xacro plus included files) \u2014 a format a build tool must expand before anything can parse it. No plain URDF is recorded for this entry, so there is nothing honest to run the checks on.",
+   "urdf": null
+  },
+  "turtlebot3-burger": {
+   "name": "TurtleBot3 Burger",
+   "mobility_class": "Ground \u2014 wheeled",
+   "class": "Differential-drive ground robot",
+   "spec": {
+    "file": "examples/turtlebot3-burger.json",
+    "drivetrain": "differential",
+    "wheel": {
+     "diameter_m": 0.066,
+     "width_m": 0.022,
+     "count": 2,
+     "driven": true
+    },
+    "rotors": null,
+    "motor": {
+     "kind": "dc_gearmotor",
+     "count": 2,
+     "voltage_v": 11.1,
+     "stall_torque_nm": 0.3
+    },
+    "sensors": [
+     {
+      "kind": "lidar_2d",
+      "position": "top",
+      "range_m": 3.5
+     }
+    ],
+    "wiring": {
+     "note": "The spec names no computer or driver model for this robot, so the driver and controller appear as the distribution points the wiring passes through, with requirements 'not specified' where the data names none. Motor voltage is the spec's own: the motors are rated at the 11.1 V battery voltage.",
+     "nodes": [
+      {
+       "id": "battery",
+       "label": "Battery \u2014 LiPo",
+       "req_label": "11.1 V",
+       "rated_max_v": null,
+       "kit": null,
+       "deck": true
+      },
+      {
+       "id": "driver",
+       "label": "Motor driver",
+       "req_label": "not specified",
+       "rated_max_v": null,
+       "kit": null,
+       "deck": true
+      },
+      {
+       "id": "motors",
+       "label": "DC gearmotors \u00d72",
+       "req_label": "11.1 V",
+       "rated_max_v": 11.1,
+       "kit": "mount",
+       "deck": true
+      },
+      {
+       "id": "controller",
+       "label": "Controller board",
+       "req_label": "not specified",
+       "rated_max_v": null,
+       "kit": null,
+       "deck": true
+      },
+      {
+       "id": "lidar",
+       "label": "2D lidar (360\u00b0)",
+       "req_label": "not specified",
+       "rated_max_v": null,
+       "kit": "lidar",
+       "deck": false
+      }
+     ],
+     "connections": [
+      {
+       "from": "battery",
+       "to": "driver",
+       "kind": "power",
+       "volts": 11.1,
+       "label": "battery rail"
+      },
+      {
+       "from": "driver",
+       "to": "motors",
+       "kind": "power",
+       "volts": 11.1,
+       "label": "motor rail \u2014 the spec rates the motors at the battery voltage"
+      },
+      {
+       "from": "battery",
+       "to": "controller",
+       "kind": "power",
+       "volts": null,
+       "label": "regulated rail (not specified)"
+      },
+      {
+       "from": "controller",
+       "to": "driver",
+       "kind": "data",
+       "volts": null,
+       "label": "PWM + direction"
+      },
+      {
+       "from": "controller",
+       "to": "lidar",
+       "kind": "power",
+       "volts": null,
+       "label": "power (rail not specified)"
+      },
+      {
+       "from": "controller",
+       "to": "lidar",
+       "kind": "data",
+       "volts": null,
+       "label": "lidar data"
+      }
+     ]
+    }
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "ROBOTIS-GIT/turtlebot3 @ fc817ce \u2014 the specimen import's pinned commit",
+    "urdf_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/urdf/turtlebot3_burger.urdf",
+    "joints": [
+     {
+      "name": "base_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "base_link"
+     },
+     {
+      "name": "wheel_left_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": null,
+      "child_link": "wheel_left_link"
+     },
+     {
+      "name": "wheel_right_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": null,
+      "child_link": "wheel_right_link"
+     },
+     {
+      "name": "caster_back_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "caster_back_link"
+     },
+     {
+      "name": "imu_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "imu_link"
+     },
+     {
+      "name": "scan_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "base_scan"
+     }
+    ]
+   }
+  },
+  "turtlebot3-waffle-pi": {
+   "name": "TurtleBot3 Waffle Pi",
+   "mobility_class": "Ground \u2014 wheeled",
+   "class": "Differential-drive ground robot",
+   "spec": {
+    "file": "examples/photo-turtlebot.json",
+    "drivetrain": "differential",
+    "wheel": {
+     "count": 2,
+     "diameter_m": 0.066,
+     "driven": true,
+     "width_m": 0.026
+    },
+    "rotors": null,
+    "motor": {
+     "count": 2,
+     "kind": "dynamixel_XL430",
+     "stall_torque_nm": 1.0,
+     "voltage_v": 11.1
+    },
+    "sensors": [
+     {
+      "kind": "lidar_2d",
+      "position": "top center",
+      "range_m": 3.5
+     },
+     {
+      "kind": "rgb_camera",
+      "position": "front",
+      "range_m": null
+     },
+     {
+      "kind": "imu",
+      "position": "internal",
+      "range_m": null
+     },
+     {
+      "kind": "encoder",
+      "position": "wheels",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail",
+       "to": "driver",
+       "volts": 11.1
+      },
+      {
+       "cable": {
+        "connector": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "from": "driver",
+       "kind": "power",
+       "label": "Dynamixel bus power \u2014 the spec rates the motors at the battery voltage",
+       "to": "motors",
+       "volts": 11.1
+      },
+      {
+       "cable": {
+        "connector": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "from": "driver",
+       "kind": "data",
+       "label": "Dynamixel bus \u2014 commands and encoder telemetry",
+       "to": "motors",
+       "volts": null
+      },
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "regulated 5 V rail (made on the controller board; not specified in the spec)",
+       "to": "controller",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "power",
+       "label": "power (rail not specified)",
+       "to": "lidar",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "lidar data",
+       "to": "lidar",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "camera link (carries power + data)",
+       "to": "camera",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "IMU link (carries power + data)",
+       "to": "imu",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "Battery \u2014 LiPo",
+       "rated_max_v": null,
+       "req_label": "11.1 V"
+      },
+      {
+       "deck": true,
+       "id": "driver",
+       "kit": null,
+       "label": "Motor driver (Dynamixel bus)",
+       "logic_v": 5.0,
+       "rated_max_v": null,
+       "req_label": "not specified"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": "mount",
+       "label": "Dynamixel XL430 \u00d72",
+       "logic_v": 5.0,
+       "rated_max_v": 11.1,
+       "req_label": "11.1 V"
+      },
+      {
+       "deck": true,
+       "id": "controller",
+       "kit": null,
+       "label": "Raspberry Pi",
+       "logic_v": 3.3,
+       "rated_max_v": null,
+       "req_label": "5 V"
+      },
+      {
+       "deck": false,
+       "id": "lidar",
+       "kit": "lidar",
+       "label": "2D lidar",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      },
+      {
+       "deck": false,
+       "id": "camera",
+       "kit": "camera",
+       "label": "RGB camera",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      },
+      {
+       "deck": true,
+       "id": "imu",
+       "kit": null,
+       "label": "IMU",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      }
+     ],
+     "note": "This spec is a photo draft \u2014 every value in it is labelled ESTIMATED in the spec itself, and the wiring inherits that. The Dynamixel bus carries power and telemetry on one connection; the motors are rated at the 11.1 V battery voltage in the spec. The Pi is the 'Pi' in Waffle Pi; its 5 V requirement is the Raspberry Pi supply spec in the parts catalog. Harness-check data (2026-10-27): the Dynamixel bus logic level (5 V TTL) is ROBOTIS's published figure for the XL430 (e-Manual: 'TTL Multidrop Bus (5V Logic)'), the Pi's GPIO logic is 3.3 V per the Raspberry Pi documentation, and the bus cables terminate in the same Robot Cable-X3P plug at both ends (ROBOTIS cable table). Currents and gauges stay unrecorded: ROBOTIS publishes only stall current for the XL430 \u2014 a peak its own manual warns is not a continuous rating \u2014 so no load current is claimed."
+    }
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "ROBOTIS-GIT/turtlebot3 @ fc817ce \u2014 the repo the catalogue records for this entry (the Burger specimen's pinned commit)",
+    "urdf_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/urdf/turtlebot3_waffle_pi.urdf",
+    "joints": [
+     {
+      "name": "base_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "base_link"
+     },
+     {
+      "name": "wheel_left_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": null,
+      "child_link": "wheel_left_link"
+     },
+     {
+      "name": "wheel_right_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": null,
+      "child_link": "wheel_right_link"
+     },
+     {
+      "name": "caster_back_right_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "caster_back_right_link"
+     },
+     {
+      "name": "caster_back_left_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "caster_back_left_link"
+     },
+     {
+      "name": "imu_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "imu_link"
+     },
+     {
+      "name": "scan_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "base_scan"
+     },
+     {
+      "name": "camera_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "camera_link"
+     },
+     {
+      "name": "camera_rgb_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "camera_rgb_frame"
+     },
+     {
+      "name": "camera_rgb_optical_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "camera_rgb_optical_frame"
+     }
+    ]
+   }
+  },
+  "pathfinder": {
+   "name": "Pathfinder",
+   "mobility_class": "Ground \u2014 wheeled",
+   "class": "Skid-steer ground rover",
+   "spec": {
+    "file": "examples/pathfinder.json",
+    "drivetrain": "skid_steer",
+    "wheel": {
+     "count": 4,
+     "diameter_m": 0.1,
+     "driven": true,
+     "width_m": 0.032
+    },
+    "rotors": null,
+    "motor": {
+     "count": 4,
+     "kind": "dc_gearmotor",
+     "stall_torque_nm": 0.8,
+     "voltage_v": 12.0
+    },
+    "sensors": [
+     {
+      "kind": "ultrasonic",
+      "position": "front",
+      "range_m": 3.0
+     },
+     {
+      "kind": "imu",
+      "position": "center",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail",
+       "to": "driver",
+       "volts": 14.8
+      },
+      {
+       "from": "driver",
+       "kind": "power",
+       "label": "PWM output \u2014 duty-limited, not a fixed rail",
+       "to": "motors",
+       "volts": null
+      },
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "regulated rail (not specified)",
+       "to": "controller",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "PWM + direction",
+       "to": "driver",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "power",
+       "label": "5 V logic rail (the HC-SR04's catalog logic level)",
+       "to": "ultrasonic",
+       "volts": 5.0
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "trigger / echo",
+       "to": "ultrasonic",
+       "volts": null
+      },
+      {
+       "from": "controller",
+       "kind": "data",
+       "label": "IMU link (carries power + data)",
+       "to": "imu",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "Battery \u2014 4S LiPo",
+       "rated_max_v": null,
+       "req_label": "14.8 V"
+      },
+      {
+       "deck": true,
+       "id": "driver",
+       "kit": null,
+       "label": "Motor driver",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": "mount",
+       "label": "DC gearmotors \u00d74",
+       "rated_max_v": 12,
+       "req_label": "12 V"
+      },
+      {
+       "deck": true,
+       "id": "controller",
+       "kit": null,
+       "label": "Controller",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      },
+      {
+       "deck": false,
+       "id": "ultrasonic",
+       "kit": "ultrasonic",
+       "label": "HC-SR04 ultrasonic ranger",
+       "logic_v": 5.0,
+       "rated_max_v": 5,
+       "req_label": "5 V"
+      },
+      {
+       "deck": true,
+       "id": "imu",
+       "kit": null,
+       "label": "IMU",
+       "rated_max_v": null,
+       "req_label": "not specified"
+      }
+     ],
+     "note": "RobotForge's own design, and its honest trap: the battery is 14.8 V and the motors are 12 V parts, but the motors are fed through the driver as PWM \u2014 the raw rail never reaches them, so that connection carries no fixed voltage and is not voltage-checked. The ultrasonic ranger's 5 V is its logic level in the parts catalog. Harness-check data (2026-10-27): the ranger's 5 V logic level is its parts-catalog record (HC-SR04). The controller's logic level is not recorded \u2014 the spec names no controller part \u2014 so the trigger/echo link still cannot be level-checked."
+    }
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "Generated in this repo: `robotforge urdf examples/pathfinder.json` (src/robotforge/urdf.py)",
+    "urdf_url": "urdf/pathfinder.urdf",
+    "joints": [
+     {
+      "name": "wheel_0_left_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "wheel_0_left"
+     },
+     {
+      "name": "wheel_1_right_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "wheel_1_right"
+     },
+     {
+      "name": "wheel_2_left_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "wheel_2_left"
+     },
+     {
+      "name": "wheel_3_right_joint",
+      "type": "continuous",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "wheel_3_right"
+     }
+    ]
+   }
+  },
+  "px4-x500": {
+   "name": "PX4 X500",
+   "mobility_class": "Aerial",
+   "class": "Aerial quadcopter",
+   "spec": {
+    "file": "examples/px4-x500.json",
+    "drivetrain": "multirotor",
+    "wheel": null,
+    "rotors": {
+     "count": 4,
+     "prop_diameter_m": 0.279
+    },
+    "motor": {
+     "count": 4,
+     "kind": "bldc",
+     "stall_torque_nm": null,
+     "voltage_v": 14.8
+    },
+    "sensors": [
+     {
+      "kind": "gps",
+      "position": "top",
+      "range_m": null
+     },
+     {
+      "kind": "imu",
+      "position": "center",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "cable": {
+        "connector": "XT60",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "XT60",
+       "connector_to": "XT60",
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail (XT60)",
+       "to": "pdb",
+       "volts": 14.8
+      },
+      {
+       "cable": {
+        "connector": "XT30",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "XT30",
+       "connector_to": "XT30",
+       "from": "pdb",
+       "kind": "power",
+       "label": "ESC power (XT30)",
+       "to": "esc",
+       "volts": 14.8
+      },
+      {
+       "from": "esc",
+       "kind": "power",
+       "label": "PWM output \u2014 duty-limited, not a fixed rail",
+       "to": "motors",
+       "volts": null
+      },
+      {
+       "cable": {
+        "connector": "JST GH 6-pin (PM02 power-module cable)",
+        "gauge_awg": null,
+        "length_mm": 150
+       },
+       "from": "pdb",
+       "kind": "power",
+       "label": "via PM02 power module (voltage not specified)",
+       "to": "fc",
+       "volts": null
+      },
+      {
+       "from": "fc",
+       "kind": "data",
+       "label": "motor signals",
+       "to": "esc",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "4S LiPo battery",
+       "rated_max_v": null,
+       "req_label": "14.8 V nominal, 3000\u20135000 mAh recommended (Holybro)"
+      },
+      {
+       "deck": true,
+       "id": "pdb",
+       "kit": null,
+       "label": "Power distribution board (PDB)",
+       "rated_max_v": null,
+       "req_label": "XT60 battery in, XT30 out to ESCs and peripherals"
+      },
+      {
+       "deck": true,
+       "id": "esc",
+       "kit": null,
+       "label": "BLHeli S 20A ESCs (\u00d74)",
+       "rated_max_v": null,
+       "req_label": "one per motor, fed from the PDB"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": null,
+       "label": "2216 920KV brushless motors (\u00d74)",
+       "rated_max_v": 14.8,
+       "req_label": "Holybro X500 V2 kit motors"
+      },
+      {
+       "deck": true,
+       "id": "fc",
+       "kit": null,
+       "label": "Pixhawk flight controller",
+       "rated_max_v": null,
+       "req_label": "powered via the PM02 power module"
+      }
+     ],
+     "note": "The X500 kit's documented power path (Holybro): the battery plugs into the power-distribution board (XT60), the board feeds the four ESCs (XT30) and, through the PM02 power module, the Pixhawk. ESC output to the motors is PWM \u2014 duty-limited, not a fixed rail \u2014 so those connections carry no voltage and are never voltage-checked. Voltages are the kit's documented 4S values; anything unsourced is 'not specified'. Harness-check data (2026-10-27): the battery and PDB ends of the battery lead are both XT60, and the PDB and ESC ends of the ESC leads are both XT30 \u2014 the PX4 User Guide's X500 V2 bill of materials describes the power distribution board as 'XT60 plug for battery & XT30 plug for ESCs & peripherals'. No currents or gauges are recorded: neither Holybro nor PX4 publishes per-run load currents or wire gauges for the kit."
+    }
+   },
+   "physics_status": "none",
+   "physics_reason": "The recorded model for the X500 is an SDF from PX4's Gazebo models repo (models/x500_base/model.sdf), not a URDF. The physics checks parse URDF, so they do not run on this entry.",
+   "urdf": null
+  },
+  "crazyflie-2-1": {
+   "name": "Crazyflie 2.1",
+   "mobility_class": "Aerial",
+   "class": "Aerial quadcopter",
+   "spec": {
+    "file": "examples/crazyflie-2-1.json",
+    "drivetrain": "multirotor",
+    "wheel": null,
+    "rotors": {
+     "count": 4,
+     "prop_diameter_m": 0.047
+    },
+    "motor": {
+     "count": 4,
+     "kind": "dc",
+     "stall_torque_nm": null,
+     "voltage_v": 3.7
+    },
+    "sensors": [
+     {
+      "kind": "imu",
+      "position": "center",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail (1S LiPo)",
+       "to": "board",
+       "volts": 3.7
+      },
+      {
+       "from": "board",
+       "kind": "power",
+       "label": "direct drive from the board (voltage not specified)",
+       "to": "motors",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "LiPo battery, 250 mAh",
+       "rated_max_v": null,
+       "req_label": "3.7 V (1S), 250 mAh"
+      },
+      {
+       "deck": true,
+       "id": "board",
+       "kit": null,
+       "label": "Crazyflie 2.1 flight board",
+       "rated_max_v": null,
+       "req_label": "single-board design: frame, power and flight control on one PCB"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": null,
+       "label": "7 mm coreless DC motors (\u00d74)",
+       "rated_max_v": 3.7,
+       "req_label": "datasheet motor"
+      }
+     ],
+     "note": "The Crazyflie is a single-board design: the battery plugs straight into the flight board and the board drives the four coreless motors directly \u2014 there is no separate power distribution to document. Motor drive voltage is not specified in the datasheet, so that connection carries no voltage and is never voltage-checked."
+    }
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "utiasDSL/gym-pybullet-drones @ 2c2470c \u2014 the specimen import's pinned commit",
+    "urdf_url": "https://raw.githubusercontent.com/utiasDSL/gym-pybullet-drones/2c2470c2043eb4cf474d9af2681c9fa10f2d0e2f/gym_pybullet_drones/assets/cf2p.urdf",
+    "joints": [
+     {
+      "name": "prop0_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "prop0_link"
+     },
+     {
+      "name": "prop1_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "prop1_link"
+     },
+     {
+      "name": "prop2_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "prop2_link"
+     },
+     {
+      "name": "prop3_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "prop3_link"
+     },
+     {
+      "name": "center_of_mass_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "center_of_mass_link"
+     }
+    ]
+   }
+  },
+  "unitree-go2": {
+   "name": "Unitree Go2",
+   "mobility_class": "Legged",
+   "class": "Legged quadruped",
+   "spec": {
+    "file": "examples/unitree-go2.json",
+    "drivetrain": "quadruped",
+    "wheel": null,
+    "rotors": null,
+    "motor": {
+     "count": 12,
+     "kind": "bldc",
+     "stall_torque_nm": null,
+     "voltage_v": 28.8
+    },
+    "sensors": [
+     {
+      "kind": "lidar_2d",
+      "position": "head",
+      "range_m": null
+     },
+     {
+      "kind": "rgb_camera",
+      "position": "front",
+      "range_m": null
+     }
+    ],
+    "wiring": null
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "unitreerobotics/unitree_ros @ 267182b \u2014 the specimen import's pinned commit",
+    "urdf_url": "https://raw.githubusercontent.com/unitreerobotics/unitree_ros/267182b8521c8d6a631bab1fe63836873237a525/robots/go2_description/urdf/go2_description.urdf",
+    "joints": [
+     {
+      "name": "Head_upper_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "Head_upper"
+     },
+     {
+      "name": "Head_lower_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "Head_lower"
+     },
+     {
+      "name": "FL_hip_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.0472,
+       "upper": 1.0472,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "FL_hip"
+     },
+     {
+      "name": "FL_hip_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "FL_hip_rotor"
+     },
+     {
+      "name": "FL_thigh_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.5708,
+       "upper": 3.4907,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "FL_thigh"
+     },
+     {
+      "name": "FL_thigh_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "FL_thigh_rotor"
+     },
+     {
+      "name": "FL_calf_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.7227,
+       "upper": -0.83776,
+       "effort": 45.43,
+       "velocity": 15.7
+      },
+      "child_link": "FL_calf"
+     },
+     {
+      "name": "FL_calflower_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "FL_calflower"
+     },
+     {
+      "name": "FL_calflower1_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "FL_calflower1"
+     },
+     {
+      "name": "FL_calf_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "FL_calf_rotor"
+     },
+     {
+      "name": "FL_foot_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "FL_foot"
+     },
+     {
+      "name": "FR_hip_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.0472,
+       "upper": 1.0472,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "FR_hip"
+     },
+     {
+      "name": "FR_hip_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "FR_hip_rotor"
+     },
+     {
+      "name": "FR_thigh_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.5708,
+       "upper": 3.4907,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "FR_thigh"
+     },
+     {
+      "name": "FR_thigh_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "FR_thigh_rotor"
+     },
+     {
+      "name": "FR_calf_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.7227,
+       "upper": -0.83776,
+       "effort": 45.43,
+       "velocity": 15.7
+      },
+      "child_link": "FR_calf"
+     },
+     {
+      "name": "FR_calflower_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "FR_calflower"
+     },
+     {
+      "name": "FR_calflower1_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "FR_calflower1"
+     },
+     {
+      "name": "FR_calf_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "FR_calf_rotor"
+     },
+     {
+      "name": "FR_foot_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "FR_foot"
+     },
+     {
+      "name": "RL_hip_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.0472,
+       "upper": 1.0472,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "RL_hip"
+     },
+     {
+      "name": "RL_hip_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "RL_hip_rotor"
+     },
+     {
+      "name": "RL_thigh_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.5236,
+       "upper": 4.5379,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "RL_thigh"
+     },
+     {
+      "name": "RL_thigh_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "RL_thigh_rotor"
+     },
+     {
+      "name": "RL_calf_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.7227,
+       "upper": -0.83776,
+       "effort": 45.43,
+       "velocity": 15.7
+      },
+      "child_link": "RL_calf"
+     },
+     {
+      "name": "RL_calflower_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "RL_calflower"
+     },
+     {
+      "name": "RL_calflower1_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "RL_calflower1"
+     },
+     {
+      "name": "RL_calf_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "RL_calf_rotor"
+     },
+     {
+      "name": "RL_foot_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "RL_foot"
+     },
+     {
+      "name": "RR_hip_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.0472,
+       "upper": 1.0472,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "RR_hip"
+     },
+     {
+      "name": "RR_hip_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "RR_hip_rotor"
+     },
+     {
+      "name": "RR_thigh_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.5236,
+       "upper": 4.5379,
+       "effort": 23.7,
+       "velocity": 30.1
+      },
+      "child_link": "RR_thigh"
+     },
+     {
+      "name": "RR_thigh_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "RR_thigh_rotor"
+     },
+     {
+      "name": "RR_calf_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.7227,
+       "upper": -0.83776,
+       "effort": 45.43,
+       "velocity": 15.7
+      },
+      "child_link": "RR_calf"
+     },
+     {
+      "name": "RR_calflower_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "RR_calflower"
+     },
+     {
+      "name": "RR_calflower1_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "RR_calflower1"
+     },
+     {
+      "name": "RR_calf_rotor_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "RR_calf_rotor"
+     },
+     {
+      "name": "RR_foot_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "RR_foot"
+     },
+     {
+      "name": "imu_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "imu"
+     },
+     {
+      "name": "radar_joint",
+      "type": "fixed",
+      "axis": [
+       0.0,
+       0.0,
+       0.0
+      ],
+      "limit": null,
+      "child_link": "radar"
+     },
+     {
+      "name": "front_camera_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "front_camera"
+     }
+    ]
+   }
+  },
+  "mini-pupper": {
+   "name": "Mini Pupper",
+   "mobility_class": "Legged",
+   "class": "Legged quadruped",
+   "spec": {
+    "file": "examples/mini-pupper.json",
+    "drivetrain": "quadruped",
+    "wheel": null,
+    "rotors": null,
+    "motor": {
+     "count": 12,
+     "kind": "servo",
+     "stall_torque_nm": null,
+     "voltage_v": 7.4
+    },
+    "sensors": [
+     {
+      "kind": "imu",
+      "position": "body",
+      "range_m": null
+     },
+     {
+      "kind": "lidar_2d",
+      "position": "top",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail (2S LiPo, mounted under the bottom plate)",
+       "to": "board",
+       "volts": 7.4
+      },
+      {
+       "from": "board",
+       "kind": "power",
+       "label": "numbered servo cables (voltage not specified)",
+       "to": "motors",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "2S LiPo battery",
+       "rated_max_v": null,
+       "req_label": "7.4 V nominal, 800 mAh \u2014 MangDang docs cap the servo rail below 8.4 V"
+      },
+      {
+       "deck": true,
+       "id": "board",
+       "kit": null,
+       "label": "Mini Pupper control board",
+       "rated_max_v": null,
+       "req_label": "Raspberry Pi host; servos connect with numbered cables"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": null,
+       "label": "Custom servos (\u00d712)",
+       "rated_max_v": 7.4,
+       "req_label": "12 DOF, three per leg"
+      }
+     ],
+     "note": "The documented pattern from MangDang's assembly guide and docs: the 2S battery mounts under the bottom plate and powers the control board; the twelve servos connect with numbered cables. MangDang's documentation caps the battery below 8.4 V (over 2S would fry the servos), which is why the 7.4 V nominal figure matters here. The servo feed's exact rail voltage is not specified, so that connection is never voltage-checked."
+    }
+   },
+   "physics_status": "none",
+   "physics_reason": "No URDF is recorded in the catalogue for this entry \u2014 its Robodex spec comes from MangDang's published specification pages, which carry no link masses or collision geometry to check.",
+   "urdf": null
+  },
+  "unitree-g1": {
+   "name": "Unitree G1",
+   "mobility_class": "Legged",
+   "class": "Legged humanoid",
+   "spec": {
+    "file": "examples/unitree-g1.json",
+    "drivetrain": "humanoid",
+    "wheel": null,
+    "rotors": null,
+    "motor": {
+     "count": 29,
+     "kind": "bldc",
+     "stall_torque_nm": null,
+     "voltage_v": 46.8
+    },
+    "sensors": [
+     {
+      "kind": "depth_camera",
+      "position": "head",
+      "range_m": null
+     },
+     {
+      "kind": "lidar_2d",
+      "position": "head",
+      "range_m": null
+     },
+     {
+      "kind": "imu",
+      "position": "torso",
+      "range_m": null
+     }
+    ],
+    "wiring": null
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "unitreerobotics/unitree_ros @ 267182b (the Go2 specimen's pinned commit for the same repo) \u2014 the file the catalogue's provenance note parsed: 36 link masses summing to 35.115 kg",
+    "urdf_url": "https://raw.githubusercontent.com/unitreerobotics/unitree_ros/267182b8521c8d6a631bab1fe63836873237a525/robots/g1_description/g1_29dof.urdf",
+    "joints": [
+     {
+      "name": "pelvis_contour_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "pelvis_contour_link"
+     },
+     {
+      "name": "left_hip_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.5307,
+       "upper": 2.8798,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "left_hip_pitch_link"
+     },
+     {
+      "name": "left_hip_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.5236,
+       "upper": 2.9671,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "left_hip_roll_link"
+     },
+     {
+      "name": "left_hip_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -2.7576,
+       "upper": 2.7576,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "left_hip_yaw_link"
+     },
+     {
+      "name": "left_knee_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.087267,
+       "upper": 2.8798,
+       "effort": 139.0,
+       "velocity": 20.0
+      },
+      "child_link": "left_knee_link"
+     },
+     {
+      "name": "left_ankle_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.87267,
+       "upper": 0.5236,
+       "effort": 35.0,
+       "velocity": 30.0
+      },
+      "child_link": "left_ankle_pitch_link"
+     },
+     {
+      "name": "left_ankle_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.2618,
+       "upper": 0.2618,
+       "effort": 35.0,
+       "velocity": 30.0
+      },
+      "child_link": "left_ankle_roll_link"
+     },
+     {
+      "name": "right_hip_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.5307,
+       "upper": 2.8798,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "right_hip_pitch_link"
+     },
+     {
+      "name": "right_hip_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.9671,
+       "upper": 0.5236,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "right_hip_roll_link"
+     },
+     {
+      "name": "right_hip_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -2.7576,
+       "upper": 2.7576,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "right_hip_yaw_link"
+     },
+     {
+      "name": "right_knee_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.087267,
+       "upper": 2.8798,
+       "effort": 139.0,
+       "velocity": 20.0
+      },
+      "child_link": "right_knee_link"
+     },
+     {
+      "name": "right_ankle_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.87267,
+       "upper": 0.5236,
+       "effort": 35.0,
+       "velocity": 30.0
+      },
+      "child_link": "right_ankle_pitch_link"
+     },
+     {
+      "name": "right_ankle_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.2618,
+       "upper": 0.2618,
+       "effort": 35.0,
+       "velocity": 30.0
+      },
+      "child_link": "right_ankle_roll_link"
+     },
+     {
+      "name": "waist_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -2.618,
+       "upper": 2.618,
+       "effort": 88.0,
+       "velocity": 32.0
+      },
+      "child_link": "waist_yaw_link"
+     },
+     {
+      "name": "waist_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.52,
+       "upper": 0.52,
+       "effort": 35.0,
+       "velocity": 30.0
+      },
+      "child_link": "waist_roll_link"
+     },
+     {
+      "name": "waist_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.52,
+       "upper": 0.52,
+       "effort": 35.0,
+       "velocity": 30.0
+      },
+      "child_link": "torso_link"
+     },
+     {
+      "name": "logo_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "logo_link"
+     },
+     {
+      "name": "head_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "head_link"
+     },
+     {
+      "name": "waist_support_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "waist_support_link"
+     },
+     {
+      "name": "imu_in_torso_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "imu_in_torso"
+     },
+     {
+      "name": "imu_in_pelvis_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "imu_in_pelvis"
+     },
+     {
+      "name": "d435_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "d435_link"
+     },
+     {
+      "name": "mid360_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "mid360_link"
+     },
+     {
+      "name": "left_shoulder_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -3.0892,
+       "upper": 2.6704,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "left_shoulder_pitch_link"
+     },
+     {
+      "name": "left_shoulder_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.5882,
+       "upper": 2.2515,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "left_shoulder_roll_link"
+     },
+     {
+      "name": "left_shoulder_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -2.618,
+       "upper": 2.618,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "left_shoulder_yaw_link"
+     },
+     {
+      "name": "left_elbow_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.0472,
+       "upper": 2.0944,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "left_elbow_link"
+     },
+     {
+      "name": "left_wrist_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.972222054,
+       "upper": 1.972222054,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "left_wrist_roll_link"
+     },
+     {
+      "name": "left_wrist_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.614429558,
+       "upper": 1.614429558,
+       "effort": 5.0,
+       "velocity": 22.0
+      },
+      "child_link": "left_wrist_pitch_link"
+     },
+     {
+      "name": "left_wrist_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -1.614429558,
+       "upper": 1.614429558,
+       "effort": 5.0,
+       "velocity": 22.0
+      },
+      "child_link": "left_wrist_yaw_link"
+     },
+     {
+      "name": "left_hand_palm_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "left_rubber_hand"
+     },
+     {
+      "name": "right_shoulder_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -3.0892,
+       "upper": 2.6704,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "right_shoulder_pitch_link"
+     },
+     {
+      "name": "right_shoulder_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -2.2515,
+       "upper": 1.5882,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "right_shoulder_roll_link"
+     },
+     {
+      "name": "right_shoulder_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -2.618,
+       "upper": 2.618,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "right_shoulder_yaw_link"
+     },
+     {
+      "name": "right_elbow_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.0472,
+       "upper": 2.0944,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "right_elbow_link"
+     },
+     {
+      "name": "right_wrist_roll_joint",
+      "type": "revolute",
+      "axis": [
+       1.0,
+       0.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.972222054,
+       "upper": 1.972222054,
+       "effort": 25.0,
+       "velocity": 37.0
+      },
+      "child_link": "right_wrist_roll_link"
+     },
+     {
+      "name": "right_wrist_pitch_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.614429558,
+       "upper": 1.614429558,
+       "effort": 5.0,
+       "velocity": 22.0
+      },
+      "child_link": "right_wrist_pitch_link"
+     },
+     {
+      "name": "right_wrist_yaw_joint",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -1.614429558,
+       "upper": 1.614429558,
+       "effort": 5.0,
+       "velocity": 22.0
+      },
+      "child_link": "right_wrist_yaw_link"
+     },
+     {
+      "name": "right_hand_palm_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "right_rubber_hand"
+     }
+    ]
+   }
+  },
+  "robotis-op3": {
+   "name": "ROBOTIS OP3",
+   "mobility_class": "Legged",
+   "class": "Legged humanoid",
+   "spec": {
+    "file": "examples/robotis-op3.json",
+    "drivetrain": "humanoid",
+    "wheel": null,
+    "rotors": null,
+    "motor": {
+     "count": 20,
+     "kind": "servo",
+     "stall_torque_nm": 3.8,
+     "voltage_v": 11.1
+    },
+    "sensors": [
+     {
+      "kind": "rgb_camera",
+      "position": "head",
+      "range_m": null
+     },
+     {
+      "kind": "imu",
+      "position": "torso",
+      "range_m": null
+     }
+    ],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "battery rail",
+       "to": "opencr",
+       "volts": 11.1
+      },
+      {
+       "cable": {
+        "connector": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "from": "opencr",
+       "kind": "power",
+       "label": "Dynamixel TTL bus power",
+       "to": "motors",
+       "volts": 11.1
+      },
+      {
+       "cable": {
+        "connector": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "from": "opencr",
+       "kind": "data",
+       "label": "Dynamixel TTL bus (data)",
+       "to": "motors",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "LiPo battery, 3-cell",
+       "rated_max_v": null,
+       "req_label": "11.1 V, 3300 mAh (current e-Manual specification)"
+      },
+      {
+       "deck": true,
+       "id": "opencr",
+       "kit": null,
+       "label": "OpenCR sub-controller",
+       "output_current_a": 4.5,
+       "rated_max_v": null,
+       "req_label": "distributes battery power onto the Dynamixel bus"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": null,
+       "label": "XM430-W350-R servos (\u00d720)",
+       "rated_max_v": 11.1,
+       "req_label": "documented input range 10.0\u201314.8 V; stall torque 3.8 N\u00b7m at 11.1 V"
+      }
+     ],
+     "note": "The OP3's documented pattern: the battery powers the OpenCR sub-controller, and the OpenCR distributes power and data to all twenty XM430-W350 servos over the daisy-chained Dynamixel TTL bus. The servos' documented input range is 10.0\u201314.8 V (rated_max_v records the 11.1 V bus voltage this robot actually runs). The Intel NUC's own power feed is not part of the documented bus and is not shown. Harness-check data (2026-10-27): the OpenCR's 12 V output is rated at 4.5 A maximum in the ROBOTIS OpenCR e-Manual, and the bus cables terminate in the same Robot Cable-X3P plug at both ends (ROBOTIS cable table, as recorded for the cable above). No logic level is recorded for the bus: the OP3's servos are the RS-485 variant (XM430-W350-R), and RS-485 is a differential bus, not a 3.3/5 V logic family. Servo load currents stay unrecorded \u2014 ROBOTIS publishes stall current only, a peak its manual says is not a continuous rating."
+    }
+   },
+   "physics_status": "none",
+   "physics_reason": "The recorded model for the OP3 is an MJCF from the MuJoCo menagerie, not a URDF. The physics checks parse URDF, so they do not run on this entry.",
+   "urdf": null
+  },
+  "openmanipulator-x": {
+   "name": "OpenManipulator-X",
+   "mobility_class": "Stationary",
+   "class": "Stationary robotic arm",
+   "spec": {
+    "file": "examples/openmanipulator-x.json",
+    "drivetrain": "robotic_arm",
+    "wheel": null,
+    "rotors": null,
+    "motor": {
+     "count": 5,
+     "kind": "servo",
+     "stall_torque_nm": null,
+     "voltage_v": 12.0
+    },
+    "sensors": [],
+    "wiring": {
+     "connections": [
+      {
+       "from": "battery",
+       "kind": "power",
+       "label": "supply rail",
+       "to": "opencr",
+       "volts": 12.0
+      },
+      {
+       "cable": {
+        "connector": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "from": "opencr",
+       "kind": "power",
+       "label": "Dynamixel TTL bus power",
+       "to": "motors",
+       "volts": 12.0
+      },
+      {
+       "cable": {
+        "connector": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+        "gauge_awg": null,
+        "length_mm": null
+       },
+       "connector_from": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "connector_to": "Robot Cable-X3P (JST 3-pin, Dynamixel TTL)",
+       "from": "opencr",
+       "kind": "data",
+       "label": "Dynamixel TTL bus (data)",
+       "to": "motors",
+       "volts": null
+      }
+     ],
+     "nodes": [
+      {
+       "deck": true,
+       "id": "battery",
+       "kit": null,
+       "label": "12 V DC power supply",
+       "rated_max_v": null,
+       "req_label": "12.0 V input per the e-Manual specification \u2014 no onboard battery"
+      },
+      {
+       "deck": true,
+       "id": "opencr",
+       "kit": null,
+       "label": "OpenCR / PC controller",
+       "logic_v": 5.0,
+       "output_current_a": 4.5,
+       "rated_max_v": null,
+       "req_label": "main controller per the e-Manual (PC or OpenCR)"
+      },
+      {
+       "deck": true,
+       "id": "motors",
+       "kit": null,
+       "label": "XM430-W350-T servos (\u00d75)",
+       "logic_v": 5.0,
+       "rated_max_v": 12.0,
+       "req_label": "4 arm joints + gripper, TTL multidrop bus"
+      }
+     ],
+     "note": "The OpenManipulator-X has no battery: the documented pattern is a 12 V DC supply feeding the controller (PC or OpenCR), which powers the five XM430-W350-T servos over the TTL multidrop bus \u2014 the bus carries both power and data on the same chain. Voltages are the e-Manual's specified 12 V input throughout. Harness-check data (2026-10-27): the bus is a TTL-level multidrop bus (OpenManipulator-X specification) at the Dynamixel 5 V TTL logic level (ROBOTIS X-series documentation); the OpenCR's 12 V output is rated at 4.5 A maximum (OpenCR e-Manual); the bus cables terminate in the same Robot Cable-X3P plug at both ends (ROBOTIS cable table). Servo load currents stay unrecorded \u2014 ROBOTIS publishes stall current only for the XM430-W350, a peak its manual says is not a continuous rating."
+    }
+   },
+   "physics_status": "urdf",
+   "urdf": {
+    "source_label": "ROBOTIS-GIT/open_manipulator @ bc555a9 \u2014 the specimen import's pinned commit",
+    "urdf_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/open_manipulator/bc555a9c41ebd7493dc945ddabc43fc649681b62/open_manipulator_description/urdf/open_manipulator_x/open_manipulator_x.urdf",
+    "joints": [
+     {
+      "name": "world_fixed",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "link1"
+     },
+     {
+      "name": "joint1",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       0.0,
+       1.0
+      ],
+      "limit": {
+       "lower": -3.141592653589793,
+       "upper": 3.141592653589793,
+       "effort": 1000.0,
+       "velocity": 4.8
+      },
+      "child_link": "link2"
+     },
+     {
+      "name": "joint2",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.5,
+       "upper": 1.5,
+       "effort": 1000.0,
+       "velocity": 4.8
+      },
+      "child_link": "link3"
+     },
+     {
+      "name": "joint3",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.5,
+       "upper": 1.4,
+       "effort": 1000.0,
+       "velocity": 4.8
+      },
+      "child_link": "link4"
+     },
+     {
+      "name": "joint4",
+      "type": "revolute",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -1.7,
+       "upper": 1.97,
+       "effort": 1000.0,
+       "velocity": 4.8
+      },
+      "child_link": "link5"
+     },
+     {
+      "name": "gripper_left_joint",
+      "type": "prismatic",
+      "axis": [
+       0.0,
+       1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.011,
+       "upper": 0.02,
+       "effort": 1000.0,
+       "velocity": 4.8
+      },
+      "child_link": "gripper_left_link"
+     },
+     {
+      "name": "gripper_right_joint",
+      "type": "prismatic",
+      "axis": [
+       0.0,
+       -1.0,
+       0.0
+      ],
+      "limit": {
+       "lower": -0.011,
+       "upper": 0.02,
+       "effort": 1000.0,
+       "velocity": 4.8
+      },
+      "child_link": "gripper_right_link"
+     },
+     {
+      "name": "end_effector_joint",
+      "type": "fixed",
+      "axis": null,
+      "limit": null,
+      "child_link": "end_effector_link"
+     }
+    ]
+   }
+  }
+ }
+}

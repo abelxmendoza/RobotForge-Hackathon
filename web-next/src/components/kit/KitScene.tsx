@@ -12,6 +12,24 @@ import type * as THREE_NS from 'three';
 import { ROOT, fetchJSON } from '../forge/model';
 import { cableControlPoints, type Point3 } from '@/lib/wire3d';
 import type { SimReadyManifest, SpecimenDoc, SpecimenPart } from './burger';
+import type { FlowPath } from '@/lib/stageAnimation';
+
+/* Living Build Stage state for this scene, computed by the parent
+ * from recorded data (lib/stageAnimation): whether each clock may
+ * advance this frame (play/pause, tab visibility, on-screen and
+ * Wiring-mode gates already applied), the speed multiplier, the
+ * layer toggles, and the recorded flow paths to draw. The scene
+ * only renders what it is handed — it invents no motion and no
+ * electrical values of its own. */
+export interface KitLife {
+  playing: boolean;
+  flowPlaying: boolean;
+  speed: number;
+  motion: boolean;
+  sensors: boolean;
+  flow: boolean;
+  flows: FlowPath[];
+}
 
 /* A bench prop the user placed from the Parts palette: one build
  * list instance, rendered from the prop's actual GLB at the drop
@@ -103,6 +121,7 @@ export default function KitScene({
   cad,
   real,
   propsOn,
+  life,
   placedProps,
   wiring,
   selectedSpecimen,
@@ -124,6 +143,7 @@ export default function KitScene({
   cad: boolean;
   real: boolean;
   propsOn: boolean;
+  life?: KitLife;
   placedProps: PlacedProp[];
   wiring: WiringSceneView | null;
   selectedSpecimen: string | null;
@@ -174,6 +194,10 @@ export default function KitScene({
   const holdersRef = useRef<Map<string, THREE_NS.Object3D>>(new Map());
   const targetRef = useRef(explodeTarget);
   targetRef.current = explodeTarget;
+  const lifeRef = useRef(life);
+  lifeRef.current = life;
+  const cadRef = useRef(cad);
+  cadRef.current = cad;
   const realRef = useRef(real);
   realRef.current = real;
   const wiringRef = useRef(wiring);
@@ -231,6 +255,16 @@ export default function KitScene({
         renderer.toneMappingExposure = 1.05;
 
         const scene = new THREE.Scene();
+        /* Environment-lit PBR: a neutral room environment gives the
+         * standard materials something real to reflect, which is
+         * most of the "lifelike" gap over flat hemisphere light. */
+        const { RoomEnvironment } = await import(
+          'three/addons/environments/RoomEnvironment.js'
+        );
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+        scene.environment = envTex;
+        (scene as unknown as { environmentIntensity: number }).environmentIntensity = 0.35;
         const camera = new THREE.PerspectiveCamera(42, 2, 0.01, 20);
         camera.up.set(0, 0, 1);
         camera.position.set(0.34, -0.42, 0.3);
@@ -271,6 +305,30 @@ export default function KitScene({
         ground.rotation.x = 0;
         ground.receiveShadow = true;
         scene.add(ground);
+        /* Radial fade ring: the stage disc melts into the page
+         * background instead of ending at a hard circle edge. */
+        const fadeCanvas = document.createElement('canvas');
+        fadeCanvas.width = 256;
+        fadeCanvas.height = 256;
+        const fctx = fadeCanvas.getContext('2d');
+        if (fctx) {
+          const grad = fctx.createRadialGradient(128, 128, 80, 128, 128, 128);
+          grad.addColorStop(0, 'rgba(27,30,36,1)');
+          grad.addColorStop(1, 'rgba(27,30,36,0)');
+          fctx.fillStyle = grad;
+          fctx.fillRect(0, 0, 256, 256);
+        }
+        const fadeTex = new THREE.CanvasTexture(fadeCanvas);
+        const fade = new THREE.Mesh(
+          new THREE.CircleGeometry(0.85, 64),
+          new THREE.MeshBasicMaterial({
+            map: fadeTex,
+            transparent: true,
+            depthWrite: false,
+          }),
+        );
+        fade.position.z = -0.002;
+        scene.add(fade);
         const grid = new THREE.PolarGridHelper(0.5, 12, 6, 64, 0x2c313a, 0x23262e);
         grid.rotation.x = Math.PI / 2;
         grid.position.z = 0.001;
@@ -304,8 +362,35 @@ export default function KitScene({
           return m;
         };
 
+        /* Living Build Stage registry: the moving pieces the tick
+         * animates, collected while the kit is built. Everything
+         * here is driven by lib/stageAnimation's recorded-data
+         * capability map via the parent's `life` prop — the scene
+         * itself decides nothing about what may move. */
+        const anim = {
+          wheelMeshes: [] as THREE_NS.Mesh[],
+          lidarPivot: null as THREE_NS.Group | null,
+          sweepGroup: null as THREE_NS.Group | null,
+          ledMat: null as THREE_NS.MeshStandardMaterial | null,
+          driverLedMat: null as THREE_NS.MeshStandardMaterial | null,
+          time: 0,
+          flowTime: 0,
+          flowGroup: new THREE.Group(),
+          flowItems: [] as {
+            path: FlowPath;
+            variant: number;
+            tube: THREE_NS.Mesh;
+            pulse: THREE_NS.Mesh;
+            curve: THREE_NS.CatmullRomCurve3 | null;
+          }[],
+          flowSig: '',
+          envTex,
+          pmrem,
+        };
+
         const robot = new THREE.Group();
         scene.add(robot);
+        scene.add(anim.flowGroup);
         const groups: Record<string, THREE_NS.Group> = {};
         const part = (keyName: string, dir: [number, number, number]) => {
           const g = new THREE.Group();
@@ -329,17 +414,93 @@ export default function KitScene({
         g = part('sbc', [0, 0, 0.085]);
         mesh(new RoundedBoxGeometry(0.085, 0.056, 0.006, 2, 0.002), M.green, -0.02, 0, 0.155, g);
         mesh(new THREE.BoxGeometry(0.03, 0.02, 0.008), M.dark, -0.03, 0, 0.162, g);
-        mesh(new THREE.BoxGeometry(0.014, 0.014, 0.004), M.gold, 0.005, -0.012, 0.16, g);
+        /* The SoC gets its own material instance: its emissive is
+         * the board's status LED, blinked by the tick while the
+         * stage clock runs (the recorded blink track for boards). */
+        anim.ledMat = new THREE.MeshStandardMaterial({
+          color: 0xd4af37,
+          roughness: 0.3,
+          metalness: 0.9,
+          emissive: 0x22cc66,
+          emissiveIntensity: 0.6,
+        });
+        mesh(new THREE.BoxGeometry(0.014, 0.014, 0.004), anim.ledMat, 0.005, -0.012, 0.16, g);
         // driver board
         g = part('driver', [0.055, 0, 0.05]);
         mesh(new RoundedBoxGeometry(0.045, 0.045, 0.005, 2, 0.002), M.red, 0.045, 0, 0.153, g);
         mesh(new THREE.BoxGeometry(0.016, 0.016, 0.004), M.dark, 0.045, 0, 0.158, g);
-        // lidar turret
+        /* Driver output indicator: lit only while its load motors
+         * (the wheels) are actually animating — output state tied
+         * to the load, never a free-running decoration. */
+        anim.driverLedMat = new THREE.MeshStandardMaterial({
+          color: 0x33150a,
+          roughness: 0.4,
+          emissive: 0xff7722,
+          emissiveIntensity: 0.25,
+        });
+        mesh(new THREE.BoxGeometry(0.006, 0.006, 0.003), anim.driverLedMat, 0.058, -0.014, 0.157, g);
+        // lidar turret: drum + ring + hub sit in a pivot at the
+        // turret axis so the recorded scan_joint sweep can turn
+        // them; the post stays fixed in the lidar group.
         g = part('lidar', [0, 0, 0.16]);
         mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.02, 24), M.dark, 0.045, 0, 0.165, g);
-        mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.034, 36), M.dark, 0.045, 0, 0.192, g);
-        mesh(new THREE.TorusGeometry(0.035, 0.0026, 10, 40), M.hub, 0.045, 0, 0.2, g).rotation.x = Math.PI / 2;
-        mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.036, 16), M.hub, 0.045, 0, 0.192, g);
+        const lidarPivot = new THREE.Group();
+        lidarPivot.position.set(0.045, 0, 0);
+        g.add(lidarPivot);
+        anim.lidarPivot = lidarPivot;
+        mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.034, 36), M.dark, 0, 0, 0.192, lidarPivot);
+        mesh(new THREE.TorusGeometry(0.035, 0.0026, 10, 40), M.hub, 0, 0, 0.2, lidarPivot).rotation.x = Math.PI / 2;
+        mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.036, 16), M.hub, 0, 0, 0.192, lidarPivot);
+        /* A rim notch so the turret's rotation is visible, aligned
+         * with the sweep wedge's leading edge below. */
+        mesh(new THREE.BoxGeometry(0.008, 0.036, 0.01), M.hub, 0.03, 0, 0.192, lidarPivot);
+        /* Sensor layer: sweep wedge + faint scan disc at the lidar
+         * height, rotated with the turret. The Burger's lidar
+         * range IS recorded (3.5 m), but at stage scale the wedge
+         * is drawn to the stage edge and the panel states the
+         * recorded range in words — the wedge is a direction
+         * indicator, not a to-scale range plot. */
+        const sweepGroup = new THREE.Group();
+        sweepGroup.position.set(0.045, 0, 0.192);
+        const sweepDisc = new THREE.Mesh(
+          new THREE.CircleGeometry(0.5, 48),
+          new THREE.MeshBasicMaterial({
+            color: 0xf59e0b,
+            transparent: true,
+            opacity: 0.07,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+          }),
+        );
+        const sweepWedge = new THREE.Mesh(
+          new THREE.CircleGeometry(0.5, 24, 0, 0.55),
+          new THREE.MeshBasicMaterial({
+            color: 0xf59e0b,
+            transparent: true,
+            opacity: 0.2,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+          }),
+        );
+        const sweepEdge = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 0.003, 0.001),
+          new THREE.MeshBasicMaterial({
+            color: 0xffc46b,
+            transparent: true,
+            opacity: 0.85,
+            depthWrite: false,
+          }),
+        );
+        sweepEdge.position.set(0.25, 0, 0);
+        sweepGroup.add(sweepDisc, sweepWedge, sweepEdge);
+        sweepGroup.visible = false;
+        /* The sweep layer must never intercept part picking: a
+         * stage-wide disc would swallow every click as "lidar". */
+        sweepGroup.traverse((o) => {
+          (o as THREE_NS.Mesh).raycast = () => {};
+        });
+        g.add(sweepGroup);
+        anim.sweepGroup = sweepGroup;
         // motors inboard of wheels
         g = part('motors', [0, 0, 0]);
         for (const s of [1, -1]) {
@@ -358,6 +519,18 @@ export default function KitScene({
           tire.rotation.x = Math.PI / 2;
           const hub = mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.023, 20), M.hub, 0, 0, 0, w);
           hub.rotation.x = Math.PI / 2;
+          /* A spoke on the tire's rim, in the tire's own geometry
+           * space (radial plane XZ, axle Y): when the tick spins
+           * the tire about its axle the spoke makes the turn
+           * visible instead of a featureless cylinder rolling. */
+          const spoke = new THREE.Mesh(
+            new THREE.BoxGeometry(0.016, 0.023, 0.005),
+            M.hub,
+          );
+          spoke.position.set(0.02, 0, 0);
+          spoke.castShadow = true;
+          tire.add(spoke);
+          anim.wheelMeshes.push(tire, hub);
         }
         // casters front/rear
         g = part('caster', [0, 0, -0.085]);
@@ -411,6 +584,7 @@ export default function KitScene({
           pickMeshes: [],
         };
         (st as unknown as { STLLoaderCtor: unknown }).STLLoaderCtor = STLLoader;
+        (st as unknown as { anim: typeof anim }).anim = anim;
         sceneRef.current = st;
 
         const applyExplode = (e: number) => {
@@ -561,10 +735,138 @@ export default function KitScene({
           }
         };
 
+        /* ---- Living Build Stage: flow paths + per-frame life ----
+         * Anchors are the recorded wiring nodes' stage positions;
+         * each rides its part group's explode offset so the cables
+         * follow the kit as it opens. Node ids come from the spec
+         * wiring the parent derived paths from (battery / driver /
+         * controller / lidar / motors); the motors node fans out
+         * to both recorded motor positions. Unknown node → the
+         * path is skipped, never approximated. */
+        const FLOW_ANCHORS: Record<string, { key: string; pts: [number, number, number][] }> = {
+          battery: { key: 'battery', pts: [[0, 0, 0.105]] },
+          driver: { key: 'driver', pts: [[0.045, 0, 0.153]] },
+          controller: { key: 'sbc', pts: [[-0.02, 0, 0.155]] },
+          lidar: { key: 'lidar', pts: [[0.045, 0, 0.192]] },
+          motors: {
+            key: 'motors',
+            pts: [
+              [0, 0.062, 0.036],
+              [0, -0.062, 0.036],
+            ],
+          },
+        };
+        const anchorPoint = (
+          node: string,
+          variant: number,
+        ): THREE_NS.Vector3 | null => {
+          const a = FLOW_ANCHORS[node];
+          if (!a) return null;
+          const p = a.pts[Math.min(variant, a.pts.length - 1)];
+          const grp = groups[a.key];
+          const off = grp ? grp.position : new THREE.Vector3();
+          /* motor children ride their own explode offset too */
+          const extraY =
+            node === 'motors' ? Math.sign(p[1]) * explodeCurRef.current * 0.028 : 0;
+          return new THREE.Vector3(p[0] + off.x, p[1] + off.y + extraY, p[2] + off.z);
+        };
+        const buildFlowItems = (flows: FlowPath[]) => {
+          for (const it of anim.flowItems) {
+            anim.flowGroup.remove(it.tube, it.pulse);
+            it.tube.geometry.dispose();
+            (it.tube.material as THREE_NS.Material).dispose();
+            (it.pulse.material as THREE_NS.Material).dispose();
+            it.pulse.geometry.dispose();
+          }
+          anim.flowItems = [];
+          for (const path of flows) {
+            const toA = FLOW_ANCHORS[path.to];
+            const variants = toA ? toA.pts.length : 1;
+            for (let v = 0; v < variants; v++) {
+              const color = new THREE.Color(path.color);
+              const tube = new THREE.Mesh(
+                new THREE.BufferGeometry(),
+                new THREE.MeshBasicMaterial({
+                  color,
+                  transparent: true,
+                  opacity: 0.38,
+                }),
+              );
+              tube.raycast = () => {};
+              const pulse = new THREE.Mesh(
+                new THREE.SphereGeometry(0.0042, 10, 8),
+                new THREE.MeshBasicMaterial({
+                  color,
+                  transparent: true,
+                  opacity: 0.5 + path.intensity * 0.5,
+                }),
+              );
+              pulse.raycast = () => {};
+              anim.flowGroup.add(tube, pulse);
+              anim.flowItems.push({ path, variant: v, tube, pulse, curve: null });
+            }
+          }
+          anim.flowSig = '__built__';
+        };
+        const updateFlow = () => {
+          const life = lifeRef.current;
+          const show =
+            !!life && life.flow && !realRef.current && !cadRef.current;
+          anim.flowGroup.visible = show && anim.flowItems.length > 0;
+          if (!show) return;
+          /* rebuild tube geometry only when an endpoint actually
+           * moved (explode lerp, mode switch) — a handful of small
+           * tubes, rebuilt on change, never per frame */
+          const sig = anim.flowItems
+            .map((it) => {
+              const a = anchorPoint(it.path.from, 0);
+              const b = anchorPoint(it.path.to, it.variant);
+              return a && b
+                ? `${a.x.toFixed(3)},${a.y.toFixed(3)},${a.z.toFixed(3)}>${b.x.toFixed(3)},${b.y.toFixed(3)},${b.z.toFixed(3)}`
+                : 'x';
+            })
+            .join('|');
+          if (sig !== anim.flowSig) {
+            anim.flowSig = sig;
+            anim.flowItems.forEach((it, i) => {
+              const a = anchorPoint(it.path.from, 0);
+              const b = anchorPoint(it.path.to, it.variant);
+              if (!a || !b) {
+                it.curve = null;
+                it.tube.visible = false;
+                it.pulse.visible = false;
+                return;
+              }
+              const pts = cableControlPoints(
+                [a.x, a.y, a.z],
+                [b.x, b.y, b.z],
+                i,
+              ).map((p) => new THREE.Vector3(p[0], p[1], p[2]));
+              it.curve = new THREE.CatmullRomCurve3(pts);
+              it.tube.geometry.dispose();
+              it.tube.geometry = new THREE.TubeGeometry(it.curve, 24, 0.0016, 6);
+              it.tube.visible = true;
+              it.pulse.visible = true;
+            });
+          }
+          for (const it of anim.flowItems) {
+            if (!it.curve) continue;
+            const phase =
+              (anim.flowTime * it.path.pulsePerSec +
+                anim.flowItems.indexOf(it) * 0.37) %
+              1;
+            it.pulse.position.copy(it.curve.getPointAt(phase));
+          }
+        };
+
         let raf = 0;
         let lastReported = -1;
+        let lastStamp = performance.now();
         const tick = () => {
           raf = requestAnimationFrame(tick);
+          const now = performance.now();
+          const dt = Math.min((now - lastStamp) / 1000, 0.05);
+          lastStamp = now;
           explodeCurRef.current += (targetRef.current - explodeCurRef.current) * 0.12;
           if (Math.abs(targetRef.current - explodeCurRef.current) < 0.001)
             explodeCurRef.current = targetRef.current;
@@ -574,6 +876,43 @@ export default function KitScene({
             lastReported = explodeCurRef.current;
             cbRef.current.onExplodeCur(explodeCurRef.current);
           }
+          /* Stage life: two clocks (mechanical + flow), each
+           * already gated by the parent. Life applies to the
+           * generated kit only — the Real specimen keeps its
+           * recorded URDF poses and CAD mode stays a blueprint. */
+          const life = lifeRef.current;
+          const onKit = !realRef.current && !cadRef.current;
+          if (life && onKit) {
+            if (anim.flowItems.length === 0 && life.flows.length > 0)
+              buildFlowItems(life.flows);
+            if (life.playing && life.motion) {
+              const step = dt * life.speed;
+              anim.time += step;
+              const dAngle = step * 2.4;
+              const spinAxis = new THREE.Vector3(0, 1, 0);
+              for (const m of anim.wheelMeshes) m.rotateOnAxis(spinAxis, dAngle);
+              if (anim.lidarPivot) anim.lidarPivot.rotation.z = anim.time * 1.6;
+              if (anim.ledMat)
+                anim.ledMat.emissiveIntensity =
+                  Math.sin(anim.time * 5) > 0 ? 1.8 : 0.25;
+              if (anim.driverLedMat)
+                anim.driverLedMat.emissiveIntensity =
+                  1.3 + Math.sin(anim.time * 9.6) * 0.8;
+            } else {
+              if (anim.ledMat) anim.ledMat.emissiveIntensity = 0.6;
+              if (anim.driverLedMat) anim.driverLedMat.emissiveIntensity = 0.25;
+            }
+            if (anim.sweepGroup) {
+              anim.sweepGroup.visible = life.sensors;
+              anim.sweepGroup.rotation.z = anim.time * 1.6;
+            }
+            if (life.flowPlaying) anim.flowTime += dt * life.speed;
+          } else {
+            if (anim.sweepGroup) anim.sweepGroup.visible = false;
+            if (anim.ledMat) anim.ledMat.emissiveIntensity = 0.6;
+            if (anim.driverLedMat) anim.driverLedMat.emissiveIntensity = 0.25;
+          }
+          updateFlow();
           controls.update();
           resize();
           renderer.render(scene, camera);
@@ -590,6 +929,9 @@ export default function KitScene({
           canvas.removeEventListener('dragover', onDragOver);
           canvas.removeEventListener('drop', onDrop);
           controls.dispose();
+          anim.envTex.dispose();
+          anim.pmrem.dispose();
+          fadeTex.dispose();
           renderer.dispose();
           sceneRef.current = null;
         };
