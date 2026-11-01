@@ -530,7 +530,7 @@ export function createWrench(data: EngineData): Wrench {
       if (robot) return chipsForRobot(robot);
     }
     if (p === "/kit" || p.indexOf("/kit/") === 0) {
-      return ["Show me batteries", "What is a TB6612FNG?", "Plan a differential rover build"];
+      return ["Add a RealSense camera and an RPLIDAR A1 to my build", "Show me batteries", "What is a TB6612FNG?", "Plan a differential rover build"];
     }
     if (p === "/evidence" || p.indexOf("/evidence/") === 0) {
       return ["Show me the reports", "Which robots failed the gate?", "What are the gate thresholds?"];

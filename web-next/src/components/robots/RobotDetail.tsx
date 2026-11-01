@@ -13,6 +13,7 @@ import {
 import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
 import PartsKitSection from "./PartsKitSection";
+import PhysicsSection from "./PhysicsSection";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
 import SpecWiring from "@/components/wiring/SpecWiring";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
@@ -252,6 +253,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   ];
   if (check) jump.push({ href: "#stability", label: "Static stability" });
   if (specimen) jump.push({ href: "#specimen", label: "Specimen" });
+  jump.push({ href: "#physics", label: "Physics checks" });
   if (harnessRep) jump.push({ href: "#harness", label: "Harness checks" });
   if (specFile) {
     jump.push({ href: "#take-apart", label: "Take it apart" });
@@ -392,6 +394,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
       </section>
 
       {specimen ? <SpecimenSection specimen={specimen} /> : null}
+
+      <PhysicsSection slug={slug} robotName={robot.name} />
 
       <section className="section" id="gate">
         <h2><Term k="gate">Gate</Term> runs</h2>

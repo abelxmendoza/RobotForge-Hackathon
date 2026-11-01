@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<robot name="pathfinder">
+  <link name="base_link">
+    <visual><geometry><box size="0.42 0.31 0.18"/></geometry></visual>
+    <collision><geometry><box size="0.42 0.31 0.18"/></geometry></collision>
+    <inertial><mass value="3.4000"/><inertia ixx="0.036408" ixy="0" ixz="0" iyy="0.059160" iyz="0" izz="0.077208"/></inertial>
+  </link>
+  <link name="wheel_0_left">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></collision>
+    <inertial><mass value="0.1250"/><inertia ixx="0.000115" ixy="0" ixz="0" iyy="0.000208" iyz="0" izz="0.000115"/></inertial>
+  </link>
+  <joint name="wheel_0_left_joint" type="continuous">
+    <parent link="base_link"/><child link="wheel_0_left"/>
+    <origin xyz="0.15999999999999998 0.17099999999999999 -0.075"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <link name="wheel_1_right">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></collision>
+    <inertial><mass value="0.1250"/><inertia ixx="0.000115" ixy="0" ixz="0" iyy="0.000208" iyz="0" izz="0.000115"/></inertial>
+  </link>
+  <joint name="wheel_1_right_joint" type="continuous">
+    <parent link="base_link"/><child link="wheel_1_right"/>
+    <origin xyz="0.15999999999999998 -0.17099999999999999 -0.075"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <link name="wheel_2_left">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></collision>
+    <inertial><mass value="0.1250"/><inertia ixx="0.000115" ixy="0" ixz="0" iyy="0.000208" iyz="0" izz="0.000115"/></inertial>
+  </link>
+  <joint name="wheel_2_left_joint" type="continuous">
+    <parent link="base_link"/><child link="wheel_2_left"/>
+    <origin xyz="-0.15999999999999998 0.17099999999999999 -0.075"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <link name="wheel_3_right">
+    <visual><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></visual>
+    <collision><origin rpy="1.5708 0 0"/><geometry><cylinder radius="0.05" length="0.032"/></geometry></collision>
+    <inertial><mass value="0.1250"/><inertia ixx="0.000115" ixy="0" ixz="0" iyy="0.000208" iyz="0" izz="0.000115"/></inertial>
+  </link>
+  <joint name="wheel_3_right_joint" type="continuous">
+    <parent link="base_link"/><child link="wheel_3_right"/>
+    <origin xyz="-0.15999999999999998 -0.17099999999999999 -0.075"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+</robot>

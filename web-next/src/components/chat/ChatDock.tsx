@@ -23,7 +23,15 @@ import {
   type RobotData,
   type TemplateData,
 } from "./engine";
-import { gateReports, parts, robotSlug, robots } from "@/lib/data";
+import { gateReports, parts, robotSlug, robots, simReadyProps } from "@/lib/data";
+import {
+  addToBuildList,
+  buildConfirmationText,
+  buildPaletteItems,
+  parseBuildRequest,
+  type BuildEntry,
+} from "@/lib/palette";
+import { BUILD_KEY } from "@/lib/buildList";
 import {
   createWrench,
   isDemoRequest,
@@ -92,6 +100,11 @@ function buildEngine(): Engine {
 function buildWrench(): Wrench {
   return createWrench(engineData());
 }
+
+/* The Parts palette's catalogue, for the chat's build commands —
+ * the same items and the same deterministic matcher the palette
+ * and the BOM wizard use (lib/palette.ts). */
+const PALETTE_ITEMS = buildPaletteItems(parts, simReadyProps);
 
 interface LiveHealth {
   ok?: boolean;
@@ -362,6 +375,33 @@ export function useForgeAssistant() {
           return true;
         }
       } catch (e) { noteBubble((e as Error).message); return true; }
+      /* Build-list commands ("add a RealSense camera and two
+       * wheels to my build"): resolved deterministically against
+       * the palette catalogue — the same matching the BOM wizard's
+       * offline step uses — and applied to the shared build list
+       * (rf.build.v1) with the same add action the palette's drag
+       * and Add button perform. The reply confirms what was added
+       * with quantities and names anything that was not found or
+       * was ambiguous; a request this grammar cannot resolve at
+       * all returns null and falls through to the paths below. */
+      const buildReq = parseBuildRequest(q, PALETTE_ITEMS, [
+        ...robots.map((r) => r.name),
+        ...readStore<GarageRobot[]>(GARAGE_KEY, []).map((r) => r.name),
+      ]);
+      if (buildReq) {
+        try {
+          let entries = readStore<BuildEntry[]>(BUILD_KEY, []);
+          for (const add of buildReq.adds) {
+            entries = addToBuildList(entries, add.item, add.qty, 'chat', () => uid('build'));
+          }
+          if (buildReq.adds.length) {
+            const err = writeStore(BUILD_KEY, entries);
+            if (err) throw new Error(err);
+          }
+          noteBubble(buildConfirmationText(buildReq));
+        } catch (e) { noteBubble((e as Error).message); }
+        return true;
+      }
       const command = parseCommand(q);
       if (command) {
         try {

@@ -7,6 +7,7 @@
  * page. kit.html's own top nav is not reproduced: the app shell
  * provides navigation on this route. */
 import type { Metadata } from "next";
+import Link from "next/link";
 import AppShell from "@/components/shell/AppShell";
 import KitViewer from "@/components/kit/KitViewer";
 import PartsCatalogue from "@/components/robots/PartsCatalogue";
@@ -33,7 +34,10 @@ export default function KitPage() {
         <p className="sub">
           {parts.length} real parts with datasheet-sourced specs, grouped by
           class. These are what the forge assembles robots from and checks
-          parts lists against.
+          parts lists against. Every card carries vendor search links for
+          the part — search links only, never a displayed price or stock
+          claim. The <Link href="/bom/">BOM wizard</Link> turns a kit or a
+          build template into an exportable bill of materials.
         </p>
         <PartsCatalogue />
       </section>

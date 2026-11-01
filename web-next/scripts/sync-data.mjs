@@ -16,9 +16,13 @@ mkdirSync(join(root, "src", "styles"), { recursive: true });
 copyFileSync(join(repo, "catalog", "kinds.json"), join(root, "src", "data", "kinds.json"));
 copyFileSync(join(repo, "catalog", "families.json"), join(root, "src", "data", "families.json"));
 copyFileSync(join(repo, "assets", "js", "chat-intents.json"), join(root, "src", "data", "chat-intents.json"));
-for (const f of ["robots.json", "parts.json", "gate-reports.json", "parts-kits.json"]) {
+for (const f of ["robots.json", "parts.json", "gate-reports.json", "parts-kits.json", "physics.json"]) {
   copyFileSync(join(repo, "catalog", f), join(root, "src", "data", f));
 }
+// The SimReady bench-prop manifest: the palette and the build list
+// import it statically (the kit scene keeps fetching its own copy
+// from public/ at runtime).
+copyFileSync(join(repo, "catalog", "props", "simready", "props.json"), join(root, "src", "data", "simready-props.json"));
 mkdirSync(join(root, "public"), { recursive: true });
 cpSync(join(repo, "assets"), join(root, "public", "assets"), { recursive: true });
 for (const css of ["tokens.css", "app.css", "site.css", "chat.css", "anim.css"]) {

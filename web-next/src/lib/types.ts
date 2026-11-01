@@ -37,6 +37,16 @@ export interface Part {
   license?: string;
   [key: string]: unknown;
 }
+/* A build recipe in the parts catalogue: required catalogue parts
+ * with quantities, plus optional part ids (catalog/parts.json
+ * `templates`). The BOM wizard assembles from these verbatim. */
+export interface PartTemplate {
+  name: string;
+  label: string;
+  gate_pack?: string;
+  required: Record<string, number>;
+  optional: string[];
+}
 export interface GateReportRun {
   id: string;
   title: string;
@@ -68,6 +78,39 @@ export interface RobotKit {
   spec_file?: string;
   kit: { estimated: boolean; parts: KitPart[] } | null;
   reason?: string;
+}
+/* In-browser physics checks (catalog/physics.json). status "urdf":
+ * the entry's official model is a plain URDF at a pinned commit and
+ * the checks run on it in the browser. status "none": the recorded
+ * model is not a URDF (or not recorded at all) — the page shows the
+ * reason instead of results. Nothing here is a verdict. */
+export interface PhysicsEntry {
+  status: "urdf" | "none";
+  reason?: string;
+  urdf_url?: string;
+  packages?: Record<string, string>;
+  source_label?: string;
+  license?: string;
+  model_note?: string;
+  generated?: boolean;
+  catalog_mass_kg?: number | null;
+  catalog_mass_label?: string;
+}
+/* NVIDIA SimReady bench props (catalog/props/simready/props.json,
+ * synced into src/data/simready-props.json). External CC BY 4.0
+ * models used as bench dressing in the kit scene and as the Parts
+ * palette's only 3D-model items. Mirrors the manifest's own fields
+ * (components/kit/burger.ts carries the scene's fuller copy). */
+export interface SimReadyPropEntry {
+  id: string;
+  name: string;
+  file: string;
+  source_package: string;
+  source_url: string;
+  attribution: string;
+  size_m: [number, number, number];
+  rotation_y_rad: number;
+  [key: string]: unknown;
 }
 /* Robodex families (catalog/families.json, schema
  * robotforge-robodex-families/1): robots grouped by family, with
