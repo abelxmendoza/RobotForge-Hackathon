@@ -11,6 +11,11 @@ license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+# Optional build123d CAD back end (`robotforge cad --engine build123d`).
+# OpenSCAD remains the default engine and needs no dependency.
+build123d = ["build123d>=0.9"]
+
 [project.scripts]
 robotforge = "robotforge.cli:main"
 

@@ -1,0 +1,81 @@
+{
+  "dataset": "nvidia/simready-assets",
+  "dataset_url": "https://huggingface.co/datasets/nvidia/simready-assets",
+  "honesty": [
+    "These are external NVIDIA assets, downloaded from the SimReady dataset on Hugging Face — not RobotForge models.",
+    "They are bench dressing in the kit scene only: they are not kit parts, not catalog robots, and nothing about them is checked by the gate.",
+    "The source packages' physics and material data do not survive the trip to glTF; what you see is shape and surface colour only.",
+    "Each model was decimated and its textures resized/re-encoded to fit a web size budget (per-prop numbers below); silhouettes and proportions are the source's, fine detail is reduced."
+  ],
+  "license": "CC BY 4.0",
+  "license_note": "Each package's own LICENSE.txt and packaging.json declare CC BY 4.0 (verified per package 2026-10-31; the dataset card itself carries no license tag).",
+  "props": [
+    {
+      "attribution": "Storage crate (crate_yellow_a07) by NVIDIA, from nvidia/simready-assets on Hugging Face, CC BY 4.0 — converted to glTF by RobotForge (decimation, texture resize, WebP).",
+      "file": "crate.glb",
+      "id": "crate",
+      "name": "Storage crate",
+      "optimized_bytes": 664368,
+      "position_xy_m": [
+        -0.31,
+        0.21
+      ],
+      "root_usd": "simready_usd/sm_crate_yellow_a07_01.usd",
+      "rotation_y_rad": -0.15,
+      "sha256": "b3f556162143ba37e44621925a1b58f6903da9944a4fae768c67c699a1805ac0",
+      "size_m": [
+        0.601,
+        0.171,
+        0.402
+      ],
+      "source_package": "crate_yellow_a07",
+      "source_url": "https://huggingface.co/datasets/nvidia/simready-assets/tree/main/crate_yellow_a07",
+      "triangles": 29999
+    },
+    {
+      "attribution": "Cordless drill (powerTool_drill_a01) by NVIDIA, from nvidia/simready-assets on Hugging Face, CC BY 4.0 — converted to glTF by RobotForge (decimation, 512px albedo, WebP).",
+      "file": "drill.glb",
+      "id": "drill",
+      "name": "Cordless drill",
+      "optimized_bytes": 1280088,
+      "position_xy_m": [
+        0.27,
+        -0.31
+      ],
+      "root_usd": "simready_usd/sm_powerTool_drill_a01_01.usd",
+      "rotation_y_rad": 0.8,
+      "sha256": "b28aa6900288ddf430891d6d4421c027b5d03b3ea7d3e3eef365b21f4e8848fa",
+      "size_m": [
+        0.225,
+        0.228,
+        0.064
+      ],
+      "source_package": "powerTool_drill_a01",
+      "source_url": "https://huggingface.co/datasets/nvidia/simready-assets/tree/main/powerTool_drill_a01",
+      "triangles": 70881
+    },
+    {
+      "attribution": "Oscilloscope (testingTool_oscilloscope_a01) by NVIDIA, from nvidia/simready-assets on Hugging Face, CC BY 4.0 — converted to glTF by RobotForge (decimation, 512px albedo, WebP).",
+      "file": "scope.glb",
+      "id": "scope",
+      "name": "Oscilloscope",
+      "optimized_bytes": 1673336,
+      "position_xy_m": [
+        0.37,
+        0.22
+      ],
+      "root_usd": "simready_usd/sm_testingTool_oscilloscope_a01_01.usd",
+      "rotation_y_rad": -0.5,
+      "sha256": "42e19e309579003420ca9b06faa939ae9bd756e2ea189c63e3537ff53f7c6dd9",
+      "size_m": [
+        0.149,
+        0.235,
+        0.318
+      ],
+      "source_package": "testingTool_oscilloscope_a01",
+      "source_url": "https://huggingface.co/datasets/nvidia/simready-assets/tree/main/testingTool_oscilloscope_a01",
+      "triangles": 79997
+    }
+  ],
+  "retrieved": "2026-10-31"
+}

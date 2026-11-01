@@ -9,8 +9,8 @@
  * the page shows the flat 2D fallback. */
 import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
-import { fetchJSON } from '../forge/model';
-import type { SpecimenDoc, SpecimenPart } from './burger';
+import { ROOT, fetchJSON } from '../forge/model';
+import type { SimReadyManifest, SpecimenDoc, SpecimenPart } from './burger';
 
 type ThreeModule = typeof THREE_NS;
 
@@ -37,6 +37,7 @@ interface SceneState {
   };
   robot: THREE_NS.Group;
   specimenGroup: THREE_NS.Group;
+  propsGroup: THREE_NS.Group;
   ground: THREE_NS.Mesh;
   grid: THREE_NS.Object3D;
   groups: Record<string, THREE_NS.Group>;
@@ -55,6 +56,7 @@ export default function KitScene({
   spin,
   cad,
   real,
+  propsOn,
   selectedSpecimen,
   onReady,
   onFail,
@@ -62,12 +64,15 @@ export default function KitScene({
   onSelectSpecimen,
   onSpecimenLoaded,
   onSpecimenError,
+  onPropsLoaded,
+  onPropsError,
   onExplodeCur,
 }: {
   explodeTarget: number;
   spin: boolean;
   cad: boolean;
   real: boolean;
+  propsOn: boolean;
   selectedSpecimen: string | null;
   onReady: () => void;
   onFail: () => void;
@@ -75,6 +80,8 @@ export default function KitScene({
   onSelectSpecimen: (id: string) => void;
   onSpecimenLoaded: (doc: SpecimenDoc) => void;
   onSpecimenError: () => void;
+  onPropsLoaded: (doc: SimReadyManifest) => void;
+  onPropsError: () => void;
   onExplodeCur: (v: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,6 +92,8 @@ export default function KitScene({
     onSelectSpecimen,
     onSpecimenLoaded,
     onSpecimenError,
+    onPropsLoaded,
+    onPropsError,
     onExplodeCur,
   });
   cbRef.current = {
@@ -94,6 +103,8 @@ export default function KitScene({
     onSelectSpecimen,
     onSpecimenLoaded,
     onSpecimenError,
+    onPropsLoaded,
+    onPropsError,
     onExplodeCur,
   };
   const targetRef = useRef(explodeTarget);
@@ -103,6 +114,7 @@ export default function KitScene({
   const sceneRef = useRef<SceneState | null>(null);
   const specimenRef = useRef<Map<string, SpecimenRec>>(new Map());
   const specimenStateRef = useRef({ loaded: false, loading: false });
+  const propsStateRef = useRef({ loaded: false, loading: false });
   const cadMatsRef = useRef<Map<THREE_NS.Mesh, THREE_NS.Material | THREE_NS.Material[]>>(new Map());
   const savedEmissiveRef = useRef<Map<THREE_NS.Mesh, number>>(new Map());
   const selectedKeyRef = useRef<string | null>(null);
@@ -170,10 +182,12 @@ export default function KitScene({
         key.position.set(0.35, -0.25, 0.6);
         key.castShadow = true;
         key.shadow.mapSize.set(2048, 2048);
-        key.shadow.camera.left = -0.35;
-        key.shadow.camera.bottom = -0.35;
-        key.shadow.camera.right = 0.35;
-        key.shadow.camera.top = 0.35;
+        /* ±0.8 (not ±0.35) so the SimReady bench props around the
+         * stage sit inside the shadow camera too. */
+        key.shadow.camera.left = -0.8;
+        key.shadow.camera.bottom = -0.8;
+        key.shadow.camera.right = 0.8;
+        key.shadow.camera.top = 0.8;
         key.shadow.radius = 4;
         scene.add(key);
         const rim = new THREE.DirectionalLight(0xf59e0b, 0.7);
@@ -288,6 +302,13 @@ export default function KitScene({
         specimenGroup.visible = false;
         scene.add(specimenGroup);
 
+        /* SimReady bench props live in their own group: environment
+         * dressing around the stage, independent of the generated
+         * kit and the specimen — loaded lazily by the effect below. */
+        const propsGroup = new THREE.Group();
+        propsGroup.visible = false;
+        scene.add(propsGroup);
+
         const st: SceneState = {
           THREE,
           renderer,
@@ -296,6 +317,7 @@ export default function KitScene({
           controls: controls as unknown as SceneState['controls'],
           robot,
           specimenGroup,
+          propsGroup,
           ground,
           grid,
           groups,
@@ -565,6 +587,63 @@ export default function KitScene({
     applySpecimenEmissive(selectedSpecimen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSpecimen]);
+
+  /* SimReady bench props: visibility + lazy manifest-driven load.
+   * External NVIDIA assets (CC BY 4.0) used as bench dressing only —
+   * they are not kit parts, they are never raycast-pickable, and the
+   * explode/CAD machinery never touches them. The manifest (with
+   * per-prop attribution) is fetched from the same public folder the
+   * build materializes the models into. */
+  useEffect(() => {
+    const st = sceneRef.current;
+    if (!st) return;
+    st.propsGroup.visible = propsOn;
+    if (!propsOn) return;
+    const pst = propsStateRef.current;
+    if (pst.loaded || pst.loading) return;
+    pst.loading = true;
+    (async () => {
+      try {
+        const doc = await fetchJSON<SimReadyManifest>(
+          'catalog/props/simready/props.json',
+        );
+        const { GLTFLoader } = await import(
+          'three/addons/loaders/GLTFLoader.js'
+        );
+        const loader = new GLTFLoader();
+        const THREE = st.THREE;
+        for (const p of doc.props) {
+          const gltf = await loader.loadAsync(
+            ROOT + 'catalog/props/simready/' + p.file,
+          );
+          /* glTF is Y-up with the prop standing on y=0; this scene is
+           * Z-up. Tilting +90° about X maps glTF +Y to scene +Z, so
+           * the prop stands on the floor (z=0) at its native scale. */
+          const inner = new THREE.Group();
+          inner.rotation.x = Math.PI / 2;
+          inner.add(gltf.scene);
+          const holder = new THREE.Group();
+          holder.position.set(p.position_xy_m[0], p.position_xy_m[1], 0);
+          holder.rotation.z = p.rotation_y_rad;
+          holder.add(inner);
+          holder.traverse((m) => {
+            const mm = m as THREE_NS.Mesh;
+            if ((mm as { isMesh?: boolean }).isMesh) {
+              mm.castShadow = true;
+              mm.receiveShadow = true;
+            }
+          });
+          st.propsGroup.add(holder);
+        }
+        pst.loaded = true;
+        cbRef.current.onPropsLoaded(doc);
+      } catch {
+        cbRef.current.onPropsError();
+      } finally {
+        pst.loading = false;
+      }
+    })();
+  }, [propsOn]);
 
   return <canvas id="view3d" ref={canvasRef} />;
 }
