@@ -22,6 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: web-next/package-lock.json
+      # The node unit tests (bom, palette, physics, wiring, build plan,
+      # demo bar) symlink web-next/node_modules for zod / three / react.
+      - name: Install web-next packages
+        run: npm ci --prefix web-next
       - name: Install package + test runner
         run: pip install -e . pytest
       - name: Run the test suite
