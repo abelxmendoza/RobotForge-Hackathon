@@ -83,11 +83,6 @@ def test_photo_component_falls_back_honestly():
     assert "render" in comp  # renders are badged, never passed off
 
 
-def test_wizard_lines_show_thumbnails():
-    wizard = (WEB / "src/components/bom/BomWizard.tsx").read_text()
-    assert "photoForLine" in wizard and "PartPhoto" in wizard
-
-
 def test_palette_cards_prefer_verified_photos():
     palette = (WEB / "src/components/kit/PartsPalette.tsx").read_text()
     assert "verifiedPhoto" in palette and "PartPhoto" in palette

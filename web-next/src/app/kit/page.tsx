@@ -36,8 +36,9 @@ export default function KitPage() {
           class. These are what the forge assembles robots from and checks
           parts lists against. Every card carries vendor search links for
           the part — search links only, never a displayed price or stock
-          claim. The <Link href="/bom/">BOM wizard</Link> turns a kit or a
-          build template into an exportable bill of materials.
+          claim. The <Link href="/garage/#tab=bom">BOM tab in the
+          Workshop</Link> turns your robot into an exportable bill of
+          materials.
         </p>
         <PartsCatalogue />
       </section>

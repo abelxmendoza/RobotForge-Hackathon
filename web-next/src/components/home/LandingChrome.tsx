@@ -14,7 +14,6 @@ import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
 const SITE_NAV = [
   { label: "Home", href: "/" },
   { label: "Robots", href: "/robots/" },
-  { label: "Evidence", href: "/evidence/" },
   { label: "How it works", href: "/how-it-works/" },
 ];
 

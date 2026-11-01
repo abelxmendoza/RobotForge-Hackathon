@@ -29,20 +29,7 @@ LIB = WEB / "src/lib"
 
 # ---------------------------------------------------------------- wiring
 
-def test_panel_is_in_the_bom_wizard_review_step():
-    wizard = (WEB / "src/components/bom/BomWizard.tsx").read_text()
-    assert "BuildPlanPanel" in wizard
-    panel = (WEB / "src/components/bom/BuildPlanPanel.tsx").read_text()
-    assert "generateBuildPlan" in panel
-    assert "Your constraints" in panel
-    assert "NOT CHECKED" in panel
-
-
-def test_panel_is_deterministic_and_offline():
-    panel = (WEB / "src/components/bom/BuildPlanPanel.tsx").read_text()
-    # No live endpoint, no model call: the engine is local math.
-    for banned in ("postJSON", "liveHealth", "suggestPartsLive", "fetch("):
-        assert banned not in panel, banned
+def test_build_plan_engine_is_deterministic_and_offline():
     engine = (LIB / "buildPlan.ts").read_text()
     for banned in ("postJSON", "liveHealth", "fetch("):
         assert banned not in engine, banned

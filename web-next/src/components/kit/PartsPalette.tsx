@@ -19,7 +19,6 @@
  * (lib/buildList.ts): the BOM wizard starts from it, and the chat
  * adds to it with the same add actions. */
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { parts, simReadyProps } from '@/lib/data';
 import type { Part } from '@/lib/types';
 import {
@@ -227,9 +226,6 @@ export default function PartsPalette({
               </div>
             ))}
             <p className="buildlist-foot">
-              <Link href="/bom/?start=build" className="palette-bomlink">
-                Open in the BOM wizard →
-              </Link>{' '}
               <button type="button" onClick={onClear}>
                 Clear list
               </button>

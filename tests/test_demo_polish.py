@@ -40,8 +40,9 @@ def test_side_menu_has_no_demo_entry_but_the_real_doors_stay():
     assert '"/demo/"' not in nav
     # The rest of the nav is unchanged, in order.
     ids = re.findall(r'id: "(\w+)"', nav)
-    assert ids == ["home", "workshop", "inventory", "robots", "bom",
-                   "evidence"], ids
+    # BOM wizard and Evidence left the nav on 2026-11-01; /evidence/
+    # stays reachable from robot pages, the demo and Wrench.
+    assert ids == ["home", "workshop", "inventory", "robots"], ids
     landing = (WEB / "src/app/page.tsx").read_text()
     assert "RunDemoLink" in landing
     chrome = (WEB / "src/components/home/LandingChrome.tsx").read_text()

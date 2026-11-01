@@ -63,10 +63,6 @@ def test_chat_and_wizard_share_the_wiring_state():
     assert 'WIRING_KEY = "rf.wiring.v1"' in store
     assert "resolveWiringKey" in store
     assert ".demo" in store
-    wizard = (WEB / "src/components/bom/BomWizard.tsx").read_text()
-    assert "harnessText" in wizard
-    assert "harnessCsv" in wizard
-    assert "useBuildWiring" in wizard
 
 
 def test_data_reality_counts():

@@ -1,5 +1,5 @@
 /* Verified part photos: the pure lookups behind every surface that
- * shows one (BOM wizard, Workshop BOM tab, parts palette).
+ * shows one (Workshop BOM tab, parts palette).
  *
  * A photo is shown only when the catalogue record carries a complete
  * web-gathered record — url, source page, credit, fetched-at, trust
