@@ -23,6 +23,8 @@ import type { LiveHealth } from '@/components/forge/model';
 import { downloadJSON, uid, useStore } from '@/lib/store';
 import { preparePhoto } from '@/lib/image';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
+import SimulateTab from './SimulateTab';
+import BomTab from './BomTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
   diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, setPath,
@@ -45,13 +47,15 @@ function counts(lines: string[]) {
   };
 }
 
-type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'checks' | 'history';
+type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'history';
 const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
   { id: 'specs', label: 'Specs', icon: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5' },
+  { id: 'simulate', label: 'Simulate', icon: 'M3 17l5-5 4 3 8-9M14 6h6v6' },
   { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
+  { id: 'bom', label: 'BOM', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
 ];
 
@@ -387,7 +391,7 @@ export default function Garage() {
   useEffect(() => {
     const check = (hash: string) => {
       if (hash === '#assembly') setTab('build');
-      const t = hash.match(/^#tab=(overview|build|wiring|specs|checks|history)$/);
+      const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|history)$/);
       if (t) setTab(t[1] as WorkTab);
     };
     check(window.location.hash);
@@ -678,11 +682,11 @@ export default function Garage() {
                     <span className="ws-card-go">See checks →</span>
                   </button>
                   {roverCounts && (
-                    <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : (roverCounts.marginal || roverCounts.unchecked) ? 'marginal' : 'pass')} onClick={() => setTab('checks')}>
+                    <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : (roverCounts.marginal || roverCounts.unchecked) ? 'marginal' : 'pass')} onClick={() => setTab('simulate')}>
                       <span className="ws-card-icon"><Icon d={ICON.field} size={22} /></span>
                       <span className="ws-card-label">Field checks</span>
                       <strong>{roverText}</strong>
-                      <span className="ws-card-go">See checks →</span>
+                      <span className="ws-card-go">Watch the test runs →</span>
                     </button>
                   )}
                   <button type="button" className="ws-card" onClick={() => setTab('history')}>
@@ -760,6 +764,14 @@ export default function Garage() {
                 </div>
               )}
             </section>
+            )}
+
+            {tab === 'simulate' && (
+              <SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} />
+            )}
+
+            {tab === 'bom' && (
+              <BomTab spec={draft} robotId={robot.id} robotName={draft.name || robot.name} inventory={inventory} />
             )}
 
             {tab === 'history' && (
