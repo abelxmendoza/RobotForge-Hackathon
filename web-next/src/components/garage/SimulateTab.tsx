@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { maxSlopeDeg, TERRAINS, type RoverCheck } from '@/lib/rover';
 import { robots, physicsOf } from '@/lib/data';
 import type { Spec } from '@/lib/garage';
+import { runRoverSim, simUnavailable, type RoverSim, type SimRun } from '@/lib/roverSim';
 
 type RoverOpts = { terrain: string; slopeDeg: number; stepM: number; targetMin: number };
 const RUN_MS = 3200;
@@ -32,7 +33,8 @@ function useRun(key: string): [number, () => void] {
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setT(1); return; }
     const t0 = performance.now();
     const tick = (now: number) => {
-      const k = Math.min(1, (now - t0) / RUN_MS);
+      // the first rAF timestamp can predate t0 by a frame; never go below 0
+      const k = Math.min(1, Math.max(0, (now - t0) / RUN_MS));
       setT(k);
       if (k < 1) raf.current = requestAnimationFrame(tick);
     };
@@ -200,6 +202,97 @@ function BatteryScene({ check, targetMin }: { check?: RoverCheck; targetMin: num
   );
 }
 
+/* Tier 2: the same two tests as a real Rapier rigid-body run (lib/roverSim).
+ * Opt-in (a button), so the tab stays instant; replays the recorded
+ * poses at the same scale as the estimate scenes. */
+function PhysicsRuns({ spec, opts, shape, estimates }: { spec: Spec; opts: RoverOpts; shape: Shape; estimates: { slope?: RoverCheck; step?: RoverCheck } }) {
+  const [state, setState] = useState<{ busy: boolean; res: RoverSim | null; err: string | null; key: string }>({ busy: false, res: null, err: null, key: '' });
+  const key = `${opts.terrain}-${opts.slopeDeg}-${opts.stepM}-${JSON.stringify([spec?.mass_kg, spec?.length_m, spec?.width_m, spec?.height_m, spec?.ground_clearance_m, spec?.wheel, spec?.motor])}`;
+  const unavailable = simUnavailable(spec);
+  const stale = state.res && state.key !== key;
+  const run = async () => {
+    setState({ busy: true, res: null, err: null, key });
+    try {
+      const res = await runRoverSim(spec, opts);
+      setState({ busy: false, res, err: null, key });
+    } catch (e) {
+      setState({ busy: false, res: null, err: e instanceof Error ? e.message : String(e), key });
+    }
+  };
+  return (
+    <section className="sim-physics" aria-label="Physics runs">
+      <div className="sim-physics-head">
+        <div>
+          <h4>Physics runs <span className="verdict unchecked">browser physics · Rapier</span></h4>
+          <p className="faint g-small">Runs the slope and kerb as a rigid-body simulation in this browser: wheels, contact, grip and motor torque limits, on a simplified model of the spec. Not Gazebo.</p>
+        </div>
+        <button type="button" className="btn btn-sm" onClick={run} disabled={state.busy || !!unavailable}>
+          {state.busy ? 'Running…' : state.res ? (stale ? 'Run again (inputs changed)' : 'Run again') : 'Run physics'}
+        </button>
+      </div>
+      {unavailable && <p className="faint g-small">The physics run {unavailable}.</p>}
+      {state.err && <p className="g-small sim-err" role="alert">The physics run failed: {state.err}</p>}
+      {state.res && (
+        <>
+          <div className="sim-grid">
+            <PhysicsScene kind="slope" run={state.res.slope} shape={shape} slopeDeg={opts.slopeDeg} stepM={opts.stepM} estimate={estimates.slope} />
+            <PhysicsScene kind="step" run={state.res.step} shape={shape} slopeDeg={opts.slopeDeg} stepM={opts.stepM} estimate={estimates.step} />
+          </div>
+          <details className="g-small faint"><summary>What the physics model assumes</summary><ul>{state.res.assumptions.map((a) => <li key={a}>{a}</li>)}</ul></details>
+        </>
+      )}
+    </section>
+  );
+}
+
+function PhysicsScene({ kind, run, shape, slopeDeg, stepM, estimate }: { kind: 'slope' | 'step'; run: SimRun; shape: Shape; slopeDeg: number; stepM: number; estimate?: RoverCheck }) {
+  const [t, play] = useRun(`${kind}-${run.poses.length}-${run.distanceM}`);
+  const i = Math.min(run.poses.length - 1, Math.floor(t * (run.poses.length - 1)));
+  const p = run.poses[i] ?? { x: 0, z: 0, pitchDeg: 0, t: 0 };
+  const y0 = 170, ppm = shape.ppm;
+  const startX = kind === 'slope' ? 70 : 60;
+  const a = (kind === 'slope' ? Math.min(Math.max(slopeDeg, 0), 45) : 0) * Math.PI / 180;
+  const along = p.x * ppm;
+  const ax = along * Math.cos(a);
+  // follow the robot forwards past mid-scene, and backwards if it slides off the left edge
+  const minX = 30 + shape.bodyW / 2 - startX;
+  const cam = ax > 170 ? ax - 170 : ax < minX ? ax - minX : 0;
+  const rx = startX + along * Math.cos(a) - cam, ry = y0 - along * Math.sin(a) - p.z * ppm + cam * Math.tan(a);
+  const kerbX = startX + (shape.bodyW / 2 + 0.15 * ppm) - cam;
+  const h = Math.min(160, Math.max(2, stepM * ppm));
+  const est = estimate?.status;
+  const estOk = est === 'PASS' || est === 'MARGINAL';
+  const agrees = est && est !== 'NOT_CHECKED' ? estOk === run.ok : null;
+  const label = run.outcome.charAt(0).toUpperCase() + run.outcome.slice(1);
+  return (
+    <figure className="sim-scene">
+      <svg viewBox="0 0 380 200" role="img" aria-label={`Physics run, ${kind === 'slope' ? `${slopeDeg} degree slope` : `${Math.round(stepM * 1000)} mm kerb`}: ${run.outcome}`}>
+        {kind === 'slope' ? (
+          // the camera slides along the ramp, so the ramp itself stays put on screen
+          <polygon points={`0,${y0 + startX * Math.tan(a)} 380,${y0 - (380 - startX) * Math.tan(a)} 380,200 0,200`} className="sim-ground" />
+        ) : (
+          <>
+            <line x1={0} y1={y0} x2={Math.max(0, kerbX)} y2={y0} className="sim-floor" />
+            {kerbX < 380 && <polygon points={`${kerbX},${y0} ${kerbX},${y0 - h} 380,${y0 - h} 380,200 ${kerbX},200`} className="sim-ground" />}
+          </>
+        )}
+        <ScaleBar shape={shape} />
+        <text x={366} y={22} textAnchor="end" className="sim-label">{p.t.toFixed(1)} s · {run.distanceM >= 0 ? '' : '−'}{Math.abs(p.x).toFixed(2)} m</text>
+        <Rover x={rx} y={ry} angle={(kind === 'slope' ? slopeDeg : 0) + p.pitchDeg} shape={shape} spin={-p.x / Math.max(1e-3, shape.wheelR / ppm) * 57.3} tone={run.ok ? 'pass' : 'fail'} />
+      </svg>
+      <figcaption>
+        <strong>{kind === 'slope' ? `Slope ${slopeDeg}°` : `Kerb ${Math.round(stepM * 1000)} mm`}</strong> <span className={'verdict ' + (run.ok ? 'pass' : 'fail')}>{label}</span>
+        <span className="faint">
+          Moved {run.distanceM.toFixed(2)} m in {run.seconds.toFixed(1)} s{run.maxPitchDeg > 5 ? `, pitched up to ${Math.round(run.maxPitchDeg)}°` : ''}.
+          {agrees === true && ' Agrees with the estimate above.'}
+          {agrees === false && ` Differs from the estimate above (${STATUS_TXT[est as string].toLowerCase()}): the physics run includes grip and contact, which the estimate assumes away.`}
+        </span>
+        <button type="button" className="chip" onClick={play}>Replay</button>
+      </figcaption>
+    </figure>
+  );
+}
+
 /* The Robodex entry this robot came from, matched by name. */
 function catalogMatch(spec: Spec): { slug: string; name: string; physics: boolean } | null {
   const norm = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -246,6 +339,7 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
             <StepScene check={byName('rover.step_climb')} stepM={opts.stepM} shape={shape} />
             <BatteryScene check={byName('rover.runtime')} targetMin={opts.targetMin} />
           </div>
+          <PhysicsRuns spec={spec} opts={opts} shape={shape} estimates={{ slope: byName('rover.slope_climb'), step: byName('rover.step_climb') }} />
           <details className="g-small faint"><summary>How these are worked out</summary><ul>{checks.flatMap((c) => c.assumptions).filter((a, i, all) => all.indexOf(a) === i).map((a) => <li key={a}>{a}</li>)}</ul></details>
         </>
       )}

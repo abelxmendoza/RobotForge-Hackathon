@@ -1524,3 +1524,11 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .bom-item-cell{display:inline-flex;align-items:flex-start;gap:10px}
 /* Workshop BOM tab: the credited photo sits in the row's 64px art slot. */
 .bom-art .part-photo figcaption{max-width:64px}
+
+/* Simulate: Rapier physics runs (Tier 2, 2026-11-01) */
+.sim-physics{margin:var(--s4) 0;padding:var(--s4);border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2,var(--surface))}
+.sim-physics-head{display:flex;gap:var(--s3);align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.sim-physics-head h4{margin:0 0 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sim-physics-head p{margin:0;max-width:60ch}
+.sim-physics .sim-grid{margin-bottom:var(--s3)}
+.sim-err{color:#ff6b6b}
