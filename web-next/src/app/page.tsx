@@ -6,7 +6,6 @@ import { AiInsideCards } from "@/components/home/AiInside";
 import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
-import DemoEntryButton from "@/components/shell/DemoEntryButton";
 
 /**
  * Home — originally a port of the vanilla landing's <main> (index.html),
@@ -64,15 +63,14 @@ export default function HomePage() {
             <Link className="btn btn-primary" href="/garage/">
               Open the app →
             </Link>
-            <DemoEntryButton className="btn" label="Try the demo" />
             <Link className="btn" href="/demo/">
               Run the demo
             </Link>
           </div>
           <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
-            Trying the demo needs no account: the app opens with sample
-            data and recorded answers. Nothing in it is live, and it
-            never touches your own robots or parts.
+            The demo needs no account and runs in your browser. When it
+            finishes you can explore the whole app with its sample data,
+            which never touches your own robots or parts.
           </p>
           <figure className="hero-art">
             {/* eslint-disable-next-line @next/next/no-img-element */}

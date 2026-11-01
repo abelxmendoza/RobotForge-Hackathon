@@ -25,7 +25,11 @@ section{scroll-margin-top:80px}
 .site-nav a:hover{color:var(--text);text-decoration:none;background:var(--surface)}
 .site-header .btn-primary{padding:10px 16px}
 .site-header .btn-app{padding:10px 16px}
-@media (max-width:900px){.site-header .btn-app{display:none}}
+/* Header items never wrap onto two lines; the nav collapses into the
+ * menu before it would (Abel, 2026-11-01: "fix the nav menu"). */
+.site-header .site-nav a,.site-header .btn,.site-header .site-nav-aside > *{white-space:nowrap}
+.site-header .site-nav-aside{align-items:center}
+@media (max-width:860px){.site-header .btn-app{display:none}}
 
 /* ---------- hero ---------- */
 .hero{padding:var(--s9) 0 var(--s8);text-align:center}

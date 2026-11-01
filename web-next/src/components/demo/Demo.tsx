@@ -36,6 +36,7 @@ import { diffSpecs, fmtValue, GARAGE_KEY, type GarageRobot, type Spec } from '@/
 import { readStore, uid, writeStore } from '@/lib/store';
 import { gateReports } from '@/lib/data';
 import Term from '@/components/shell/Term';
+import DemoEntryButton from '@/components/shell/DemoEntryButton';
 
 const FixReplay3D = dynamic(() => import('./FixReplay3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D replay…</p> });
 
@@ -124,6 +125,7 @@ export default function Demo() {
   };
 
   const after = loop ? forgeValidateSpec(loop.finalSpec).lines : [];
+  const n = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
   const errorsBefore = before.filter((l) => l.startsWith('[ERROR]')).length;
   const warnsBefore = before.filter((l) => l.startsWith('[WARN]')).length;
   const errorsAfter = after.filter((l) => l.startsWith('[ERROR]')).length;
@@ -220,8 +222,8 @@ export default function Demo() {
         <div className={'demo-verdict ' + (loop.resolved ? 'pass' : 'fail')} role="status">
           <strong>
             {loop.resolved
-              ? `Fixed: ${errorsBefore} errors → ${errorsAfter} errors`
-              : `Not fully fixed: ${errorsBefore} errors → ${errorsAfter} errors`}
+              ? `Fixed: ${n(errorsBefore, 'error')} → ${n(errorsAfter, 'error')}`
+              : `Not fully fixed: ${n(errorsBefore, 'error')} → ${n(errorsAfter, 'error')}`}
           </strong>
           <span>
             {diff.length} change{diff.length === 1 ? '' : 's'} applied · rover field checks{' '}
@@ -265,7 +267,7 @@ export default function Demo() {
         {panel(
           1,
           <><Term k="checks">Engineering checks</Term> catch it</>,
-          before.length ? `${errorsBefore} errors, ${warnsBefore} warnings` : '',
+          before.length ? `${n(errorsBefore, 'error')}, ${n(warnsBefore, 'warning')}` : '',
           <>
             <p>{errorsBefore} error{errorsBefore === 1 ? '' : 's'} and {warnsBefore} warning{warnsBefore === 1 ? '' : 's'}, found by deterministic checks in your browser. No AI involved yet.</p>
             <Findings lines={before} />
@@ -285,7 +287,7 @@ export default function Demo() {
         {panel(
           3,
           'The checks decide',
-          loop ? `${diff.length} changes · ${errorsAfter} errors left · rover ${passCount(roverBefore)}/${roverBefore?.length ?? 0} → ${passCount(roverAfter)}/${roverAfter?.length ?? 0}` : '',
+          loop ? `${n(diff.length, 'change')} · ${n(errorsAfter, 'error')} left · rover ${passCount(roverBefore)}/${roverBefore?.length ?? 0} → ${passCount(roverAfter)}/${roverAfter?.length ?? 0}` : '',
           <>
             <h3 className="demo-sub">What changed</h3>
             <ul className="g-changes">
@@ -322,6 +324,7 @@ export default function Demo() {
         <div className="demo-end">
           <button type="button" className="btn btn-primary" onClick={saveToGarage}>Save both versions to My robots</button>
           <Link className="btn" href="/garage/">Open My robots</Link>
+          <DemoEntryButton className="btn" label="Explore the app with sample data" />
           {saved && <span className="faint" role="status">{saved}</span>}
         </div>
       )}
