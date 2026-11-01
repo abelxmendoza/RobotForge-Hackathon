@@ -15,12 +15,7 @@ export default function WorkshopPage() {
       <div className="page-head">
         <div>
           <h1>Workshop</h1>
-          <p className="lede">
-            Your robots, with Wrench at the bottom of the page. Bring in the robot you have,
-            even a broken one, try upgrades before you buy parts, or ask Wrench
-            to check, change or design one. Every change is checked and saved
-            as a version.
-          </p>
+          <p className="lede">Your robots. Change one, check it, save it.</p>
         </div>
       </div>
       <Workshop />

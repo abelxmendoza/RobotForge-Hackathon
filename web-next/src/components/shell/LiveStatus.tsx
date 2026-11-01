@@ -81,11 +81,21 @@ export function ModeBanner({
   mode,
   reason,
   children,
+  compact = false,
 }: {
   mode: LiveMode;
   reason?: string;
   children?: ReactNode;
+  /* One small pill with the headline; the reason moves to its tooltip. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <span className={'mode-chip m-' + mode} role="status" title={[HEADLINE[mode], reason ? 'Why: ' + reason + '.' : ''].filter(Boolean).join(' ')}>
+        <span className="mode-pill">{PILL[mode]}</span> {HEADLINE[mode]}
+      </span>
+    );
+  }
   return (
     <div className={'mode-banner m-' + mode} role="status">
       <span className="mode-pill">{PILL[mode]}</span>
