@@ -10,6 +10,8 @@ import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import RobodexPicker from './RobodexPicker';
 import RobotAvatar from './RobotAvatar';
+import WiringView from '@/components/wiring/WiringView';
+import { isWiring } from '@/lib/wiring';
 import { robots as dexRobots } from '@/lib/data';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -362,6 +364,7 @@ export default function Garage() {
   const [saveError, setSaveError] = useState('');
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<WorkTab>('overview');
+  const [benchWires, setBenchWires] = useState(false);
   /* #assembly (Wrench's assembly proposals link there) opens Build. */
   useEffect(() => {
     const check = (hash: string) => { if (hash === '#assembly') setTab('build'); };
@@ -566,7 +569,7 @@ export default function Garage() {
                 <RobotAvatar names={[robot.name, String(draft.name ?? '')]} size={48} />
                 <h2>{draft.name || robot.name}</h2>
                 <span className="ws-vchip">v{robot.versions.length}</span>
-                <span className={'verdict ' + verdict.cls}>{verdict.label}</span>
+                <span key={verdict.cls} className={'verdict ws-verdict ' + verdict.cls}>{verdict.label}</span>
                 <ModeBanner compact mode={lm.mode} reason={lm.reason} />
               </div>
               <div className="g-head-actions">
@@ -661,8 +664,24 @@ export default function Garage() {
               </section>
             )}
 
-            {(tab === 'build' || tab === 'wiring') && (
-              <AssemblyWorkspace key={robot.id} robotId={robot.id} view={tab === 'build' ? 'components' : 'wiring'} onView={(v) => setTab(v === 'components' ? 'build' : 'wiring')} />
+            {tab === 'build' && (
+              <AssemblyWorkspace key={robot.id} robotId={robot.id} view="components" onView={(v) => setTab(v === 'components' ? 'build' : 'wiring')} />
+            )}
+
+            {tab === 'wiring' && (
+              <section className="ws-pane" aria-label="Wiring">
+                {isWiring(draft.wiring) ? <WiringView wiring={draft.wiring} /> : (
+                  <div className="ws-empty">
+                    <svg viewBox="0 0 120 60" width="140" aria-hidden="true"><rect x="6" y="20" width="30" height="20" rx="4" fill="var(--surface-3)" /><rect x="84" y="8" width="30" height="18" rx="4" fill="var(--surface-3)" /><rect x="84" y="34" width="30" height="18" rx="4" fill="var(--surface-3)" /><path d="M36 30 C60 30 60 17 84 17" stroke="var(--marginal)" strokeWidth="2" fill="none" /><path d="M36 30 C60 30 60 43 84 43" stroke="var(--link)" strokeWidth="2" strokeDasharray="5 4" fill="none" /></svg>
+                    <p><strong>No wiring recorded for this robot yet.</strong> Robodex robots such as Pathfinder and TurtleBot3 come with their harness. You can plan connections on the bench below.</p>
+                  </div>
+                )}
+                {!benchWires ? (
+                  <button type="button" className="btn btn-sm" onClick={() => setBenchWires(true)}>Plan new connections on the 3D bench</button>
+                ) : (
+                  <AssemblyWorkspace key={robot.id} robotId={robot.id} view="wiring" onView={(v) => setTab(v === 'components' ? 'build' : 'wiring')} />
+                )}
+              </section>
             )}
 
             {tab === 'specs' && (

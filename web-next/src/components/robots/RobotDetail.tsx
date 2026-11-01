@@ -14,6 +14,7 @@ import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
 import PartsKitSection from "./PartsKitSection";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
+import SpecWiring from "@/components/wiring/SpecWiring";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
 import RobotPhoto from "./RobotPhoto";
 
@@ -525,6 +526,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           </div>
         </section>
       ) : null}
+
+      {specFile ? <SpecWiring specFile={specFile} /> : null}
 
       <PartsKitSection slug={slug} />
 

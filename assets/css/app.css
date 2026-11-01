@@ -1017,3 +1017,52 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 @media (max-width:760px){.g-robot{grid-template-columns:auto 1fr}}
 .ws-tile{min-width:0;overflow:hidden}
 .ws-tile strong{font-size:clamp(.95rem,1.35vw,1.2rem)}
+
+/* Workshop PR 3: motion and the wiring harness. Motion is short, eases out,
+   and switches off under prefers-reduced-motion. */
+.ws-tile,.ws-card{animation:ws-rise .38s var(--ease) both}
+.ws-tile:nth-child(2){animation-delay:.04s}.ws-tile:nth-child(3){animation-delay:.08s}.ws-tile:nth-child(4){animation-delay:.12s}.ws-tile:nth-child(5){animation-delay:.16s}
+.ws-card:nth-child(1){animation-delay:.12s}.ws-card:nth-child(2){animation-delay:.18s}.ws-card:nth-child(3){animation-delay:.24s}
+.ws-verdict{animation:ws-pop-in .4s cubic-bezier(.2,1.5,.4,1)}
+.ws-tile-icon,.ws-card-icon{transition:transform .2s var(--ease)}
+.ws-tile:hover .ws-tile-icon,.ws-card:hover .ws-card-icon{transform:scale(1.08) rotate(-4deg)}
+.est-dot{animation:est-pulse 2.4s ease-in-out infinite}
+.ws-tabs button::after{content:"";position:absolute;left:16px;right:16px;bottom:-1px;height:2px;background:var(--accent);transform:scaleX(0);transition:transform .22s var(--ease)}
+.ws-tabs button[aria-selected="true"]{border-bottom-color:transparent}
+.ws-tabs button[aria-selected="true"]::after{transform:scaleX(1)}
+@keyframes ws-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ws-pop-in{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes est-pulse{50%{box-shadow:0 0 0 6px transparent}}
+
+/* Wiring harness (React port): amber power, blue data, red only for a
+   recorded over-voltage. Powered cables glow in supply order. */
+.wv-line{transition:stroke .25s ease,filter .25s ease}
+.wv-line.on.power{stroke:var(--marginal);filter:drop-shadow(0 0 3px rgba(242,188,102,.55))}
+.wv-line.on.data{stroke:var(--link);filter:drop-shadow(0 0 3px rgba(131,184,255,.45))}
+.wv-node rect{transition:stroke .25s ease,fill .25s ease}
+.wv-node.on rect{stroke:var(--marginal);fill:#22303f}
+.wv-node.sel rect{stroke:var(--accent)}
+.wv-cable,.wv-node{transition:opacity .2s ease}
+.wv-power{display:inline-flex;align-items:center;gap:6px}
+.wv-power.on{border-color:var(--marginal);color:var(--marginal);box-shadow:0 0 0 3px var(--marginal-soft)}
+.wv-key{display:inline-block;width:18px;height:0;border-top:2px solid var(--marginal);vertical-align:middle;margin:0 4px 0 8px}
+.wv-key.data{border-top:2px dashed var(--link)}
+.wv-detail{animation:ws-fade .2s ease-out}
+.wv-detail dl{display:grid;grid-template-columns:1fr;gap:2px;margin-top:10px;font-size:var(--fs-sm)}
+.wv-detail dd{margin:0 0 8px}
+.wv-detail dt{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.05em}
+.wv-counts{grid-template-columns:auto 1fr!important;gap:4px 12px!important}
+.wv-notebox{margin-bottom:10px}
+.wv-detail dt{color:var(--text-faint)}
+.wv-detail .qty{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint)}
+.wv-callout{font-size:var(--fs-sm);margin:10px 0}
+.wv-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.wv-table tbody tr[aria-selected="true"]{background:var(--accent-soft)}
+.wv-total{margin-top:8px}
+.ws-empty{display:flex;align-items:center;gap:var(--s4);padding:var(--s4);border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface);flex-wrap:wrap}
+.ws-empty p{flex:1 1 260px;margin:0;color:var(--text-muted)}
+.ws-empty strong{color:var(--text)}
+@media (prefers-reduced-motion:reduce){
+  .ws-tile,.ws-card,.ws-verdict,.est-dot,.wv-detail{animation:none}
+  .ws-tabs button::after,.wv-line,.wv-node rect,.wv-cable,.wv-node,.ws-tile-icon,.ws-card-icon{transition:none}
+}
