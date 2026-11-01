@@ -12,17 +12,17 @@ runs in node against the real catalogue data):
    sourcing URL builders, BOM assembly + export, the zod gate on
    the /list shape, the AI-SDK structured step against a fake
    endpoint, and the deterministic local matcher.
-3. Node integration: the REAL engine (URDFLoader + Rapier) on the
-   REAL model files — Burger, Go2, Pathfinder — asserting the
-   masses the catalogue independently records and that the settle
-   test lands the body at its stance height. Needs network for the
-   two upstream URDFs; skips when it cannot have it.
+3. Node integration: the REAL engine (URDFLoader + Rapier) on pinned
+   fixture copies of the official Burger and Go2 models plus the generated
+   Pathfinder — asserting the masses the catalogue independently records
+   and that the settle test lands the body at its stance height. The
+   upstream commit URLs remain recorded in catalog/physics.json; CI stays
+   deterministic and offline.
 """
 import json
 import shutil
 import subprocess
 import tempfile
-import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -207,6 +207,8 @@ const realFetch = globalThis.fetch;
 globalThis.fetch = async (url, opts) => {
   const u = String(url);
   if (u.startsWith('/')) return new Response(fs.readFileSync(repo + '/web-next/public' + u), { status: 200 });
+  if (u.endsWith('/turtlebot3_burger.urdf')) return new Response(fs.readFileSync(repo + '/tests/fixtures/urdf/turtlebot3-burger.urdf'), { status: 200 });
+  if (u.endsWith('/go2_description.urdf')) return new Response(fs.readFileSync(repo + '/tests/fixtures/urdf/unitree-go2.urdf'), { status: 200 });
   return realFetch(url, opts);
 };
 const phys = JSON.parse(fs.readFileSync(repo + '/catalog/physics.json', 'utf8'));
@@ -239,14 +241,11 @@ def test_engine_end_to_end_in_node(tmp_path):
     node = shutil.which("node")
     if not node:
         pytest.skip("Node unavailable")
-    phys = json.loads((REPO / "catalog/physics.json").read_text())["robots"]
-    doms = {}
-    for file, slug in (("burger", "turtlebot3-burger"), ("go2", "unitree-go2")):
-        try:
-            with urllib.request.urlopen(phys[slug]["urdf_url"], timeout=30) as r:
-                doms[file] = _dom_json(r.read().decode("utf-8"))
-        except Exception:
-            pytest.skip(f"cannot fetch the {slug} URDF in this environment")
+    fixture_dir = REPO / "tests/fixtures/urdf"
+    doms = {
+        "burger": _dom_json((fixture_dir / "turtlebot3-burger.urdf").read_text()),
+        "go2": _dom_json((fixture_dir / "unitree-go2.urdf").read_text()),
+    }
     doms["pathfinder"] = _dom_json(
         (WEB / "public/urdf/pathfinder.urdf").read_text())
 
