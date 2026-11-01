@@ -102,6 +102,18 @@ def test_workshop_bom_tab_reaches_photos_by_catalogue_id_only():
     assert "illustrations of a typical part" in tab  # copy stays honest
 
 
+def test_workshop_bom_photos_coexist_with_price_badges():
+    # The re-gate price wiring (build-plan store badges + totals)
+    # landed in the same rows: a row can now carry BOTH the verified
+    # photo (by catalogue id) and a price badge (by the same id's
+    # wizard key) — neither route may fall back to a name match.
+    tab = (WEB / "src/components/garage/BomTab.tsx").read_text()
+    assert "verifiedPhoto" in tab and "PartPhoto" in tab
+    assert "resolvedPrice" in tab and "priceTotals" in tab
+    assert "`part:${partId}`" in tab
+    assert "web-gathered estimate" in tab
+
+
 def test_superseded_tab_implementation_did_not_land():
     # Abel's decision: #87's tabs stay; #82's tab components stay out.
     garage = (WEB / "src/components/garage/Garage.tsx").read_text()

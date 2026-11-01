@@ -252,6 +252,87 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/* ---------------- typo tolerance (matching only) ----------------
+ * Phone typing produces "batery", "pathfidner", "hw many parts".
+ * Exact-token matching used to drop those questions on the
+ * fallback even though every word was one keystroke off a word
+ * the engine keys on. Before matching, each question token that
+ * is NOT already a vocabulary word is corrected to the unique
+ * closest vocabulary word — same first letter, edit distance 1
+ * (2 for long words), no ties. The vocabulary is the engine's own
+ * world: robot and part names, kind labels, topic keywords, and
+ * the aspect words below. Correction only ever changes which
+ * recorded answer a question reaches; answer text is assembled
+ * from the records exactly as before, and a token with no unique
+ * close match passes through untouched and falls back honestly. */
+
+const ASPECT_VOCAB = [
+  "gate", "verdict", "passed", "failed", "measured", "score",
+  "spec", "specs", "size", "dimension", "dimensions", "mass",
+  "weight", "heavy", "wheel", "wheels", "battery", "batteries",
+  "motor", "motors", "sensor", "sensors", "license", "licence",
+  "provenance", "stable", "stability", "balance", "compare",
+  "versus", "heavier", "lighter", "bigger", "smaller", "larger",
+  "faster", "slower", "speed", "payload", "carry", "carries",
+  "cost", "price", "expensive", "range", "runtime", "life",
+  "torque", "build", "building", "plan", "planning", "assemble",
+  "rover", "robot", "robots", "parts", "part", "catalogue",
+  "catalog", "robodex", "threshold", "thresholds", "many",
+  "starter", "kind", "kinds", "template", "templates", "reports",
+  "report", "evidence", "demo", "sample", "recorded", "broken",
+  "camera", "lidar", "chassis", "computer", "height", "tall",
+  "footprint", "about", "tell", "show", "list", "find", "need",
+  "want", "have", "else", "missing", "what", "how", "which",
+  "who", "why", "when", "where",
+];
+
+const QUESTION_WORDS = ["how", "what", "who", "why", "when", "where", "which"];
+
+function levenshtein(a: string, b: string): number {
+  let prev: number[] = [];
+  for (let j = 0; j <= b.length; j++) prev.push(j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur: number[] = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur.push(
+        Math.min(
+          prev[j] + 1,
+          cur[j - 1] + 1,
+          prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)
+        )
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function correctTokens(qt: string[], vocab: Set<string>): string[] {
+  return qt.map((tok) => {
+    if (vocab.has(tok) || tok.length < 2 || /\d/.test(tok)) return tok;
+    const maxD = tok.length >= 7 ? 2 : 1;
+    let best: string | null = null;
+    let bestD = maxD + 1;
+    let ties = 0;
+    vocab.forEach((w) => {
+      if (w.charAt(0) !== tok.charAt(0)) return;
+      if (Math.abs(w.length - tok.length) > maxD) return;
+      /* Two-letter tokens only ever correct to a question word
+       * ("hw" -> "how"); short function words are left alone. */
+      if (tok.length === 2 && QUESTION_WORDS.indexOf(w) === -1) return;
+      const d = levenshtein(tok, w);
+      if (d < bestD) {
+        bestD = d;
+        best = w;
+        ties = 1;
+      } else if (d === bestD) {
+        ties++;
+      }
+    });
+    return best !== null && ties === 1 && bestD <= maxD ? best : tok;
+  });
+}
+
 function fmt(v: unknown): string | null {
   return v == null ? null : String(parseFloat(Number(v).toFixed(3)));
 }
@@ -500,7 +581,47 @@ function robotAnswer(robot: RobotData, qt: string[], root: string): string {
   return out + "</p>";
 }
 
-function compareAnswer(hits: RobotHitScore[], root: string): string {
+/* ---------------- comparisons ----------------
+ * Two robots in one question get more than two verdicts: the
+ * recorded specs side by side, and — when the question names an
+ * aspect (heavier, bigger, battery…) — a verdict computed from
+ * the recorded figures only. An aspect no robot records is named
+ * as unrecorded; the comparison never fills the gap with a
+ * plausible-sounding number. */
+
+interface CompareAspect {
+  words: string[];
+  keyRe: RegExp;
+  label: string;
+}
+
+const COMPARE_ASPECTS: CompareAspect[] = [
+  { words: ["heavier", "lighter", "heavy", "weight", "mass"], keyRe: /mass|weight/i, label: "mass" },
+  { words: ["bigger", "smaller", "larger", "size", "footprint", "dimension", "dimensions", "taller", "height"], keyRe: /footprint|dimension|size|height/i, label: "size" },
+  { words: ["battery", "batteries"], keyRe: /battery/i, label: "battery" },
+  { words: ["payload", "carry", "carries", "carrying", "load"], keyRe: /payload/i, label: "payload" },
+  { words: ["speed", "faster", "slower", "fast"], keyRe: /speed/i, label: "speed" },
+  { words: ["sensor", "sensors", "camera", "lidar"], keyRe: /sensor/i, label: "sensors" },
+];
+
+function specEntries(robot: RobotData): { key: string; value: string }[] {
+  const ks = robot.key_specs || {};
+  return Object.keys(ks).map((k) => ({ key: k, value: String(ks[k]) }));
+}
+
+function truncVal(v: string): string {
+  if (v.length <= 110) return v;
+  const cut = v.slice(0, 110);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > 40 ? cut.slice(0, sp) : cut) + "…";
+}
+
+function firstNums(v: string, n: number): number[] {
+  const m = String(v).match(/\d+(?:\.\d+)?/g) || [];
+  return m.slice(0, n).map(Number);
+}
+
+function compareAnswer(hits: RobotHitScore[], qt: string[], root: string): string {
   let out = "<p>Here is what the recorded data says about each:</p>";
   hits.forEach((h) => {
     const r = h.robot;
@@ -520,6 +641,108 @@ function compareAnswer(hits: RobotHitScore[], root: string): string {
       esc(robotPage(root, r)) +
       '">Its page &rarr;</a></p>';
   });
+
+  const robots = hits.map((h) => h.robot);
+  const aspect = COMPARE_ASPECTS.find((a) =>
+    a.words.some((w) => qt.indexOf(w) !== -1)
+  );
+
+  /* Rows for one spec key across all compared robots. */
+  const rowFor = (key: string): string => {
+    const cells = robots.map((r) => {
+      const e = specEntries(r).find((x) => x.key === key);
+      return (
+        "<strong>" + esc(r.name) + ":</strong> " +
+        (e ? esc(truncVal(e.value)) : "not recorded")
+      );
+    });
+    return (
+      "<li><strong>" + esc(key.replace(/_/g, " ")) + "</strong> — " +
+      cells.join(" · ") + "</li>"
+    );
+  };
+  const keysMatching = (re: RegExp): string[] => {
+    const seen: string[] = [];
+    robots.forEach((r) =>
+      specEntries(r).forEach((e) => {
+        if (re.test(e.key) && seen.indexOf(e.key) === -1) seen.push(e.key);
+      })
+    );
+    return seen;
+  };
+
+  if (aspect) {
+    const keys = keysMatching(aspect.keyRe);
+    if (!keys.length) {
+      out +=
+        "<p>Neither robot has a recorded " +
+        esc(aspect.label) +
+        " — I won&rsquo;t guess at one.</p>";
+      if (aspect.label === "payload") {
+        const masses = robots
+          .map((r) => {
+            const e = specEntries(r).find((x) => /mass|weight/i.test(x.key));
+            const n = e ? firstNums(e.value, 1)[0] : null;
+            return n != null ? esc(r.name) + " " + n + " kg" : null;
+          })
+          .filter(Boolean);
+        if (masses.length)
+          out +=
+            "<p>Their own masses are recorded — " +
+            masses.join(", ") +
+            " — but that is the robots&rsquo; own weight, not a payload rating.</p>";
+      }
+      return out;
+    }
+    out +=
+      "<p><strong>Recorded " + esc(aspect.label) + ", side by side:</strong></p><ul>" +
+      keys.slice(0, 2).map(rowFor).join("") +
+      "</ul>";
+    /* A verdict only where the recorded figures are comparable. */
+    if (robots.length === 2 && (aspect.label === "mass" || aspect.label === "size")) {
+      const key = keys[0];
+      const vals = robots.map((r) => {
+        const e = specEntries(r).find((x) => x.key === key);
+        if (!e) return null;
+        const nums = firstNums(e.value, 2);
+        if (!nums.length) return null;
+        return aspect.label === "size" && nums.length >= 2
+          ? nums[0] * nums[1]
+          : nums[0];
+      });
+      if (vals[0] != null && vals[1] != null && vals[0] !== vals[1]) {
+        const win = vals[0] > vals[1] ? 0 : 1;
+        const word =
+          aspect.label === "mass"
+            ? qt.indexOf("lighter") !== -1 ? "Lighter" : "Heavier"
+            : qt.indexOf("smaller") !== -1 ? "Smaller" : "Bigger";
+        out +=
+          "<p>" + word + " on the recorded figures: <strong>" +
+          esc(robots[win].name) + "</strong>.</p>";
+      }
+    }
+    return out;
+  }
+
+  /* No named aspect: the shared recorded specs, most telling first. */
+  const priority = [/mass|weight/i, /battery/i, /footprint|dimension|size/i, /sensor/i, /motor/i];
+  const shared: string[] = [];
+  priority.forEach((re) => {
+    keysMatching(re).forEach((k) => {
+      if (
+        shared.length < 3 &&
+        shared.indexOf(k) === -1 &&
+        robots.every((r) => specEntries(r).some((e) => e.key === k))
+      )
+        shared.push(k);
+    });
+  });
+  if (shared.length) {
+    out +=
+      "<p><strong>Recorded specs, side by side:</strong></p><ul>" +
+      shared.map(rowFor).join("") +
+      "</ul>";
+  }
   return out;
 }
 
@@ -547,6 +770,97 @@ function brandAnswer(group: RobotData[], root: string): string {
     "</ul><p>Ask about one by its full name or number.</p>";
   return out;
 }
+
+/* ---------------- unrecorded-attribute honesty ----------------
+ * A question can name a robot correctly and still ask for a fact
+ * the record does not hold ("Andino's top speed", "the Go2's
+ * payload"). Answering with the robot's overview would read as if
+ * the question had been answered. When one of these attribute
+ * asks is detected and the attribute appears nowhere in the
+ * robot's recorded key specs, the answer names the gap and lists
+ * what IS recorded — it never estimates. */
+
+interface AttributeAsk {
+  phrases: string[];
+  words: string[];
+  label: string;
+  /* Record-side evidence: token or phrase that must appear in the
+   * robot's recorded key specs for the attribute to count as
+   * recorded. Token equality, so "ranger" is not "range". */
+  evidence: string[];
+}
+
+const ATTRIBUTE_ASKS: AttributeAsk[] = [
+  {
+    phrases: ["top speed", "how fast"],
+    words: ["speed"],
+    label: "top speed",
+    evidence: ["speed"],
+  },
+  {
+    phrases: [
+      "battery life", "run time", "flight time",
+      "how long does it run", "how long does the battery last",
+    ],
+    words: ["runtime"],
+    label: "battery life / runtime",
+    evidence: ["runtime", "battery life", "flight time", "endurance"],
+  },
+  {
+    phrases: ["load capacity"],
+    words: ["payload", "carry", "carries", "carrying"],
+    label: "payload",
+    evidence: ["payload"],
+  },
+  { phrases: [], words: ["torque"], label: "torque", evidence: ["torque"] },
+  { phrases: [], words: ["range"], label: "range", evidence: ["range"] },
+];
+
+function attributeGap(robot: RobotData, qt: string[]): string | null {
+  const ask = ATTRIBUTE_ASKS.find(
+    (a) =>
+      a.phrases.some((p) => phraseIn(qt, p)) ||
+      a.words.some((w) => qt.indexOf(w) !== -1)
+  );
+  if (!ask) return null;
+  const ks = robot.key_specs || {};
+  const specText = Object.keys(ks)
+    .map((k) => k.replace(/_/g, " ") + " " + String(ks[k]))
+    .join(" ");
+  const specToks = tokens(specText);
+  const recorded = ask.evidence.some(
+    (e) => specToks.indexOf(e) !== -1 || phraseIn(specToks, e)
+  );
+  return recorded ? null : ask.label;
+}
+
+function attributeGapAnswer(
+  robot: RobotData,
+  label: string,
+  root: string
+): AnswerResult {
+  const keys = Object.keys(robot.key_specs || {});
+  const keyList = keys.length
+    ? keys.map((k) => esc(k.replace(/_/g, " "))).join(", ")
+    : "no key specs";
+  return {
+    html:
+      "<p><strong>" +
+      esc(dexId(robot)) +
+      " " +
+      esc(robot.name) +
+      "</strong> — its " +
+      esc(label) +
+      " is not recorded. The record for it covers: " +
+      keyList +
+      '. Ask me about one of those, or <a href="' +
+      esc(robotPage(root, robot)) +
+      '">open its page &rarr;</a></p>',
+    hits: [robotHit(robot, root)],
+  };
+}
+
+const PRICE_WORDS = ["cost", "price", "prices", "pricing", "expensive"];
 
 /* ---------------- part matching + answers ---------------- */
 
@@ -660,6 +974,7 @@ const FILTER_STOP: Record<string, number> = {
   give: 1, get: 1, parts: 1, part: 1, robots: 1, robot: 1, used: 1,
   use: 1, using: 1, there: 1, any: 1, and: 1, or: 1, to: 1, from: 1,
   work: 1, works: 1, i: 1, want: 1, need: 1, have: 1, has: 1, can: 1,
+  you: 1, your: 1, yours: 1, many: 1, much: 1, catalogue: 1, catalog: 1,
   could: 1, please: 1, all: 1, one: 1, ones: 1,
 };
 
@@ -1203,6 +1518,25 @@ function planningAnswer(ctx: Ctx, q: string, qt: string[]): AnswerResult | null 
       return rf;
     }
   }
+  /* "I want a rover for my backyard" names no kind and uses no
+   * build verb, but it is unmistakably the start of a build —
+   * offer the kinds instead of falling through to the fallback. */
+  const wantPhrase =
+    phraseIn(qt, "i want") ||
+    phraseIn(qt, "i need") ||
+    phraseIn(qt, "looking for");
+  if (
+    wantPhrase &&
+    !kind &&
+    (qt.indexOf("rover") !== -1 || qt.indexOf("robot") !== -1)
+  ) {
+    return kindPickerAnswer(
+      ctx,
+      "Every custom build starts " +
+        "from a starter kind — a body plan with real defaults " +
+        "and an honest gate badge. Pick one:"
+    );
+  }
   if (hasBuild || needPhrase) {
     return kindPickerAnswer(
       ctx,
@@ -1464,6 +1798,8 @@ const GREETING_HEADS = [
   "howdy",
   "morning",
   "yo",
+  "gm",
+  "sup",
 ];
 
 /* Words that, right after "i'm", mean it is not a name. */
@@ -1763,10 +2099,25 @@ export function createEngine(data: EngineData): Engine {
   const topics = (data.intents && data.intents.topics) || [];
   const suggestions = (data.intents && data.intents.suggestions) || [];
 
+  /* The typo-correction vocabulary: the engine's own world. */
+  const vocab = new Set<string>(ASPECT_VOCAB);
+  ctx.data.robots.forEach((r) => tokens(r.name).forEach((t) => vocab.add(t)));
+  ctx.data.parts.forEach((p) => {
+    tokens(p.name).forEach((t) => vocab.add(t));
+    tokens(String(p.id).replace(/_/g, " ")).forEach((t) => vocab.add(t));
+  });
+  ctx.data.kinds.forEach((k) => {
+    tokens(k.label).forEach((t) => vocab.add(t));
+    tokens(k.id.replace(/-/g, " ")).forEach((t) => vocab.add(t));
+  });
+  topics.forEach((t) =>
+    (t.keywords || []).forEach((kw) => tokens(kw).forEach((x) => vocab.add(x)))
+  );
+
   function answer(question: string): AnswerResult {
     const q = String(question || "");
-    const qt = tokens(q);
-    if (!qt.length) {
+    const rawQt = tokens(q);
+    if (!rawQt.length) {
       return { html: "<p>Ask me about a robot, a part, or the gate.</p>", chips: suggestions };
     }
 
@@ -1774,17 +2125,45 @@ export function createEngine(data: EngineData): Engine {
     const conv = conversationalAnswer(q, "chat", suggestions);
     if (conv) return conv;
 
+    /* Matching runs on typo-corrected tokens; the records that
+     * answer is built from are unchanged. */
+    const qt = correctTokens(rawQt, vocab);
+
     /* 1. robots: strong entity match wins */
     const rHits = findRobots(qt, ctx.data.robots).filter((h) => h.score >= 6);
     if (rHits.length === 1) {
+      const robot = rHits[0].robot;
+      /* A price ask about a named robot belongs to the pricing
+       * honesty, not the robot overview: no prices are recorded. */
+      if (PRICE_WORDS.some((w) => qt.indexOf(w) !== -1)) {
+        const topic = topics.find(
+          (t) => (t.keywords || []).indexOf("price") !== -1
+        );
+        if (topic && topic.answer) {
+          return {
+            html:
+              "<p><strong>" +
+              esc(dexId(robot)) +
+              " " +
+              esc(robot.name) +
+              "</strong> — no price is recorded for it.</p>" +
+              textAnswer(topic.answer, topic.link, ctx.root),
+            hits: [robotHit(robot, ctx.root)],
+          };
+        }
+      }
+      /* An attribute the record does not hold gets named as a
+       * gap, not papered over with the overview. */
+      const gap = attributeGap(robot, qt);
+      if (gap) return attributeGapAnswer(robot, gap, ctx.root);
       return {
-        html: robotAnswer(rHits[0].robot, qt, ctx.root),
-        hits: [robotHit(rHits[0].robot, ctx.root)],
+        html: robotAnswer(robot, qt, ctx.root),
+        hits: [robotHit(robot, ctx.root)],
       };
     }
     if (rHits.length > 1) {
       return {
-        html: compareAnswer(rHits, ctx.root),
+        html: compareAnswer(rHits, qt, ctx.root),
         hits: rHits.map((h) => robotHit(h.robot, ctx.root)),
       };
     }

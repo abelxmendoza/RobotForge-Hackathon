@@ -5,8 +5,21 @@
  * block, then checked against the person's own parts list (My parts).
  * Each line says whether a matching part is already on the shelf,
  * only in the sim, or still to get, and carries vendor SEARCH links.
- * Like the BOM wizard, it never shows a price, a stock level or an
- * availability claim. */
+ * It never shows a stock level or an availability claim.
+ *
+ * Prices (re-gated 2026-11-01): the tab reads the SAME build-plan
+ * price store the BOM wizard writes (lib/buildPlan.ts, key
+ * rf.buildplan.v1, through the store layer — so demo mode reads its
+ * ".demo" twin and nothing here ever touches the network). A line
+ * shows a price only when a record backs it, resolved by
+ * resolvedPrice() under the exact key the wizard stores: a line
+ * reaches a catalogue price record ONLY through its matched shelf
+ * part's recorded catalogue id (`part:<id>`, the wizard's own key
+ * for a catalogue line) — never through a name match, the same
+ * doctrine the verified photos follow. A line with no record stays
+ * visibly unpriced and is counted as unpriced in the totals, never
+ * zero-filled; the totals line reports the unverified web-gathered
+ * share separately, in the budget check's own words. */
 import { useMemo } from 'react';
 import Link from 'next/link';
 import SourcingLinks from '@/components/robots/SourcingLinks';
@@ -18,6 +31,11 @@ import { partArt } from '@/lib/partArt';
 import { parts as catalogParts } from '@/lib/data';
 import { verifiedPhoto } from '@/lib/partPhoto';
 import PartPhoto from '@/components/parts/PartPhoto';
+import { useStore } from '@/lib/store';
+import {
+  DEFAULT_PROFILE, PROFILE_KEY, priceTotals, resolvedPrice,
+  type ConstraintsProfile, type PlanItem, type ResolvedPrice,
+} from '@/lib/buildPlan';
 
 const catalogById = new Map(catalogParts.map((p) => [p.id, p]));
 
@@ -25,7 +43,18 @@ const catalogById = new Map(catalogParts.map((p) => [p.id, p]));
  * same family whose fit can't be confirmed from its name or specs.
  * need: nothing usable, or too few units (got < qty). */
 type Have = { state: 'have' | 'sim' | 'check' | 'need'; part?: InventoryPart; got: number };
-interface Row { line: BomLine; category: string; have: Have }
+interface Row {
+  line: BomLine; category: string; have: Have;
+  /* The build-plan view of this line: its key is the wizard's own
+   * price key where the line has a recorded catalogue identity
+   * (the matched shelf part's catalog_part_id), else the line's own
+   * key — exact-key lookups only, either way. price is null when no
+   * record backs a figure: the line is unpriced, never $0. */
+  priceItem: PlanItem;
+  price: ResolvedPrice | null;
+}
+
+const money = (n: number) => `$${n.toFixed(2)}`;
 
 const fmt = (v: unknown, scale = 1, digits = 0) => (typeof v === 'number' && Number.isFinite(v) ? (v * scale).toFixed(digits).replace(/\.0+$/, '') : null);
 
@@ -107,11 +136,30 @@ function linesFromSpec(spec: Spec): { line: BomLine; category: string }[] {
 export default function BomTab({ spec, robotId, robotName, inventory }: {
   spec: Spec; robotId: string; robotName: string; inventory: InventoryPart[];
 }) {
+  /* The wizard's build-plan profile, through the store layer: in
+   * demo mode this reads the profile's ".demo" twin, and no read
+   * here ever leaves the browser. */
+  const [profile] = useStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE);
   const rows: Row[] = useMemo(() => {
     const pool = inventory.filter((p) => partSection(p) === 'parts' && p.quantity > 0 && (!p.robot_id || p.robot_id === robotId));
     const left = new Map(pool.map((p) => [p.id, p.quantity]));
     // prefer a part assigned to this robot, then a real one, then sim-only
     const rank = (a: InventoryPart, b: InventoryPart) => Number(b.robot_id === robotId) - Number(a.robot_id === robotId) || Number(partReality(a) === 'sim_only') - Number(partReality(b) === 'sim_only');
+    /* Attach the recorded price, if any. The price key is the
+     * wizard's `part:<catalogue id>` when the matched shelf part
+     * records that id — the only honest route from a spec-derived
+     * line to a catalogue record — and the line's own key otherwise.
+     * Both are exact lookups in the same store; nothing is matched
+     * by name, and no record means the line stays unpriced. */
+    const withPrice = (line: BomLine, category: string, have: Have): Row => {
+      const partId = have.part?.catalog_part_id || undefined;
+      const priceItem: PlanItem = {
+        key: partId ? `part:${partId}` : line.key,
+        name: line.name, qty: line.qty, role: 'buy', partId,
+        sourceLabel: line.sourceLabel,
+      };
+      return { line, category, have, priceItem, price: resolvedPrice(priceItem, profile) };
+    };
     return linesFromSpec(spec).map(({ line, category }) => {
       const family = pool.filter((p) => p.category === category).sort(rank);
       const fitting = family.filter((p) => fits(line, category, p) === true && (left.get(p.id) ?? 0) > 0);
@@ -127,12 +175,28 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
         }
         const part = fitting[0];
         const have: Have = got < line.qty ? { state: 'need', part, got } : { state: anySim ? 'sim' : 'have', part, got };
-        return { line, category, have };
+        return withPrice(line, category, have);
       }
       const maybe = family.find((p) => fits(line, category, p) === null);
-      return { line, category, have: maybe ? { state: 'check', part: maybe, got: 0 } : { state: 'need', got: 0 } };
+      return withPrice(line, category, maybe ? { state: 'check', part: maybe, got: 0 } : { state: 'need', got: 0 });
     });
-  }, [spec, inventory, robotId]);
+  }, [spec, inventory, robotId, profile]);
+
+  /* The totals line: the same priceTotals() the wizard's budget
+   * check reads, so both surfaces report the same figures — the
+   * recorded total, its buckets, and the unverified web-gathered
+   * share stated separately. Unpriced lines are counted out loud
+   * and contribute nothing. */
+  const totals = useMemo(
+    () => priceTotals(rows.map((r) => r.priceItem), profile),
+    [rows, profile],
+  );
+  const buckets = [
+    totals.userSum ? `${money(totals.userSum)} your prices` : null,
+    totals.sourcedSum ? `${money(totals.sourcedSum)} sourced estimates` : null,
+    totals.apiSum ? `${money(totals.apiSum)} API prices` : null,
+    totals.gatheredSum ? `${money(totals.gatheredSum)} web-gathered estimates` : null,
+  ].filter(Boolean).join(' + ');
 
   const counts = { have: rows.filter((r) => r.have.state === 'have').length, sim: rows.filter((r) => r.have.state === 'sim').length, check: rows.filter((r) => r.have.state === 'check').length, need: rows.filter((r) => r.have.state === 'need').length };
   const label = (h: Have, qty: number) =>
@@ -142,7 +206,10 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
           : h.got > 0 ? `Have ${h.got} of ${qty} (${h.part?.name}); get ${qty - h.got} more` : 'To get';
 
   const exportCsv = () => {
-    const lines = rows.map((r) => ({ ...r.line, note: [r.line.note, label(r.have, r.line.qty)].filter(Boolean).join(' · ') }));
+    const lines = rows.map((r) => ({ ...r.line, note: [r.line.note, label(r.have, r.line.qty),
+      /* A price rides into the export only with its record's label
+       * behind it — the same rule the build plan's export follows. */
+      r.price ? `${money(r.price.amount * r.line.qty)} (${r.price.label})` : 'unpriced — no price recorded'].filter(Boolean).join(' · ') }));
     const blob = new Blob([bomToCsv(lines)], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -155,7 +222,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
     <section className="ws-pane ws-bom" aria-label="Bill of materials">
       <div className="ws-history-head">
         <h3>Bill of materials</h3>
-        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches; this site never shows prices.</p>
+        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it in the BOM wizard&apos;s build plan — your own price, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>
       </div>
       {rows.length === 0 ? (
         <p className="faint">The spec has no battery, motors, wheels or wiring yet, so there is nothing to list. Add them in Specs.</p>
@@ -186,6 +253,27 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
                 <div className="bom-main">
                   <strong>{r.line.name}</strong>
                   <span className="faint g-small">{r.category.replace('_', ' ')}{r.line.note ? ` · ${r.line.note}` : ''}</span>
+                  {/* The build-plan price badge, in the wizard's own
+                   * language: a web-gathered figure is badged as an
+                   * unverified estimate with its receipt; a sourced
+                   * or API figure carries its ESTIMATE/API label; a
+                   * user price is named as theirs; no record at all
+                   * reads "Unpriced" — never a bare $0. */}
+                  {r.price ? (
+                    r.price.kind === 'web_gathered' ? (
+                      <span>
+                        <span style={{
+                          border: '1px solid #b06000', color: '#b06000', borderRadius: 999,
+                          padding: '0 8px', fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap',
+                        }}>web-gathered estimate</span>{' '}
+                        <span className="faint g-small">{money(r.price.amount)} each{r.line.qty > 1 ? ` · ${money(r.price.amount * r.line.qty)} for ${r.line.qty}` : ''} · {r.price.label}</span>
+                      </span>
+                    ) : (
+                      <span className="faint g-small">{money(r.price.amount)} each{r.line.qty > 1 ? ` · ${money(r.price.amount * r.line.qty)} for ${r.line.qty}` : ''} · {r.price.label}</span>
+                    )
+                  ) : (
+                    <span className="faint g-small">Unpriced — no price recorded in your build plan</span>
+                  )}
                   {(r.have.state === 'need' || r.have.state === 'check') && <SourcingLinks query={r.line.searchQuery} />}
                 </div>
                 <span className={'bom-have ' + r.have.state} title={r.have.part ? r.have.part.name : undefined}>
@@ -195,6 +283,18 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
               );
             })}
           </ul>
+          {totals.known > 0 ? (
+            <p className="g-small">
+              Recorded prices total <strong>{money(totals.known)}</strong> ({buckets}).
+              {totals.gatheredUnverified > 0 && <> Of the total, {money(totals.gatheredUnverified)} rests on unverified web-gathered data — the softest figure here; cross-checked or API data would outrank it.</>}
+              {totals.unpricedCount > 0 && <> {totals.unpricedCount} line(s) are still unpriced — their cost is not in the total.</>}
+              {' '}Shipping, tax and stock are unknown — not included in any total.
+            </p>
+          ) : (
+            <p className="g-small faint">
+              No prices are recorded for these lines in your build plan, so no total is shown — record a price or a sourced estimate in the BOM wizard and it will appear here with its source. Shipping, tax and stock are unknown — not included in any total.
+            </p>
+          )}
           <p className="ws-hist-actions">
             <button type="button" className="btn btn-sm" onClick={exportCsv}>Export CSV</button>
             <Link className="btn btn-sm btn-ghost" href={'/inventory/?robot=' + encodeURIComponent(robotId)}>Open My parts</Link>

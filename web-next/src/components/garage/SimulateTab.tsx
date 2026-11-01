@@ -10,12 +10,23 @@
  *   - battery: a gauge drains over the estimated runtime against the
  *     target.
  * These are estimates from the spec, not a Gazebo run, and the copy
- * says so. Robots that match a Robodex entry also get links to that
- * entry's recorded driving test and in-browser physics checks. */
+ * says so. Robots that match a Robodex entry also get a link to that
+ * entry's in-browser physics checks and — re-gated 2026-11-01 — the
+ * entry's Gazebo launch-bundle section itself (the robot pages'
+ * GazeboSection, built on lib/gazebo.ts exactly as they use it):
+ * the bundle download for the matched entry's recorded model, or
+ * that model's recorded unavailable reason (Mini Pupper: no model
+ * recorded; OP3: MJCF). A build with no Robodex match gets no
+ * bundle: there is no recorded model for it, and a bundle is only
+ * ever built from a recorded model — never invented from the spec,
+ * and never borrowed from a lookalike name. The match below is the
+ * tab's existing narrow one: the spec's name, verbatim or slugified,
+ * against catalogue slug/name only. */
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { maxSlopeDeg, TERRAINS, type RoverCheck } from '@/lib/rover';
 import { robots, physicsOf } from '@/lib/data';
+import GazeboSection from '@/components/robots/GazeboSection';
 import type { Spec } from '@/lib/garage';
 import { runRoverSim, simUnavailable, type RoverSim, type SimRun } from '@/lib/roverSim';
 
@@ -344,30 +355,30 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
           <details className="g-small faint"><summary>How these are worked out</summary><ul>{checks.flatMap((c) => c.assumptions).filter((a, i, all) => all.indexOf(a) === i).map((a) => <li key={a}>{a}</li>)}</ul></details>
         </>
       )}
-      <div className="ws-cards sim-more">
-        {match ? (
-          <>
-            <Link className="ws-card" href={`/robots/${match.slug}/`}>
-              <span className="ws-card-label">Driving test (Gazebo)</span>
-              <strong>{match.name}&apos;s recorded run</strong>
-              <span className="ws-card-go">Open its robot page →</span>
-            </Link>
-            {match.physics && (
-              <Link className="ws-card" href={`/robots/${match.slug}/#physics`}>
-                <span className="ws-card-label">In-browser physics</span>
-                <strong>Drop test and balance on its real model</strong>
-                <span className="ws-card-go">Run the physics checks →</span>
-              </Link>
-            )}
-          </>
-        ) : (
+      {match && match.physics ? (
+        <div className="ws-cards sim-more">
+          <Link className="ws-card" href={`/robots/${match.slug}/#physics`}>
+            <span className="ws-card-label">In-browser physics</span>
+            <strong>Drop test and balance on its real model</strong>
+            <span className="ws-card-go">Run the physics checks →</span>
+          </Link>
+        </div>
+      ) : !match ? (
+        <div className="ws-cards sim-more">
           <div className="ws-card">
-            <span className="ws-card-label">Driving test (Gazebo)</span>
-            <strong>Runs on your own computer</strong>
-            <span className="faint g-small">Export this spec, then run <code>robotforge run-gate spec.json</code> with Gazebo installed. The browser can&apos;t run Gazebo.</span>
+            <span className="ws-card-label">Gazebo launch bundle</span>
+            <strong>No bundle for this build</strong>
+            <span className="faint g-small">This robot doesn&apos;t match a Robodex entry, so no model is recorded for it — a launch bundle is only ever built from a recorded model, never invented from the spec. To drive-test it on your own computer, export this spec, then run <code>robotforge run-gate spec.json</code> with Gazebo installed. The browser can&apos;t run Gazebo.</span>
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
+      {/* The Gazebo bundle offer itself: the robot pages' own
+       * section, for the matched entry only. It offers the
+       * lib/gazebo.ts bundle download when the entry's recorded
+       * model is Gazebo-usable, and shows the recorded reason
+       * instead of a button when it is not. Built locally at click
+       * time, no Worker calls — the same terms as the robot pages. */}
+      {match && <GazeboSection slug={match.slug} robotName={match.name} />}
     </section>
   );
 }
