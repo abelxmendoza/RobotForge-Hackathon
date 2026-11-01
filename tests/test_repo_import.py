@@ -96,7 +96,7 @@ import {
   pickFiles, detectLicense, imageGate, parseBomCsv, parseBomMarkdown,
   parseUrdf, matchCatalogPart, validateHardwareItems, buildSpecimen,
   withCatalogMatches, physicsEntryFor, parseRepoInput, readmeImages,
-  buildImportedSdfBundle, gatherRequestFor,
+  buildImportedSdfBundle, gatherRequestFor, filterVendored,
 } from "./repoImport.ts";
 import { repoImportFixture } from "./repoImportFixture.ts";
 import { buildGazeboLaunch } from "./gazebo.ts";
@@ -138,6 +138,8 @@ try {
     out.readmeImgs = readmeImages(
       repoImportFixture.texts.readme,
       repoImportFixture.ref, repoImportFixture.headSha, "README.md").length;
+  } else if (scenario === "vendored") {
+    out.kept = filterVendored(job.tree);
   } else if (scenario === "readme_parts") {
     const parts = parseBomMarkdown(job.md, "README.md (part list)");
     const spec = withCatalogMatches({ parts: parts.map((p) => ({ ...p, catalogId: null })) }, job.catalog);
@@ -630,3 +632,24 @@ def test_notes_never_rename_a_named_part(tmp_path):
     by = {p["name"]: p["catalogId"] for p in out["parts"]}
     assert by["OV5647"] is None  # NOT the Pi it plugs into
     assert by["Ultrasonic"] == "ultrasonic_hcsr04"
+
+
+def test_third_party_source_trees_are_vendored(tmp_path):
+    # Omega-Code carries a full libcamera checkout under its backend; it
+    # pushed the robot's files past the 3,000-path cap. A ROS package with
+    # its own LICENSE + CMakeLists.txt is far smaller and must stay.
+    lib = "servers/backend/libcamera"
+    tree = (
+        ["README.md", "LICENSE", "meson.build",  # root never dropped
+         f"{lib}/COPYING.rst", f"{lib}/meson.build"]
+        + [f"{lib}/src/f{i}.cpp" for i in range(400)]
+        + ["ros/src/omega_robot/LICENSE", "ros/src/omega_robot/CMakeLists.txt",
+           "ros/src/omega_robot/package.xml", "ros/src/omega_robot/node.py",
+           "venv/lib/x.py"]
+    )
+    out = run_node(tmp_path, "vendored", {"tree": tree})
+    kept = out["kept"]
+    assert not any(p.startswith(lib) for p in kept)
+    assert "ros/src/omega_robot/node.py" in kept
+    assert {"README.md", "LICENSE", "meson.build"} <= set(kept)
+    assert "venv/lib/x.py" not in kept

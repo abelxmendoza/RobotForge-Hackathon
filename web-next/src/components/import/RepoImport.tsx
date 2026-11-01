@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  blobUrl, buildImportedSdfBundle, buildSpecimen, commitUrl, isVendoredPath,
+  blobUrl, buildImportedSdfBundle, buildSpecimen, commitUrl, filterVendored,
   MAX_TREE_ENTRIES,
   gatherRequestFor, imageGate, parseRepoInput, physicsEntryFor,
   pickFiles, rawUrl, slugifyRepo, validateHardwareItems,
@@ -83,14 +83,15 @@ async function fetchSnapshot(ref: RepoRef): Promise<Snapshot> {
   const treeDoc = await ghJson(
     `https://api.github.com/repos/${ref.owner}/${ref.repo}/git/trees/${sha}?recursive=1`,
   );
-  const allPaths: string[] = (treeDoc.tree || [])
+  const rawPaths: string[] = (treeDoc.tree || [])
     .filter((t: any) => t.type === "blob")
-    .map((t: any) => String(t.path))
-    // Committed venvs / node_modules can be most of a tree; drop them
-    // before the cap so the robot's own files make it in.
-    .filter((p: string) => !isVendoredPath(p));
-  const truncated = Boolean(treeDoc.truncated) || allPaths.length > MAX_TREE_ENTRIES;
-  const treePaths = allPaths.slice(0, MAX_TREE_ENTRIES);
+    .map((t: any) => String(t.path));
+  // Committed venvs, node_modules and copied-in third-party source trees
+  // can be most of a tree; drop them before the cap so the robot's own
+  // files make it in.
+  const ownPaths = filterVendored(rawPaths);
+  const truncated = Boolean(treeDoc.truncated) || ownPaths.length > MAX_TREE_ENTRIES;
+  const treePaths = ownPaths.slice(0, MAX_TREE_ENTRIES);
   const picked = pickFiles(treePaths, ref.repo);
 
   const [readme, licenseText, bomText] = await Promise.all([

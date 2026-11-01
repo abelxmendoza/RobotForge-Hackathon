@@ -225,6 +225,40 @@ export function isVendoredPath(path: string): boolean {
   return path.split("/").some((seg) => VENDORED_SEG.test(seg) || seg.endsWith(".dist-info"));
 }
 
+const LICENSE_FILE = /^(licen[cs]e|copying)([._-].*)?$/i;
+const BUILD_ROOT_FILE = /^(meson\.build|CMakeLists\.txt|configure(\.ac)?|Makefile\.am|setup\.py|pyproject\.toml|package\.json|Cargo\.toml|BUILD(\.bazel)?|WORKSPACE)$/;
+/** A nested source tree this big, with its own license and build root,
+ *  is a third-party project copied into the repo, not the robot. */
+export const THIRD_PARTY_MIN_FILES = 300;
+
+/** Drop vendored files: dependency trees (isVendoredPath) and nested
+ *  third-party source trees. Omega-Code carries a full libcamera checkout
+ *  (2,606 files, own COPYING.rst + meson.build) under its backend; a ROS
+ *  package with a LICENSE and CMakeLists.txt stays, being far smaller. */
+export function filterVendored(paths: string[]): string[] {
+  const own = paths.filter((p) => !isVendoredPath(p));
+  const hasLicense = new Set<string>();
+  const hasBuild = new Set<string>();
+  for (const p of own) {
+    const i = p.lastIndexOf("/");
+    if (i < 0) continue; // the repo root is never third-party
+    const dir = p.slice(0, i);
+    const b = p.slice(i + 1);
+    if (LICENSE_FILE.test(b)) hasLicense.add(dir);
+    if (BUILD_ROOT_FILE.test(b)) hasBuild.add(dir);
+  }
+  const candidates = [...hasLicense].filter((d) => hasBuild.has(d))
+    .sort((a, b) => a.length - b.length);
+  const roots: string[] = [];
+  for (const dir of candidates) {
+    if (roots.some((r) => dir.startsWith(r + "/"))) continue;
+    const n = own.reduce((k, p) => k + (p.startsWith(dir + "/") ? 1 : 0), 0);
+    if (n >= THIRD_PARTY_MIN_FILES) roots.push(dir);
+  }
+  if (!roots.length) return own;
+  return own.filter((p) => !roots.some((r) => p.startsWith(r + "/")));
+}
+
 function isImagePath(path: string): boolean {
   const lower = path.toLowerCase();
   return IMAGE_EXTS.some((e) => lower.endsWith(e));
@@ -248,7 +282,7 @@ function modelScore(path: string, repoHint?: string): number {
 /** Pick the candidate files the import reads, from tree paths.
  *  Pure: the same picker runs on the live tree and on fixtures. */
 export function pickFiles(paths: string[], repoHint?: string): PickedFiles {
-  const files = paths.filter((p) => !p.endsWith("/") && !isVendoredPath(p));
+  const files = filterVendored(paths.filter((p) => !p.endsWith("/")));
   const byDepth = (a: string, b: string) =>
     a.split("/").length - b.split("/").length || (a < b ? -1 : 1);
 
