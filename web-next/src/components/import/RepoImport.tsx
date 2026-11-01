@@ -515,7 +515,7 @@ function SpecimenDetail({
               </>
             )}
             {physicsState.kind === "idle" && !specimen.physics && (
-              <button type="button" className="primary" onClick={runPhysics}>
+              <button type="button" className="btn btn-primary" onClick={runPhysics}>
                 Run physics checks
               </button>
             )}
@@ -587,7 +587,7 @@ function SpecimenDetail({
                 <code>{bundleState.command}</code>{" "}
                 <button
                   type="button"
-                  className="primary"
+                  className="btn btn-primary"
                   onClick={() =>
                     downloadBytes(
                       `${bundleState.root}.zip`,
@@ -779,7 +779,7 @@ export default function RepoImport() {
             autoComplete="off"
           />
         </label>
-        <button type="submit" className="primary" disabled={Boolean(busy)}>
+        <button type="submit" className="btn btn-primary" disabled={Boolean(busy)}>
           {busy || "Import the repo"}
         </button>
         {demo && (
@@ -800,7 +800,7 @@ export default function RepoImport() {
         <>
           {!savedId && (
             <p>
-              <button type="button" className="primary" onClick={saveToGarage}>
+              <button type="button" className="btn btn-primary" onClick={saveToGarage}>
                 Save to my Garage
               </button>{" "}
               <span className="faint">

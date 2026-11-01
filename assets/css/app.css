@@ -1553,3 +1553,37 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .demo-bar-welcome .demo-steps{margin:8px 0 12px;padding-left:20px;display:grid;gap:4px;list-style:decimal;max-width:72ch}
 .demo-bar-welcome .demo-steps li{padding:0;margin:0;border:0;background:none;box-shadow:none;color:var(--text-muted);display:list-item}
 .demo-steps a{font-weight:600}
+
+/* ---- repo import (/import/) ---- */
+.repo-import{max-width:1040px}
+.repo-import > form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3);margin:var(--s4) 0 var(--s3)}
+.repo-import > form label{display:flex;flex-direction:column;gap:6px;flex:1 1 380px;font-size:var(--fs-sm);color:var(--text-muted)}
+.repo-import > form input[type=text]{width:100%;min-height:44px;padding:10px 12px;font:inherit;font-size:var(--fs-sm);
+  color:var(--text);background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-sm)}
+.repo-import > form input[type=text]:focus{outline:none;border-color:var(--accent)}
+.repo-import > form .btn{min-height:44px}
+.repo-import > p{max-width:72ch}
+.repo-import-detail{margin-top:var(--s5)}
+.repo-import-detail section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--s5);margin-top:var(--s4)}
+.repo-import-detail h3{margin:0 0 var(--s3)}
+.repo-import-detail section h3 + h3,.repo-import-detail section p + h3,.repo-import-detail section ul + h3{margin-top:var(--s5)}
+.repo-import-detail ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+.repo-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--s3);margin:var(--s3) 0}
+.repo-gallery figure{margin:0;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.repo-gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.repo-gallery figcaption{padding:8px 10px;font-size:var(--fs-xs)}
+.repo-parts{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.repo-parts th,.repo-parts td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.repo-parts th{font-size:var(--fs-xs);color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.repo-parts td:last-child{text-align:right;white-space:nowrap}
+.repo-parts td .faint{font-size:var(--fs-xs)}
+@media (max-width:640px){
+  .repo-import-detail section{padding:var(--s4)}
+  .repo-parts thead{display:none}
+  .repo-parts tr{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .repo-parts td{border:0;padding:0}
+  .repo-parts td:first-child{grid-column:1/-1}
+  .repo-parts td:nth-child(2){display:none}
+  .repo-parts td:last-child{text-align:right}
+}
