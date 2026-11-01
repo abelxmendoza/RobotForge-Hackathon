@@ -24,7 +24,7 @@ import {
   fmtSpecs,
   partScad,
 } from './burger';
-import type { GeneratedKey, SpecimenDoc, SpecimenPart } from './burger';
+import type { GeneratedKey, SimReadyManifest, SpecimenDoc, SpecimenPart } from './burger';
 
 /* Code-split (mobile UX Phase 2, 2026-10-31): the Three.js scene is
  * its own chunk, downloaded only when the scene actually mounts —
@@ -109,6 +109,9 @@ export default function KitViewer() {
   const [detail, setDetail] = useState<Detail>({ kind: 'default' });
   const [specimenDoc, setSpecimenDoc] = useState<SpecimenDoc | null>(null);
   const [selectedSpecimen, setSelectedSpecimen] = useState<string | null>(null);
+  const [propsOn, setPropsOn] = useState(false);
+  const [propsDoc, setPropsDoc] = useState<SimReadyManifest | null>(null);
+  const [propsError, setPropsError] = useState(false);
   const [fallback, setFallback] = useState(false);
   const readyRef = useRef(false);
 
@@ -191,6 +194,7 @@ export default function KitViewer() {
             spin={spin}
             cad={cad}
             real={real}
+            propsOn={propsOn}
             selectedSpecimen={selectedSpecimen}
             onReady={() => {
               readyRef.current = true;
@@ -212,6 +216,11 @@ export default function KitViewer() {
               setDetail({ kind: 'specimenList' });
             }}
             onSpecimenError={() => setDetail({ kind: 'specimenError' })}
+            onPropsLoaded={(doc) => {
+              setPropsDoc(doc);
+              setPropsError(false);
+            }}
+            onPropsError={() => setPropsError(true)}
             onExplodeCur={setExplodeCur}
           />
           )}
@@ -255,6 +264,13 @@ export default function KitViewer() {
             ⬢ Real model — ROBOTIS
           </button>
           <button
+            id="propsBtn"
+            className={propsOn ? 'on' : undefined}
+            onClick={() => setPropsOn(!propsOn)}
+          >
+            ▦ Bench props — NVIDIA SimReady
+          </button>
+          <button
             id="dlBtn"
             className="primary"
             disabled={real}
@@ -278,6 +294,48 @@ export default function KitViewer() {
                 {specimenDoc.honesty.join(' ')}
               </>
             ) : null}
+          </div>
+        )}
+        {propsOn && (
+          <div className="box" style={{ marginTop: 14 }}>
+            {propsError ? (
+              <>
+                <b>Bench props unavailable.</b> The SimReady prop manifest
+                or models could not be loaded. The kit itself is unaffected.
+              </>
+            ) : propsDoc ? (
+              <>
+                <b>Bench props — external assets.</b> Models by NVIDIA, from
+                the{' '}
+                <a href={propsDoc.dataset_url} target="_blank" rel="noreferrer">
+                  {propsDoc.dataset}
+                </a>{' '}
+                dataset on Hugging Face, licensed{' '}
+                <b>{propsDoc.license}</b>. Converted to glTF by RobotForge
+                (decimation + texture resize —{' '}
+                {(propsDoc.props.reduce((s, p) => s + p.optimized_bytes, 0) / 1e6).toFixed(1)}{' '}
+                MB total on the web).{' '}
+                {propsDoc.honesty.join(' ')}
+                <table style={{ marginTop: 10 }}>
+                  <tbody>
+                    {propsDoc.props.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.name}</td>
+                        <td>
+                          {p.attribution}{' '}
+                          <span className="dim">
+                            ({p.size_m.map((v) => v.toFixed(2)).join(' × ')} m
+                            native · {(p.optimized_bytes / 1000).toFixed(0)} KB)
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            ) : (
+              <span className="dim">Loading bench props…</span>
+            )}
           </div>
         )}
         {(fallback || !sceneOn) && (

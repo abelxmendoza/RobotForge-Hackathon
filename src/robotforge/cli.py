@@ -280,14 +280,23 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("spec")
     u.add_argument("--out", required=True)
 
-    cd = sub.add_parser("cad", help="generate a take-apart OpenSCAD parts "
-                                    "kit from a valid spec")
+    cd = sub.add_parser("cad", help="generate a take-apart parts kit "
+                                    "from a valid spec (OpenSCAD by "
+                                    "default; build123d optional)")
     cd.add_argument("spec")
+    cd.add_argument("--engine", choices=["openscad", "build123d"],
+                    default="openscad",
+                    help="kit back end (default: openscad — the .scad "
+                         "kit, byte-identical for the same spec; "
+                         "build123d emits per-part STEP + GLB solids "
+                         "checked against the spec dimensions and "
+                         "requires the optional build123d install)")
     cd.add_argument("--out-dir", default=None,
                     help="kit folder (default: build/cad/<robot-name>)")
     cd.add_argument("--stl", action="store_true",
                     help="also render per-part + assembly STLs if an "
-                         "openscad binary is on PATH (skipped otherwise)")
+                         "openscad binary is on PATH (skipped otherwise; "
+                         "OpenSCAD engine only)")
 
     st = sub.add_parser("site", help="regenerate the web app pages (app/), "
                                      "legacy redirects and the landing "
@@ -639,6 +648,38 @@ def main(argv: list[str] | None = None) -> int:
                 return rc
             out_dir = Path(args.out_dir) if args.out_dir else \
                 Path("build/cad") / kit_slug(spec.name)
+            if args.engine == "build123d":
+                if args.stl:
+                    print("--stl renders through OpenSCAD and only "
+                          "applies to the openscad engine",
+                          file=sys.stderr)
+                    return 2
+                from .cad_build123d import (Build123dUnavailableError,
+                                            CadDimensionError,
+                                            write_kit_build123d)
+                try:
+                    exports = write_kit_build123d(spec, out_dir)
+                except (Build123dUnavailableError, CadDimensionError) as exc:
+                    print(f"build123d CAD failed: {exc}", file=sys.stderr)
+                    return 2
+                except OSError as exc:
+                    print(f"build123d CAD failed: cannot write to "
+                          f"{out_dir}: {exc.strerror or exc}",
+                          file=sys.stderr)
+                    return 2
+                if is_estimated(spec):
+                    print("*** ESTIMATED kit — drafted from a photo; every "
+                          "dimension is an estimate, not a measurement ***")
+                print(f"build123d CAD kit for {spec.name} written to "
+                      f"{out_dir}:")
+                for exp in exports:
+                    bbox = " x ".join(f"{v:g}" for v in exp.measured_bbox_mm)
+                    print(f"  {exp.step_file} + {exp.glb_file} — "
+                          f"{exp.info.name} x{exp.info.qty} "
+                          f"(measured bbox {bbox} mm, spec-checked)")
+                print("  build123d_manifest.json — spec dimensions vs "
+                      "measured bounding boxes and volumes")
+                return 0
             infos = write_kit(spec, out_dir)
             if is_estimated(spec):
                 print("*** ESTIMATED kit — drafted from a photo; every "

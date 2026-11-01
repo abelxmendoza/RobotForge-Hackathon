@@ -217,3 +217,38 @@ export const TIER_LABEL: Record<SpecimenPart['tier'], string> = {
   COLLISION_BOX: 'Collision box — no visual mesh published',
   FRAME_ONLY: 'Frame only — no geometry published',
 };
+
+/* ---------------- SimReady bench props (external assets) ------------- */
+/* Bench dressing from NVIDIA's SimReady dataset (CC BY 4.0), converted
+ * to web-sized glTF by RobotForge. The manifest of record lives in the
+ * repo at catalog/props/simready/props.json (source packages, license,
+ * per-prop attribution, sizes, hashes, conversion notes); the copy the
+ * scene fetches is materialized next to the models at build time by
+ * web-next/scripts/make-simready-props.mjs. Props are environment
+ * dressing only — never kit parts, never gate-checked. */
+
+export interface SimReadyProp {
+  id: string;
+  name: string;
+  file: string;
+  source_package: string;
+  source_url: string;
+  root_usd: string;
+  attribution: string;
+  size_m: [number, number, number];
+  triangles: number;
+  optimized_bytes: number;
+  sha256: string;
+  position_xy_m: [number, number];
+  rotation_y_rad: number;
+}
+
+export interface SimReadyManifest {
+  dataset: string;
+  dataset_url: string;
+  license: string;
+  license_note: string;
+  retrieved: string;
+  honesty: string[];
+  props: SimReadyProp[];
+}
