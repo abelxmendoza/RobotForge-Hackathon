@@ -45,13 +45,14 @@ function counts(lines: string[]) {
   };
 }
 
-type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'checks';
+type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'checks' | 'history';
 const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
   { id: 'specs', label: 'Specs', icon: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5' },
   { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
+  { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
 ];
 
 const ICON = {
@@ -62,6 +63,7 @@ const ICON = {
   drive: 'M4 12h14M13 6l6 6-6 6',
   checks: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
   field: 'M3 20l6-10 4 6 3-4 5 8z',
+  history: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2',
   bench: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
   photo: 'M4 7h3l2-2h6l2 2h3v12H4zM12 10a3 3 0 1 0 0 6 3 3 0 1 0 0-6',
   file: 'M6 3h8l4 4v14H6zM14 3v4h4',
@@ -78,6 +80,18 @@ function verdictOf(lines: string[]): { cls: string; label: string } {
   if (c.errors) return { cls: 'fail', label: `${c.errors} problem${c.errors === 1 ? '' : 's'}` };
   if (c.warns) return { cls: 'marginal', label: `${c.warns} warning${c.warns === 1 ? '' : 's'}` };
   return { cls: 'pass', label: 'Checks pass' };
+}
+
+/* A spec change in builder words: "Wheels · Diameter: 66 → 80 mm"
+ * instead of a dotted path, using the editor's own field labels and
+ * display units. Paths outside the editor keep their raw name. */
+const FIELD_BY_PATH = new Map(FIELD_GROUPS.flatMap((g) => g.fields.map((f) => [f.path, { group: g.title, field: f }] as const)));
+function changeText(path: string, before: unknown, after: unknown): { label: string; before: string; after: string; unit: string } {
+  const hit = FIELD_BY_PATH.get(path);
+  if (!hit) return { label: path, before: fmtValue(before), after: fmtValue(after), unit: '' };
+  const { group, field } = hit;
+  const show = (v: unknown) => (typeof v === 'number' && field.scale ? fmtValue(+(v * field.scale).toFixed(3)) : fmtValue(v));
+  return { label: `${group} · ${field.label}`, before: show(before), after: show(after), unit: field.unit ?? '' };
 }
 
 function num(v: unknown, scale = 1, digits = 0): string {
@@ -373,7 +387,7 @@ export default function Garage() {
   useEffect(() => {
     const check = (hash: string) => {
       if (hash === '#assembly') setTab('build');
-      const t = hash.match(/^#tab=(overview|build|wiring|specs|checks)$/);
+      const t = hash.match(/^#tab=(overview|build|wiring|specs|checks|history)$/);
       if (t) setTab(t[1] as WorkTab);
     };
     check(window.location.hash);
@@ -671,6 +685,12 @@ export default function Garage() {
                       <span className="ws-card-go">See checks →</span>
                     </button>
                   )}
+                  <button type="button" className="ws-card" onClick={() => setTab('history')}>
+                    <span className="ws-card-icon"><Icon d={ICON.history} size={22} /></span>
+                    <span className="ws-card-label">Version history</span>
+                    <strong>{robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}</strong>
+                    <span className="ws-card-go">Open History →</span>
+                  </button>
                   <button type="button" className="ws-card" onClick={() => setTab('build')}>
                     <span className="ws-card-icon"><Icon d={ICON.bench} size={22} /></span>
                     <span className="ws-card-label">Bench</span>
@@ -683,22 +703,7 @@ export default function Garage() {
                     <i className="est-dot" aria-hidden="true" /> {estimated.size} number{estimated.size === 1 ? ' is' : 's are'} guessed from the photo. <span>Measure in Specs →</span>
                   </button>
                 )}
-                <section className="g-versions" aria-label="Versions">
-                  <h3>Versions</h3>
-                  <ol>
-                    {robot.versions.map((v, i) => (
-                      <li key={v.id}>
-                        <button type="button" className="g-version" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title="Compare the draft with this version">
-                          <span className="g-vnum">v{i + 1}</span>
-                          <span><strong>{v.label}</strong><span className="g-small faint">{SOURCE_LABEL[v.source]} · {new Date(v.createdAt).toLocaleDateString()}</span></span>{v.planned && <span className="fbadge planned">PLANNED</span>}
-                        </button>
-                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => togglePlanned(v.id)} title={v.planned ? 'Mark this version as built (it records the robot as it is)' : 'Mark this version as planned (not built yet — a plan, not the as-built record)'}>{v.planned ? 'Mark built' : 'Mark planned'}</button>
-                        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDraft(JSON.parse(JSON.stringify(v.spec)))}>Load</button>
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-                <p><Link className="btn btn-sm" href={'/inventory/?robot=' + encodeURIComponent(robot.id)}>Photos & parts for {robot.name}</Link> <button type="button" className="btn btn-sm btn-ghost" onClick={() => downloadJSON('garage.json', robot)}>Export history</button></p>
+                <p><Link className="btn btn-sm" href={'/inventory/?robot=' + encodeURIComponent(robot.id)}>Photos & parts for {robot.name}</Link> </p>
               </section>
             )}
 
@@ -755,6 +760,56 @@ export default function Garage() {
                 </div>
               )}
             </section>
+            )}
+
+            {tab === 'history' && (
+              <section className="ws-pane ws-history" aria-label="Version history">
+                <div className="ws-history-head">
+                  <h3>Version history</h3>
+                  <p className="faint">Every saved change is a new version, so nothing is overwritten. Newest first.</p>
+                </div>
+                <ol className="ws-hist">
+                  {robot.versions.map((v, i) => ({ v, i })).reverse().map(({ v, i }) => {
+                    const prev = i > 0 ? robot.versions[i - 1] : null;
+                    const rows = prev ? diffSpecs(prev.spec, v.spec) : [];
+                    const shown = rows.slice(0, 8);
+                    const isLatest = i === robot.versions.length - 1;
+                    return (
+                      <li key={v.id} className={'ws-hist-item' + (v.id === base?.id ? ' sel' : '') + (v.planned ? ' planned' : '')}>
+                        <span className="ws-hist-dot" aria-hidden="true" />
+                        <div className="ws-hist-card">
+                          <div className="ws-hist-top">
+                            <span className="ws-hist-num">v{i + 1}</span>
+                            <strong>{v.label}</strong>
+                            {isLatest && <span className="fbadge">CURRENT</span>}
+                            {v.planned && <span className="fbadge planned">PLANNED</span>}
+                            <span className="faint ws-hist-when">{SOURCE_LABEL[v.source]} · {new Date(v.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                          </div>
+                          {v.note && <p className="ws-hist-note">{v.note}</p>}
+                          {!prev ? (
+                            <p className="faint ws-hist-none">Starting point for this robot.</p>
+                          ) : rows.length === 0 ? (
+                            <p className="faint ws-hist-none">Same spec as v{i}.</p>
+                          ) : (
+                            <ul className="ws-hist-changes" aria-label={`Changes from v${i}`}>
+                              {shown.map((d) => { const c = changeText(d.path, d.before, d.after); return (
+                                <li key={d.path}><span className="ws-hist-field">{c.label}</span> <span className="faint">{c.before}</span> → <strong>{c.after}</strong>{c.unit && <span className="faint"> {c.unit}</span>}</li>
+                              ); })}
+                              {rows.length > shown.length && <li className="faint">+{rows.length - shown.length} more change{rows.length - shown.length === 1 ? '' : 's'}</li>}
+                            </ul>
+                          )}
+                          <div className="ws-hist-actions">
+                            <button type="button" className="btn btn-sm" onClick={() => { setBaseId(v.id); setTab('checks'); }} title="Compare this version with the current draft in Checks">Compare with draft</button>
+                            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDraft(JSON.parse(JSON.stringify(v.spec)))} title="Load this version into the editor; saving it makes a new version">Load into editor</button>
+                            <button type="button" className="btn btn-sm btn-ghost" onClick={() => togglePlanned(v.id)} title={v.planned ? 'Mark this version as built (it records the robot as it is)' : 'Mark this version as planned (not built yet)'}>{v.planned ? 'Mark built' : 'Mark planned'}</button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <p><button type="button" className="btn btn-sm btn-ghost" onClick={() => downloadJSON('garage.json', robot)}>Export history</button></p>
+              </section>
             )}
 
             {tab === 'checks' && (
