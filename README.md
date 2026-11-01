@@ -1,6 +1,6 @@
 # RobotForge
 
-**Fix your robot before you spend a dollar.** Describe a robot, photograph it, or
+**Build, fix, modify and upgrade your robot before you spend a dollar.** Describe a robot, photograph it, or
 paste its parts list. **Muse Spark** turns it into an engineering spec, RobotForge
 checks it the way an engineer would, and its digital twin drives in Gazebo against
 ground truth. If the design doesn't add up, you find out before you buy parts.

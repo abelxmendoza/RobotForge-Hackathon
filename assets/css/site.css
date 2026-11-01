@@ -18,7 +18,7 @@ section{scroll-margin-top:80px}
 .brand-mark svg{width:16px;height:16px}
 .brand-mark--logo{background:#020e1c;display:block;position:relative;overflow:hidden}
 .brand-mark--logo img{position:absolute;width:152.9%;height:auto;max-width:none;left:-26.5%;top:-11.2%}
-.hero-logo{display:block;width:min(540px,88%);height:auto;margin:0 auto var(--s6);border-radius:var(--r-lg);box-shadow:0 0 90px rgba(66,214,196,.14)}
+.hero-logo{display:block;width:min(260px,60%);height:auto;margin:0 auto var(--s6);border-radius:var(--r-lg);box-shadow:0 0 90px rgba(66,214,196,.14)}
 .footer-brand-wrap{margin-bottom:var(--s5)}
 .site-nav{display:flex;gap:4px;margin-left:auto}
 .site-nav a{color:var(--text-muted);font-size:var(--fs-sm);font-weight:500;padding:8px 12px;border-radius:8px}
@@ -186,3 +186,17 @@ footer.site-footer p{max-width:60ch}
   .hero .lede { font-size: var(--fs-md); }
 }
 
+
+/* Landing hero: the four verbs (Build, Fix, Modify, Upgrade) and their cards */
+.hero h1.hero-verbs{max-width:19ch}
+.hero:has(.hero-verbs){padding-top:var(--s7)}
+.hero-verbs span{color:var(--accent)}
+.verb-cards{list-style:none;padding:0;margin:var(--s7) auto 0;max-width:1040px;display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);text-align:left}
+.verb-card{display:flex;flex-direction:column;gap:var(--s2);height:100%;padding:var(--s5) var(--s4);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);text-decoration:none;transition:border-color .15s,transform .15s}
+.verb-card:hover,.verb-card:focus-visible{border-color:var(--accent);transform:translateY(-2px)}
+.verb-card .verb{font-weight:700;font-size:var(--fs-lg);color:var(--accent)}
+.verb-card .verb-body{color:var(--text-muted);font-size:var(--fs-sm);line-height:1.5;flex:1}
+.verb-card .verb-go{font-size:var(--fs-sm);font-weight:600}
+@media (max-width:900px){.verb-cards{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.verb-cards{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.verb-card{transition:none}.verb-card:hover{transform:none}}

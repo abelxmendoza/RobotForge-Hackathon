@@ -14,7 +14,10 @@ import { loadSession } from "@/lib/auth";
 import { isDemoMode, setDemoMode } from "@/lib/demoMode";
 import { seedDemoStores } from "@/lib/demoSeed";
 
-export default function RunDemoLink({ className, style, children }: { className?: string; style?: CSSProperties; children: ReactNode }) {
+/* `to` sends the click somewhere other than /demo/ (the landing's
+ * Build / Fix / Modify / Upgrade cards deep-link into the Workshop);
+ * visitors with no session still get demo mode turned on first. */
+export default function RunDemoLink({ className, style, children, to = "/demo/" }: { className?: string; style?: CSSProperties; children: ReactNode; to?: string }) {
   const router = useRouter();
   const onClick = async (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -26,7 +29,7 @@ export default function RunDemoLink({ className, style, children }: { className?
       /* seeding is best-effort; the demo still opens */
     }
     setDemoMode(true);
-    router.push("/demo/");
+    router.push(to);
   };
-  return <Link className={className} style={style} href="/demo/" onClick={onClick}>{children}</Link>;
+  return <Link className={className} style={style} href={to} onClick={onClick}>{children}</Link>;
 }
