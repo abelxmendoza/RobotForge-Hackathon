@@ -7,6 +7,12 @@ needs its dimensions. A measured spec is the strongest evidence any
 robot in the Robodex can have. Every other entry is DOCUMENTED (from a
 vendor or published source) or ESTIMATED (from a photo).
 
+Before measuring, see [EXTRACTION.md](EXTRACTION.md): Omega1's own code
+repo has already been read for every fact it records
+([`omega1.extracted.json`](omega1.extracted.json)), including code
+defaults to check against your measurements. Note that the code's
+0.20 m wheel track can't be right on a 0.15 m wide kit.
+
 The template `omega1.template.json` pre-fills only what the kit
 documents. Everything else is a `MEASURE_ME`, `LOOK_UP` or `READ_OFF`
 string, and the spec parser rejects strings, so the template can't be

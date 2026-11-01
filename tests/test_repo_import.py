@@ -138,6 +138,11 @@ try {
     out.readmeImgs = readmeImages(
       repoImportFixture.texts.readme,
       repoImportFixture.ref, repoImportFixture.headSha, "README.md").length;
+  } else if (scenario === "readme_parts") {
+    const parts = parseBomMarkdown(job.md, "README.md (part list)");
+    const spec = withCatalogMatches({ parts: parts.map((p) => ({ ...p, catalogId: null })) }, job.catalog);
+    out.parts = spec.parts;
+    out.picked = pickFiles(job.tree);
   } else if (scenario === "gazebo") {
     const pfUrl = "urdf/pathfinder.urdf";
     const pf = fs.readFileSync(
@@ -523,3 +528,71 @@ def test_gazebo_bundles(tmp_path):
     py_compile.compile(str(launch), doraise=True)
     assert "generated scaffolding" in by_rel["launch/launch.py"].lower()
     assert "gz sim" in sdf["gz"]
+
+
+# --------------------------------------------------------------------- #
+# Omega1 regressions (abelxmendoza/Omega-Code @ 1d7bb60)
+# --------------------------------------------------------------------- #
+# Running the import on the real Omega1 repo found three problems: the
+# committed virtualenvs (~8,000 files) pushed the robot's own files past
+# the 3,000-path cap, the README's REST-route tables were read as parts
+# ("Start the simulation loop"), and bare role words matched the wrong
+# catalogue parts ("Camera" -> RealSense D435, "Controller" -> a flight
+# controller stack). These excerpts are verbatim from that README.
+
+OMEGA1_README = """## Hardware
+
+| Component | Details |
+|---|---|
+| Compute | Raspberry Pi 4B (4 GB) |
+| Motor driver | PCA9685 PWM hat (I2C 0x40) |
+| Ultrasonic | HC-SR04 (GPIO 27 trig / GPIO 22 echo) |
+| Camera | CSI OV5647 (via libcamera + GStreamer) |
+| Controller | Xbox One S/X wireless (via xpad or Bluetooth) |
+
+### Simulation API
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/sim/start` | Start the simulation loop |
+| POST | `/sim/stop` | Stop the simulation loop |
+"""
+
+
+def test_omega1_readme_parts_and_matches(tmp_path):
+    tree = (
+        ["README.md", "LICENSE", "image/README/omega1.png"]
+        + [f"venv/lib/python3.11/site-packages/pkg{i}/img/x.png" for i in range(5)]
+        + ["servers/backend/controllers/lighting/omega1_venv/lib/a.py",
+           "servers/backend/.direnv/python-3.11.2/lib/README.md",
+           "ui/node_modules/left-pad/README.md"]
+    )
+    out = run_node(tmp_path, "readme_parts",
+                   {"md": OMEGA1_README, "catalog": catalog(), "tree": tree})
+    parts = out["parts"]
+    # Only the hardware table: the route table is not a part list.
+    assert [p["name"] for p in parts] == [
+        "Compute", "Motor driver", "Ultrasonic", "Camera", "Controller"]
+    by = {p["name"]: p["catalogId"] for p in parts}
+    # The real part sits in the Details cell, and it still matches.
+    assert by["Ultrasonic"] == "ultrasonic_hcsr04"
+    # Role words alone never match: no RealSense for an OV5647.
+    assert by["Camera"] is None
+    assert by["Controller"] is None
+    assert by["Motor driver"] is None
+    assert by["Compute"] is None  # a Pi 4B is not the catalogue's Pi 5
+    # Vendored trees are not the robot.
+    picked = out["picked"]
+    assert picked["images"] == ["image/README/omega1.png"]
+    assert picked["readme"] == "README.md"
+
+
+def test_generic_words_never_match(tmp_path):
+    names = ["Camera", "Controller", "Motor driver", "Chassis", "Sensors",
+             "Ultrasonic", "HC-SR04", "Ultrasonic HC-SR04"]
+    out = run_node(tmp_path, "match", {"names": names, "catalog": catalog()})
+    m = out["matches"]
+    for generic in names[:6]:
+        assert m[generic] is None, generic
+    assert m["HC-SR04"] == "ultrasonic_hcsr04"
+    assert m["Ultrasonic HC-SR04"] == "ultrasonic_hcsr04"

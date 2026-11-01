@@ -215,6 +215,16 @@ function base(path: string): string {
   return path.split("/").pop() || path;
 }
 
+/** Vendored dependency trees (committed virtualenvs, node_modules,
+ *  pip caches). They are not the robot, and on a real repo they can be
+ *  most of the tree: Omega-Code commits ~8,000 venv files, which used
+ *  to push its own robot files past the 3,000-path cap. */
+const VENDORED_SEG = /^(node_modules|\.?venv|[\w.-]+_venv|\.direnv|site-packages|__pycache__|\.tox|\.git)$/i;
+
+export function isVendoredPath(path: string): boolean {
+  return path.split("/").some((seg) => VENDORED_SEG.test(seg) || seg.endsWith(".dist-info"));
+}
+
 function isImagePath(path: string): boolean {
   const lower = path.toLowerCase();
   return IMAGE_EXTS.some((e) => lower.endsWith(e));
@@ -238,7 +248,7 @@ function modelScore(path: string, repoHint?: string): number {
 /** Pick the candidate files the import reads, from tree paths.
  *  Pure: the same picker runs on the live tree and on fixtures. */
 export function pickFiles(paths: string[], repoHint?: string): PickedFiles {
-  const files = paths.filter((p) => !p.endsWith("/"));
+  const files = paths.filter((p) => !p.endsWith("/") && !isVendoredPath(p));
   const byDepth = (a: string, b: string) =>
     a.split("/").length - b.split("/").length || (a < b ? -1 : 1);
 
@@ -464,6 +474,10 @@ function parseQty(s: string): number | null {
 const NAME_COL = /^(part|component|item|name|description|material)s?$/i;
 const QTY_COL = /^(qty|quantity|count|no\.?|#|amount)$/i;
 const NOTES_COL = /^(notes?|comments?|details?|specs?|type)$/i;
+/** Header cells that mark a table as something other than a part list
+ *  (API routes, ROS topics, CLI flags, launch parameters). A README's
+ *  "Method | Path | Description" table is not hardware. */
+const NOT_PARTS_COL = /^(method|path|endpoint|route|url|topic|parameter|param|argument|flag|option|command|port|variable|env|default|status)s?$/i;
 
 /** Parse a markdown document's part tables (also used on READMEs —
  *  a "Part list" table is a BOM by another name). */
@@ -476,6 +490,13 @@ export function parseBomMarkdown(md: string, sourceFile: string): BomPart[] {
     const nameIdx = header.findIndex((c) => NAME_COL.test(c));
     if (nameIdx < 0) continue;
     if (!/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1] || "")) continue;
+    if (header.some((c) => NOT_PARTS_COL.test(c))) {
+      // Skip the whole non-part table, not just its header row.
+      let j = i + 2;
+      while (j < lines.length && lines[j].includes("|")) j++;
+      i = j;
+      continue;
+    }
     const qtyIdx = header.findIndex((c) => QTY_COL.test(c));
     const notesIdx = header.findIndex((c) => NOTES_COL.test(c));
     for (let j = i + 2; j < lines.length; j++) {
@@ -642,15 +663,31 @@ function nameTokens(s: string): string[] {
     .filter((t) => t.length >= 2 || /^\d$/.test(t));
 }
 
+/** Words that name a kind of part, not a part. A name made only of
+ *  these ("Camera", "Motor driver", "Controller") says nothing about
+ *  which part it is, so it must not match the first catalogue entry
+ *  that happens to contain the word. */
+const GENERIC_PART_WORDS = new Set([
+  "adc", "battery", "board", "cable", "camera", "chassis", "compute",
+  "computer", "controller", "driver", "drivers", "encoder", "encoders",
+  "frame", "gimbal", "hat", "imu", "kit", "lidar", "line", "module",
+  "motor", "motors", "pack", "pan", "plate", "power", "sensor", "sensors",
+  "servo", "servos", "shield", "tilt", "tracking", "ultrasonic", "wheel",
+  "wheels",
+]);
+
 /** Match a free-text part name against the catalogue: squashed
  *  substring, or all-token containment, over ids and names. No fuzzy
- *  matching — near-misses (BNO085 vs BNO055, Pi 4 vs Pi 5) miss. */
+ *  matching — near-misses (BNO085 vs BNO055, Pi 4 vs Pi 5) miss, and
+ *  a bare category word ("Camera") matches nothing. */
 export function matchCatalogPart(
   name: string,
   catalog: { id: string; name: string }[],
 ): string | null {
   const sq = squashName(name);
   if (!sq) return null;
+  const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (!words.length || words.every((w) => GENERIC_PART_WORDS.has(w))) return null;
   for (const part of catalog) {
     if (sq.length >= 3 &&
       (squashName(part.id).includes(sq) || squashName(part.name).includes(sq))) {
@@ -823,7 +860,10 @@ export function withCatalogMatches(
     ...specimen,
     parts: specimen.parts.map((p) => ({
       ...p,
-      catalogId: matchCatalogPart(p.name, catalog),
+      // A "Role | Details" hardware table puts the actual part in the
+      // details ("Ultrasonic | HC-SR04 (GPIO 27…)"), so try its head too.
+      catalogId: matchCatalogPart(p.name, catalog) ??
+        (p.notes ? matchCatalogPart(p.notes.split(/[(\u2014\u2013,;]/)[0].trim(), catalog) : null),
     })),
   };
 }

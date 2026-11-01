@@ -1,0 +1,521 @@
+{
+  "_about": "Omega1 facts extracted from its own code repo with the template in docs/omega1/EXTRACTION.md. Every value cites the file, line and verbatim quote it came from. MEASURE_ME fields have no value on purpose: the repo doesn't record them.",
+  "robot": "Omega1",
+  "source": {
+    "repo": "https://github.com/abelxmendoza/Omega-Code",
+    "commit": "1d7bb60d68520639578917b9fbb2a70cc903dd0a",
+    "extracted_on": "2026-11-01"
+  },
+  "evidence_levels": {
+    "DOCUMENTED": "Stated as fact in the repo (README hardware table, wiring, pin maps).",
+    "CODE_DEFAULT": "A parameter default in code. Usable as a starting estimate, never as a measurement.",
+    "MEASURE_ME": "Not in the repo. Needs a tape measure, calipers or a scale on the real robot.",
+    "MEASURED": "Taken on the real robot, with a date."
+  },
+  "fields": {
+    "identity.name": {
+      "value": "Omega1",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 1,
+        "quote": "# Omega-1 — Hybrid ROS2 Robotics Platform"
+      }
+    },
+    "identity.base_kit": {
+      "value": "Freenove 4WD smart car",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 309,
+        "quote": "| Chassis | Freenove 4WD smart car |"
+      }
+    },
+    "drivetrain": {
+      "value": "skid_steer",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 323,
+        "quote": "| Left upper (front-left) | ch1 | ch0 |"
+      },
+      "note": "Four independently driven fixed wheels, two channels each (README motor channel map); turning is done by opposing left/right commands."
+    },
+    "compute.main": {
+      "value": "Raspberry Pi 4B (4 GB)",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 308,
+        "quote": "| Compute | Raspberry Pi 4B (4 GB) |"
+      }
+    },
+    "compute.planned": {
+      "value": "Jetson Orin",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 145,
+        "quote": "|             Jetson Orin (future)                  |"
+      },
+      "note": "Future, not fitted."
+    },
+    "motors.count": {
+      "value": 4,
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 311,
+        "quote": "| Motors | 4× DC gear motors — ch0–7 |"
+      }
+    },
+    "motors.kind": {
+      "value": "dc_gearmotor",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 311,
+        "quote": "| Motors | 4× DC gear motors — ch0–7 |"
+      }
+    },
+    "motors.driver": {
+      "value": "PCA9685 PWM hat, I2C 0x40",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 310,
+        "quote": "| Motor driver | PCA9685 PWM hat (I2C 0x40) |"
+      }
+    },
+    "motors.pwm_frequency_hz": {
+      "value": 50,
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 806,
+        "quote": "All 16 PCA9685 channels share one global PWM clock. **The clock must stay at 50 Hz.**"
+      },
+      "note": "Shared with the pan-tilt servos; motors must not raise it."
+    },
+    "motors.channel_map.front_left": {
+      "value": {
+        "forward": 1,
+        "backward": 0
+      },
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 323,
+        "quote": "| Left upper (front-left) | ch1 | ch0 |"
+      }
+    },
+    "motors.channel_map.rear_left": {
+      "value": {
+        "forward": 2,
+        "backward": 3
+      },
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 324,
+        "quote": "| Left lower (rear-left) | ch2 | ch3 |"
+      }
+    },
+    "motors.channel_map.front_right": {
+      "value": {
+        "forward": 7,
+        "backward": 6
+      },
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 325,
+        "quote": "| Right upper (front-right) | ch7 | ch6 |"
+      }
+    },
+    "motors.channel_map.rear_right": {
+      "value": {
+        "forward": 5,
+        "backward": 4
+      },
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 326,
+        "quote": "| Right lower (rear-right) | ch5 | ch4 |"
+      }
+    },
+    "motors.max_rpm": {
+      "value": 300.0,
+      "unit": "rpm",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/motor_controller_node.py",
+        "line": 173,
+        "quote": "self.declare_parameter('max_rpm',         300.0)"
+      },
+      "note": "ROS parameter default, not a datasheet value."
+    },
+    "wheel.radius_m": {
+      "value": 0.05,
+      "unit": "m",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/motor_controller_node.py",
+        "line": 27,
+        "quote": "wheel_radius      float   0.05    -- metres"
+      },
+      "note": "Code default. The launch file's own example uses 0.04 (see findings). Measure."
+    },
+    "wheel.track_m": {
+      "value": 0.2,
+      "unit": "m",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/motor_controller_node.py",
+        "line": 26,
+        "quote": "wheel_base        float   0.20    -- metres between wheel centrelines"
+      },
+      "note": "Code calls it wheel_base, but 'between wheel centrelines' (left to right) is the track. Measure."
+    },
+    "actuators.pan_tilt.yaw_channel": {
+      "value": 8,
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/servo_controller_node.py",
+        "line": 98,
+        "quote": "self.declare_parameter('yaw_ch',          8)"
+      }
+    },
+    "actuators.pan_tilt.pitch_channel": {
+      "value": 9,
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/servo_controller_node.py",
+        "line": 99,
+        "quote": "self.declare_parameter('pitch_ch',        9)"
+      }
+    },
+    "actuators.pan_tilt.yaw_pulse_us": {
+      "value": [
+        1000,
+        2000
+      ],
+      "unit": "us",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/servo_controller_node.py",
+        "line": 103,
+        "quote": "self.declare_parameter('yaw_max_us',      2000)"
+      },
+      "note": "Node limits; the driver clamps every pulse to 1200–1800 µs (README line 80), so the effective range is 1200–1800."
+    },
+    "actuators.pan_tilt.pitch_pulse_us": {
+      "value": [
+        1300,
+        1700
+      ],
+      "unit": "us",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/servo_controller_node.py",
+        "line": 104,
+        "quote": "self.declare_parameter('pitch_min_us',    1300)   # tight — loose hardware"
+      },
+      "note": "Narrowed on purpose because of loose hardware: a mechanical fault to record."
+    },
+    "sensors.ultrasonic.model": {
+      "value": "HC-SR04",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 313,
+        "quote": "| Ultrasonic | HC-SR04 (GPIO 27 trig / GPIO 22 echo) |"
+      }
+    },
+    "sensors.ultrasonic.pins": {
+      "value": {
+        "trig_gpio": 27,
+        "echo_gpio": 22
+      },
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 313,
+        "quote": "| Ultrasonic | HC-SR04 (GPIO 27 trig / GPIO 22 echo) |"
+      }
+    },
+    "sensors.ultrasonic.range_m": {
+      "value": [
+        0.02,
+        4.0
+      ],
+      "unit": "m",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/sensor_node.py",
+        "line": 26,
+        "quote": "ultrasonic_max_m    float  4.00    -- maximum valid range (400 cm)"
+      }
+    },
+    "sensors.ultrasonic.mount_xyz_m": {
+      "value": [
+        0.12,
+        0.0,
+        0.02
+      ],
+      "unit": "m",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/launch/omega_hybrid.launch.py",
+        "line": 253,
+        "quote": "'0.12', '0.0', '0.02', '0.0', '0.0', '0.0',"
+      },
+      "note": "Static TF base_link -> ultrasonic_front; the launch file says to adjust it to the physical robot. Measure."
+    },
+    "sensors.camera.model": {
+      "value": "OV5647 (CSI)",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 316,
+        "quote": "| Camera | CSI OV5647 (via libcamera + GStreamer) |"
+      }
+    },
+    "sensors.camera.mount_xyz_m": {
+      "value": [
+        0.08,
+        0.0,
+        0.1
+      ],
+      "unit": "m",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/launch/omega_hybrid.launch.py",
+        "line": 240,
+        "quote": "'0.08', '0.0', '0.10', '0.0', '0.0', '0.0',"
+      },
+      "note": "Static TF base_link -> camera_link, 0 deg pitch. Code default; measure."
+    },
+    "sensors.line_tracking": {
+      "value": {
+        "count": 3,
+        "kind": "ir",
+        "gpio": [
+          14,
+          15,
+          23
+        ]
+      },
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 314,
+        "quote": "| Line tracking | 3× IR sensors (GPIO 14/15/23) |"
+      }
+    },
+    "sensors.battery_adc": {
+      "value": "ADS1115, I2C 0x48",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 315,
+        "quote": "| Battery ADC | ADS1115 (I2C 0x48) |"
+      }
+    },
+    "power.cells_in_series": {
+      "value": 2,
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/sensor_node.py",
+        "line": 33,
+        "quote": "battery_cells       int    2       -- number of LiPo cells (affects full_charge)"
+      }
+    },
+    "power.cell_full_v": {
+      "value": 4.2,
+      "unit": "V",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/sensor_node.py",
+        "line": 34,
+        "quote": "battery_cell_full_v float  4.2     -- full charge voltage per cell"
+      }
+    },
+    "power.cell_cutoff_v": {
+      "value": 3.0,
+      "unit": "V",
+      "evidence": "CODE_DEFAULT",
+      "source": {
+        "file": "ros/src/omega_robot/omega_robot/sensor_node.py",
+        "line": 35,
+        "quote": "battery_cell_min_v  float  3.0     -- cutoff voltage per cell"
+      }
+    },
+    "interfaces.teleop": {
+      "value": "Xbox One S/X wireless controller",
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 317,
+        "quote": "| Controller | Xbox One S/X wireless (via xpad or Bluetooth) |"
+      }
+    },
+    "interfaces.tf_tree": {
+      "value": [
+        "odom -> base_link",
+        "base_link -> camera_link",
+        "base_link -> ultrasonic_front"
+      ],
+      "evidence": "DOCUMENTED",
+      "source": {
+        "file": "README.md",
+        "line": 165,
+        "quote": "└── base_link          (dynamic: motor_controller @ 50 Hz)"
+      }
+    },
+    "geometry.length_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Chassis plate, front edge to back edge."
+    },
+    "geometry.width_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Chassis plate, side to side, wheels excluded."
+    },
+    "geometry.height_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Floor to the top of the tallest fixed part (camera / pan-tilt)."
+    },
+    "geometry.ground_clearance_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Floor to the lowest point under the plate."
+    },
+    "geometry.wheelbase_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Front axle centre to rear axle centre. Not in the repo at all."
+    },
+    "geometry.track_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Centre of left tyre to centre of right tyre. Replaces the 0.20 m code default."
+    },
+    "wheel.diameter_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Calipers across the tyre. Replaces the 0.05 m radius code default."
+    },
+    "wheel.width_m": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Tyre width."
+    },
+    "mass_kg": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Whole robot on a scale, batteries in."
+    },
+    "power.capacity_mah": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Printed on the 18650 cells."
+    },
+    "motors.voltage_v": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Gearmotor label or kit datasheet. Leave empty rather than guess."
+    },
+    "sensors.camera.mount_xyz_m.measured": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Lens position relative to the chassis centre, and its tilt."
+    },
+    "sensors.ultrasonic.mount_xyz_m.measured": {
+      "value": null,
+      "evidence": "MEASURE_ME",
+      "note": "Sensor face relative to the chassis centre."
+    }
+  },
+  "findings": [
+    {
+      "id": "track-wider-than-robot",
+      "severity": "high",
+      "text": "The motor controller assumes 0.20 m between left and right wheel centres, but the Freenove kit's whole envelope is 0.15 m wide. The code default can't be Omega1's real track, so odometry and turning in a twin built from it would be wrong.",
+      "sources": [
+        {
+          "file": "ros/src/omega_robot/omega_robot/motor_controller_node.py",
+          "line": 26,
+          "quote": "wheel_base        float   0.20    -- metres between wheel centrelines"
+        }
+      ]
+    },
+    {
+      "id": "two-wheel-sizes",
+      "severity": "medium",
+      "text": "The repo gives two wheel sizes: 0.05 m radius as the default and 0.04 m in the launch file's usage example. Neither is labelled as measured.",
+      "sources": [
+        {
+          "file": "ros/src/omega_robot/omega_robot/motor_controller_node.py",
+          "line": 27,
+          "quote": "wheel_radius      float   0.05    -- metres"
+        },
+        {
+          "file": "ros/launch/omega_hybrid.launch.py",
+          "line": 27,
+          "quote": "ros2 launch omega_robot omega_hybrid.launch.py wheel_base:=0.18 wheel_radius:=0.04"
+        }
+      ]
+    },
+    {
+      "id": "loose-pitch-servo",
+      "severity": "medium",
+      "text": "The pitch servo's range was narrowed to 1300–1700 µs because of loose hardware. That is a real mechanical fault, and it belongs in Omega1's repair list.",
+      "sources": [
+        {
+          "file": "ros/src/omega_robot/omega_robot/servo_controller_node.py",
+          "line": 104,
+          "quote": "self.declare_parameter('pitch_min_us',    1300)   # tight — loose hardware"
+        }
+      ]
+    },
+    {
+      "id": "servo-clamp-vs-node-limits",
+      "severity": "low",
+      "text": "The yaw node allows 1000–2000 µs, but the driver clamps every pulse to 1200–1800 µs, so the real yaw travel is narrower than the parameter says.",
+      "sources": [
+        {
+          "file": "ros/src/omega_robot/omega_robot/servo_controller_node.py",
+          "line": 102,
+          "quote": "self.declare_parameter('yaw_min_us',      1000)"
+        },
+        {
+          "file": "README.md",
+          "line": 80,
+          "quote": "| PCA9685 shared PWM clock bug (500 Hz → invalid servo pulses) | Motor driver locked to 50 Hz; `Servo.__init__` reads the PRESCALE register on startup and auto-corrects if another process changed the frequency; all servo pulses hard-clamped to 1200–1800 µs on every command |"
+        }
+      ]
+    },
+    {
+      "id": "mounts-are-placeholders",
+      "severity": "low",
+      "text": "The camera and ultrasonic offsets are static-transform defaults that the launch file itself says to adjust to the physical robot. Treat them as estimates until measured.",
+      "sources": [
+        {
+          "file": "ros/launch/omega_hybrid.launch.py",
+          "line": 224,
+          "quote": "# ---- static transforms (adjust XYZ/RPY to your physical robot) ------"
+        }
+      ]
+    },
+    {
+      "id": "no-robot-model",
+      "severity": "high",
+      "text": "The repo has no URDF, xacro or SDF file, so RobotForge's repo import can't simulate Omega1 directly. This file plus the measurements in MEASURE.md is the route to a URDF (robotforge urdf).",
+      "sources": []
+    }
+  ]
+}
