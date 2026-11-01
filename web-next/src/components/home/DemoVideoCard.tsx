@@ -17,7 +17,7 @@
 import { assetPath } from "@/components/home/asset";
 
 const POSTER = "assets/img/demo-poster.jpg";
-const RUNTIME = "0:57";
+const RUNTIME = "0:56";
 const LABEL =
   "Recorded walkthrough · demo data · everything shown is the live app";
 
