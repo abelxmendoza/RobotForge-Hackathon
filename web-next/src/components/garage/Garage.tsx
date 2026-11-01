@@ -489,8 +489,15 @@ export default function Garage() {
           const roverCounts = roverDraft ? {
             pass: roverDraft.filter((c) => c.status === 'PASS').length,
             fail: roverDraft.filter((c) => c.status === 'FAIL').length,
-            other: roverDraft.filter((c) => c.status !== 'PASS' && c.status !== 'FAIL').length,
+            marginal: roverDraft.filter((c) => c.status === 'MARGINAL').length,
+            unchecked: roverDraft.filter((c) => c.status !== 'PASS' && c.status !== 'FAIL' && c.status !== 'MARGINAL').length,
           } : null;
+          const roverText = roverCounts ? [
+            `${roverCounts.pass} pass`,
+            roverCounts.marginal ? `${roverCounts.marginal} marginal` : '',
+            `${roverCounts.fail} fail`,
+            roverCounts.unchecked ? `${roverCounts.unchecked} not checked` : '',
+          ].filter(Boolean).join(' · ') : '';
           const tiles: { label: string; value: string; unit: string }[] = [
             { label: 'Mass', value: num(draft.mass_kg, 1, 2), unit: 'kg' },
             { label: 'Size', value: `${num(draft.length_m, 1000)} × ${num(draft.width_m, 1000)} × ${num(draft.height_m, 1000)}`, unit: 'mm' },
@@ -557,9 +564,9 @@ export default function Garage() {
                     <span className="ws-card-go">See checks →</span>
                   </button>
                   {roverCounts && (
-                    <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : roverCounts.other ? 'marginal' : 'pass')} onClick={() => setTab('checks')}>
+                    <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : (roverCounts.marginal || roverCounts.unchecked) ? 'marginal' : 'pass')} onClick={() => setTab('checks')}>
                       <span className="ws-card-label">Field checks</span>
-                      <strong>{roverCounts.pass} pass · {roverCounts.fail} fail{roverCounts.other ? ` · ${roverCounts.other} not checked` : ''}</strong>
+                      <strong>{roverText}</strong>
                       <span className="ws-card-go">See checks →</span>
                     </button>
                   )}
