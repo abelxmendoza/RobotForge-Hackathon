@@ -32,6 +32,19 @@
  *   POST /part-chat-> { part, message, history? } => { reply, update,
  *                     confirmed, model } — talk a part through until
  *                     the owner confirms what it is.
+ *   POST /auth/register -> { email, password, name? } => { token, user }
+ *   POST /auth/login    -> { email, password } => { token, user }
+ *   GET  /auth/me       -> (Bearer) => { user }
+ *   POST /auth/logout   -> { ok } (stateless: the client drops the token)
+ *   GET  /auth/config   -> { metaLogin } (is Meta login switched on?)
+ *   GET  /auth/meta/start    -> 302 to Facebook (501 until the Meta
+ *                     app secrets exist)
+ *   GET  /auth/meta/callback -> 302 back to the site with the session
+ *                     token in the URL fragment
+ *   GET  /admin/users, POST /admin/seed-founder, POST
+ *        /admin/grant-role — operator routes, guarded by the
+ *        OPERATOR_TOKEN secret (X-Operator-Token header). That is
+ *        how Muse administers accounts for the owner.
  *
  * The text routes (describe/chat/list/fix/part-chat) run a
  * three-provider chain in MEASURED order (fixed 24-description
@@ -1374,6 +1387,393 @@ async function handlePartChat(request, env) {
   });
 }
 
+/* ---------------- accounts (auth) ----------------
+ * Identity + role only (v1): an account does NOT sync robots or
+ * inventory — those stay in the visitor's browser (localStorage).
+ * There is no email verification and no password reset in v1.
+ *
+ * Users live in the same KV as the budget counters:
+ *   auth:user:<email-lowercase> -> { email, name, passHash, role,
+ *     provider, createdAt }
+ * passHash is "pbkdf2$100000$<salt b64>$<hash b64>" (PBKDF2-HMAC-
+ * SHA256 via WebCrypto, per-user salt) or null for Meta-login
+ * accounts, which have no password. Passwords and hashes are never
+ * logged and never returned; /admin/users returns public fields
+ * only. Sessions are stateless HS256 JWTs signed with the
+ * AUTH_JWT_SECRET Worker secret (7-day expiry). Every protected
+ * route re-verifies the signature AND the expiry, then re-reads
+ * the user record, so a role change applies immediately.
+ *
+ * The founder address is reserved: it cannot be registered through
+ * the public route — only the operator route can seed it. */
+
+const FOUNDER_EMAIL = 'abelxmendoza@gmail.com';
+const SITE_HOME = 'https://robot-forge-hackathon.vercel.app';
+const AUTH_JWT_TTL_SECONDS = 7 * 24 * 3600;
+const PBKDF2_ITERATIONS = 100000;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const textEnc = new TextEncoder();
+const textDec = new TextDecoder();
+
+function authConfigured(env) {
+  return Boolean(env.AUTH_JWT_SECRET && env.RF_LIVE_KV);
+}
+
+function metaConfigured(env) {
+  return Boolean(env.META_APP_ID && env.META_APP_SECRET);
+}
+
+function bytesToB64(bytes) {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
+}
+
+function b64ToBytes(b64) {
+  const s = atob(b64);
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+
+function bytesToB64Url(bytes) {
+  return bytesToB64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function b64UrlToBytes(text) {
+  let s = String(text).replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return b64ToBytes(s);
+}
+
+function timingSafeEqualStr(a, b) {
+  const x = textEnc.encode(String(a));
+  const y = textEnc.encode(String(b));
+  let diff = x.length ^ y.length;
+  const n = Math.max(x.length, y.length);
+  for (let i = 0; i < n; i++) diff |= (x[i] || 0) ^ (y[i] || 0);
+  return diff === 0;
+}
+
+async function pbkdf2(password, saltBytes, iterations = PBKDF2_ITERATIONS) {
+  const key = await crypto.subtle.importKey(
+    'raw', textEnc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: saltBytes, iterations, hash: 'SHA-256' }, key, 256);
+  return new Uint8Array(bits);
+}
+
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await pbkdf2(password, salt);
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${bytesToB64(salt)}$${bytesToB64(hash)}`;
+}
+
+async function verifyPassword(password, stored) {
+  if (!stored) return false;
+  const parts = String(stored).split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+  const iterations = parseInt(parts[1], 10) || PBKDF2_ITERATIONS;
+  let salt;
+  try { salt = b64ToBytes(parts[2]); } catch (e) { return false; }
+  const actual = bytesToB64(await pbkdf2(password, salt, iterations));
+  return timingSafeEqualStr(actual, parts[3]);
+}
+
+async function jwtKey(env) {
+  return crypto.subtle.importKey('raw', textEnc.encode(env.AUTH_JWT_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+async function signSession(env, user) {
+  const now = Math.floor(Date.now() / 1000);
+  const head = bytesToB64Url(textEnc.encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })));
+  const body = bytesToB64Url(textEnc.encode(JSON.stringify(
+    { sub: user.email, role: user.role, iat: now, exp: now + AUTH_JWT_TTL_SECONDS })));
+  const data = head + '.' + body;
+  const sig = await crypto.subtle.sign('HMAC', await jwtKey(env), textEnc.encode(data));
+  return data + '.' + bytesToB64Url(new Uint8Array(sig));
+}
+
+async function verifySession(env, token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const ok = await crypto.subtle.verify('HMAC', await jwtKey(env),
+      b64UrlToBytes(parts[2]), textEnc.encode(parts[0] + '.' + parts[1]));
+    if (!ok) return null;
+    const payload = JSON.parse(textDec.decode(b64UrlToBytes(parts[1])));
+    if (!payload.sub || !payload.exp) return null;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+function userKey(email) { return 'auth:user:' + email; }
+
+async function getUser(env, email) {
+  const raw = await env.RF_LIVE_KV.get(userKey(email));
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+async function putUser(env, user) {
+  await env.RF_LIVE_KV.put(userKey(user.email), JSON.stringify(user));
+}
+
+/* The only user shape that ever leaves this Worker: no hash, ever. */
+function publicUser(u) {
+  return {
+    email: u.email, name: u.name || '', role: u.role,
+    provider: u.provider || 'password', createdAt: u.createdAt,
+  };
+}
+
+function cleanEmail(value) {
+  return String(value || '').trim().toLowerCase().slice(0, 254);
+}
+
+async function sessionUser(request, env) {
+  const header = request.headers.get('Authorization') || '';
+  if (!header.startsWith('Bearer ')) return null;
+  const payload = await verifySession(env, header.slice(7).trim());
+  if (!payload) return null;
+  return getUser(env, payload.sub);
+}
+
+function authOff(request) {
+  return err(request, 503, 'auth_not_configured',
+    'Accounts are not switched on at the endpoint yet.');
+}
+
+async function handleAuthRegister(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 400, 'bad_request', error);
+  const email = cleanEmail(data.email);
+  const password = String(data.password || '');
+  const name = String(data.name || '').trim().slice(0, 80);
+  if (!EMAIL_RE.test(email)) {
+    return err(request, 400, 'bad_email', 'That email address does not look right.');
+  }
+  if (password.length < 8) {
+    return err(request, 400, 'weak_password', 'Password must be at least 8 characters.');
+  }
+  if (password.length > 200) {
+    return err(request, 400, 'weak_password', 'Password is too long.');
+  }
+  if (email === FOUNDER_EMAIL) {
+    return err(request, 403, 'reserved_email',
+      'This address is reserved for the founder account and cannot be registered here.');
+  }
+  if (await getUser(env, email)) {
+    return err(request, 409, 'already_registered',
+      'An account with this email already exists — sign in instead.');
+  }
+  const user = {
+    email, name: name || email.split('@')[0],
+    passHash: await hashPassword(password),
+    role: 'user', provider: 'password', createdAt: new Date().toISOString(),
+  };
+  await putUser(env, user);
+  const token = await signSession(env, user);
+  return json(request, 201, { token, user: publicUser(user) });
+}
+
+async function handleAuthLogin(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 400, 'bad_request', error);
+  const email = cleanEmail(data.email);
+  const password = String(data.password || '');
+  const user = email ? await getUser(env, email) : null;
+  let ok = false;
+  if (user && user.passHash) {
+    ok = await verifyPassword(password, user.passHash);
+  } else {
+    /* Unknown or passwordless (Meta) account: still pay the PBKDF2
+     * cost so the response time does not say which case it was. */
+    await pbkdf2(password || 'x', new Uint8Array(16));
+  }
+  if (!user || !ok) {
+    return err(request, 401, 'bad_credentials', 'Invalid email or password.');
+  }
+  const token = await signSession(env, user);
+  return json(request, 200, { token, user: publicUser(user) });
+}
+
+async function handleAuthMe(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const user = await sessionUser(request, env);
+  if (!user) return err(request, 401, 'unauthorized', 'Sign in first.');
+  return json(request, 200, { user: publicUser(user) });
+}
+
+function handleAuthLogout(request) {
+  /* Stateless sessions: logging out is the client dropping the token. */
+  return json(request, 200, { ok: true });
+}
+
+function handleAuthConfig(request, env) {
+  return json(request, 200, { metaLogin: metaConfigured(env) });
+}
+
+function metaRedirectUri(request) {
+  return new URL(request.url).origin + '/auth/meta/callback';
+}
+
+async function handleMetaStart(request, env) {
+  if (!metaConfigured(env)) {
+    return err(request, 501, 'meta_not_configured',
+      'Meta login is not configured yet — the founder still needs to create the Meta app and add its secrets.');
+  }
+  const state = bytesToB64Url(crypto.getRandomValues(new Uint8Array(16)));
+  if (env.RF_LIVE_KV) {
+    await env.RF_LIVE_KV.put('auth:state:' + state, '1', { expirationTtl: 600 });
+  }
+  const q = new URLSearchParams({
+    client_id: env.META_APP_ID,
+    redirect_uri: metaRedirectUri(request),
+    scope: 'email,public_profile',
+    state, response_type: 'code',
+  });
+  return new Response(null, {
+    status: 302,
+    headers: { Location: 'https://www.facebook.com/dialog/oauth?' + q.toString() },
+  });
+}
+
+async function handleMetaCallback(request, env) {
+  const fail = () => new Response(null, {
+    status: 302,
+    headers: { Location: SITE_HOME + '/#auth_error=meta_login_failed' },
+  });
+  if (!metaConfigured(env)) {
+    return err(request, 501, 'meta_not_configured',
+      'Meta login is not configured yet — the founder still needs to create the Meta app and add its secrets.');
+  }
+  if (!authConfigured(env)) return authOff(request);
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  if (!code || !state) return fail();
+  const stateKey = 'auth:state:' + state;
+  if (!(await env.RF_LIVE_KV.get(stateKey))) return fail();
+  await env.RF_LIVE_KV.delete(stateKey);
+  try {
+    const tokenRes = await fetch('https://graph.facebook.com/v21.0/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: env.META_APP_ID, client_secret: env.META_APP_SECRET,
+        redirect_uri: metaRedirectUri(request), code,
+      }).toString(),
+    });
+    if (!tokenRes.ok) return fail();
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) return fail();
+    const meRes = await fetch('https://graph.facebook.com/me?fields=id,name,email&access_token=' +
+      encodeURIComponent(tokenData.access_token));
+    if (!meRes.ok) return fail();
+    const me = await meRes.json();
+    const email = cleanEmail(me.email);
+    if (!EMAIL_RE.test(email)) return fail();
+    let user = await getUser(env, email);
+    if (!user) {
+      user = {
+        email, name: String(me.name || '').trim().slice(0, 80) || email.split('@')[0],
+        passHash: null,
+        role: email === FOUNDER_EMAIL ? 'founder' : 'user',
+        provider: 'meta', createdAt: new Date().toISOString(),
+      };
+      await putUser(env, user);
+    }
+    const token = await signSession(env, user);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: SITE_HOME + '/#auth=' + token },
+    });
+  } catch (e) {
+    return fail();
+  }
+}
+
+/* ---------------- operator (admin) routes ----------------
+ * Guarded by the OPERATOR_TOKEN Worker secret, sent as the
+ * X-Operator-Token header. This is how Muse administers
+ * accounts from the owner's machines: list users, seed the
+ * founder, grant roles. */
+
+function operatorAuthorized(request, env) {
+  const provided = request.headers.get('X-Operator-Token') || '';
+  return Boolean(env.OPERATOR_TOKEN) && provided.length > 0 &&
+    timingSafeEqualStr(provided, String(env.OPERATOR_TOKEN));
+}
+
+function operatorOff(request) {
+  return err(request, 401, 'unauthorized', 'Operator token required.');
+}
+
+async function handleAdminUsers(request, env) {
+  if (!operatorAuthorized(request, env)) return operatorOff(request);
+  if (!env.RF_LIVE_KV) return authOff(request);
+  const users = [];
+  let cursor;
+  do {
+    const page = await env.RF_LIVE_KV.list({ prefix: 'auth:user:', cursor, limit: 256 });
+    for (const k of page.keys) {
+      const u = await getUser(env, k.name.slice('auth:user:'.length));
+      if (u) users.push(publicUser(u));
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && users.length < 1000);
+  users.sort((a, b) => a.email.localeCompare(b.email));
+  return json(request, 200, { users, count: users.length });
+}
+
+async function handleAdminSeedFounder(request, env) {
+  if (!operatorAuthorized(request, env)) return operatorOff(request);
+  if (!authConfigured(env)) return authOff(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 400, 'bad_request', error);
+  const password = String(data.password || '');
+  if (password.length < 8 || password.length > 200) {
+    return err(request, 400, 'weak_password',
+      'Founder password must be between 8 and 200 characters.');
+  }
+  const existing = await getUser(env, FOUNDER_EMAIL);
+  const user = {
+    email: FOUNDER_EMAIL,
+    name: (existing && existing.name) || 'Abel Mendoza',
+    passHash: await hashPassword(password),
+    role: 'founder',
+    provider: (existing && existing.provider) || 'password',
+    createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+  };
+  await putUser(env, user);
+  return json(request, 200, { ok: true, user: publicUser(user) });
+}
+
+async function handleAdminGrantRole(request, env) {
+  if (!operatorAuthorized(request, env)) return operatorOff(request);
+  if (!authConfigured(env)) return authOff(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 400, 'bad_request', error);
+  const email = cleanEmail(data.email);
+  const role = String(data.role || '');
+  if (!['user', 'admin', 'founder'].includes(role)) {
+    return err(request, 400, 'bad_role', 'Role must be "user", "admin" or "founder".');
+  }
+  const user = await getUser(env, email);
+  if (!user) return err(request, 404, 'no_such_user', 'No account with that email.');
+  user.role = role;
+  await putUser(env, user);
+  return json(request, 200, { ok: true, user: publicUser(user) });
+}
+
 async function handle(request, env) {
   if (originRejected(request)) {
     return err(request, 403, 'origin_rejected',
@@ -1386,7 +1786,7 @@ async function handle(request, env) {
       headers: {
         ...corsHeaders(request),
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Operator-Token',
         'Access-Control-Max-Age': '86400',
       },
     });
@@ -1411,6 +1811,10 @@ async function handle(request, env) {
        * Baseten -> Meta -> Fireworks chain (any one key lights
        * them); photo/part/transcribe need the Meta key. */
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY) },
+      /* Accounts: on when the JWT secret + KV exist. Meta login
+       * stays off until the founder adds the Meta app secrets. */
+      auth: authConfigured(env),
+      metaLogin: metaConfigured(env),
       routes: {
         describe: textProvider, chat: textProvider, list: textProvider,
         fix: textProvider, part_chat: textProvider,
@@ -1443,7 +1847,37 @@ async function handle(request, env) {
   if (url.pathname === '/transcribe' && request.method === 'POST') {
     return handleTranscribe(request, env);
   }
-  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat or /transcribe.');
+  if (url.pathname === '/auth/register' && request.method === 'POST') {
+    return handleAuthRegister(request, env);
+  }
+  if (url.pathname === '/auth/login' && request.method === 'POST') {
+    return handleAuthLogin(request, env);
+  }
+  if (url.pathname === '/auth/me' && request.method === 'GET') {
+    return handleAuthMe(request, env);
+  }
+  if (url.pathname === '/auth/logout' && request.method === 'POST') {
+    return handleAuthLogout(request);
+  }
+  if (url.pathname === '/auth/config' && request.method === 'GET') {
+    return handleAuthConfig(request, env);
+  }
+  if (url.pathname === '/auth/meta/start' && request.method === 'GET') {
+    return handleMetaStart(request, env);
+  }
+  if (url.pathname === '/auth/meta/callback' && request.method === 'GET') {
+    return handleMetaCallback(request, env);
+  }
+  if (url.pathname === '/admin/users' && request.method === 'GET') {
+    return handleAdminUsers(request, env);
+  }
+  if (url.pathname === '/admin/seed-founder' && request.method === 'POST') {
+    return handleAdminSeedFounder(request, env);
+  }
+  if (url.pathname === '/admin/grant-role' && request.method === 'POST') {
+    return handleAdminGrantRole(request, env);
+  }
+  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe or /auth/*.');
 }
 
 export default { fetch: handle };

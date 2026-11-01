@@ -45,6 +45,40 @@ can be re-measured through this endpoint. Fireworks' transport
 also remains in the Python CLI's describe chain (see the top-level
 README, "Optional Fireworks transport").
 
+## Accounts (`/auth/*`, `/admin/*`)
+
+Accounts are **identity + role only** (v1). Robots and inventory
+stay in the visitor's browser — there is no cloud sync, no email
+verification and no password reset yet.
+
+| Route | What it does | Secret needed |
+|---|---|---|
+| `POST /auth/register` | `{email, password, name?}` → `{token, user}` (role `user`) | `AUTH_JWT_SECRET` |
+| `POST /auth/login` | `{email, password}` → `{token, user}`; wrong credentials are a generic 401 | `AUTH_JWT_SECRET` |
+| `GET /auth/me` | Bearer token → `{user}` (role re-read from the record) | `AUTH_JWT_SECRET` |
+| `POST /auth/logout` | `{ok}` — stateless; the client drops the token | — |
+| `GET /auth/config` | `{metaLogin}` — whether Meta login is switched on | — |
+| `GET /auth/meta/start` · `GET /auth/meta/callback` | Meta (Facebook) login: OAuth round trip, find-or-create by email, 302 back to the site with the session token in the URL fragment. Answers `501 meta_not_configured` until the app secrets exist | `META_APP_ID` + `META_APP_SECRET` |
+| `GET /admin/users` | Operator: list accounts (public fields only — never hashes) | `OPERATOR_TOKEN` |
+| `POST /admin/seed-founder` | Operator: create/update the founder account (`abelxmendoza@gmail.com`, role `founder`) with the given password | `OPERATOR_TOKEN` |
+| `POST /admin/grant-role` | Operator: set a user's role (`user` / `admin` / `founder`) | `OPERATOR_TOKEN` |
+
+Users are KV records `auth:user:<email-lowercase>` in `RF_LIVE_KV`.
+Passwords are PBKDF2-HMAC-SHA256 (WebCrypto, per-user salt,
+100k iterations); sessions are HS256 JWTs signed with
+`AUTH_JWT_SECRET` (7-day expiry, signature + expiry verified on
+every protected route). The founder address is **reserved** — the
+public register route refuses it (403); only the operator route
+can seed it. Operator routes take the `X-Operator-Token` header;
+that is how Muse administers accounts from the owner's
+machines. `/health` reports `auth` and `metaLogin` booleans.
+
+To switch Meta login on: create an app at developers.facebook.com
+(Facebook Login), set its Valid OAuth Redirect URI to this
+Worker's `/auth/meta/callback` URL, and add `META_APP_ID` and
+`META_APP_SECRET` as Worker secrets. The button on the site
+appears by itself once `/auth/config` reports `metaLogin: true`.
+
 ## Document mode (`/photo` with `mode: "document"`)
 
 For a photo of a spec sheet, datasheet or blueprint, the same route
