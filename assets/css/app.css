@@ -875,11 +875,22 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 }
 .workshop-wrench-title{font-size:var(--fs-lg);margin:0 0 var(--s3)}
 .workshop-wrench .forge-samples,.workshop-wrench .composer-row{flex-wrap:wrap}
-/* Keep Wrench's composer in reach while the docked thread scrolls. */
+/* Wrench's composer in the Workshop: the same oval as the bottom bar,
+   kept in reach while the docked thread scrolls. */
+.main-chat-composer{background:transparent;border:0;padding:0;gap:var(--s2)}
 .workshop-wrench .forge-composer{
   position:sticky;bottom:calc(-1 * var(--s4));z-index:2;
-  margin-bottom:calc(-1 * var(--s4));box-shadow:0 -12px 24px rgba(0,0,0,.35);
+  margin:0 calc(-1 * var(--s4)) calc(-1 * var(--s4));
+  padding:var(--s3) var(--s4) var(--s4);
+  background:linear-gradient(to bottom, transparent, var(--surface) 28%);
 }
+.wrench-composer textarea{
+  flex:1;min-width:0;width:auto;background:transparent;border:0;border-radius:0;resize:none;
+  color:var(--text);font:400 var(--fs-md)/1.45 var(--font);
+  padding:8px 4px;max-height:160px;overflow-y:auto;
+}
+.wrench-composer textarea:focus{outline:none}
+.main-chat-composer .composer-note{font-size:var(--fs-xs);margin:0 12px}
 @media (max-width:1180px){
   .workshop{grid-template-columns:minmax(0,1fr)}
   .workshop-toggle{
@@ -895,5 +906,5 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .workshop[data-pane="wrench"] .workshop-robots{display:none}
   .workshop-wrench{position:static;max-height:none;overflow:visible;border:0;background:transparent;padding:0}
   .workshop-wrench-title{display:none}
-  .workshop-wrench .forge-composer{position:static;margin-bottom:0;box-shadow:none}
+  .workshop-wrench .forge-composer{position:static;margin:0;padding:0;background:none}
 }
