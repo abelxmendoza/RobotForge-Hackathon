@@ -14,6 +14,7 @@ import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
 import PartsKitSection from "./PartsKitSection";
 import PhysicsSection from "./PhysicsSection";
+import GazeboSection from "./GazeboSection";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
 import SpecWiring from "@/components/wiring/SpecWiring";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
@@ -396,6 +397,7 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
       {specimen ? <SpecimenSection specimen={specimen} /> : null}
 
       <PhysicsSection slug={slug} robotName={robot.name} />
+      <GazeboSection slug={slug} robotName={robot.name} />
 
       <section className="section" id="gate">
         <h2><Term k="gate">Gate</Term> runs</h2>
