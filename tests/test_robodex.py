@@ -9,8 +9,8 @@ import io
 import json
 from contextlib import redirect_stderr, redirect_stdout
 
-from robotforge.catalog import (GATE_STATUSES, CatalogError, GateStatus,
-                                Robodex)
+from robotforge.catalog import (GATE_STATUSES, ROBOT_SOURCES, CatalogError,
+                                GateStatus, Robodex, RobotEntry)
 from robotforge.cli import main
 
 dex = Robodex.load()
@@ -36,6 +36,19 @@ def test_entries_have_required_fields():
         assert r.provenance.get("source_name"), f"{r.name}: no provenance"
         assert r.provenance.get("license"), f"{r.name}: no licence recorded"
         assert r.gate_status.status in GATE_STATUSES
+        assert r.source in ROBOT_SOURCES
+
+
+def test_current_entries_are_researched_sources():
+    assert len(dex.robots) == 11
+    assert {r.source for r in dex.robots} == {"researched"}
+
+
+def test_robot_source_round_trips_and_rejects_unknown_values():
+    data = dex.robots[0].to_dict()
+    assert RobotEntry.from_dict(data).source == "researched"
+    data["source"] = "guessed"
+    assert_raises(CatalogError, lambda: RobotEntry.from_dict(data))
 
 
 def test_the_four_founders_in_order():

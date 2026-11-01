@@ -4,6 +4,7 @@ import { robotSlug } from "@/lib/data";
 import { classPath, dexId, gateStatusOf, imgSrc, robotImage, staticCheckOf } from "./shared";
 import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
 import RobotPhoto from "./RobotPhoto";
+import { sourceBadge } from "@/lib/robotSource";
 
 /* site.py robot_card, byte-for-byte in structure: photo, dex number,
    name, taxonomy class path, verdict pill (recorded runs only), and
@@ -31,6 +32,7 @@ export default function RobotCard({ robot, hidden = false }: { robot: Robot; hid
       )}
       <div className="body">
         <span className="dex">{dexId(robot)}</span>
+        <span className={`source-badge source-${robot.source}`}>{sourceBadge(robot)}</span>
         <h3>{robot.name}</h3>
         <span className="cls">{classPath(robot)}</span>
         <VerdictBadge status={status} />

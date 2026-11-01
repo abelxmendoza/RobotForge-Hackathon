@@ -9,6 +9,7 @@ export interface GateRunSummary {
 export interface Robot {
   number: string | number;
   name: string;
+  source: "my" | "sighted" | "photo" | "researched";
   slug?: string;
   class: string;
   subtype?: string;

@@ -42,6 +42,7 @@
       "mobility_class": "Ground \u2014 wheeled",
       "name": "Andino",
       "number": 1,
+      "source": "researched",
       "provenance": {
         "license": "BSD-3-Clause",
         "note": "License is per-package LICENSE files in the repo (each reads BSD 3-Clause, (c) 2023 Ekumen Inc.); the repo root carries no single LICENSE file. Spec values were read from andino_description/config/andino/*.yaml and the andino_hardware BOM.",
@@ -96,6 +97,7 @@
       "mobility_class": "Ground \u2014 wheeled",
       "name": "TurtleBot3 Burger",
       "number": 2,
+      "source": "researched",
       "provenance": {
         "license": "Apache-2.0",
         "note": "The Waffle Pi URDF was pulled from this repo by `robotforge lookup` (chunk #4) with its LICENSE and a blob-SHA manifest; the Burger reference spec uses the public dimensions stated in examples/turtlebot3-burger.json.",
@@ -126,6 +128,7 @@
       "mobility_class": "Ground \u2014 wheeled",
       "name": "TurtleBot3 Waffle Pi",
       "number": 3,
+      "source": "researched",
       "provenance": {
         "license": "Apache-2.0",
         "note": "The spec is a photo draft (all dimensions ESTIMATED) produced by `robotforge describe --photo`; the official Waffle Pi URDF was pulled by `robotforge lookup` under Apache-2.0.",
@@ -170,6 +173,7 @@
       "mobility_class": "Ground \u2014 wheeled",
       "name": "Pathfinder",
       "number": 4,
+      "source": "researched",
       "provenance": {
         "license": "Apache-2.0",
         "note": "RobotForge's in-repo reference design (examples/pathfinder.json), authored for the hackathon demo.",
@@ -201,6 +205,7 @@
       "mobility_class": "Aerial",
       "name": "PX4 X500",
       "number": 5,
+      "source": "researched",
       "provenance": {
         "license": "BSD-3-Clause (PX4/PX4-gazebo-models)",
         "note": "Geometry, height and link masses from the PX4 Gazebo model x500_base/model.sdf (rotor poses \u00b10.174 m, base_link pose z 0.24 m, link masses 2.0 kg + 4\u00d7 0.0160769 kg). Kit hardware (motors, ESCs, PDB wiring pattern, battery recommendation) from Holybro's official X500 V2 product page. The Gazebo model's propeller (0.279 m) differs from the physical kit's 1045 props; the model's value is what the spec carries, and the difference is stated in the key specs.",
@@ -258,6 +263,7 @@
       "mobility_class": "Aerial",
       "name": "Crazyflie 2.1",
       "number": 6,
+      "source": "researched",
       "provenance": {
         "license": "Open-source hardware (design files and schematics published by Bitcraze)",
         "note": "Every value is from the official Crazyflie 2.1 datasheet (Rev 3): takeoff weight 29 g, size 92 \u00d7 92 \u00d7 29 mm measured motor-to-motor including motor mount feet, 250 mAh LiPo, 7 mm coreless motors, 47-17 propellers, BMI088 + BMP388. The photo shows the 2.1+, the current revision of the 2.1 platform, and is credited as such.",
@@ -310,6 +316,7 @@
       "mobility_class": "Legged",
       "name": "Unitree Go2",
       "number": 7,
+      "source": "researched",
       "provenance": {
         "license": "BSD-3-Clause (unitreerobotics/unitree_ros)",
         "note": "Mass is the sum of the 33 link masses in the official go2_description URDF (body 6.923 kg + four legs at 2.291 kg each = 16.087 kg). That is more than Unitree's published ~15 kg with battery; the URDF models each joint's rotor as its own link, and the table's figure is a rounded marketing weight \u2014 both numbers are stated in the key specs and neither is hidden. Dimensions, motor count, battery and sensors from Unitree's published Go2 parameter table. The internal wiring harness is not publicly documented, so this spec carries no wiring block.",
@@ -381,6 +388,7 @@
       "mobility_class": "Legged",
       "name": "Mini Pupper",
       "number": 8,
+      "source": "researched",
       "provenance": {
         "license": "Apache-2.0 (MangDang/mini_pupper_ros)",
         "note": "Dimensions, weight, battery capacity and servo count from MangDang's published specifications (launch specification, as also reported by CNX Software and the Raspberry Pi magazine). The 2S / 7.4 V battery figure is from MangDang's own documentation ('battery spec\u2026 voltage should be less than 7.4 V'; over 8.4 V 'you'll almost certainly fry all your servos'). The description package's link masses (0.304 kg, structure only) are recorded in the key specs, not passed off as the robot's weight. No official v1 photo is linkable \u2014 the repository's photo shows the v2 \u2014 so this entry carries a labeled RobotForge line illustration instead.",
@@ -421,6 +429,7 @@
       "mobility_class": "Legged",
       "name": "Unitree G1",
       "number": 9,
+      "source": "researched",
       "provenance": {
         "license": "BSD-3-Clause (unitreerobotics/unitree_ros)",
         "note": "Dimensions, weight, battery and sensors from Unitree's published G1 parameter table (the table lists total DOF options up to 43 with optional arms; the base 29-DOF configuration is what the official g1_29dof URDF models). The URDF's 36 link masses sum to 35.115 kg, grouped in the spec as trunk 12.669 / legs 14.372 / arms 7.038 / head 1.036 kg \u2014 within half a percent of the published ~35 kg. Battery voltage 46.8 V is the 13-string nominal (the table's '13-string lithium battery' and 54 V charger imply it). The internal wiring harness is not publicly documented, so this spec carries no wiring block.",
@@ -462,6 +471,7 @@
       "mobility_class": "Legged",
       "name": "ROBOTIS OP3",
       "number": 10,
+      "source": "researched",
       "provenance": {
         "license": "Apache-2.0 (ROBOTIS-GIT/ROBOTIS-OP3)",
         "note": "Height, weight, DOF, actuator model and battery from the ROBOTIS e-Manual OP3 introduction (the current e-Manual lists a 3300 mAh battery; older ROBOTIS material says 1800 mAh \u2014 the current figure is used and the change is noted). Stall torque and voltage range from the e-Manual's XM430-W350 page. The DOF split (legs 6 each, arms 3 each, head 2) is the e-Manual's 20-DOF layout as also published in RoboCup materials. ROBOTIS publishes no standing footprint: the spec's length and width are ESTIMATED from the robot's proportions and are labeled ESTIMATED everywhere they appear.",
@@ -528,6 +538,7 @@
       "mobility_class": "Stationary",
       "name": "OpenManipulator-X",
       "number": 11,
+      "source": "researched",
       "provenance": {
         "license": "Apache-2.0 (ROBOTIS-GIT/open_manipulator)",
         "note": "Actuators, input voltage, DOF, payload, weight, reach and gripper stroke all from the ROBOTIS e-Manual's OpenManipulator-X specification page. The e-Manual states the 0.70 kg weight excludes the base plate; the official URDF's seven link masses sum to 0.594 kg, recorded in the spec's component masses. The spec's width is the gripper's maximum stroke (75 mm) and its height the radial reach \u2014 an arm has no body box; both are labeled with what they mean. Power is a 12 V DC supply, modeled in the spec's battery slot with chemistry 'dc_supply' and zero capacity, because the arm carries no battery.",

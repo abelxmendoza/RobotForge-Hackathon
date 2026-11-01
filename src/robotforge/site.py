@@ -46,6 +46,16 @@ VERDICT_CLASS = {"PASS": "pass", "MARGINAL": "marginal", "FAIL": "fail",
                  "NOT_GATED": "norun"}
 VERDICT_LABEL = {"PASS": "Pass", "MARGINAL": "Marginal", "FAIL": "Fail",
                  "NOT_GATED": "Not gated"}
+SOURCE_LABEL = {"my": "My robot", "sighted": "Sighted",
+                "photo": "From photo", "researched": "Researched"}
+SOURCE_TAB_LABEL = {"my": "My Robots", "sighted": "Sighted Robots",
+                    "photo": "From Photos", "researched": "Researched"}
+SOURCE_DESCRIPTION = {
+    "my": "Robots you own and keep in the Workshop.",
+    "sighted": "Other people's robots you saw in person and credited.",
+    "photo": "Robots known from a 2D photo or video frame; dimensions stay estimated.",
+    "researched": "Researched robots use published specs, URDFs, datasheets, and project records.",
+}
 
 # Locked gate thresholds (docs/DESIGN.md): pass <= 5, fail > 10, in % for
 # distance and degrees for heading.
@@ -381,8 +391,11 @@ def robot_card(r: RobotEntry, root: str, href: str) -> str:
     check = r.static_check()
     return (f'<a class="robot-card" href="{e(href)}" '
             f'data-status="{r.gate_status.status}" '
-            f'data-mobility="{e(r.mobility_class)}">{ph}'
+            f'data-mobility="{e(r.mobility_class)}" '
+            f'data-source="{e(r.source)}">{ph}'
             f'<div class="body"><span class="dex">{e(r.dex_id)}</span>'
+            f'<span class="source-badge source-{e(r.source)}">'
+            f'{e(SOURCE_LABEL[r.source])}</span>'
             f'<h3>{e(r.name)}</h3><span class="cls">{e(r.class_path)}</span>'
             f'{verdict_badge(r.gate_status.status)}'
             f'{static_badge(check) if check else ""}</div></a>')
@@ -495,6 +508,17 @@ def render_robots_index(dex: Robodex, cat: Catalog) -> str:
                       for r in dex.robots)
     counts = {s: sum(r.gate_status.status == s for r in dex.robots)
               for s in ("PASS", "FAIL", "NOT_GATED")}
+    source_counts = {s: sum(r.source == s for r in dex.robots)
+                     for s in SOURCE_TAB_LABEL}
+    source_tabs = []
+    for source, label in SOURCE_TAB_LABEL.items():
+        selected = source == "researched"
+        source_tabs.append(
+            f'<button class="tab" type="button" role="tab" '
+            f'data-sfilter="{e(source)}" '
+            f'data-description="{e(SOURCE_DESCRIPTION[source])}" '
+            f'aria-selected="{str(selected).lower()}">{e(label)} '
+            f'({source_counts[source]})</button>')
     chips = ['<button class="chip" type="button" data-filter="all" '
              f'aria-pressed="true">All ({len(dex.robots)})</button>']
     for s, n in counts.items():
@@ -524,14 +548,17 @@ def render_robots_index(dex: Robodex, cat: Catalog) -> str:
   <div>
     <div class="eyebrow">Robots</div>
     <h1>Robodex</h1>
-    <p class="lede">Every robot the forge knows, numbered in the order it learned them. Badges come only from recorded gate runs. A robot with no run says so in grey.</p>
+    <p class="lede">Every robot the forge knows, first sorted by how we know it, then by how it moves. Source badges name the evidence behind an entry; gate badges still come only from recorded runs.</p>
   </div>
 </div>
+<div class="tabs source-tabs" role="tablist" aria-label="Robot source">{"".join(source_tabs)}</div>
+<p class="sub source-summary" id="source-summary">{e(SOURCE_DESCRIPTION["researched"])}</p>
 <div class="toolbar" role="group" aria-label="Filter by verdict">{"".join(chips)}</div>
 <div class="toolbar" role="group" aria-label="Filter by class">{"".join(class_chips)}</div>
 <div class="robot-grid" id="robot-grid">
 {cards}
 </div>
+<p class="state-box source-empty" id="robots-empty" hidden>No robots match this source and filter combination yet.</p>
 <div class="dex-strip" aria-label="Robot illustrations">
   <figure><img src="{root}assets/img/illustrations/andino.svg" alt="Illustration of Andino" loading="lazy"><figcaption>#001 Andino</figcaption></figure>
   <figure><img src="{root}assets/img/illustrations/turtlebot3-burger.svg" alt="Illustration of TurtleBot3 Burger" loading="lazy"><figcaption>#002 TurtleBot3 Burger</figcaption></figure>

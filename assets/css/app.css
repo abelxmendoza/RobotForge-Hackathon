@@ -132,6 +132,11 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 }
 .toolbar input[type="search"]:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 .robot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--s4)}
+.source-tabs{margin-bottom:var(--s3)}
+.source-summary{margin:0 0 var(--s5)}
+.source-empty{padding:var(--s5);margin-bottom:var(--s5)}
+.source-empty h2{font-size:var(--fs-lg);margin-bottom:var(--s2)}
+.source-empty p{max-width:68ch}
 .group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--s4)}
 .group-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r-lg);overflow:hidden;color:var(--text);padding:0;width:100%;
