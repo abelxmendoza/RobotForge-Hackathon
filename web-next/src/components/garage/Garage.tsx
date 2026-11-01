@@ -570,12 +570,21 @@ export default function Garage() {
               <button type="button" className="g-robot" aria-current={r.id === selected ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); }}>
                 <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
                 <span className="g-robot-text"><strong>{r.name}</strong>
+                {r.repoImport && <span className="fbadge live">From repo</span>}
                 <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}{r.versions[r.versions.length - 1]?.planned ? ' · planned' : ''}</span></span>
               </button>
+              {r.repoImport && (
+                <span className="g-robot-links faint">
+                  <a href={r.repoImport.provenance.repoUrl} target="_blank" rel="noreferrer">{r.repoImport.provenance.owner}/{r.repoImport.provenance.repo}</a>
+                  {' · '}
+                  <Link href={`/import/?robot=${r.id}`}>import details</Link>
+                </span>
+              )}
             </li>
           ))}
         </ul>
         {robots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>+ Add a robot</button>}
+        <Link className="btn btn-sm" href="/import/">Import a repo</Link>
         <p className="faint g-small" title="Saved in this browser only. Use Export to keep a copy.">Saved in this browser</p>
       </aside>
 

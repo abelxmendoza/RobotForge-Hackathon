@@ -110,7 +110,10 @@ export default function RobotsIndex() {
           <p className="lede">
             Every robot RobotForge knows, sorted by how we know it. The
             source tells you how far to trust its numbers.{" "}
-            <Link href="/#workflow">How the test works →</Link>
+            <Link href="/#workflow">How the test works →</Link>{" "}
+            Know a robot that lives in a GitHub repo?{" "}
+            <Link href="/import/">Import the repo →</Link> and it joins your
+            Garage as a specimen with the repo attached.
           </p>
         </div>
       </div>
