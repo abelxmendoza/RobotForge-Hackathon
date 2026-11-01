@@ -545,7 +545,9 @@ export default function Garage() {
           ].filter(Boolean).join(' · ') : '';
           /* A number still equal to what the photo draft guessed is ESTIMATED:
            * it gets an amber dot until the owner types a measured value. */
-          const photoV = robot.versions.find((v) => v.source === 'photo');
+          const photoV = robot.versions.find((v) => v.source === 'photo')
+            /* An imported or re-imported photo draft keeps its provenance only in the description. */
+            ?? robot.versions.find((v) => String(v.spec?.description || '').startsWith('Photo draft'));
           const estimated = new Set<string>(photoV ? FIELD_GROUPS.flatMap((g) => g.fields)
             .filter((f) => f.kind === 'number' || f.kind === 'integer')
             .map((f) => f.path)
