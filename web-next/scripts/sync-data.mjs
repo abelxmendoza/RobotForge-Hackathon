@@ -16,7 +16,7 @@ mkdirSync(join(root, "src", "styles"), { recursive: true });
 copyFileSync(join(repo, "catalog", "kinds.json"), join(root, "src", "data", "kinds.json"));
 copyFileSync(join(repo, "catalog", "families.json"), join(root, "src", "data", "families.json"));
 copyFileSync(join(repo, "assets", "js", "chat-intents.json"), join(root, "src", "data", "chat-intents.json"));
-for (const f of ["robots.json", "parts.json", "gate-reports.json", "parts-kits.json", "physics.json", "stage-animation.json"]) {
+for (const f of ["robots.json", "parts.json", "gate-reports.json", "parts-kits.json", "physics.json", "stage-animation.json", "tools.json", "materials.json"]) {
   copyFileSync(join(repo, "catalog", f), join(root, "src", "data", f));
 }
 // The SimReady bench-prop manifest: the palette and the build list
