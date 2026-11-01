@@ -60,6 +60,71 @@ export function setDemoMode(on: boolean): void {
   window.dispatchEvent(new CustomEvent(DEMO_EVENT));
 }
 
+/* ---- the demo bar's dismissal ------------------------------------
+ * The slim demo bar can be hidden with its ×, but sample data must
+ * never become indistinguishable from real data: while the bar is
+ * hidden, a DEMO pill stays in the topbar (shell/DemoBar.tsx's
+ * DemoPill) with the exit inside it. The dismissal is recorded in
+ * sessionStorage KEYED BY the demo session's `since` stamp, so it
+ * persists for the rest of that demo session (page loads included)
+ * and a fresh demo start — a new stamp — shows the bar again. */
+export const DEMO_BAR_EVENT = 'rf-demo-bar-change';
+const DEMO_BAR_DISMISSED_KEY = 'rf.demo.barDismissedFor';
+
+function currentDemoSince(): string | null {
+  try {
+    const raw = window.localStorage.getItem(DEMO_FLAG_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { since?: unknown };
+    return typeof parsed.since === 'string' ? parsed.since : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isDemoBarDismissed(): boolean {
+  try {
+    const since = currentDemoSince();
+    return (
+      since !== null &&
+      window.sessionStorage.getItem(DEMO_BAR_DISMISSED_KEY) === since
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function setDemoBarDismissed(dismissed: boolean): void {
+  try {
+    const since = currentDemoSince();
+    if (dismissed && since !== null) {
+      window.sessionStorage.setItem(DEMO_BAR_DISMISSED_KEY, since);
+    } else {
+      window.sessionStorage.removeItem(DEMO_BAR_DISMISSED_KEY);
+    }
+  } catch {
+    /* storage blocked: the bar simply stays as it is */
+  }
+  window.dispatchEvent(new CustomEvent(DEMO_BAR_EVENT));
+}
+
+export function useDemoBarDismissed(): boolean {
+  const [dismissed, setDismissed] = useState(false);
+  useEffect(() => {
+    const read = () => setDismissed(isDemoBarDismissed());
+    read();
+    window.addEventListener(DEMO_BAR_EVENT, read);
+    window.addEventListener(DEMO_EVENT, read);
+    window.addEventListener('storage', read);
+    return () => {
+      window.removeEventListener(DEMO_BAR_EVENT, read);
+      window.removeEventListener(DEMO_EVENT, read);
+      window.removeEventListener('storage', read);
+    };
+  }, []);
+  return dismissed;
+}
+
 /* Reactive demo state for components (the demo bar, entry buttons,
  * the chat's subtitle). Re-reads on the demo event and on cross-tab
  * storage changes. */

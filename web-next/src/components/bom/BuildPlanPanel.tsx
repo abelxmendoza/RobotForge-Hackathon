@@ -8,10 +8,13 @@ import { readStore, useStore, downloadJSON } from "@/lib/store";
 import { isWiring, type Wiring } from "@/lib/wiring";
 import {
   DEFAULT_PROFILE, MATERIAL_OPTIONS, PHASE_ORDER, PROFILE_KEY, TOOL_OPTIONS,
-  bomLinePlanItems, generateBuildPlan, kitFileIndex, planToMarkdown,
+  bomLinePlanItems, generateBuildPlan, isBuildWiring, kitFileIndex,
+  planToMarkdown, wiringFromBuildWiring,
   type BuildPlan, type CheckState, type ConstraintsProfile, type PlanStep,
   type SourcedPrice,
 } from "@/lib/buildPlan";
+import { BUILD_KEY } from "@/lib/buildList";
+import type { BuildEntry } from "@/lib/palette";
 
 /* Build plan + real-life constraints, inside the BOM wizard's
  * review step. The plan and every check are computed by the
@@ -60,7 +63,14 @@ export default function BuildPlanPanel({ lines, title, kitSlug }: {
     let wiring: Wiring | null = null;
     try {
       const saved = readStore<unknown>("rf.wiring.v1", null);
-      if (isWiring(saved)) wiring = saved;
+      if (isWiring(saved)) {
+        wiring = saved;
+      } else if (isBuildWiring(saved)) {
+        /* The Kit wiring view's shape: adapt it so the power check
+         * judges the wiring the visitor actually drew. */
+        const entries = readStore<BuildEntry[]>(BUILD_KEY, []);
+        wiring = wiringFromBuildWiring(saved, entries, partsById);
+      }
     } catch { /* no saved wiring — the power check abstains in writing */ }
     return generateBuildPlan({
       title,

@@ -139,6 +139,28 @@ const wiring = { nodes: [{ id: 'battery', label: 'Battery' }, { id: 'drv', label
 assert.equal(B.checkPower([battery], wiring).state, 'blocked');
 assert.equal(B.checkPower([driver], null).state, 'not_checked'); // no battery recorded
 
+// --- saved build-list wiring (the Kit wiring view's shape) adapts ---
+const synthDriver = { id: 'synth_12v_driver', name: 'Synthetic 12 V-max driver', part_class: 'drivers', specs: { voltage_v_max: 12, channels: 1 } };
+const partsById2 = new Map(partsById);
+partsById2.set(synthDriver.id, synthDriver);
+const bwEntries = [
+  { uid: 'e-batt', kind: 'catalog-part', refId: 'lipo_4s_5200', qty: 1, via: 'palette' },
+  { uid: 'e-drv', kind: 'catalog-part', refId: 'driver_tb6612fng', qty: 1, via: 'palette' },
+  { uid: 'e-syn', kind: 'catalog-part', refId: 'synth_12v_driver', qty: 1, via: 'palette' },
+];
+assert.equal(B.isBuildWiring(wiring), false); // the spec shape is not the build shape
+assert.equal(B.isBuildWiring({ connections: [] }), true);
+const bwOk = { connections: [{ id: 'c1', fromEntry: 'e-batt', fromPort: 'power-out', toEntry: 'e-drv', toPort: 'power-in', type: 'power' }] };
+const adaptedOk = B.wiringFromBuildWiring(bwOk, bwEntries, partsById2);
+assert.ok(adaptedOk && adaptedOk.connections.length === 1);
+assert.notEqual(B.checkPower([battery], adaptedOk).state, 'blocked'); // 14.8 V into a 15 V-max input
+const bwBad = { connections: [{ id: 'c2', fromEntry: 'e-batt', fromPort: 'power-out', toEntry: 'e-syn', toPort: 'power-in', type: 'power' }] };
+const adaptedBad = B.wiringFromBuildWiring(bwBad, bwEntries, partsById2);
+assert.equal(B.checkPower([battery], adaptedBad).state, 'blocked'); // 14.8 V into a 12 V-max input
+assert.ok(B.checkPower([battery], adaptedBad).detail.includes('Recorded wiring over-voltage'));
+const bwData = { connections: [{ id: 'c3', fromEntry: 'e-batt', fromPort: 'power-out', toEntry: 'e-drv', toPort: 'power-in', type: 'data' }] };
+assert.equal(B.wiringFromBuildWiring(bwData, bwEntries, partsById2), null); // nothing judgeable
+
 // --- torque estimate: labeled, margin-based, abstains without inputs ---
 const rover = partsDoc.templates.find(t => t.name === 'rover_diff_drive');
 const roverItems = B.bomLinePlanItems(BOM.templateBomLines(rover, partsById, []), partsById, kitsByFile);
@@ -231,10 +253,21 @@ def _prep_unit_dir(tmp: Path) -> None:
         (tmp / name).write_text((LIB / name).read_text())
     bom = (LIB / "bom.ts").read_text().replace('"./sourcing"', '"./sourcing.ts"')
     (tmp / "bom.ts").write_text(bom)
+    palette = (LIB / "palette.ts").read_text()
+    palette = (palette.replace('"./bom"', '"./bom.ts"')
+               .replace('"./sourcing"', '"./sourcing.ts"')
+               .replace('"./types"', '"./types.ts"'))
+    (tmp / "palette.ts").write_text(palette)
+    build_wiring = (LIB / "buildWiring.ts").read_text()
+    build_wiring = (build_wiring.replace('"./types"', '"./types.ts"')
+                    .replace('"./palette"', '"./palette.ts"'))
+    (tmp / "buildWiring.ts").write_text(build_wiring)
     engine = (LIB / "buildPlan.ts").read_text()
     engine = (engine.replace('"./bom"', '"./bom.ts"')
               .replace('"./types"', '"./types.ts"')
-              .replace('"./wiring"', '"./wiring.ts"'))
+              .replace('"./wiring"', '"./wiring.ts"')
+              .replace('"./buildWiring"', '"./buildWiring.ts"')
+              .replace('"./palette"', '"./palette.ts"'))
     (tmp / "buildPlan.ts").write_text(engine)
     (tmp / "node_modules").symlink_to(WEB / "node_modules")
 

@@ -26,7 +26,9 @@
  * the real catalogue. */
 import type { BomLine } from "./bom";
 import type { KitPart, Part, RobotKit } from "./types";
-import { badConns, type Wiring } from "./wiring";
+import { badConns, type WireConn, type WireNode, type Wiring } from "./wiring";
+import { portsByEntry, type BuildWiring } from "./buildWiring";
+import type { BuildEntry } from "./palette";
 
 /* ------------------------------------------------------------------ */
 /* Constraints profile                                                 */
@@ -509,6 +511,62 @@ export function checkTools(items: PlanItem[], profile: ConstraintsProfile): Chec
     fix: "Borrow or buy the named tool, tick it in Your constraints if you already own it, " +
       "or re-plan the step another way.",
     stepIds: [...new Set(missing.flatMap((r) => r.stepIds))] };
+}
+
+/* The Kit wiring view saves the build list's wiring under the same
+ * rf.wiring.v1 key in lib/buildWiring.ts's shape ({connections:
+ * [{fromEntry, fromPort, toEntry, toPort, type}]}) — NOT the spec
+ * shape above. isBuildWiring tells the two apart. */
+export function isBuildWiring(w: unknown): w is BuildWiring {
+  return !!w && typeof w === "object"
+    && Array.isArray((w as BuildWiring).connections)
+    && (w as BuildWiring).connections.every((c) => !!c
+      && typeof c.fromEntry === "string" && typeof c.toEntry === "string");
+}
+
+/* Adapt saved build-list wiring into the spec-wiring shape the
+ * badConns scan reads, so the power check judges the wiring the
+ * visitor actually drew. Only power connections whose source port
+ * records a voltage can be judged; a target's rating is its landing
+ * port's recorded ratedMaxV (or the top of its recorded range).
+ * Connections the data can't judge are left out — the scan then
+ * abstains on them exactly as it does for spec wiring, and a
+ * driver's motor-out (no recorded volts) never gets judged. */
+export function wiringFromBuildWiring(
+  bw: BuildWiring,
+  entries: BuildEntry[],
+  partsById: Map<string, Part>,
+): Wiring | null {
+  const ports = portsByEntry(entries, partsById);
+  const nameOf = new Map<string, string>();
+  for (const e of entries) {
+    const p = e.kind === "catalog-part" ? partsById.get(e.refId) : undefined;
+    nameOf.set(e.uid, p?.name ?? e.uid);
+  }
+  const nodes = new Map<string, WireNode>();
+  const connections: WireConn[] = [];
+  const nodeFor = (uid: string, portId: string, rated: number | null): string => {
+    const id = `${uid}:${portId}`;
+    if (!nodes.has(id)) {
+      nodes.set(id, { id, label: nameOf.get(uid) ?? uid, rated_max_v: rated });
+    }
+    return id;
+  };
+  for (const c of bw.connections) {
+    if (c.type !== "power") continue;
+    const fromPort = (ports.get(c.fromEntry) ?? []).find((p) => p.id === c.fromPort);
+    const toPort = (ports.get(c.toEntry) ?? []).find((p) => p.id === c.toPort);
+    if (!fromPort || !toPort || fromPort.volts == null) continue;
+    const rated = toPort.ratedMaxV ?? (toPort.rangeV ? toPort.rangeV[1] : null);
+    connections.push({
+      from: nodeFor(c.fromEntry, c.fromPort, null),
+      to: nodeFor(c.toEntry, c.toPort, rated),
+      kind: "power",
+      volts: fromPort.volts,
+    });
+  }
+  if (!connections.length) return null;
+  return { nodes: [...nodes.values()], connections };
 }
 
 export function checkPower(items: PlanItem[], wiring: Wiring | null): CheckResult {
