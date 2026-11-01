@@ -317,6 +317,82 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ============ STATUS — what's live, dated and checked.
+           Every line below was verified on the served site the night
+           it was written (bundle fingerprints, the endpoint health
+           report, the served pages themselves). If a line stops being
+           true, it comes off this page — that is the whole policy. */}
+      <section className="band" id="status">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">Status</div>
+            <h2>What&apos;s live right now.</h2>
+            <p>Checked on the served site, Oct 31, 2026.</p>
+          </div>
+          <div className="ai-cards">
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Wrench, the guide</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                Say hello — it answers like a person, not a search box.
+                Facts come from recorded data and arrive with their
+                sources; follow-ups remember the robot you&apos;re
+                talking about; a failure gets a plain-language
+                explanation, and the robot can be opened in the
+                Workshop to fix.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Robodex</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                11 catalogued robots plus sightings, sorted by how we
+                know them, then by how they move. Gate badges come only
+                from recorded runs — never from a model&apos;s say-so.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Inventory</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                Your shelf, kept honest: the parts and tools you really
+                own, with sim-only entries kept visibly separate.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Live endpoint</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                Muse Spark is answering now — describing robots, chat,
+                and reading robot and part photos. If a route ever goes
+                down, answers are labeled RECORDED and replay a real
+                earlier run instead.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Phone-first</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                The site is tuned for the phone in your hand: touch
+                targets at least 44 px, forms that don&apos;t zoom on
+                focus, compact cards, and nothing hiding under the
+                chat bar.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
       {/* ============ ROBOTS ============ */}
       <section className="band" id="robots">
         <div className="wrap">
