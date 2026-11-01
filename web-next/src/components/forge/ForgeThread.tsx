@@ -25,7 +25,7 @@
  * imperative DOM log); the Redux forge slice tracks the current
  * run's stage position (step) and input kind (tab), per the store
  * contract. */
-import { ASSISTANT_NAME, HANDOFF_LABEL, takeHandoff } from '@/lib/handoff';
+import { ASSISTANT_NAME, HANDOFF_ACCEPT, HANDOFF_LABEL, handoffKind, takeHandoff } from '@/lib/handoff';
 import { elementText } from '@/lib/copytext';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
@@ -338,11 +338,7 @@ export default function ForgeThread() {
     null,
   );
   const fileRefs = {
-    photo: useRef<HTMLInputElement>(null),
-    camera: useRef<HTMLInputElement>(null),
-    doc: useRef<HTMLInputElement>(null),
-    spec: useRef<HTMLInputElement>(null),
-    scan: useRef<HTMLInputElement>(null),
+    any: useRef<HTMLInputElement>(null),
   };
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1489,6 +1485,14 @@ export default function ForgeThread() {
           }}
         >
           Document — TurtleBot3 spec sheet
+        </button>{' '}
+        <button
+          className="btn btn-sm"
+          type="button"
+          data-sample="scan"
+          onClick={() => void runSampleScan()}
+        >
+          Scan — sample .ply (SAMPLE)
         </button>
       </div>
       {assistant.actions}
@@ -1511,138 +1515,66 @@ export default function ForgeThread() {
             Remove
           </button>
         </div>
-        <label
-          className="faint"
-          htmlFor="forge-input"
-          style={{ fontSize: 'var(--fs-xs)' }}
-        >
-          Message {ASSISTANT_NAME}
-        </label>
-        <textarea
-          id="forge-input"
-          ref={inputRef}
-          rows={3}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
-            }
-          }}
-          placeholder={inputMode === 'design' ? 'Describe a robot in plain words… or attach a photo, a parts list, a spec file, or a .ply scan below.' : `Ask ${ASSISTANT_NAME} about a robot or part, or tell it what to change… or attach a file below.`}
-        />
-        <div className="composer-row">
-          <div className="attach-btns">
-            <span className="faint" style={{ fontSize: 'var(--fs-xs)' }}>
-              Attach:
-            </span>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              onClick={() => fileRefs.photo.current?.click()}
-            >
-              Photo
-            </button>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              onClick={() => fileRefs.camera.current?.click()}
-            >
-              Take photo
-            </button>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              onClick={() => fileRefs.doc.current?.click()}
-            >
-              Parts list
-            </button>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              onClick={() => fileRefs.spec.current?.click()}
-            >
-              Spec JSON
-            </button>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              onClick={() => fileRefs.scan.current?.click()}
-            >
-              Scan (.ply)
-            </button>{' '}
-            <button
-              className="btn btn-sm"
-              type="button"
-              data-sample="scan"
-              onClick={() => void runSampleScan()}
-            >
-              Try a sample scan (SAMPLE)
-            </button>
-          </div>
-          <button className="btn btn-primary" type="submit">
-            Send
+        {/* Same oval composer as Wrench's bottom bar on every other page:
+            paperclip, one line that grows, round send button. */}
+        <div className="chat-bar-composer wrench-composer">
+          <button
+            type="button"
+            className="chat-bar-attach"
+            onClick={() => fileRefs.any.current?.click()}
+            aria-label="Attach a photo, parts list, spec file or scan"
+            title="Attach a photo, parts list (.txt/.csv), spec (.json) or scan (.ply)"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 11.5 12.6 19.9a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" />
+            </svg>
+          </button>
+          <textarea
+            id="forge-input"
+            ref={inputRef}
+            rows={1}
+            value={text}
+            aria-label={`Message ${ASSISTANT_NAME}`}
+            onChange={(e) => {
+              setText(e.target.value);
+              const ta = e.currentTarget;
+              ta.style.height = 'auto';
+              ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
+              }
+            }}
+            placeholder={inputMode === 'design' ? 'Describe a robot in plain words…' : `Message ${ASSISTANT_NAME}…`}
+          />
+          <button
+            type="submit"
+            className="chat-bar-send"
+            disabled={!text.trim() && !attach}
+            aria-label="Send message"
+            title="Send"
+          >
+            ↑
           </button>
         </div>
         <p className="faint composer-note">
-          Files stay in your browser unless you run a live step. In local and
-          recorded mode nothing is uploaded, ever.
+          Photos, parts lists (.txt/.csv), specs (.json) and scans (.ply) stay
+          in your browser unless you run a live step.
         </p>
         <input
           type="file"
-          ref={fileRefs.photo}
-          accept="image/*"
+          ref={fileRefs.any}
+          accept={HANDOFF_ACCEPT}
           hidden
           onChange={(e) => {
             const f = e.target.files && e.target.files[0];
-            if (f) setAttach({ kind: 'photo', file: f });
             e.target.value = '';
-          }}
-        />
-        <input
-          type="file"
-          ref={fileRefs.camera}
-          accept="image/*"
-          capture="environment"
-          hidden
-          onChange={(e) => {
-            const f = e.target.files && e.target.files[0];
-            if (f) setAttach({ kind: 'photo', file: f });
-            e.target.value = '';
-          }}
-        />
-        <input
-          type="file"
-          ref={fileRefs.doc}
-          accept=".txt,.md,.csv,text/plain"
-          hidden
-          onChange={(e) => {
-            const f = e.target.files && e.target.files[0];
-            if (f) setAttach({ kind: 'doc', file: f });
-            e.target.value = '';
-          }}
-        />
-        <input
-          type="file"
-          ref={fileRefs.spec}
-          accept=".json,application/json"
-          hidden
-          onChange={(e) => {
-            const f = e.target.files && e.target.files[0];
-            if (f) setAttach({ kind: 'spec', file: f });
-            e.target.value = '';
-          }}
-        />
-        <input
-          type="file"
-          ref={fileRefs.scan}
-          accept=".ply"
-          hidden
-          onChange={(e) => {
-            const f = e.target.files && e.target.files[0];
-            if (f) setAttach({ kind: 'scan', file: f });
-            e.target.value = '';
+            if (!f) return;
+            const kind = handoffKind(f);
+            if (kind) setAttach({ kind, file: f });
+            else pushNote(`${ASSISTANT_NAME} reads photos, .json specs, .txt/.csv parts lists and .ply scans. ${f.name} is none of those.`);
           }}
         />
       </form>
