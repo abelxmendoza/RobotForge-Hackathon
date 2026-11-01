@@ -24,6 +24,8 @@ import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/L
  * (Burger's 2026-10-28 Torque-VM run, Pathfinder, Andino).
  */
 
+import DemoVideoCard from "@/components/home/DemoVideoCard";
+
 export const metadata: Metadata = {
   // Absolute: the vanilla landing's <title>, bypassing the layout's
   // "%s · RobotForge" template.
@@ -135,6 +137,46 @@ export default function HomePage() {
             <figcaption>
               AI illustration (muse-image-1.0). The real robots in the app
               carry real, credited photos.
+            </figcaption>
+          </figure>
+          <DemoVideoCard />
+        </div>
+      </section>
+
+      {/* ============ TRAILER — recorded from the live app in demo
+           mode (real screens, recorded data, no mockups). Tap-to-play:
+           preload="none" + poster, so nothing downloads until a
+           visitor asks for it. The video is silent; its text is on
+           screen. */}
+      <section className="band" id="trailer">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">Trailer</div>
+            <h2>Watch RobotForge work.</h2>
+            <p>
+              One minute inside the real app — the Workshop, the
+              Robodex, the take-apart Kit, and a broken robot caught
+              and fixed in one run.
+            </p>
+          </div>
+          <figure className="hero-art" style={{ marginTop: 0 }}>
+            <video
+              controls
+              preload="none"
+              poster={assetPath("assets/video/robotforge-trailer-poster.png")}
+              width={1920}
+              height={1080}
+              aria-label="RobotForge trailer — a recorded tour of the live app in demo mode"
+            >
+              <source
+                src={assetPath("assets/video/robotforge-trailer-v1.mp4")}
+                type="video/mp4"
+              />
+            </video>
+            <figcaption>
+              Recorded from the live app in demo mode, Nov 1, 2026 —
+              real screens, recorded data, no mockups. Silent; the
+              text is on screen.
             </figcaption>
           </figure>
         </div>
@@ -414,30 +456,48 @@ export default function HomePage() {
       </section>
 
       {/* ============ STATUS — what's live, dated and checked.
-           Every line below was verified on the served site the night
-           it was written (bundle fingerprints, the endpoint health
-           report, the served pages themselves). If a line stops being
-           true, it comes off this page — that is the whole policy. */}
+           Every line below was verified the night it was written —
+           Oct 31, 2026 against the served site (bundle fingerprints,
+           the endpoint health report, the served pages themselves);
+           refreshed Nov 1, 2026 against main's merged code and the
+           live endpoint after the accounts, physics, palette and BOM
+           merges. If a line stops being true, it comes off this
+           page — that is the whole policy. */}
       <section className="band" id="status">
         <div className="wrap">
           <div className="section-head">
             <div className="eyebrow">Status</div>
             <h2>What&apos;s live right now.</h2>
-            <p>Checked on the served site, Oct 31, 2026.</p>
+            <p>Checked on the served site, Nov 1, 2026.</p>
           </div>
           <div className="ai-cards">
             <article className="card ai-card">
               <div className="ai-card-head">
-                <h3>Wrench, the guide</h3>
+                <h3>Wrench, the workshop operator</h3>
                 <span className="fbadge live">LIVE</span>
               </div>
               <p>
-                Say hello — it answers like a person, not a search box.
-                Facts come from recorded data and arrive with their
-                sources; follow-ups remember the robot you&apos;re
-                talking about; a failure gets a plain-language
-                explanation, and the robot can be opened in the
-                Workshop to fix.
+                Wrench runs the workshop with you — it is not a tour
+                guide. Describe a robot and it drafts the spec with
+                Muse Spark; tell it to add a part or change a number
+                and it does the work in the chat, every edit previewed
+                and checked before it lands. Its answers come from
+                recorded data and carry their sources, and when a
+                robot fails, Wrench names the check that went over
+                and sends the robot to the fix loop.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Accounts</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                Sign up with an email, or continue with Meta — both
+                live today, and live AI in the app runs on your
+                account. GitHub and Google sign-in join when those
+                providers are switched on; their buttons appear on
+                the sign-in card by themselves.
               </p>
             </article>
             <article className="card ai-card">
@@ -446,9 +506,37 @@ export default function HomePage() {
                 <span className="fbadge live">LIVE</span>
               </div>
               <p>
-                11 catalogued robots plus sightings, sorted by how we
-                know them, then by how they move. Gate badges come only
-                from recorded runs — never from a model&apos;s say-so.
+                11 catalogued robots plus your own sightings, grouped
+                by how they move. Gate badges come only from recorded
+                runs — never from a model&apos;s say-so.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Physics checks</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                A robot page can run its real URDF through a physics
+                engine in your browser: a mass audit, a stability
+                check, and a short drop test — does it stand? Robots
+                whose record isn&apos;t a URDF say so, with the
+                reason, instead of faking a result.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Build with parts</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                The catalogue&apos;s 50 parts carry datasheet specs
+                and vendor search links — no prices are shown,
+                because none are verified. Drag parts onto the kit
+                stage or add them by chat; the build list feeds a
+                BOM wizard that exports a CSV. Every kit part is
+                parametric CAD: OpenSCAD on the kit page, with a
+                build123d back end in the project&apos;s tooling.
               </p>
             </article>
             <article className="card ai-card">
@@ -471,18 +559,6 @@ export default function HomePage() {
                 and reading robot and part photos. If a route ever goes
                 down, answers are labeled RECORDED and replay a real
                 earlier run instead.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Phone-first</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                The site is tuned for the phone in your hand: touch
-                targets at least 44 px, forms that don&apos;t zoom on
-                focus, compact cards, and nothing hiding under the
-                chat bar.
               </p>
             </article>
           </div>
