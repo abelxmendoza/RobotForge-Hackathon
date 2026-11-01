@@ -476,8 +476,10 @@ const QTY_COL = /^(qty|quantity|count|no\.?|#|amount)$/i;
 const NOTES_COL = /^(notes?|comments?|details?|specs?|type)$/i;
 /** Header cells that mark a table as something other than a part list
  *  (API routes, ROS topics, CLI flags, launch parameters). A README's
- *  "Method | Path | Description" table is not hardware. */
-const NOT_PARTS_COL = /^(method|path|endpoint|route|url|topic|parameter|param|argument|flag|option|command|port|variable|env|default|status)s?$/i;
+ *  "Method | Path | Description" table is not hardware. Only headers
+ *  that never describe hardware are here: URL, status and port columns
+ *  do appear in real BOMs ("Part | Qty | URL"). */
+const NOT_PARTS_COL = /^(method|path|endpoint|route|topic|parameter|param|argument|flag|option|command|variable|env|default)s?$/i;
 
 /** Parse a markdown document's part tables (also used on READMEs —
  *  a "Part list" table is a BOM by another name). */
@@ -490,15 +492,16 @@ export function parseBomMarkdown(md: string, sourceFile: string): BomPart[] {
     const nameIdx = header.findIndex((c) => NAME_COL.test(c));
     if (nameIdx < 0) continue;
     if (!/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1] || "")) continue;
-    if (header.some((c) => NOT_PARTS_COL.test(c))) {
+    const qtyIdx = header.findIndex((c) => QTY_COL.test(c));
+    const notesIdx = header.findIndex((c) => NOTES_COL.test(c));
+    // A quantity column is a part list whatever else the table has.
+    if (qtyIdx < 0 && header.some((c) => NOT_PARTS_COL.test(c))) {
       // Skip the whole non-part table, not just its header row.
       let j = i + 2;
       while (j < lines.length && lines[j].includes("|")) j++;
       i = j;
       continue;
     }
-    const qtyIdx = header.findIndex((c) => QTY_COL.test(c));
-    const notesIdx = header.findIndex((c) => NOTES_COL.test(c));
     for (let j = i + 2; j < lines.length; j++) {
       if (!lines[j].includes("|")) break;
       const cells = lines[j].split("|").map((c) => cleanCell(c));

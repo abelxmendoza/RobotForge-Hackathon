@@ -259,6 +259,7 @@ def test_tree_scan_picks(tmp_path):
     })
     picked = out["picked"]
     assert picked["readme"] == "README.md"
+
     assert picked["license"] == "LICENSE"
     assert picked["bom"] == "hardware/bom.csv"  # CSV preferred over MD
     assert picked["primaryModel"] == {
@@ -596,3 +597,22 @@ def test_generic_words_never_match(tmp_path):
         assert m[generic] is None, generic
     assert m["HC-SR04"] == "ultrasonic_hcsr04"
     assert m["Ultrasonic HC-SR04"] == "ultrasonic_hcsr04"
+
+
+def test_bom_tables_with_link_or_status_columns_survive(tmp_path):
+    # Codex review on #96: a "Part | Qty | URL" BOM must not be dropped
+    # as a non-part table. Route tables are still skipped.
+    md = (
+        "| Part | Qty | URL |\n|---|---|---|\n"
+        "| HC-SR04 | 1 | https://example.com/hcsr04 |\n\n"
+        "| Component | Status | Port |\n|---|---|---|\n"
+        "| RPLIDAR A1 | working | /dev/ttyUSB0 |\n\n"
+        "| Part | Qty | Command |\n|---|---|---|\n"
+        "| BNO055 | 1 | i2cdetect -y 1 |\n\n"
+        "| Method | Path | Description |\n|---|---|---|\n"
+        "| POST | /sim/start | Start the simulation loop |\n"
+    )
+    out = run_node(tmp_path, "readme_parts",
+                   {"md": md, "catalog": catalog(), "tree": ["README.md"]})
+    names = [p["name"] for p in out["parts"]]
+    assert names == ["HC-SR04", "RPLIDAR A1", "BNO055"]
