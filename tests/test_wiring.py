@@ -304,7 +304,10 @@ def _prep_unit_dir(tmp: Path) -> None:
     bw = bw.replace('"./palette"', '"./palette.ts"').replace(
         '"./types"', '"./types.ts"')
     (tmp / "buildWiring.ts").write_text(bw)
-    (tmp / "store.ts").write_text((LIB / "store.ts").read_text())
+    store = (LIB / "store.ts").read_text().replace(
+        "'./demoMode'", "'./demoMode.ts'")
+    (tmp / "store.ts").write_text(store)
+    (tmp / "demoMode.ts").write_text((LIB / "demoMode.ts").read_text())
     ws = (LIB / "wiringStore.ts").read_text()
     ws = ws.replace('"./store"', '"./store.ts"').replace(
         '"./buildWiring"', '"./buildWiring.ts"')
