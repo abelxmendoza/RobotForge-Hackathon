@@ -1073,3 +1073,127 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 }
 /* A recorded over-voltage stays red when the harness is powered. */
 .wv-cable.bad .wv-line.on{stroke:var(--fail);filter:drop-shadow(0 0 3px rgba(248,113,113,.6))}
+
+/* ==== Mobile UX pass — Phase 0 + 1 (2026-10-31, Abel-approved plan) ====
+/* Scoped to phone widths / coarse pointers; desktop unchanged. */
+/* Mobile UX pass — Phase 0 + 1 (Abel-approved 2026-10-31; plan:
+   ~/workspace/hackathon/mobile-ux-plan-2026-10-31.md).
+   Every rule below is scoped to phone widths or coarse pointers;
+   desktop rendering is unchanged. These stylesheets are shared with
+   the vanilla site, whose matching classes get the same mobile
+   treatment. Appended last in app.css / site.css so equal-
+   specificity rules here win the cascade. */
+
+/* ---------- content never hides under the fixed bars ----------
+   On phones the bottom tab bar is fixed, and on most app pages the
+   chat composer floats above it (bottom: 84px + inset, ~58px tall).
+   The base .content bottom padding (136px) lets the last lines of a
+   page slide under the composer. When a chat bar is mounted, give
+   the content enough room to scroll fully clear of both bars. */
+@media (max-width: 900px) {
+  .shell:has(.chat-bar) .content {
+    padding-bottom: calc(196px + env(safe-area-inset-bottom));
+  }
+  /* Landing (no app shell): keep the footer clear of the chat
+     composer when one is mounted there. */
+  body:has(.chat-bar) main#main {
+    padding-bottom: calc(150px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ---------- touch baseline: 44px targets, 16px fields ----------
+   iOS zooms the page on focus for any field under 16px, and chips
+   across the app were 36–38px tall. Keyed to coarse pointers so
+   landscape phones and tablets are covered, with a width-based twin
+   for narrow screens that misreport their pointer. */
+@media (pointer: coarse) {
+  .chip, .fc-hit, .jump .chip { min-height: 44px; }
+  .chip { display: inline-flex; align-items: center; }
+  .chat-bar-toggle, .chat-bar-send, .chat-bar-attach { width: 44px; height: 44px; }
+  .chat-bar-composer textarea { min-height: 44px; }
+  .nav-more-menu a { min-height: 44px; display: flex; align-items: center; }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select, textarea { font-size: 16px !important; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select { min-height: 44px; }
+  .toolbar input[type="search"] { min-height: 44px; }
+}
+@media (max-width: 560px) {
+  .chip, .fc-hit, .jump .chip { min-height: 44px; }
+  .chip { display: inline-flex; align-items: center; }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select, textarea { font-size: 16px !important; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select { min-height: 44px; }
+  .toolbar input[type="search"] { min-height: 44px; }
+}
+
+/* Glossary terms: the dotted underline reads like a broken link on
+   touch screens (no hover). Soften it there. */
+@media (pointer: coarse) {
+  .term { border-bottom-color: rgba(148, 178, 204, .45); }
+}
+
+/* ---------- Robodex group cards: compact rows on phones ----------
+   Full-width 4:3 covers made one card fill a viewport — six groups,
+   six screens of scrolling. On phones a group card becomes a row:
+   square thumbnail left, dex/name/tally/Open right. */
+@media (max-width: 700px) {
+  .group-grid { grid-template-columns: 1fr; gap: 12px; }
+  .group-card { flex-direction: row; align-items: stretch; }
+  .group-card .ph { width: 106px; flex: none; aspect-ratio: auto; }
+  .group-card .ph img { padding: 8px; }
+  .group-card .body { padding: 12px 14px; gap: 4px; align-content: center; }
+  .group-card h3 { font-size: var(--fs-md); }
+  .group-card .open { margin-top: 2px; }
+  .group-card.empty .ph { display: none; }
+  .group-card.empty .body { padding: 14px; }
+}
+
+/* ---------- robot cards: two columns on phones ----------
+   Inside a Robodex group (and anywhere .robot-grid is used) one
+   card per row was ~340px of scroll per robot. Two columns at
+   ~170px keep photo, name and badge readable. */
+@media (max-width: 700px) {
+  .robot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .robot-card .body { padding: 12px 12px 14px; gap: 4px; }
+  .robot-card h3 { font-size: var(--fs-md); }
+  .robot-card .ph img { padding: 8px; }
+}
+@media (max-width: 380px) {
+  .robot-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- robot detail: sticky jump rail on phones ----------
+   The detail page runs ~10,000px on a phone. The jump nav (moved
+   out of the hero in RobotDetail.tsx so it can stick) becomes a
+   sticky, sideways-scrolling chip rail under the topbar, and
+   anchored sections stop clear of it. */
+@media (max-width: 900px) {
+  .jump {
+    position: sticky; top: 56px; z-index: 25;
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    margin-top: var(--s4); padding: 8px 2px;
+    background: rgba(8, 16, 26, .94); backdrop-filter: blur(8px);
+  }
+  .jump::-webkit-scrollbar { display: none; }
+  .jump .chip { flex: none; }
+  .content .section { scroll-margin-top: 124px; }
+}
+
+/* ---------- wide tables & code: say that they scroll ----------
+   Spec/gate tables and the AI-inside table live in sideways scroll
+   panes; with no affordance, phone users never find the rest. A
+   right-edge fade hints the scroll, and the first column sticks so
+   row labels stay visible while swiping. */
+@media (max-width: 900px) {
+  .table-scroll, .g-tablewrap {
+    box-shadow: inset -28px 0 24px -24px rgba(2, 10, 20, .9);
+  }
+  .table-scroll table.data th:first-child,
+  .table-scroll table.data td:first-child,
+  .g-tablewrap table th:first-child,
+  .g-tablewrap table td:first-child {
+    position: sticky; left: 0; background: var(--surface);
+  }
+}
