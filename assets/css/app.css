@@ -1588,3 +1588,5 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .repo-parts td:nth-child(2)::before{content:"Qty ";color:var(--text-faint)}
   .repo-parts td:last-child{text-align:right}
 }
+.g-remove-confirm{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--text-muted)}
+.g-remove-yes{border-color:var(--fail);color:var(--fail)}
