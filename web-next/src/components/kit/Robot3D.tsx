@@ -112,10 +112,6 @@ export default function Robot3D({
 }) {
   const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate});
   motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate};
-  /* The stage-life bundle rides its own ref (same pattern as
-   * motionRef): the frame loop reads the latest render's life. */
-  const lifeRef = useRef(life);
-  lifeRef.current = life;
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -124,6 +120,10 @@ export default function Robot3D({
   cbRef.current = { onSelect, onFail, onMove, onPlaybackEnd };
   const stateRef = useRef({ explode, selected });
   stateRef.current = { explode, selected };
+  /* The stage-life bundle rides its own ref (same pattern as
+   * motionRef): the frame loop reads the latest render's life. */
+  const lifeRef = useRef(life);
+  lifeRef.current = life;
 
   useEffect(() => {
     let disposed = false;
