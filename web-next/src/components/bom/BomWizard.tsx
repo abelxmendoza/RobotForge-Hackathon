@@ -13,6 +13,7 @@ import {
 } from "@/lib/bom";
 import { liveHealth, postJSON, routeOn } from "@/components/forge/live";
 import SourcingLinks from "@/components/robots/SourcingLinks";
+import BuildPlanPanel from "./BuildPlanPanel";
 
 /* The BOM wizard: three steps over the site's real parts data.
  * Start from a robot's take-apart kit, a catalogue build template,
@@ -473,6 +474,11 @@ export default function BomWizard() {
                   {copied ? "Copied ✓" : "Copy as text"}
                 </button>
               </p>
+              <BuildPlanPanel
+                lines={lines}
+                title={title}
+                kitSlug={start.kind === "kit" ? start.slug : undefined}
+              />
             </>
           ) : (
             <p className="state-box">
