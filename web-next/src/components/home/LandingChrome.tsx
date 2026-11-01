@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import RevealInit from "@/components/shell/RevealInit";
-import { BrandMark, REPO_URL, RESEARCH_URL } from "@/components/shell/AppShell";
+import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
 
 /* One set of names, each always the same page (see AppShell's NAV). */
 const SITE_NAV = [
@@ -39,7 +39,6 @@ export function LandingHeader() {
           ))}
         </nav>
         <nav className="site-nav site-nav-aside" aria-label="More">
-          <a href={RESEARCH_URL}>Research</a>
           <a href={REPO_URL}>GitHub</a>
         </nav>
         <Link className="btn btn-app" href="/garage/">Open the app</Link>
@@ -52,7 +51,6 @@ export function LandingHeader() {
             {SITE_NAV.map((n) => (
               <Link key={n.href} href={n.href} aria-current={n.href === "/" ? "page" : undefined}>{n.label}</Link>
             ))}
-            <a href={RESEARCH_URL}>Research</a>
             <a href={REPO_URL}>GitHub</a>
           </div>
         </details>
@@ -72,7 +70,7 @@ export function LandingFooter() {
       </div>
       <div className="wrap">
         <p>Built Oct 26 – Nov 4, 2026 for the Meta Global AI Developer Hackathon, Indie track, “Push the Frontier.” Earlier design exploration informed the project and is disclosed in the repository.</p>
-        <p>By Abel Mendoza · <Link href="/how-it-works/">How it works</Link> · <a href={RESEARCH_URL}>Research</a> · <a href={REPO_URL}>GitHub</a> · Apache-2.0</p>
+        <p>By Abel Mendoza · <Link href="/how-it-works/">How it works</Link> · <a href={REPO_URL}>GitHub</a> · Apache-2.0</p>
       </div>
     </footer>
   );

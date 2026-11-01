@@ -8,7 +8,6 @@ src/styles/*.css
 public/assets/
 public/examples/
 public/catalog/
-public/problem-space.html
 # Copied at prebuild by scripts/copy-vanilla.mjs from the repo root.
 public/vanilla/
 

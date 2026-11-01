@@ -26,7 +26,6 @@ for (const css of ["tokens.css", "app.css", "site.css", "chat.css", "anim.css"])
 }
 // Runtime-fetched static files (specs, recorded runs, specimen).
 cpSync(join(repo, "examples"), join(root, "public", "examples"), { recursive: true });
-copyFileSync(join(repo, "problem-space.html"), join(root, "public", "problem-space.html"));
 cpSync(join(repo, "catalog", "specimens"), join(root, "public", "catalog", "specimens"), { recursive: true });
 // Raw gate-report JSONs, served as-is so a badge's receipt can link
 // the actual report file (catalog/gate-runs/<run>.json).
