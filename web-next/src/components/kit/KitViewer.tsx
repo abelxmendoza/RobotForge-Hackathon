@@ -17,7 +17,18 @@ import type { CatalogPart } from '../forge/data';
 import PartsPalette from './PartsPalette';
 import WiringPanel from './WiringPanel';
 import type { PlacedProp, WiringSceneView } from './KitScene';
-import { parts as catalogParts, simReadyProps, stageRecordOf } from '@/lib/data';
+import { parts as catalogParts, simReadyProps } from '@/lib/data';
+import { useBuildList } from '@/lib/buildList';
+import { useBuildWiring } from '@/lib/wiringStore';
+import {
+  addConnection,
+  deviceBoxes,
+  portAnchors,
+  portsByEntry,
+  removeConnection,
+  resolveConnections,
+} from '@/lib/buildWiring';
+import { stageRecordOf } from '@/lib/data';
 import {
   flowPaths,
   parseStoredWiringGraph,
@@ -29,16 +40,6 @@ import {
 import { useStageAnimation } from '@/lib/useStageAnimation';
 import { DEMO_EVENT, isDemoMode } from '@/lib/demoMode';
 import { StageControlsRow } from './StageControls';
-import { useBuildList } from '@/lib/buildList';
-import { useBuildWiring } from '@/lib/wiringStore';
-import {
-  addConnection,
-  deviceBoxes,
-  portAnchors,
-  portsByEntry,
-  removeConnection,
-  resolveConnections,
-} from '@/lib/buildWiring';
 import type { Part } from '@/lib/types';
 import {
   addToBuildList,
@@ -202,10 +203,8 @@ export default function KitViewer() {
    * and its toggle (wiringOn) feeds the same gate the hook
    * accepts: motion pauses in Wiring mode and the flow layer
    * yields to it. */
-  const [wiringOn, setWiringOn] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const stage = useStageAnimation(stageRef);
-  const wiringMode = wiringOn;
   const burgerRecord = stageRecordOf('turtlebot3-burger');
   const burgerCapability = useMemo(
     () => (burgerRecord ? robotCapability(burgerRecord) : null),
@@ -240,16 +239,6 @@ export default function KitViewer() {
       window.removeEventListener(DEMO_EVENT, read);
     };
   }, []);
-  const life = {
-    playing: stage.playingNow(wiringMode),
-    flowPlaying: stage.flowPlayingNow(wiringMode),
-    speed: stage.controls.speed,
-    motion: stage.controls.motion,
-    sensors: stage.controls.sensors,
-    flow: stage.controls.flow,
-    flows: burgerFlows,
-  };
-
   /* The Parts palette + the shared build list (lib/buildList.ts —
    * the same list the chat adds to and the BOM wizard starts
    * from). Bench-prop entries with a position are the scene's
@@ -296,6 +285,7 @@ export default function KitViewer() {
    * leaves the build list retires everywhere at once. Ports come
    * only from recorded catalogue data; devices without ports get
    * no block and the panel says why. */
+  const [wiringOn, setWiringOn] = useState(false);
   const [pendingPort, setPendingPort] = useState<string | null>(null);
   const [selectedConn, setSelectedConn] = useState<string | null>(null);
   const [wireNote, setWireNote] = useState<string | null>(null);
@@ -434,6 +424,20 @@ export default function KitViewer() {
     }
   };
 
+  /* The stage's life bundle, built here — below the wiringOn state
+   * it gates on: in Wiring mode the stage motion pauses and the
+   * flow layer yields to the wiring view (see useStageAnimation). */
+  const wiringMode = wiringOn;
+  const life = {
+    playing: stage.playingNow(wiringMode),
+    flowPlaying: stage.flowPlayingNow(wiringMode),
+    speed: stage.controls.speed,
+    motion: stage.controls.motion,
+    sensors: stage.controls.sensors,
+    flow: stage.controls.flow,
+    flows: burgerFlows,
+  };
+
   /* Mobile UX Phase 2 (2026-10-31): on phone-width screens the 3D
    * scene waits for a tap — mounting Three.js + WebGL up front made
    * /kit the heaviest page on mobile while most readers only need
@@ -521,11 +525,11 @@ export default function KitViewer() {
             propsOn={propsOn}
             placedProps={placedProps}
             wiring={wiringView}
-            life={life}
             onCanvasDrop={handleCanvasDrop}
             onPortClick={handlePortClick}
             onWireClick={handleWireClick}
             selectedSpecimen={selectedSpecimen}
+            life={life}
             onReady={() => {
               readyRef.current = true;
             }}

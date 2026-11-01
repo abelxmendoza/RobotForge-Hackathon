@@ -71,6 +71,7 @@ interface Session {
 
 export default function Robot3D({
   spec,
+  life,
   explode,
   selected,
   onSelect,
@@ -84,9 +85,9 @@ export default function Robot3D({
   fov, comparison, replay = 1, playing = false, onMove, onPlaybackEnd,
   teardown,
   autoRotate = false,
-  life,
 }: {
   spec: RobotSpec;
+  life?: RobotLife;
   explode: number;
   selected: string | null;
   onSelect: (id: string) => void;
@@ -108,10 +109,13 @@ export default function Robot3D({
   /* Slow turntable spin; pauses while you drag a part or the user
    * prefers reduced motion. */
   autoRotate?: boolean;
-  life?: RobotLife;
 }) {
-  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,life});
-  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,life};
+  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate});
+  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate};
+  /* The stage-life bundle rides its own ref (same pattern as
+   * motionRef): the frame loop reads the latest render's life. */
+  const lifeRef = useRef(life);
+  lifeRef.current = life;
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -606,7 +610,7 @@ export default function Robot3D({
           const delta=Math.min(clock.getDelta(),0.05);
           const effects=motionRef.current.animate&&!reducedMotion.matches;
           const settings=motionRef.current;
-          const lifeNow=settings.life;
+          const lifeNow=lifeRef.current;
           if(lifeNow?.playing) lifeTime+=delta*lifeNow.speed;
           if(!settings.playing){playStart=null;playFinished=false;}
           else if(playStart===null)playStart=clock.elapsedTime;

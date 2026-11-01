@@ -122,9 +122,9 @@ export default function KitScene({
   cad,
   real,
   propsOn,
+  life,
   placedProps,
   wiring,
-  life,
   selectedSpecimen,
   onReady,
   onFail,
@@ -144,9 +144,9 @@ export default function KitScene({
   cad: boolean;
   real: boolean;
   propsOn: boolean;
+  life?: KitLife;
   placedProps: PlacedProp[];
   wiring: WiringSceneView | null;
-  life?: KitLife;
   selectedSpecimen: string | null;
   onReady: () => void;
   onFail: () => void;
