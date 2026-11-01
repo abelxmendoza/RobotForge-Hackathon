@@ -32,3 +32,9 @@ jobs:
         run: pip install -e . pytest
       - name: Run the test suite
         run: python -m pytest tests/ -q
+      - name: Build the production web export
+        working-directory: web-next
+        run: npm run build
+      - name: Smoke-test required exported routes
+        working-directory: web-next
+        run: npm run smoke
