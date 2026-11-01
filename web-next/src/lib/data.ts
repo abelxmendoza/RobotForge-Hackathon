@@ -4,9 +4,10 @@ import familiesDoc from "@/data/families.json";
 import gateDoc from "@/data/gate-reports.json";
 import kitsDoc from "@/data/parts-kits.json";
 import physicsDoc from "@/data/physics.json";
+import simReadyDoc from "@/data/simready-props.json";
 import harnessDoc from "@/data/harness-reports.json";
 import stabilityDoc from "@/data/stability-reports.json";
-import type { Family, GateReportRun, Part, PartTemplate, PhysicsEntry, Robot, RobotKit } from "./types";
+import type { Family, GateReportRun, Part, PartTemplate, PhysicsEntry, Robot, RobotKit, SimReadyPropEntry } from "./types";
 
 export const robots = (robotsDoc as unknown as { robots: Robot[] }).robots;
 export const parts = (partsDoc as unknown as { parts: Part[] }).parts;
@@ -21,6 +22,8 @@ export const kitOf = (slug: string): RobotKit | undefined => partsKits[slug];
 
 export const physicsChecks = (physicsDoc as unknown as { robots: Record<string, PhysicsEntry> }).robots;
 export const physicsOf = (slug: string): PhysicsEntry | undefined => physicsChecks[slug];
+
+export const simReadyProps = (simReadyDoc as unknown as { props: SimReadyPropEntry[] }).props;
 
 export const harnessReports = harnessDoc as unknown as Record<string, Record<string, unknown>>;
 export const stabilityReports = stabilityDoc as unknown as Record<string, Record<string, unknown>>;

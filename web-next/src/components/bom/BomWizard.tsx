@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { parts, partsKits, partTemplates } from "@/lib/data";
-import type { Part } from "@/lib/types";
+import { parts, partsKits, partTemplates, simReadyProps } from "@/lib/data";
+import type { Part, SimReadyPropEntry } from "@/lib/types";
+import { useStore } from "@/lib/store";
+import { BUILD_KEY } from "@/lib/buildList";
+import { buildListToBomLines, type BuildEntry } from "@/lib/palette";
 import {
   catalogBomLine, kitBomLines, localMatchParts, mergeBomLines,
   suggestPartsLive, suggestionsFromImport, templateBomLines,
@@ -12,8 +15,9 @@ import { liveHealth, postJSON, routeOn } from "@/components/forge/live";
 import SourcingLinks from "@/components/robots/SourcingLinks";
 
 /* The BOM wizard: three steps over the site's real parts data.
- * Start from a robot's take-apart kit or a catalogue build template
- * (or empty), configure what the data supports (template optionals,
+ * Start from a robot's take-apart kit, a catalogue build template,
+ * the shared build list (Parts palette + chat adds) or empty,
+ * configure what the data supports (template optionals,
  * quantities, catalogue picks, one AI suggestion step), then review
  * and export. The AI step is badged honestly: LIVE when the live
  * endpoint's model answered, LOCAL when the deterministic in-browser
@@ -22,6 +26,7 @@ import SourcingLinks from "@/components/robots/SourcingLinks";
 type Start =
   | { kind: "kit"; slug: string }
   | { kind: "template"; name: string }
+  | { kind: "build" }
   | { kind: "blank" };
 
 interface AiOutcome {
@@ -33,6 +38,9 @@ interface AiOutcome {
 }
 
 const partsById = new Map<string, Part>(parts.map((p) => [p.id, p]));
+const propsById = new Map<string, SimReadyPropEntry>(
+  simReadyProps.map((p) => [p.id, p]),
+);
 
 export default function BomWizard() {
   const kitSlugs = useMemo(
@@ -50,9 +58,14 @@ export default function BomWizard() {
   const [aiBusy, setAiBusy] = useState(false);
   const [ai, setAi] = useState<AiOutcome | null>(null);
   const [copied, setCopied] = useState(false);
+  /* The shared build list (Parts palette + chat): a fourth start.
+   * It is read live, so parts added on the Kit page while this
+   * wizard is open arrive here too. */
+  const [buildEntries] = useStore<BuildEntry[]>(BUILD_KEY, []);
 
   // Deep links: /bom/?kit=<slug> or /bom/?template=<name> pre-pick
-  // the starting point (the robot pages' parts-kit sections link in).
+  // the starting point (the robot pages' parts-kit sections link in);
+  // /bom/?start=build starts from the shared build list.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const kit = q.get("kit");
@@ -62,6 +75,9 @@ export default function BomWizard() {
       setStep(2);
     } else if (tpl && partTemplates.some((t) => t.name === tpl)) {
       setStart({ kind: "template", name: tpl });
+      setStep(2);
+    } else if (q.get("start") === "build") {
+      setStart({ kind: "build" });
       setStep(2);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,8 +92,11 @@ export default function BomWizard() {
       const tpl = partTemplates.find((t) => t.name === start.name);
       return tpl ? templateBomLines(tpl, partsById, optionals) : [];
     }
+    if (start.kind === "build") {
+      return buildListToBomLines(buildEntries, partsById, propsById);
+    }
     return [];
-  }, [start, optionals]);
+  }, [start, optionals, buildEntries]);
 
   const lines = useMemo(() => {
     const merged = mergeBomLines([...baseLines, ...extra]);
@@ -89,6 +108,7 @@ export default function BomWizard() {
   const title = useMemo(() => {
     if (start.kind === "kit") return partsKits[start.slug]?.robot ?? "kit";
     if (start.kind === "template") return partTemplates.find((t) => t.name === start.name)?.label ?? "build";
+    if (start.kind === "build") return "your build list";
     return "custom build";
   }, [start]);
 
@@ -237,6 +257,25 @@ export default function BomWizard() {
               </p>
             ))}
           </div>
+          {buildEntries.length ? (
+            <div className="card" style={{ marginTop: 12 }}>
+              <h3 style={{ fontSize: "var(--fs-md)" }}>Your build list</h3>
+              <p style={{ marginTop: 8 }}>
+                <label>
+                  <input
+                    type="radio"
+                    name="start"
+                    checked={start.kind === "build"}
+                    onChange={() => pickStart({ kind: "build" })}
+                  />{" "}
+                  The parts you added from the Parts palette on the Kit
+                  page or by asking the assistant in chat —{" "}
+                  {buildEntries.reduce((s, e) => s + e.qty, 0)} item
+                  {buildEntries.reduce((s, e) => s + e.qty, 0) === 1 ? "" : "s"}.
+                </label>
+              </p>
+            </div>
+          ) : null}
           <div className="card" style={{ marginTop: 12 }}>
             <p>
               <label>

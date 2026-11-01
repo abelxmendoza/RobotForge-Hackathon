@@ -7,10 +7,21 @@
  * same lights, same materials, same geometry numbers as vanilla.
  * Three.js is loaded dynamically; any failure reports onFail and
  * the page shows the flat 2D fallback. */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as THREE_NS from 'three';
 import { ROOT, fetchJSON } from '../forge/model';
 import type { SimReadyManifest, SpecimenDoc, SpecimenPart } from './burger';
+
+/* A bench prop the user placed from the Parts palette: one build
+ * list instance, rendered from the prop's actual GLB at the drop
+ * point (or a default slot). uid is the build entry's id, so
+ * removing the entry removes exactly this holder. */
+export interface PlacedProp {
+  uid: string;
+  file: string;
+  pos: [number, number];
+  yaw: number;
+}
 
 type ThreeModule = typeof THREE_NS;
 
@@ -38,6 +49,7 @@ interface SceneState {
   robot: THREE_NS.Group;
   specimenGroup: THREE_NS.Group;
   propsGroup: THREE_NS.Group;
+  dropsGroup: THREE_NS.Group;
   ground: THREE_NS.Mesh;
   grid: THREE_NS.Object3D;
   groups: Record<string, THREE_NS.Group>;
@@ -57,6 +69,7 @@ export default function KitScene({
   cad,
   real,
   propsOn,
+  placedProps,
   selectedSpecimen,
   onReady,
   onFail,
@@ -67,12 +80,14 @@ export default function KitScene({
   onPropsLoaded,
   onPropsError,
   onExplodeCur,
+  onCanvasDrop,
 }: {
   explodeTarget: number;
   spin: boolean;
   cad: boolean;
   real: boolean;
   propsOn: boolean;
+  placedProps: PlacedProp[];
   selectedSpecimen: string | null;
   onReady: () => void;
   onFail: () => void;
@@ -83,6 +98,7 @@ export default function KitScene({
   onPropsLoaded: (doc: SimReadyManifest) => void;
   onPropsError: () => void;
   onExplodeCur: (v: number) => void;
+  onCanvasDrop: (itemKey: string, pos: [number, number]) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cbRef = useRef({
@@ -95,6 +111,7 @@ export default function KitScene({
     onPropsLoaded,
     onPropsError,
     onExplodeCur,
+    onCanvasDrop,
   });
   cbRef.current = {
     onReady,
@@ -106,7 +123,11 @@ export default function KitScene({
     onPropsLoaded,
     onPropsError,
     onExplodeCur,
+    onCanvasDrop,
   };
+  const [sceneReady, setSceneReady] = useState(false);
+  const glbCacheRef = useRef<Map<string, THREE_NS.Object3D>>(new Map());
+  const holdersRef = useRef<Map<string, THREE_NS.Object3D>>(new Map());
   const targetRef = useRef(explodeTarget);
   targetRef.current = explodeTarget;
   const realRef = useRef(real);
@@ -309,6 +330,14 @@ export default function KitScene({
         propsGroup.visible = false;
         scene.add(propsGroup);
 
+        /* Palette placements live in their own group too: models
+         * the user dropped or asked for, one holder per build-list
+         * entry, synced by the effect below. Independent of the
+         * bench-props toggle — those are dressing, these are the
+         * user's build. */
+        const dropsGroup = new THREE.Group();
+        scene.add(dropsGroup);
+
         const st: SceneState = {
           THREE,
           renderer,
@@ -318,6 +347,7 @@ export default function KitScene({
           robot,
           specimenGroup,
           propsGroup,
+          dropsGroup,
           ground,
           grid,
           groups,
@@ -408,6 +438,41 @@ export default function KitScene({
         canvas.addEventListener('pointerdown', onDown);
         canvas.addEventListener('pointerup', onUp);
 
+        /* Palette drag-and-drop: a card dragged from the Parts
+         * palette carries the item key; the drop point raycasts to
+         * the ground plane (z=0) so a placed model lands where it
+         * was dropped. The parent decides what the item does —
+         * models join the scene, model-less parts only the list. */
+        const onDragOver = (e: DragEvent) => {
+          if (
+            e.dataTransfer &&
+            Array.from(e.dataTransfer.types).includes('application/x-rf-palette')
+          ) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }
+        };
+        const onDrop = (e: DragEvent) => {
+          e.preventDefault();
+          const itemKey =
+            e.dataTransfer?.getData('application/x-rf-palette') ||
+            e.dataTransfer?.getData('text/plain');
+          if (!itemKey) return;
+          const r = canvas.getBoundingClientRect();
+          ptr.set(
+            ((e.clientX - r.left) / r.width) * 2 - 1,
+            -((e.clientY - r.top) / r.height) * 2 + 1,
+          );
+          ray.setFromCamera(ptr, camera);
+          const groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+          const hitPoint = new THREE.Vector3();
+          if (ray.ray.intersectPlane(groundPlane, hitPoint)) {
+            cbRef.current.onCanvasDrop(itemKey, [hitPoint.x, hitPoint.y]);
+          }
+        };
+        canvas.addEventListener('dragover', onDragOver);
+        canvas.addEventListener('drop', onDrop);
+
         const resize = () => {
           const w = canvas.clientWidth;
           const h = canvas.clientHeight;
@@ -441,11 +506,14 @@ export default function KitScene({
         applyExplode(0);
         tick();
         cbRef.current.onReady();
+        setSceneReady(true);
 
         cleanup = () => {
           cancelAnimationFrame(raf);
           canvas.removeEventListener('pointerdown', onDown);
           canvas.removeEventListener('pointerup', onUp);
+          canvas.removeEventListener('dragover', onDragOver);
+          canvas.removeEventListener('drop', onDrop);
           controls.dispose();
           renderer.dispose();
           sceneRef.current = null;
@@ -644,6 +712,74 @@ export default function KitScene({
       }
     })();
   }, [propsOn]);
+
+  /* Palette placements: reconcile dropsGroup with the build list.
+   * One holder per entry uid; each prop file loads once and is
+   * cloned per instance (clones share geometry/materials with the
+   * cached original, which is never added to the scene itself).
+   * Same orientation as the bench props: glTF +Y maps to scene +Z
+   * via the +90° X tilt, the holder stands on z=0 at the entry's
+   * position with the manifest's yaw. Holders are not pickable —
+   * picking only intersects the robot and specimen groups — and
+   * the explode/CAD machinery never touches this group. */
+  useEffect(() => {
+    const st = sceneRef.current;
+    if (!st || !sceneReady) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { GLTFLoader } = await import(
+          'three/addons/loaders/GLTFLoader.js'
+        );
+        const loader = new GLTFLoader();
+        const THREE = st.THREE;
+        const want = new Map(placedProps.map((p) => [p.uid, p]));
+        holdersRef.current.forEach((holder, uid) => {
+          if (!want.has(uid)) {
+            st.dropsGroup.remove(holder);
+            holdersRef.current.delete(uid);
+          }
+        });
+        for (const p of placedProps) {
+          if (cancelled) return;
+          if (holdersRef.current.has(p.uid)) continue;
+          let proto = glbCacheRef.current.get(p.file);
+          if (!proto) {
+            const gltf = await loader.loadAsync(
+              ROOT + 'catalog/props/simready/' + p.file,
+            );
+            if (cancelled) return;
+            proto = gltf.scene;
+            glbCacheRef.current.set(p.file, proto);
+          }
+          const inner = new THREE.Group();
+          inner.rotation.x = Math.PI / 2;
+          inner.add(proto.clone(true));
+          const holder = new THREE.Group();
+          holder.position.set(p.pos[0], p.pos[1], 0);
+          holder.rotation.z = p.yaw;
+          holder.add(inner);
+          holder.traverse((m) => {
+            const mm = m as THREE_NS.Mesh;
+            if ((mm as { isMesh?: boolean }).isMesh) {
+              mm.castShadow = true;
+              mm.receiveShadow = true;
+            }
+          });
+          st.dropsGroup.add(holder);
+          holdersRef.current.set(p.uid, holder);
+        }
+      } catch {
+        /* A model that fails to load simply does not appear; the
+         * build-list entry remains and says the part is in the
+         * build — the palette card's preview states the same
+         * failure honestly on its own surface. */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [placedProps, sceneReady]);
 
   return <canvas id="view3d" ref={canvasRef} />;
 }

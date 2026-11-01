@@ -96,6 +96,22 @@ export interface PhysicsEntry {
   catalog_mass_kg?: number | null;
   catalog_mass_label?: string;
 }
+/* NVIDIA SimReady bench props (catalog/props/simready/props.json,
+ * synced into src/data/simready-props.json). External CC BY 4.0
+ * models used as bench dressing in the kit scene and as the Parts
+ * palette's only 3D-model items. Mirrors the manifest's own fields
+ * (components/kit/burger.ts carries the scene's fuller copy). */
+export interface SimReadyPropEntry {
+  id: string;
+  name: string;
+  file: string;
+  source_package: string;
+  source_url: string;
+  attribution: string;
+  size_m: [number, number, number];
+  rotation_y_rad: number;
+  [key: string]: unknown;
+}
 /* Robodex families (catalog/families.json, schema
  * robotforge-robodex-families/1): robots grouped by family, with
  * configuration variants told apart by a signature and individual

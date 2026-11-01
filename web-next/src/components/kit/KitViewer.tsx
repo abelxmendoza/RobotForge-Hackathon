@@ -10,10 +10,22 @@
  * The parts catalogue and the spec-driven take-apart viewer used to
  * be repeated here; they now live once each, in PartsCatalogue (below
  * this viewer on /kit/) and on the robot pages. */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { parts as libParts } from '../forge/data';
 import type { CatalogPart } from '../forge/data';
+import PartsPalette from './PartsPalette';
+import type { PlacedProp } from './KitScene';
+import { parts as catalogParts, simReadyProps } from '@/lib/data';
+import { useBuildList } from '@/lib/buildList';
+import {
+  addToBuildList,
+  buildPaletteItems,
+  removeFromBuildList,
+  setBuildQty,
+  type PaletteItem,
+} from '@/lib/palette';
+import { uid } from '@/lib/store';
 import {
   GENERATED_KEYS,
   PD_META,
@@ -78,6 +90,38 @@ const KIT_CSS = `
 .kitpage .cls{margin:26px 0 6px;text-transform:capitalize}
 .kitpage .layer{width:78%;margin:3px auto;text-align:center;background:#21252e;
   border:1px solid #2c313a;border-radius:10px;padding:9px;cursor:pointer;font-weight:600}
+.kitpage .palette{position:absolute;top:0;right:0;bottom:0;width:min(470px,94%);z-index:6;
+  background:rgba(17,19,23,.97);border-left:1px solid #2c313a;overflow-y:auto;padding:16px 16px 24px;text-align:left}
+.kitpage .palette-head{display:flex;justify-content:space-between;align-items:center;font-size:17px}
+.kitpage .palette-note{font-size:12.5px;color:#9aa3ad;line-height:1.5}
+.kitpage .palette-search{width:100%;background:#0e1013;border:1px solid #2c313a;border-radius:9px;
+  color:#e8eaed;padding:8px 10px;font-size:13.5px;margin:6px 0 2px}
+.kitpage .palette-sec{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;margin:16px 0 8px}
+.kitpage .palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.kitpage .pcard{background:#1b1e24;border:1px solid #2c313a;border-radius:12px;padding:9px;cursor:grab}
+.kitpage .pcard:active{cursor:grabbing}
+.kitpage .pcard h4{font-size:13px;margin:7px 0 3px;line-height:1.3}
+.kitpage .pcard-spec{font-size:11.5px;color:#9aa3ad;margin:0 0 5px;line-height:1.4}
+.kitpage .pcard-cap{font-size:10.5px;color:#9aa3ad;margin-top:4px}
+.kitpage .pcard-badges{margin:0 0 4px}
+.kitpage .pbadge{font-size:10.5px;font-weight:700;border:1px solid #2c313a;border-radius:20px;padding:1px 7px;color:#9aa3ad}
+.kitpage .pbadge.real{color:#7fd08c;border-color:#24502c}
+.kitpage .pbadge.sim_only{color:#c9a2ff;border-color:#4b3670}
+.kitpage .pcard-src{font-size:11px;color:#9aa3ad;margin:0 0 7px}
+.kitpage .pcard button{width:100%;font-size:12.5px;padding:6px 8px}
+.kitpage .palette-thumb{aspect-ratio:10/7;background:#0e1013;border:1px solid #23262e;border-radius:9px;
+  display:grid;place-items:center;overflow:hidden}
+.kitpage .palette-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.kitpage .palette-thumb-note{font-size:11px;color:#9aa3ad;text-align:center;padding:8px;line-height:1.45}
+.kitpage .palette-noimg{border-style:dashed}
+.kitpage .buildlist{margin-top:18px;border-top:1px solid #2c313a;padding-top:4px}
+.kitpage .buildrow{display:flex;gap:8px;align-items:center;background:#1b1e24;border:1px solid #2c313a;
+  border-radius:10px;padding:7px 9px;margin-top:7px;font-size:13px}
+.kitpage .buildrow-name{flex:1;line-height:1.35}
+.kitpage .buildrow-qty{display:flex;gap:6px;align-items:center;font-weight:600}
+.kitpage .buildrow-qty button,.kitpage .buildrow>button{padding:3px 9px;font-size:12.5px}
+.kitpage .buildlist-foot{margin-top:10px;font-size:13px}
+.kitpage .palette-bomlink{font-weight:700}
 `;
 
 function downloadText(name: string, text: string) {
@@ -114,6 +158,60 @@ export default function KitViewer() {
   const [propsError, setPropsError] = useState(false);
   const [fallback, setFallback] = useState(false);
   const readyRef = useRef(false);
+
+  /* The Parts palette + the shared build list (lib/buildList.ts —
+   * the same list the chat adds to and the BOM wizard starts
+   * from). Bench-prop entries with a position are the scene's
+   * placed props; catalogue entries live in the list only. */
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [dropNote, setDropNote] = useState<string | null>(null);
+  const [buildEntries, saveBuild] = useBuildList();
+  const paletteItems = useMemo(
+    () => buildPaletteItems(catalogParts, simReadyProps),
+    [],
+  );
+  const paletteByKey = useMemo(
+    () => new Map(paletteItems.map((i) => [i.key, i])),
+    [paletteItems],
+  );
+  const placedProps: PlacedProp[] = useMemo(
+    () =>
+      buildEntries.flatMap((e) => {
+        if (e.kind !== 'bench-prop' || !e.pos) return [];
+        const prop = simReadyProps.find((p) => p.id === e.refId);
+        return prop
+          ? [
+              {
+                uid: e.uid,
+                file: prop.file,
+                pos: e.pos,
+                yaw: prop.rotation_y_rad,
+              },
+            ]
+          : [];
+      }),
+    [buildEntries],
+  );
+  const addPaletteItem = (item: PaletteItem, explicitPos?: [number, number]) => {
+    saveBuild(
+      addToBuildList(buildEntries, item, 1, 'palette', () => uid('build'), explicitPos),
+    );
+  };
+  const handleCanvasDrop = (itemKey: string, pos: [number, number]) => {
+    const item = paletteByKey.get(itemKey);
+    if (!item) return;
+    if (item.hasModel) {
+      addPaletteItem(item, pos);
+      setDropNote(
+        `${item.name} placed in the scene where you dropped it, and added to your build list.`,
+      );
+    } else {
+      addPaletteItem(item);
+      setDropNote(
+        `${item.name} added to your build list — it has no 3D model, so nothing was placed in the scene.`,
+      );
+    }
+  };
 
   /* Mobile UX Phase 2 (2026-10-31): on phone-width screens the 3D
    * scene waits for a tap — mounting Three.js + WebGL up front made
@@ -171,7 +269,10 @@ export default function KitViewer() {
             explode slider and watch it come apart. Flip on <b>CAD mode</b>{' '}
             and the same model becomes parametric OpenSCAD you can download,
             open in OpenSCAD or FreeCAD, edit, and print. Geometry: TurtleBot3
-            Burger dims — the robot the gate passed.
+            Burger dims — the robot the gate passed. Open the{' '}
+            <b>Parts palette</b> to drag bench props onto the stage and
+            build a parts list — or ask the assistant in chat to add
+            parts to your build.
           </p>
         </header>
 
@@ -195,6 +296,8 @@ export default function KitViewer() {
             cad={cad}
             real={real}
             propsOn={propsOn}
+            placedProps={placedProps}
+            onCanvasDrop={handleCanvasDrop}
             selectedSpecimen={selectedSpecimen}
             onReady={() => {
               readyRef.current = true;
@@ -229,6 +332,16 @@ export default function KitViewer() {
               <b>Drag</b> orbit · <b>Pinch</b> zoom · <b>Tap</b>{' '}
               {real ? 'a real part to inspect it' : 'a part to inspect'}
             </div>
+          )}
+          {paletteOpen && (
+            <PartsPalette
+              entries={buildEntries}
+              onAdd={(item) => addPaletteItem(item)}
+              onRemove={(id) => saveBuild(removeFromBuildList(buildEntries, id))}
+              onQty={(id, qty) => saveBuild(setBuildQty(buildEntries, id, qty))}
+              onClear={() => saveBuild([])}
+              onClose={() => setPaletteOpen(false)}
+            />
           )}
         </div>
         <div className="bar3d">
@@ -271,6 +384,13 @@ export default function KitViewer() {
             ▦ Bench props — NVIDIA SimReady
           </button>
           <button
+            id="paletteBtn"
+            className={paletteOpen ? 'on' : undefined}
+            onClick={() => setPaletteOpen(!paletteOpen)}
+          >
+            ▤ Parts palette
+          </button>
+          <button
             id="dlBtn"
             className="primary"
             disabled={real}
@@ -284,6 +404,12 @@ export default function KitViewer() {
             ⭳ Download .scad
           </button>
         </div>
+        {dropNote && (
+          <div className="box" style={{ marginTop: 14 }}>
+            <b>Palette:</b> {dropNote}{' '}
+            <button onClick={() => setDropNote(null)}>Dismiss</button>
+          </div>
+        )}
         {real && (
           <div className="box" style={{ marginTop: 14 }}>
             {specimenDoc ? (
