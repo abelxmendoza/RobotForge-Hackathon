@@ -75,6 +75,18 @@
 }
 .fc-hit:hover{border-color:var(--accent);color:var(--accent)}
 .fc-hit[data-kind="robot"]{border-style:dashed}
+.fc-hit[data-kind="action"]{border-color:var(--accent);color:var(--accent)}
+
+/* Evidence sources under a factual answer: the records the answer
+ * came from, rendered as quieter chips than the answer's own hits. */
+.fc-sources{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.fc-sources-label{color:var(--text-faint);font-size:var(--fs-xs);font-weight:600}
+.fc-source{
+  background:transparent;color:var(--text-faint);border:1px dashed var(--border);
+  border-radius:999px;font:500 var(--fs-xs)/1.2 var(--font);
+  padding:4px 9px;cursor:pointer;text-align:left;
+}
+.fc-source:hover{border-color:var(--accent);color:var(--accent)}
 
 .fc-chips{
   display:flex;flex-wrap:wrap;gap:6px;

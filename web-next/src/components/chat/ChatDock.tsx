@@ -24,6 +24,14 @@ import {
   type TemplateData,
 } from "./engine";
 import { gateReports, parts, robotSlug, robots } from "@/lib/data";
+import {
+  createWrench,
+  isDemoRequest,
+  type SourceRef,
+  type TurnMemory,
+  type Wrench,
+} from "./wrench";
+import { assetPath } from "@/components/home/asset";
 import { parseNavCommand, type NavAction } from "@/lib/nav";
 import { MOBILITY_CLASSES } from "@/components/robots/shared";
 import { groupSlug } from "@/components/robots/GroupCard";
@@ -35,7 +43,7 @@ import InventoryProposal from './InventoryProposal';
 import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,type InventoryOperation} from '@/lib/inventory';
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
-import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot } from '@/lib/garage';
+import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -59,10 +67,10 @@ const SUB_LIVE =
 const LIVE_BADGE =
   "LIVE MODEL — not from recorded RobotForge data; check numbers on the Evidence page";
 
-function buildEngine(): Engine {
+function engineData() {
   const templates =
     (partsDoc as unknown as { templates?: TemplateData[] }).templates || [];
-  return createEngine({
+  return {
     robots: robots as unknown as RobotData[],
     parts: parts as unknown as PartData[],
     templates: templates.length,
@@ -71,7 +79,15 @@ function buildEngine(): Engine {
     reports: { runs: gateReports } as unknown as ReportsData,
     intents: intentsDoc as unknown as IntentsData,
     root: "",
-  });
+  };
+}
+
+function buildEngine(): Engine {
+  return createEngine(engineData());
+}
+
+function buildWrench(): Wrench {
+  return createWrench(engineData());
 }
 
 interface LiveHealth {
@@ -88,6 +104,7 @@ interface Msg {
   html?: string;
   text?: string;
   hits?: Hit[];
+  sources?: SourceRef[];
 }
 
 let nextId = 1;
@@ -105,15 +122,21 @@ const carry: {
   inventoryProposal: InventoryOperation | null;
   assemblyProposal: AssemblyOperation | null;
   lastApplied: Applied;
-} = { messages: [], chips: null, proposal: null, inventoryProposal: null, assemblyProposal: null, lastApplied: null };
+  memory: TurnMemory;
+} = { messages: [], chips: null, proposal: null, inventoryProposal: null, assemblyProposal: null, lastApplied: null, memory: {} };
 
 export function useForgeAssistant() {
   const router = useRouter();
   const pathname = usePathname();
   const engine = useMemo(buildEngine, []);
+  const wrench = useMemo(buildWrench, []);
+  const memoryRef = useRef<TurnMemory>(carry.memory);
+  useEffect(() => () => { carry.memory = memoryRef.current; }, []);
 
   const [messages, setMessages] = useState<Msg[]>(() => carry.messages);
-  const [chips, setChipsState] = useState<string[]>(() => carry.chips ?? DEFAULT_CHIPS);
+  const [chips, setChipsState] = useState<string[]>(
+    () => carry.chips ?? wrench.contextChips(pathname || "", carry.memory)
+  );
   const [subText, setSubText] = useState(SUB_RECORDED);
 
   const [proposal, setProposal] = useState<Preview | null>(() => carry.proposal);
@@ -482,7 +505,7 @@ export function useForgeAssistant() {
        * answer-only path that could claim an action happened. They go to
        * the Tier-1 translator, which can only propose a validated
        * command, or they are refused plainly. */
-      if (/^(?:add|remove|delete|move|place|mount|connect|wire|disconnect|generate|export|run|save|set|undo|make|change|increase|decrease|bigger|smaller|heavier|lighter)\b/i.test(q)) {
+      if (!isDemoRequest(q) && /^(?:add|remove|delete|move|place|mount|connect|wire|disconnect|generate|export|run|save|set|undo|make|change|increase|decrease|bigger|smaller|heavier|lighter)\b/i.test(q)) {
         void proposeViaLive(q);
         return;
       }
@@ -490,20 +513,26 @@ export function useForgeAssistant() {
         who: "bot",
         html: '<p class="fc-dim">Checking the recorded data&hellip;</p>',
       });
-      const done = (ans: AnswerResult) => {
+      const done = (ans: AnswerResult & { sources?: SourceRef[] }) => {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits } : m
+            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits, sources: ans.sources } : m
           )
         );
-        setChips(ans.chips || engine.suggestions);
+        setChips(
+          ans.chips && ans.chips.length
+            ? ans.chips
+            : wrench.contextChips(pathname || "", memoryRef.current)
+        );
         autoAction(q, ans);
       };
       /* The vanilla widget answers inside its data-load promise, so
        * the "Checking…" bubble paints first; the data here is a
        * static import, so defer one tick to keep the same rhythm. */
       window.setTimeout(() => {
-        const ans = engine.answer(q);
+        const turn = wrench.answerTurn(q, memoryRef.current);
+        memoryRef.current = turn.memory || {};
+        const ans: AnswerResult & { sources?: SourceRef[] } = turn;
         /* Recorded answers stay the default and stay instant: only
          * the engine's honest fallback may go live. */
         if (!ans.fallback || !liveBase()) {
@@ -526,6 +555,7 @@ export function useForgeAssistant() {
                     : "out of budget for today") +
                   ", so this answer is from the recorded data only.</p>",
                 chips: ans.chips,
+                sources: ans.sources,
               });
             } else {
               done(ans);
@@ -566,20 +596,107 @@ export function useForgeAssistant() {
               done({
                 html: ans.html + '<p class="fc-live-note">' + note + "</p>",
                 chips: ans.chips,
+                sources: ans.sources,
               });
             });
         });
       }, 0);
     },
-    [appendMsg, autoAction, checkLive, doNav, engine, liveBase, liveChat, proposeViaLive, runCommands, setChips, noteBubble]
+    [appendMsg, autoAction, checkLive, doNav, engine, liveBase, liveChat, pathname, proposeViaLive, runCommands, setChips, wrench, noteBubble]
+  );
+
+  /* The fix handoff: a failing robot's recorded spec goes into the
+   * Workshop exactly the way its own "From the Robodex" add flow
+   * loads it — fetched spec, a Baseline version sourced 'robodex' —
+   * and the user lands in the Workshop, where the fix loop and the
+   * checks live. Nothing is changed about the robot until the user
+   * works on it there. */
+  const fixHandoff = useCallback(
+    (hit: Hit) => {
+      const slug = String(hit.id || "").slice("fix:".length);
+      const robot = robots.find((r) => robotSlug(r) === slug);
+      if (!robot || !robot.spec_file) {
+        noteBubble("I couldn't find that robot's recorded spec file, so nothing was sent to the Workshop.");
+        return;
+      }
+      const specFile: string = robot.spec_file;
+      fetch(assetPath(specFile))
+        .then((r) => {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json() as Promise<Spec>;
+        })
+        .then((spec) => {
+          const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          if (saved.some((g) => g.name === robot.name)) {
+            noteBubble(
+              "“" + robot.name + "” is already in your Workshop — opening it there. Its saved versions are unchanged."
+            );
+          } else {
+            const nowIso = new Date().toISOString();
+            const entry: GarageRobot = {
+              id: uid("robot"),
+              name: robot.name,
+              createdAt: nowIso,
+              versions: [
+                {
+                  id: uid("v"),
+                  label: "Baseline",
+                  note: "Started from " + robot.name + " — sent from chat to work on its recorded gate failure",
+                  source: "robodex",
+                  createdAt: nowIso,
+                  spec: spec,
+                },
+              ],
+            };
+            const error = writeStore(GARAGE_KEY, [...saved, entry]);
+            if (error) throw new Error(error);
+            noteBubble(
+              "I put “" + robot.name + "” in your Workshop with its recorded spec as the Baseline version. " +
+                "Open it there and run the fix loop — the checks decide whether a change holds."
+            );
+          }
+          router.push("/garage/");
+        })
+        .catch((e: Error) => {
+          noteBubble("I couldn't load that spec (" + e.message + "), so nothing was sent to the Workshop.");
+        });
+    },
+    [noteBubble, router]
   );
 
   const onHitClick = (h: Hit) => {
+    if (h.kind === "action") {
+      if (h.id && h.id.indexOf("fix:") === 0) {
+        fixHandoff(h);
+        return;
+      }
+      if (h.route) {
+        router.push(h.route);
+        return;
+      }
+    }
     if (h.kind === "part") focusPartHit(h);
     else if (h.route) router.push(h.route);
   };
 
-  return {ask,messages,chips,onHitClick,subText,actions: <div className="main-chat-actions">
+  /* Visible reset: clears the conversation, the session memory and
+   * any pending proposal. Saved robots and inventory are untouched. */
+  const resetConversation = useCallback(() => {
+    setMessages([]);
+    setProposal(null);
+    setAssemblyProposal(null);
+    setInventoryProposal(null);
+    lastApplied.current = null;
+    memoryRef.current = {};
+    carry.messages = [];
+    carry.proposal = null;
+    carry.inventoryProposal = null;
+    carry.assemblyProposal = null;
+    carry.memory = {};
+    setChipsState(wrench.contextChips(pathname || "", {}));
+  }, [pathname, wrench]);
+
+  return {ask,messages,chips,onHitClick,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
           onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}

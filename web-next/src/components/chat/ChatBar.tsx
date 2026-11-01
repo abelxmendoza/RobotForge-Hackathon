@@ -94,6 +94,16 @@ export default function ChatBar() {
                 getText={() => transcript(assistant.messages)}
               />
             )}
+            {assistant.messages.length > 0 && (
+              <button
+                type="button"
+                className="chat-bar-full"
+                onClick={assistant.resetConversation}
+                title="Clear this conversation and Wrench's memory of it"
+              >
+                New conversation
+              </button>
+            )}
             <Link className="chat-bar-full" href="/garage/#wrench" title="Open Wrench in the Workshop">
               Full size
             </Link>

@@ -165,6 +165,9 @@ export interface Hit {
   id?: string;
   label: string;
   route?: string;
+  /* Action hits (kind "action") may carry the robot's recorded
+   * spec file so the UI can hand it to the Workshop fix loop. */
+  specFile?: string;
 }
 
 export interface AnswerResult {
