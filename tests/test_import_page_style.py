@@ -17,3 +17,9 @@ def test_import_page_has_css_rules():
     for sel in (".repo-import > form", ".repo-import-detail section",
                 ".repo-gallery", ".repo-parts"):
         assert sel in CSS, sel
+
+
+def test_phone_layout_keeps_the_quantity_visible():
+    phone = CSS.split(".repo-parts thead{display:none}", 1)[1].split("}\n}", 1)[0]
+    assert "nth-child(2){display:none}" not in phone
+    assert 'content:"Qty "' in phone

@@ -1581,9 +1581,10 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 @media (max-width:640px){
   .repo-import-detail section{padding:var(--s4)}
   .repo-parts thead{display:none}
-  .repo-parts tr{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .repo-parts tr{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--border)}
   .repo-parts td{border:0;padding:0}
   .repo-parts td:first-child{grid-column:1/-1}
-  .repo-parts td:nth-child(2){display:none}
+  .repo-parts td:nth-child(2){font-size:var(--fs-xs);color:var(--text-muted)}
+  .repo-parts td:nth-child(2)::before{content:"Qty ";color:var(--text-faint)}
   .repo-parts td:last-child{text-align:right}
 }
