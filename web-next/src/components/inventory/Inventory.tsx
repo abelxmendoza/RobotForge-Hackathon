@@ -3,6 +3,7 @@
  * read each one, then confirm it in a short chat. A part counts as
  * yours-and-known only after you confirm it; confirmed batteries,
  * motors and wheels can be fitted to a robot in the Garage. */
+import { partArt } from '@/lib/partArt';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
@@ -33,7 +34,9 @@ function blankPart(source: 'photo' | 'manual', photo: string | null): InventoryP
 function PartCard({ p, robotName, active, onOpen }: { robotName?:string; p: InventoryPart; active: boolean; onOpen: () => void }) {
   return (
     <button type="button" className="inv-card" aria-pressed={active} onClick={onOpen}>
-      {p.photo ? <img src={p.photo} alt="" /> : <span className="inv-noimg" aria-hidden="true">{label(p.category).slice(0, 1).toUpperCase()}</span>}
+      {p.photo ? <img src={p.photo} alt="" />
+        : partArt(p.name, p.category) ? <span className="part-art" title="Illustration of a typical part like this, not a photo of yours"><img src={partArt(p.name, p.category)!} alt="" loading="lazy" /></span>
+          : <span className="inv-noimg" aria-hidden="true">{label(p.category).slice(0, 1).toUpperCase()}</span>}
       <span className="inv-card-body">
         <strong>{p.name}</strong>
         <span className="faint">{label(p.category)} · ×{p.quantity} · {robotName||'Shared / unassigned'}</span>
