@@ -126,7 +126,6 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
-          <DemoVideoCard />
           <figure className="hero-art">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -140,6 +139,7 @@ export default function HomePage() {
               carry real, credited photos.
             </figcaption>
           </figure>
+          <DemoVideoCard />
         </div>
       </section>
 
