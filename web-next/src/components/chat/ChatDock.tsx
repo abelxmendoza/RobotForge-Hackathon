@@ -32,6 +32,9 @@ import {
   type BuildEntry,
 } from "@/lib/palette";
 import { BUILD_KEY } from "@/lib/buildList";
+import { runWiringCommand } from "@/lib/buildWiring";
+import { readBuildWiring, writeBuildWiring } from "@/lib/wiringStore";
+import type { Part } from "@/lib/types";
 import {
   createWrench,
   isDemoRequest,
@@ -102,6 +105,7 @@ function buildWrench(): Wrench {
  * the same items and the same deterministic matcher the palette
  * and the BOM wizard use (lib/palette.ts). */
 const PALETTE_ITEMS = buildPaletteItems(parts, simReadyProps);
+const PARTS_BY_ID = new Map<string, Part>(parts.map((p) => [p.id, p]));
 
 interface LiveHealth {
   ok?: boolean;
@@ -383,6 +387,36 @@ export function useForgeAssistant() {
             if (err) throw new Error(err);
           }
           noteBubble(buildConfirmationText(buildReq));
+        } catch (e) { noteBubble((e as Error).message); }
+        return true;
+      }
+      /* Wiring commands ("wire the camera to the Orin",
+       * "disconnect the lidar", "what is the camera plugged
+       * into", "check my wiring"): resolved deterministically
+       * against the build list's wiring graph (lib/buildWiring.ts,
+       * rf.wiring.v1) — ports from recorded catalogue data only.
+       * The reply confirms what changed and names every refusal;
+       * shapes this grammar doesn't own (quoted or robot-directed,
+       * like the build grammar) return null and fall through. */
+      const wiringOutcome = runWiringCommand(
+        q,
+        readStore<BuildEntry[]>(BUILD_KEY, []),
+        readBuildWiring(),
+        PARTS_BY_ID,
+        PALETTE_ITEMS,
+        [
+          ...robots.map((r) => r.name),
+          ...readStore<GarageRobot[]>(GARAGE_KEY, []).map((r) => r.name),
+        ],
+        () => uid('wire'),
+      );
+      if (wiringOutcome) {
+        try {
+          if (wiringOutcome.wiring) {
+            const err = writeBuildWiring(wiringOutcome.wiring);
+            if (err) throw new Error(err);
+          }
+          noteBubble(wiringOutcome.text);
         } catch (e) { noteBubble((e as Error).message); }
         return true;
       }

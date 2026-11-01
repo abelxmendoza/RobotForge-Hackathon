@@ -13,6 +13,8 @@ import {
 } from "@/lib/bom";
 import { liveHealth, postJSON, routeOn } from "@/components/forge/live";
 import SourcingLinks from "@/components/robots/SourcingLinks";
+import { useBuildWiring } from "@/lib/wiringStore";
+import { harnessCsv, harnessText } from "@/lib/buildWiring";
 
 /* The BOM wizard: three steps over the site's real parts data.
  * Start from a robot's take-apart kit, a catalogue build template,
@@ -62,6 +64,20 @@ export default function BomWizard() {
    * It is read live, so parts added on the Kit page while this
    * wizard is open arrive here too. */
   const [buildEntries] = useStore<BuildEntry[]>(BUILD_KEY, []);
+  /* The build list's wiring (rf.wiring.v1): when the BOM starts
+   * from the build list, its exports gain the wiring table as a
+   * harness section — the same resolved connections the Kit
+   * page's Wiring view draws. No wiring, no section: an export
+   * never invents a harness. */
+  const [buildWiring] = useBuildWiring();
+  const bomNameOf = (e: BuildEntry) => {
+    if (e.kind === "catalog-part") {
+      const part = partsById.get(e.refId);
+      const base = part ? part.name : e.refId;
+      return e.qty > 1 ? `${base} ×${e.qty}` : base;
+    }
+    return propsById.get(e.refId)?.name ?? e.refId;
+  };
 
   // Deep links: /bom/?kit=<slug> or /bom/?template=<name> pre-pick
   // the starting point (the robot pages' parts-kit sections link in);
@@ -169,8 +185,25 @@ export default function BomWizard() {
     });
   };
 
+  const harness = useMemo(
+    () =>
+      start.kind === "build"
+        ? harnessText(buildEntries, buildWiring, partsById, bomNameOf)
+        : "",
+    // bomNameOf is a pure lookup over module-level maps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [start, buildEntries, buildWiring],
+  );
+
   const downloadCsv = () => {
-    const blob = new Blob([bomToCsv(lines)], { type: "text/csv" });
+    const csvHarness =
+      start.kind === "build"
+        ? harnessCsv(buildEntries, buildWiring, partsById, bomNameOf)
+        : "";
+    const blob = new Blob(
+      [bomToCsv(lines) + (csvHarness ? csvHarness + "\n" : "")],
+      { type: "text/csv" },
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -181,7 +214,9 @@ export default function BomWizard() {
 
   const copyText = async () => {
     try {
-      await navigator.clipboard.writeText(bomToText(lines, title));
+      await navigator.clipboard.writeText(
+        bomToText(lines, title) + (harness ? "\n\n" + harness : ""),
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -443,6 +478,14 @@ export default function BomWizard() {
             specs — no prices, stock or availability are shown, here or in
             the exports.
           </p>
+          {harness ? (
+            <p className="sub">
+              This BOM starts from your build list, so both exports also
+              carry its wiring table as a harness section — the schematic
+              connections from the Kit page&apos;s Wiring view, with their
+              recorded-data checks.
+            </p>
+          ) : null}
           {lines.length ? (
             <>
               <div className="table-scroll">
