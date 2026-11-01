@@ -315,7 +315,6 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
    * it when there is something to read, and collapses with ▾. */
   const [open, setOpen] = useState(!docked);
   const welcomeIdRef = useRef(0);
-  const convoLenRef = useRef(0);
   const panelBodyRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const assistant = useForgeAssistant();
@@ -1287,6 +1286,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     const value = text.trim();
     const a = attach;
     if (!a && !value) return;
+    setOpen(true); // chatting opens the conversation so the reply is visible
     busyRef.current = true;
     try {
       if (a && a.kind === 'spec') await runSpec(a.file);
@@ -1406,22 +1406,15 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     return ASSISTANT_NAME + ':\n' + body;
   };
 
-  /* Anything new in the conversation (a reply, a step, a file handed
-   * over from another page) opens the docked panel so it can be read. */
+  /* The docked panel never opens by itself (Abel, 2026-11-01): arriving
+   * on the Workshop, with a restored conversation, demo entries or a
+   * #wrench / #words link, leaves it collapsed. It opens only when the
+   * person chats (onSubmit, a suggestion chip) or presses the ▴ toggle. */
   const convoLen = entries.filter((e) => e.id !== welcomeIdRef.current).length;
   useEffect(() => {
-    if (docked && convoLen > convoLenRef.current) setOpen(true);
-    convoLenRef.current = convoLen;
     const body = panelBodyRef.current;
     if (docked && body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
-  }, [docked, convoLen]);
-  useEffect(() => {
-    if (!docked) return;
-    const fromHash = () => { if (/^#(wrench|words|photo|list|document)\b/.test(window.location.hash)) setOpen(true); };
-    fromHash();
-    window.addEventListener('hashchange', fromHash);
-    return () => window.removeEventListener('hashchange', fromHash);
-  }, [docked]);
+  }, [docked, convoLen, open]);
 
   const panel = (
     <>
@@ -1531,7 +1524,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         </button>
       </div>
       {assistant.actions}
-      <div className="main-chat-suggestions g-tabs" aria-label="Workspace suggestions">{['List my robots','List my inventory','Operations'].map(q=><button className="chip" type="button" key={q} onClick={()=>{pushUser(<p>{q}</p>);assistant.ask(q);}}>{q}</button>)}</div>
+      <div className="main-chat-suggestions g-tabs" aria-label="Workspace suggestions">{['List my robots','List my inventory','Operations'].map(q=><button className="chip" type="button" key={q} onClick={()=>{setOpen(true);pushUser(<p>{q}</p>);assistant.ask(q);}}>{q}</button>)}</div>
     </>
   );
 
