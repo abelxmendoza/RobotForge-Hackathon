@@ -24,6 +24,14 @@ class FakeKV {
   constructor() { this.map = new Map(); }
   async get(k) { return this.map.has(k) ? this.map.get(k) : null; }
   async put(k, v) { this.map.set(k, String(v)); }
+  async delete(k) { this.map.delete(k); }
+  async list({ prefix = '', limit = 1000 } = {}) {
+    const names = [...this.map.keys()].filter(k => k.startsWith(prefix)).sort();
+    return {
+      keys: names.slice(0, limit).map(name => ({ name })),
+      list_complete: names.length <= limit, cursor: '',
+    };
+  }
 }
 
 const GOOD_SPEC = {
@@ -163,12 +171,14 @@ function makeEnv(overrides = {}) {
     LIVE_ENABLED: '1',
     DAILY_LIMIT: '200',
     PER_IP_DAILY_LIMIT: '30',
+    AUTH_JWT_SECRET: 'mock-jwt-secret-0123456789',
+    OPERATOR_TOKEN: 'mock-operator-token',
     ...overrides,
   };
 }
 
-async function call(env, path, { method = 'GET', body, origin = SITE, ip = '203.0.113.7' } = {}) {
-  const headers = { 'CF-Connecting-IP': ip };
+async function call(env, path, { method = 'GET', body, origin = SITE, ip = '203.0.113.7', headers: extraHeaders = {} } = {}) {
+  const headers = { 'CF-Connecting-IP': ip, ...extraHeaders };
   if (origin) headers.Origin = origin;
   let payload;
   if (body !== undefined) {
@@ -596,6 +606,183 @@ await scenario('transcribe rejects non-WAV audio', async () => {
     body: { audio_b64: Buffer.from('not a wav file at all........').toString('base64') } });
   assert.strictEqual(r.status, 400);
   assert.strictEqual(r.body.code, 'bad_audio');
+});
+
+/* ---------------- accounts ---------------- */
+
+await scenario('health reports auth on and meta login off', async () => {
+  const r = await call(makeEnv(), '/health');
+  assert.strictEqual(r.body.auth, true);
+  assert.strictEqual(r.body.metaLogin, false);
+  const c = await call(makeEnv(), '/auth/config');
+  assert.deepStrictEqual(c.body, { metaLogin: false });
+});
+
+await scenario('auth register then login then me', async () => {
+  const env = makeEnv();
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'Pat@Example.com', password: 'hunter2-hunter2', name: 'Pat' } });
+  assert.strictEqual(reg.status, 201, JSON.stringify(reg.body));
+  assert.strictEqual(reg.body.user.email, 'pat@example.com');
+  assert.strictEqual(reg.body.user.role, 'user');
+  assert.ok(reg.body.token.split('.').length === 3, 'session token is a JWT');
+  assert.ok(!JSON.stringify(reg.body).includes('passHash'), 'hash leaked in register reply');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + reg.body.token } });
+  assert.strictEqual(me.status, 200);
+  assert.strictEqual(me.body.user.name, 'Pat');
+  const login = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'pat@example.com', password: 'hunter2-hunter2' } });
+  assert.strictEqual(login.status, 200);
+  assert.strictEqual(login.body.user.email, 'pat@example.com');
+  const out = await call(env, '/auth/logout', { method: 'POST' });
+  assert.strictEqual(out.status, 200);
+});
+
+await scenario('auth duplicate register is a 409', async () => {
+  const env = makeEnv();
+  const body = { email: 'dup@example.com', password: 'password-123' };
+  const first = await call(env, '/auth/register', { method: 'POST', body });
+  assert.strictEqual(first.status, 201);
+  const second = await call(env, '/auth/register', { method: 'POST', body });
+  assert.strictEqual(second.status, 409);
+  assert.strictEqual(second.body.code, 'already_registered');
+});
+
+await scenario('auth wrong password and unknown email are a generic 401', async () => {
+  const env = makeEnv();
+  await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'sam@example.com', password: 'password-123' } });
+  const wrong = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'sam@example.com', password: 'password-999' } });
+  assert.strictEqual(wrong.status, 401);
+  assert.strictEqual(wrong.body.code, 'bad_credentials');
+  const ghost = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'ghost@example.com', password: 'password-123' } });
+  assert.strictEqual(ghost.status, 401);
+  assert.strictEqual(ghost.body.error, wrong.body.error, 'login errors must not say which part failed');
+});
+
+await scenario('auth validation rejects bad email and short password', async () => {
+  const env = makeEnv();
+  const badEmail = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'not-an-email', password: 'password-123' } });
+  assert.strictEqual(badEmail.status, 400);
+  assert.strictEqual(badEmail.body.code, 'bad_email');
+  const short = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'ok@example.com', password: 'short' } });
+  assert.strictEqual(short.status, 400);
+  assert.strictEqual(short.body.code, 'weak_password');
+});
+
+await scenario('auth founder email is reserved on the public route', async () => {
+  const r = await call(makeEnv(), '/auth/register', { method: 'POST',
+    body: { email: 'AbelXMendoza@gmail.com', password: 'password-123' } });
+  assert.strictEqual(r.status, 403);
+  assert.strictEqual(r.body.code, 'reserved_email');
+});
+
+await scenario('auth me rejects missing and tampered tokens', async () => {
+  const env = makeEnv();
+  const none = await call(env, '/auth/me');
+  assert.strictEqual(none.status, 401);
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'tam@example.com', password: 'password-123' } });
+  const parts = reg.body.token.split('.');
+  const tampered = parts[0] + '.' + parts[1] + '.' +
+    (parts[2][0] === 'A' ? 'B' : 'A') + parts[2].slice(1);
+  const bad = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + tampered } });
+  assert.strictEqual(bad.status, 401);
+  const forged = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer not-a-jwt' } });
+  assert.strictEqual(forged.status, 401);
+});
+
+await scenario('auth operator routes need the operator token', async () => {
+  const env = makeEnv();
+  const noToken = await call(env, '/admin/users');
+  assert.strictEqual(noToken.status, 401);
+  const wrong = await call(env, '/admin/users',
+    { headers: { 'X-Operator-Token': 'nope' } });
+  assert.strictEqual(wrong.status, 401);
+  const seedNoToken = await call(env, '/admin/seed-founder', { method: 'POST',
+    body: { password: 'founder-pass-123' } });
+  assert.strictEqual(seedNoToken.status, 401);
+});
+
+await scenario('auth seed founder then founder login works', async () => {
+  const env = makeEnv();
+  const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };
+  const seed = await call(env, '/admin/seed-founder', { method: 'POST',
+    body: { password: 'founder-pass-123' }, ...op });
+  assert.strictEqual(seed.status, 200, JSON.stringify(seed.body));
+  assert.strictEqual(seed.body.user.role, 'founder');
+  assert.strictEqual(seed.body.user.email, 'abelxmendoza@gmail.com');
+  const login = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'abelxmendoza@gmail.com', password: 'founder-pass-123' } });
+  assert.strictEqual(login.status, 200);
+  assert.strictEqual(login.body.user.role, 'founder');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + login.body.token } });
+  assert.strictEqual(me.body.user.role, 'founder');
+});
+
+await scenario('auth admin users lists public fields only', async () => {
+  const env = makeEnv();
+  const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };
+  await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'lee@example.com', password: 'password-123', name: 'Lee' } });
+  await call(env, '/admin/seed-founder', { method: 'POST',
+    body: { password: 'founder-pass-123' }, ...op });
+  const r = await call(env, '/admin/users', { ...op });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.count, 2);
+  assert.deepStrictEqual(r.body.users.map(u => u.email),
+    ['abelxmendoza@gmail.com', 'lee@example.com']);
+  assert.ok(!JSON.stringify(r.body).includes('passHash'), 'hash leaked via /admin/users');
+  assert.ok(!JSON.stringify(r.body).includes('pbkdf2'), 'hash leaked via /admin/users');
+});
+
+await scenario('auth grant role promotes and me reflects it at once', async () => {
+  const env = makeEnv();
+  const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'mod@example.com', password: 'password-123' } });
+  const grant = await call(env, '/admin/grant-role', { method: 'POST',
+    body: { email: 'mod@example.com', role: 'admin' }, ...op });
+  assert.strictEqual(grant.status, 200);
+  assert.strictEqual(grant.body.user.role, 'admin');
+  /* The pre-grant token still works, and /me reads the fresh role. */
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + reg.body.token } });
+  assert.strictEqual(me.body.user.role, 'admin');
+  const bogus = await call(env, '/admin/grant-role', { method: 'POST',
+    body: { email: 'mod@example.com', role: 'superuser' }, ...op });
+  assert.strictEqual(bogus.status, 400);
+  const ghost = await call(env, '/admin/grant-role', { method: 'POST',
+    body: { email: 'ghost@example.com', role: 'admin' }, ...op });
+  assert.strictEqual(ghost.status, 404);
+});
+
+await scenario('auth meta routes are a 501 while unconfigured', async () => {
+  const env = makeEnv();
+  const start = await call(env, '/auth/meta/start');
+  assert.strictEqual(start.status, 501);
+  assert.strictEqual(start.body.code, 'meta_not_configured');
+  const cb = await call(env, '/auth/meta/callback?code=x&state=y');
+  assert.strictEqual(cb.status, 501);
+});
+
+await scenario('auth is a 503 when the JWT secret is missing', async () => {
+  const env = makeEnv();
+  delete env.AUTH_JWT_SECRET;
+  const r = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'a@example.com', password: 'password-123' } });
+  assert.strictEqual(r.status, 503);
+  assert.strictEqual(r.body.code, 'auth_not_configured');
+  const h = await call(env, '/health');
+  assert.strictEqual(h.body.auth, false);
 });
 
 const failed = results.filter(r => r.startsWith('FAIL'));

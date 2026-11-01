@@ -143,7 +143,11 @@ def test_worker_guardrails_and_routes_present():
                 "rate_limited", "guardrail_error", "LIVE_ENABLED",
                 "RF_LIVE_KV", "/describe", "/chat", "/list", "/photo",
                 "photo_not_configured", "routes", "/transcribe",
-                "transcribe_not_configured", "muse-voice-transcribe-1.0"):
+                "transcribe_not_configured", "muse-voice-transcribe-1.0",
+                "/auth/register", "/auth/login", "/auth/me",
+                "/auth/meta/start", "/admin/users", "/admin/seed-founder",
+                "auth_not_configured", "reserved_email", "pbkdf2",
+                "AUTH_JWT_SECRET", "OPERATOR_TOKEN", "metaLogin"):
         assert bit in WORKER, bit
     # photo is the optional route: 501 when its secret is absent
     assert "501" in WORKER and "env.META_API_KEY" in WORKER
@@ -186,6 +190,11 @@ def test_worker_mock_suite():
                  "list happy path sanitizes",
                  "document mode transcribes",
                  "document mode rejects",
+                 "auth register then login then me",
+                 "auth founder email is reserved",
+                 "auth seed founder then founder login works",
+                 "auth admin users lists public fields only",
+                 "auth meta routes are a 501 while unconfigured",
                  "malformed model output is a 502"):
         assert "PASS " + name.split(" is a 501")[0] in r.stdout or \
             name in r.stdout, name

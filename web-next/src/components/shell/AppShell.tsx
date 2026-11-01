@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
+import AccountControl from "./AccountControl";
 import ChatBar from "@/components/chat/ChatBar";
 import { assetPath } from "@/components/home/asset";
 
@@ -89,6 +90,7 @@ export default function AppShell({ active, crumbs = [], wide = false, children }
               );
             })}
           </nav>
+          <AccountControl />
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>
         <main className={wide ? "content content--wide" : "content"} id="content">{children}</main>
