@@ -47,7 +47,7 @@ import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from 
 import { readStore, writeStore, uid } from '@/lib/store';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { forgeValidateSpec } from '@/components/forge/validate';
-import { LIVE_ENDPOINT } from "@/components/forge/live";
+import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
 import { isDemoMode, useDemoMode } from "@/lib/demoMode";
 
 
@@ -230,7 +230,15 @@ export function useForgeAssistant() {
     (q: string): Promise<string> =>
       fetch(liveBase() + "/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          /* /chat is account-gated at the Worker (see
+           * live/worker.js): carry the session token. Demo mode
+           * never calls this — engine answers stay recorded. */
+          ...(sessionToken()
+            ? { Authorization: "Bearer " + sessionToken() }
+            : {}),
+        },
         body: JSON.stringify({ message: q }),
       }).then((r) =>
         r
@@ -484,7 +492,12 @@ export function useForgeAssistant() {
     try {
       const res = await fetch(liveBase() + "/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(sessionToken()
+            ? { Authorization: "Bearer " + sessionToken() }
+            : {}),
+        },
         body: JSON.stringify({ message: q, op_context: buildOpContext() }),
       });
       const body = (await res.json().catch(() => null)) as

@@ -29,6 +29,18 @@ and the site falls back to its recorded photo sample — that is the
 designed behavior, not an error. Malformed model output is a 502
 with a plain error; raw model junk never reaches the page.
 
+**Every model route above is account-gated:** the request must
+carry a session JWT (`Authorization: Bearer <token>` from
+`/auth/login`, `/auth/register` or a social login — see
+Accounts below). The check runs in the dispatcher before the
+handler and before the budget gate, so an anonymous call gets
+`401 auth_required`, never reaches a model and never spends the
+daily budget. `/health`, `/auth/*` and `/admin/*` are the only
+exemptions. If accounts are not configured (`AUTH_JWT_SECRET`
+unset) the model routes fail closed with the same
+`503 auth_not_configured` the `/auth/*` routes give. The site's
+demo mode is unaffected — it makes no Worker calls at all.
+
 The text routes run a **three-provider chain in measured order**
 (fixed 24-description sweep, Oct 2026): **Baseten** serving Muse
 Spark Open (24/24) → **Meta Model API direct** serving the hosted
