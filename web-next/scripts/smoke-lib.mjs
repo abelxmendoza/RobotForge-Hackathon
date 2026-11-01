@@ -25,4 +25,3 @@ export function checkRoute(root, route) {
   }
   return failures;
 }
-

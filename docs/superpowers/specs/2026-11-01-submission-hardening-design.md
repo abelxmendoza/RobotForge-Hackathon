@@ -39,4 +39,3 @@ Make the November 4 RobotForge submission reproducible and honest: one determini
 - CI that runs Python tests, the Next production build, and the route smoke script.
 - Updated README/live runbook language and a credential-free Worker health checker.
 - A final audit report distinguishing passed checks, external deployment checks, and real-device GPU QA.
-

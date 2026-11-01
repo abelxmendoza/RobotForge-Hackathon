@@ -100,4 +100,3 @@
 - [ ] Run a clean `npm ci`, production build, and route smoke check.
 - [ ] Run CLI validation and inspect `git status --short`.
 - [ ] Record exact results, credentialed production checks still requiring the owner, and real-device GPU/mobile QA still outstanding.
-
