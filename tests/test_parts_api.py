@@ -95,6 +95,23 @@ def test_a_price_without_a_source_record_is_dropped():
         {"unit_price": 1.0, "supplier_url": "https://x.example/p"}) is None
 
 
+def test_normalize_estimate_carries_basis_only_when_recorded():
+    """Basis — what the unit price buys, in the source's own terms
+    ("1.75mm / 1kg", "1kg") — rides along when the source record
+    carries one and stays absent when it doesn't: the seed passes
+    the catalogue's word through, it never invents one."""
+    raw = {"unit_price": 19.99,
+           "supplier_url":
+               "https://shop.polymaker.com/products/polylite-pla",
+           "fetched_at": "2026-11-01T18:23:35Z",
+           "basis": "1.75mm / 1kg"}
+    est = seed.normalize_estimate(raw)
+    assert est["basis"] == "1.75mm / 1kg"
+    del raw["basis"]
+    est = seed.normalize_estimate(raw)
+    assert "basis" not in est
+
+
 def test_photo_is_never_the_catalogue_ai_image():
     catalog = _catalog()
     records = {r["id"]: r for r in _records()}
@@ -166,16 +183,24 @@ def test_real_catalogue_seeds_fifty_records_three_priced():
     assert est["state"] == "web_gathered"
     assert est["fetched_at"] == "2026-11-01T19:24:08Z"
     assert est["expires_at"] == "2026-11-02T19:24:08Z"
+    # The Pololu record carries no basis: the served estimate must
+    # not grow one.
+    assert "basis" not in est
     filament_prices = {
         "pla_filament": (19.99,
                          "https://shop.polymaker.com/products/polylite-pla",
-                         "2026-11-01T18:23:35Z", "2026-11-02T18:23:35Z"),
+                         "2026-11-01T18:23:35Z", "2026-11-02T18:23:35Z",
+                         "1.75mm / 1kg"),
         "petg_filament": (18.99, "https://shop.polymaker.com/products/petg",
-                          "2026-11-01T18:23:54Z", "2026-11-02T18:23:54Z"),
+                          "2026-11-01T18:23:54Z", "2026-11-02T18:23:54Z",
+                          "1kg"),
     }
-    for part_id, (price, url, fetched, expires) in filament_prices.items():
+    for part_id, (price, url, fetched, expires,
+                  basis) in filament_prices.items():
         (est,) = priced[part_id]
         assert est["unit_price"] == price, part_id
+        # Basis is served with the price, in the catalogue's terms.
+        assert est["basis"] == basis, part_id
         assert est["currency"] == "USD", part_id
         assert [(b["qty"], b["unit_price"])
                 for b in est["price_breaks"]] == [(1, price)], part_id
