@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "sync-data": "node scripts/sync-data.mjs",
     "parity": "node scripts/parity.mjs",
     "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs && node scripts/make-simready-props.mjs && node scripts/make-app-icon.mjs && node scripts/make-favicon.mjs && node scripts/make-demo-poster.mjs && node scripts/copy-vanilla.mjs",
