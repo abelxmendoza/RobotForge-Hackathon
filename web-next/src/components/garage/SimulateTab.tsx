@@ -46,23 +46,30 @@ function useRun(key: string): [number, () => void] {
 
 const ease = (x: number) => 1 - Math.pow(1 - x, 2);
 
-/* The robot's side view, drawn at one scale from its spec: body length,
- * wheel size and belly clearance in pixels per metre (ppm). */
-interface Shape { ppm: number; bodyW: number; bodyH: number; wheelR: number; clear: number }
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+/* The robot's side view, drawn at ONE scale from its spec: body length,
+ * wheel size, belly clearance and the kerb all use the same pixels per
+ * metre (ppm), sized so the body is about 110 px long. Lengths are never
+ * clamped one by one; if the robot is too big or small for the scene to
+ * keep that true, `exact` goes false and the scene says "not to scale"
+ * instead of showing the 100 mm bar. */
+interface Shape { ppm: number; bodyW: number; bodyH: number; wheelR: number; clear: number; exact: boolean }
 function shapeOf(spec: Spec): Shape {
   const L = Number(spec?.length_m) || 0.3, H = Number(spec?.height_m) || 0.15;
-  const ppm = clamp(110 / L, 120, 700);
-  const wheelR = clamp((Number(spec?.wheel?.diameter_m) || 0.06) / 2 * ppm, 5, 34);
-  const clear = clamp((Number(spec?.ground_clearance_m) || 0.02) * ppm, 2, 40);
-  const bodyW = clamp(L * ppm, 50, 130);
-  const bodyH = clamp((H - (Number(spec?.ground_clearance_m) || 0.02)) * 0.55 * ppm, 12, 40);
-  return { ppm, bodyW, bodyH, wheelR, clear };
+  const gc = Math.max(0, Number(spec?.ground_clearance_m) || 0.02);
+  const dia = Number(spec?.wheel?.diameter_m) || 0.06;
+  const raw = 110 / L;
+  const ppm = Math.min(900, Math.max(30, raw));
+  const wheelR = (dia / 2) * ppm, clear = gc * ppm;
+  // chassis height is drawn as a box, not a measured length; keep it visible
+  const bodyH = Math.max(8, (H - gc) * 0.55 * ppm);
+  const exact = ppm === raw && wheelR >= 3;
+  return { ppm, bodyW: L * ppm, bodyH, wheelR: Math.max(3, wheelR), clear, exact };
 }
 
-/* 100 mm scale bar at the robot's scale. */
-function ScaleBar({ ppm }: { ppm: number }) {
-  const w = 0.1 * ppm;
+/* 100 mm scale bar at the robot's scale, or a plain "not to scale" note. */
+function ScaleBar({ shape }: { shape: Shape }) {
+  if (!shape.exact) return <text x={14} y={22} className="sim-label">not to scale</text>;
+  const w = 0.1 * shape.ppm;
   return (
     <g className="sim-scale" transform="translate(14 18)">
       <line x1={0} y1={0} x2={w} y2={0} /><line x1={0} y1={-4} x2={0} y2={4} /><line x1={w} y1={-4} x2={w} y2={4} />
@@ -111,7 +118,7 @@ function SlopeScene({ check, slopeDeg, shape }: { check?: RoverCheck; slopeDeg: 
         <path d={`M ${x0 + 46} ${y0} A 46 46 0 0 0 ${x0 + 46 * Math.cos(a)} ${y0 - 46 * Math.sin(a)}`} className="sim-angle" />
         <text x={x0 + 54} y={y0 - 8} className="sim-label">{slopeDeg}°</text>
         {status === 'FAIL' && t > 0.5 && t < 0.75 && <text x={px} y={py - 48} className="sim-label sim-warn" textAnchor="middle">wheels slip</text>}
-        <ScaleBar ppm={shape.ppm} />
+        <ScaleBar shape={shape} />
         <Rover x={px} y={py} angle={slopeDeg > 45 ? 45 : slopeDeg} shape={shape} spin={spin} tone={STATUS_CLS[status]}
           hot={status === 'FAIL' && t > 0.3 ? 'fail' : status === 'MARGINAL' && t > 0 && t < 1 ? 'marginal' : null} />
       </svg>
@@ -129,8 +136,8 @@ function StepScene({ check, stepM, shape }: { check?: RoverCheck; stepM: number;
   const status = check?.status ?? 'NOT_CHECKED';
   const [t, play] = useRun(`${status}-${stepM}`);
   const y0 = 170;
-  // kerb drawn at the robot's own scale
-  const h = Math.min(120, Math.max(3, stepM * shape.ppm));
+  // kerb drawn at the robot's own scale (a kerb taller than the scene is cut off at the top)
+  const h = Math.min(160, Math.max(2, stepM * shape.ppm));
   const kerbX = 220;
   const front = shape.bodyW / 2; // body half-length (front wheel near the nose)
   let x: number, y = y0, ang = 0;
@@ -152,7 +159,7 @@ function StepScene({ check, stepM, shape }: { check?: RoverCheck; stepM: number;
         <polygon points={`${kerbX},${y0} ${kerbX},${y0 - h} 380,${y0 - h} 380,200 ${kerbX},200`} className="sim-ground" />
         <text x={kerbX + 8} y={y0 - h / 2 + 4} className="sim-label">{Math.round(stepM * 1000)} mm</text>
         {status === 'FAIL' && t > 0.6 && <text x={stopX} y={y0 - 60} className="sim-label sim-warn" textAnchor="middle">can&apos;t climb it</text>}
-        <ScaleBar ppm={shape.ppm} />
+        <ScaleBar shape={shape} />
         <Rover x={x} y={y} angle={ang} shape={shape} spin={spin} tone={STATUS_CLS[status]} hot={status === 'FAIL' && t > 0.6 ? 'fail' : null} />
       </svg>
       <figcaption>
@@ -217,7 +224,7 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
     <section className="ws-pane ws-sim" aria-label="Simulate">
       <div className="ws-history-head">
         <h3>Simulate</h3>
-        <p className="faint">Quick test runs worked out from this robot&apos;s spec. They are physics estimates, not a full simulator run. The robot is drawn to scale from its spec (see the 100 mm bar); change the course or the spec and they run again.</p>
+        <p className="faint">Quick test runs worked out from this robot&apos;s spec. They are physics estimates, not a full simulator run. The robot and kerb are drawn to one scale from its spec (see the 100 mm bar); change the course or the spec and they run again.</p>
       </div>
       {!checks ? (
         <p className="faint">The test runs need a ground robot with wheels, motors and a battery in its spec. This one doesn&apos;t have all three yet; add them in Specs.</p>
