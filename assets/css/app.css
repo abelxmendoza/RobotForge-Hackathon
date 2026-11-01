@@ -1550,3 +1550,6 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .ev-fix{margin-top:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--fail,#e5604d);background:color-mix(in srgb,var(--fail,#e5604d) 8%,transparent)}
 .ev-fix ul{margin:6px 0 0;padding-left:18px}
 @media (max-width:720px){.ev-steps,.ev-summary{grid-template-columns:1fr}}
+.demo-bar-welcome .demo-steps{margin:8px 0 12px;padding-left:20px;display:grid;gap:4px;list-style:decimal;max-width:72ch}
+.demo-bar-welcome .demo-steps li{padding:0;margin:0;border:0;background:none;box-shadow:none;color:var(--text-muted);display:list-item}
+.demo-steps a{font-weight:600}

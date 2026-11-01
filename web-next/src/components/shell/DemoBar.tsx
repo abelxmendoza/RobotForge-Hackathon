@@ -1,9 +1,9 @@
 "use client";
 /* The demo chrome: a slim in-flow strip at the very top of every
  * page while demo mode is on — the page underneath stays fully
- * visible and usable (Abel's rule: no stacked panels). The first
- * entry in a browser session expands it once with what the demo
- * is; after that it stays one line: "Demo · sample data" + Exit.
+ * visible and usable (Abel's rule: no stacked panels). Each demo
+ * entry expands it once with a short guided path (four steps);
+ * after that it stays one line: "Demo · sample data" + Exit.
  * Exit only clears the flag — the visitor's real stores were
  * never touched, so there is nothing to restore.
  *
@@ -16,6 +16,7 @@
  * loads inside one demo session and a fresh demo start shows the
  * bar again. */
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   setDemoBarDismissed,
@@ -87,23 +88,18 @@ export default function DemoBar() {
       {!welcomed && (
         <div className="demo-bar-welcome">
           <p>
-            <strong>You&apos;re exploring the RobotForge demo.</strong> It is
-            the real app, preloaded to feel lived-in: two demo robots in the
-            Workshop — a TurtleBot3 Burger with a saved baseline and a
-            planned upgrade, and a Pathfinder with a short build history —
-            the robot catalogue, a sample inventory split into real vs
-            sim-only parts and tools, and a Wrench thread already in
-            progress. Wrench — the workshop&apos;s build partner, not just a
-            guide — is here too: it designs specs with you in the Forge,
-            carries out build operations from chat, and checks the work
-            (gate results, physics, the BOM). In the demo it answers from
-            recorded real runs — live AI is off in the demo, so it costs
-            nothing and claims nothing it didn&apos;t do. Anything you change lives in the demo
-            sandbox only; your own robots and parts are never touched. For
-            live AI and your own shelf, exit and sign in. You can hide this
-            bar with its × — a DEMO pill in the top bar keeps the demo
-            labeled, and Exit demo lives inside it.
+            <strong>Welcome to the RobotForge demo.</strong> No account
+            needed. It&apos;s the real app with two sample TurtleBots and
+            a starter parts shelf. Wrench, your build partner, answers from
+            recorded real runs, so nothing here is live or costs anything,
+            and your own data is never touched. Try this:
           </p>
+          <ol className="demo-steps">
+            <li><Link href="/garage/" onClick={dismissWelcome}>Open the TurtleBot in the Workshop</Link> and spin it in 3D.</li>
+            <li>Ask Wrench to change something, like &ldquo;make the wheels 80 mm&rdquo;.</li>
+            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Simulate it</Link> on a slope and a kerb.</li>
+            <li><Link href="/garage/#tab=bom" onClick={dismissWelcome}>See its parts list</Link> and what you already have.</li>
+          </ol>
           <button type="button" className="btn btn-primary btn-sm" onClick={dismissWelcome}>
             Start exploring
           </button>
