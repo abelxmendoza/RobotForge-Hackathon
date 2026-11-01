@@ -135,10 +135,13 @@ def test_cli_build_writes_the_records_file(tmp_path):
     assert "3 records (2 with estimates, 1 with photos)" in r.stdout
 
 
-def test_real_catalogue_seeds_fifty_unpriced_records():
-    """Against the real catalogue (no gather output applied yet):
-    every part seeds, none carries a price — the API launches
-    honest, and prices arrive only through gather/API records.
+def test_real_catalogue_seeds_fifty_records_one_priced():
+    """Against the real catalogue: every part seeds. Prices arrive
+    only through applied gather proposals — exactly one record is
+    priced so far: driver_tb6612fng, whose proposal
+    20261101T192346Z-224e7d Abel approved and applied as-is on
+    2026-11-01 (Pololu web-gathered estimate, 24 h TTL). Every other
+    record still seeds unpriced.
     Photos mirror the catalogue exactly: a seeded record carries a
     photo only where the catalogue holds a verified photo record
     (the 9 web-gathered records of the photo slice), never from the
@@ -146,7 +149,19 @@ def test_real_catalogue_seeds_fifty_unpriced_records():
     catalog = json.loads((REPO / "catalog" / "parts.json").read_text())
     records = seed.build_records(catalog, [], seeded_at="2026-11-01T10:00:00Z")
     assert len(records) == 50
-    assert all(r["estimates"] == [] for r in records)
+    priced = {r["id"]: r["estimates"] for r in records if r["estimates"]}
+    assert set(priced) == {"driver_tb6612fng"}
+    (est,) = priced["driver_tb6612fng"]
+    assert est["unit_price"] == 4.95
+    assert est["currency"] == "USD"
+    assert [(b["qty"], b["unit_price"]) for b in est["price_breaks"]] == [
+        (1, 4.95), (5, 4.55), (25, 4.19), (100, 3.85)]
+    assert est["supplier"] == "Pololu"
+    assert est["supplier_url"] == "https://www.pololu.com/product/713"
+    assert est["source_kind"] == "web_gathered"
+    assert est["state"] == "web_gathered"
+    assert est["fetched_at"] == "2026-11-01T19:24:08Z"
+    assert est["expires_at"] == "2026-11-02T19:24:08Z"
     catalog_photo_ids = {p["id"] for p in catalog["parts"] if p.get("photo")}
     assert catalog_photo_ids, "the photo slice should have landed by now"
     for r in records:

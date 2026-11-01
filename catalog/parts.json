@@ -159,8 +159,16 @@
       "source": "Toshiba TB6612FNG breakout (Pololu/SparkFun class)",
       "specs": {
         "channels": 2,
-        "current_a_per_channel": 1.2,
-        "voltage_v_max": 15
+        "current_a_per_channel": 3.0,
+        "voltage_v_max": 13.5,
+        "input_v_max": 15.0,
+        "logic_v": [
+          2.7,
+          5.5
+        ],
+        "mass_g": 0.14,
+        "output_a": 1.2,
+        "voltage_v_min": 2.5
       },
       "blurb": "A small dual motor driver: runs two DC motors forward, reverse and brake from logic signals.",
       "used_for": "Driving the two (or four, with two boards) gearmotors of a small rover.",
@@ -168,8 +176,236 @@
         "differential-drive rover",
         "skid-steer rover"
       ],
-      "notes": "Rated about 1.2 A per channel continuous \u2014 right for small gearmotors, too small for big motors at stall. (General guidance.)",
-      "buy": null
+      "notes": "Rated about 1.2 A per channel continuous — right for small gearmotors, too small for big motors at stall. (General guidance.)",
+      "buy": null,
+      "gather_history": [
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "current_a_per_channel",
+          "prior": 1.2,
+          "new": 3.0,
+          "source_url": "https://www.pololu.com/product/713"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "input_v_max",
+          "prior": null,
+          "new": 15.0,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "logic_v",
+          "prior": null,
+          "new": [
+            2.7,
+            5.5
+          ],
+          "source_url": "https://www.pololu.com/product/713"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "mass_g",
+          "prior": null,
+          "new": 0.14,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "output_a",
+          "prior": null,
+          "new": 1.2,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "voltage_v_max",
+          "prior": 15,
+          "new": 13.5,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "voltage_v_min",
+          "prior": null,
+          "new": 2.5,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf"
+        },
+        {
+          "run_id": "20261101T192346Z-224e7d",
+          "applied_at": "2026-11-01T19:29:03Z",
+          "field": "price_estimate",
+          "prior": null,
+          "new": {
+            "unit_price": 4.95,
+            "currency": "USD",
+            "price_breaks": [
+              {
+                "qty": 1,
+                "unit_price": 4.95
+              },
+              {
+                "qty": 5,
+                "unit_price": 4.55
+              },
+              {
+                "qty": 25,
+                "unit_price": 4.19
+              },
+              {
+                "qty": 100,
+                "unit_price": 3.85
+              }
+            ],
+            "stock_wording": "backorders allowed",
+            "source_kind": "web_gathered",
+            "supplier_url": "https://www.pololu.com/product/713",
+            "fetched_at": "2026-11-01T19:24:08Z",
+            "expires_at": "2026-11-02T19:24:08Z",
+            "quote": "1\n4.95"
+          },
+          "source_url": "https://www.pololu.com/product/713"
+        }
+      ],
+      "provenance_gathered": {
+        "current_a_per_channel": {
+          "value": 3.0,
+          "source_url": "https://www.pololu.com/product/713",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Output current maximum: 3 A per channel",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "input_v_max": {
+          "value": 15.0,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Power supply voltage; VM = 15 V(Max)",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "logic_v": {
+          "value": [
+            2.7,
+            5.5
+          ],
+          "source_url": "https://www.pololu.com/product/713",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Logic voltage (VCC): 2.7 V to 5.5 V",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "mass_g": {
+          "value": 0.14,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Weght: 0.14 g (typ)",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "output_a": {
+          "value": 1.2,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Output current; IOUT=1.2 A(ave) / 3.2 A (peak)",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "voltage_v_max": {
+          "value": 13.5,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Motor supply (2.5 V to 13.5 V)",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "voltage_v_min": {
+          "value": 2.5,
+          "source_url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "Motor supply (2.5 V to 13.5 V)",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        },
+        "price_estimate": {
+          "value": {
+            "unit_price": 4.95,
+            "currency": "USD",
+            "price_breaks": [
+              {
+                "qty": 1,
+                "unit_price": 4.95
+              },
+              {
+                "qty": 5,
+                "unit_price": 4.55
+              },
+              {
+                "qty": 25,
+                "unit_price": 4.19
+              },
+              {
+                "qty": 100,
+                "unit_price": 3.85
+              }
+            ],
+            "stock_wording": "backorders allowed",
+            "source_kind": "web_gathered",
+            "supplier_url": "https://www.pololu.com/product/713",
+            "fetched_at": "2026-11-01T19:24:08Z",
+            "expires_at": "2026-11-02T19:24:08Z",
+            "quote": "1\n4.95"
+          },
+          "source_url": "https://www.pololu.com/product/713",
+          "fetched_at": "2026-11-01T19:24:08Z",
+          "quote": "1\n4.95",
+          "state": "web_gathered",
+          "pipeline_version": "gather/0.1.0",
+          "run_id": "20261101T192346Z-224e7d"
+        }
+      },
+      "price_estimate": {
+        "unit_price": 4.95,
+        "currency": "USD",
+        "price_breaks": [
+          {
+            "qty": 1,
+            "unit_price": 4.95
+          },
+          {
+            "qty": 5,
+            "unit_price": 4.55
+          },
+          {
+            "qty": 25,
+            "unit_price": 4.19
+          },
+          {
+            "qty": 100,
+            "unit_price": 3.85
+          }
+        ],
+        "stock_wording": "backorders allowed",
+        "source_kind": "web_gathered",
+        "supplier_url": "https://www.pololu.com/product/713",
+        "fetched_at": "2026-11-01T19:24:08Z",
+        "expires_at": "2026-11-02T19:24:08Z",
+        "quote": "1\n4.95"
+      }
     },
     {
       "id": "driver_l298n",
