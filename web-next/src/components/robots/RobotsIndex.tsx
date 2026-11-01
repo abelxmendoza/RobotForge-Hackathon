@@ -10,7 +10,10 @@ import { assetPath } from "@/components/home/asset";
 import RobotCard from "./RobotCard";
 import GroupCard, { gateTally, groupSlug } from "./GroupCard";
 import LocalDexSightings from "./LocalDexSightings";
-import { DEX_SOURCES, MyRobotsGrid, SightingsGrid, SourceBadge, useDexSources, type DexSource } from "./DexSources";
+import { DEX_SOURCES, isPhotoDraft, MyRobotsGrid, SightingsGrid, SourceBadge, useDexSources, type DexSource } from "./DexSources";
+
+const researched = robots.filter((r) => !isPhotoDraft(r));
+const photoRobots = robots.filter(isPhotoDraft);
 
 /* Robodex index (Abel, 2026-10-30): no filter chips. The index opens
    on a grid of group cards — one per mobility class, in taxonomy
@@ -42,7 +45,7 @@ export default function RobotsIndex() {
   /* Default tab: My robots when you have any, otherwise Researched. */
   const shown: DexSource = source ?? (dex.mine && dex.mine.length ? "mine" : "researched");
   const counts: Record<DexSource, number | null> = {
-    mine: dex.mine ? dex.mine.length : null, sighted: dex.sighted.length, photos: dex.photos.length, researched: robots.length,
+    mine: dex.mine ? dex.mine.length : null, sighted: dex.sighted.length, photos: dex.photos.length + photoRobots.length, researched: researched.length,
   };
   const pickSource = (id: DexSource) => {
     setSource(id); setOpenGroup(null);
@@ -72,7 +75,7 @@ export default function RobotsIndex() {
 
   const byClass = new Map<string, typeof robots>();
   for (const cls of MOBILITY_CLASSES) byClass.set(cls, []);
-  for (const r of robots) {
+  for (const r of researched) {
     const m = r.mobility_class ?? "";
     if (byClass.has(m)) byClass.get(m)!.push(r);
   }
@@ -103,7 +106,10 @@ export default function RobotsIndex() {
 
       {shown === "mine" ? <MyRobotsGrid mine={dex.mine} />
         : shown === "sighted" ? <SightingsGrid items={dex.sighted} source="sighted" />
-        : shown === "photos" ? <SightingsGrid items={dex.photos} source="photos" />
+        : shown === "photos" ? <>
+            {photoRobots.length > 0 && <div className="robot-grid dex-src-grid">{photoRobots.map((r) => <RobotCard key={r.name} robot={r} />)}</div>}
+            <SightingsGrid items={dex.photos} source="photos" hasOther={photoRobots.length > 0} />
+          </>
         : openGroup === null ? (
         <div className="group-grid" id="group-grid">
           {MOBILITY_CLASSES.map((cls) => (

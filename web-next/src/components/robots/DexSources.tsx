@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { families } from "@/lib/data";
+import type { Robot } from "@/lib/types";
 import { loadSightings } from "@/lib/grouping";
 import { GARAGE_KEY, SOURCE_LABEL, type GarageRobot } from "@/lib/garage";
 import { assetPath } from "@/components/home/asset";
@@ -53,6 +54,13 @@ function catalogSightings(): DexSighting[] {
   }))));
 }
 
+/* A catalog robot whose own record says its spec is a photo draft (e.g.
+ * TurtleBot3 Waffle Pi) belongs with the photo robots, not Researched. */
+export function isPhotoDraft(r: Robot): boolean {
+  const note = String((r.provenance as Record<string, unknown> | undefined)?.note ?? "");
+  return /photo draft/i.test(note) || /photo draft/i.test(String(r.description ?? ""));
+}
+
 export function SourceBadge({ source }: { source: DexSource }) {
   const s = DEX_SOURCES.find((x) => x.id === source)!;
   return <span className={"dex-src src-" + source} title={`${s.label}: numbers are ${s.trust}`}>{s.badge}<span className="dex-trust">{s.trust}</span></span>;
@@ -85,7 +93,8 @@ export function MyRobotsGrid({ mine }: { mine: GarageRobot[] | null }) {
   );
 }
 
-export function SightingsGrid({ items, source }: { items: DexSighting[]; source: "sighted" | "photos" }) {
+export function SightingsGrid({ items, source, hasOther = false }: { items: DexSighting[]; source: "sighted" | "photos"; hasOther?: boolean }) {
+  if (!items.length && hasOther) return null;
   if (!items.length) return (
     <div className="dex-empty">
       <p><strong>{source === "sighted" ? "No in-person sightings yet." : "No photo-only robots yet."}</strong>{" "}
