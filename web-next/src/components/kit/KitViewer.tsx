@@ -15,7 +15,8 @@ import dynamic from 'next/dynamic';
 import { parts as libParts } from '../forge/data';
 import type { CatalogPart } from '../forge/data';
 import PartsPalette from './PartsPalette';
-import type { PlacedProp } from './KitScene';
+import WiringPanel from './WiringPanel';
+import type { PlacedProp, WiringSceneView } from './KitScene';
 import { parts as catalogParts, simReadyProps, stageRecordOf } from '@/lib/data';
 import {
   flowPaths,
@@ -29,6 +30,16 @@ import { useStageAnimation } from '@/lib/useStageAnimation';
 import { DEMO_EVENT, isDemoMode } from '@/lib/demoMode';
 import { StageControlsRow } from './StageControls';
 import { useBuildList } from '@/lib/buildList';
+import { useBuildWiring } from '@/lib/wiringStore';
+import {
+  addConnection,
+  deviceBoxes,
+  portAnchors,
+  portsByEntry,
+  removeConnection,
+  resolveConnections,
+} from '@/lib/buildWiring';
+import type { Part } from '@/lib/types';
 import {
   addToBuildList,
   buildPaletteItems,
@@ -133,6 +144,20 @@ const KIT_CSS = `
 .kitpage .buildrow-qty button,.kitpage .buildrow>button{padding:3px 9px;font-size:12.5px}
 .kitpage .buildlist-foot{margin-top:10px;font-size:13px}
 .kitpage .palette-bomlink{font-weight:700}
+.kitpage .wire-badge{font-size:13px;color:#c8cdd4;line-height:1.55;max-width:760px}
+.kitpage .wire-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:13px;margin:8px 0}
+.kitpage .wire-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.kitpage .wire-note{background:#232830;border:1px solid #2c313a;border-radius:9px;padding:8px 11px;font-size:13.5px}
+.kitpage .wire-device{font-size:13.5px;margin:5px 0;line-height:1.45}
+.kitpage .wire-table{border-collapse:collapse;font-size:13.5px;width:100%;margin-top:12px}
+.kitpage .wire-table th{text-align:left;color:#9aa3ad;font-weight:600;padding:5px 10px 5px 0;border-bottom:1px solid #2c313a}
+.kitpage .wire-table td{border-bottom:1px solid #2c313a;padding:5px 10px 5px 0;vertical-align:top}
+.kitpage .wire-table tr.sel td{background:#232830}
+.kitpage .wire-table tbody tr{cursor:pointer}
+.kitpage .wire-dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.kitpage .wire-checks{margin-top:14px;border-top:1px solid #2c313a;padding-top:6px}
+.kitpage .wire-checks h4{margin:8px 0 6px;font-size:14px}
+.kitpage .wire-issue{font-size:13.5px;line-height:1.5}
 `;
 
 function downloadText(name: string, text: string) {
@@ -173,13 +198,14 @@ export default function KitViewer() {
   /* Living Build Stage (Layer 0 of the digital-twin path): the
    * Burger's animation capability is derived from recorded data
    * only — its pinned URDF joints and its spec's sensors/wiring —
-   * by lib/stageAnimation. This page has no Wiring mode on main;
-   * when PR #70's wiring view lands here, its toggle feeds the
-   * same gate the hook already accepts (motion pauses in Wiring
-   * mode; the flow layer yields to it). */
+   * by lib/stageAnimation. PR #70's wiring view has landed here,
+   * and its toggle (wiringOn) feeds the same gate the hook
+   * accepts: motion pauses in Wiring mode and the flow layer
+   * yields to it. */
+  const [wiringOn, setWiringOn] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const stage = useStageAnimation(stageRef);
-  const wiringMode = false;
+  const wiringMode = wiringOn;
   const burgerRecord = stageRecordOf('turtlebot3-burger');
   const burgerCapability = useMemo(
     () => (burgerRecord ? robotCapability(burgerRecord) : null),
@@ -262,6 +288,136 @@ export default function KitViewer() {
       addToBuildList(buildEntries, item, 1, 'palette', () => uid('build'), explicitPos),
     );
   };
+
+  /* Wiring (lib/buildWiring.ts): the build list's schematic
+   * connections, stored under rf.wiring.v1 (lib/wiringStore.ts —
+   * demo visitors get the ".demo" twin). The scene view-model is
+   * computed from the RESOLVED connections, so a cable whose part
+   * leaves the build list retires everywhere at once. Ports come
+   * only from recorded catalogue data; devices without ports get
+   * no block and the panel says why. */
+  const [pendingPort, setPendingPort] = useState<string | null>(null);
+  const [selectedConn, setSelectedConn] = useState<string | null>(null);
+  const [wireNote, setWireNote] = useState<string | null>(null);
+  const [buildWiring, saveWiring] = useBuildWiring();
+  const partsById = useMemo(
+    () => new Map<string, Part>(catalogParts.map((p) => [p.id, p])),
+    [],
+  );
+  const resolvedWiring = useMemo(
+    () => ({
+      connections: resolveConnections(buildEntries, buildWiring, partsById),
+    }),
+    [buildEntries, buildWiring, partsById],
+  );
+  const wiringView: WiringSceneView | null = useMemo(() => {
+    if (!wiringOn) return null;
+    const byUid = portsByEntry(buildEntries, partsById);
+    const boxes = deviceBoxes(buildEntries, partsById);
+    const anchorOf = new Map<string, [number, number, number]>();
+    const devices = boxes.map((box) => {
+      const ports = byUid.get(box.entryUid) ?? [];
+      const anchors = portAnchors(box, ports);
+      for (const p of ports) {
+        const a = anchors.get(p.id);
+        if (a) anchorOf.set(`${box.entryUid}:${p.id}`, a);
+      }
+      const entry = buildEntries.find((e) => e.uid === box.entryUid);
+      const item = entry
+        ? paletteByKey.get(`${entry.kind}:${entry.refId}`)
+        : undefined;
+      return {
+        uid: box.entryUid,
+        name:
+          (item?.name ?? entry?.refId ?? box.entryUid) +
+          (entry && entry.kind === 'catalog-part' && entry.qty > 1
+            ? ` ×${entry.qty}`
+            : ''),
+        center: box.center,
+        size: box.size,
+        ports: ports.flatMap((p) => {
+          const a = anchors.get(p.id);
+          return a
+            ? [{ key: `${box.entryUid}:${p.id}`, type: p.type, anchor: a }]
+            : [];
+        }),
+      };
+    });
+    const conns = resolvedWiring.connections.flatMap((c, i) => {
+      const a = anchorOf.get(`${c.fromEntry}:${c.fromPort}`);
+      const b = anchorOf.get(`${c.toEntry}:${c.toPort}`);
+      return a && b ? [{ id: c.id, type: c.type, a, b, lane: i % 4 }] : [];
+    });
+    return {
+      devices,
+      conns,
+      pendingPort,
+      selectedConn,
+    };
+  }, [
+    wiringOn,
+    buildEntries,
+    partsById,
+    resolvedWiring,
+    pendingPort,
+    selectedConn,
+    paletteByKey,
+  ]);
+
+  const portLabelOf = (key: string): string => {
+    const [entryUid, portId] = key.split(/:(.*)/).filter(Boolean);
+    const byUid = portsByEntry(buildEntries, partsById);
+    const entry = buildEntries.find((e) => e.uid === entryUid);
+    const item = entry
+      ? paletteByKey.get(`${entry.kind}:${entry.refId}`)
+      : undefined;
+    const port = byUid.get(entryUid)?.find((p) => p.id === portId);
+    return `${item?.name ?? entryUid} — ${port?.label ?? portId}`;
+  };
+
+  const handlePortClick = (key: string) => {
+    if (!pendingPort) {
+      setPendingPort(key);
+      setWireNote(null);
+      return;
+    }
+    if (pendingPort === key) {
+      setPendingPort(null);
+      return;
+    }
+    const [aEntry, aPort] = pendingPort.split(/:(.*)/).filter(Boolean);
+    const [bEntry, bPort] = key.split(/:(.*)/).filter(Boolean);
+    const result = addConnection(
+      buildEntries,
+      resolvedWiring,
+      partsById,
+      aEntry,
+      aPort,
+      bEntry,
+      bPort,
+      () => uid('wire'),
+    );
+    setPendingPort(null);
+    if (result.ok) {
+      saveWiring(result.wiring);
+      setWireNote(
+        `Wired ${portLabelOf(pendingPort)} ↔ ${portLabelOf(key)}.`,
+      );
+    } else {
+      setWireNote(`Not wired: ${result.error}.`);
+    }
+  };
+
+  const handleWireClick = (id: string | null) => {
+    setSelectedConn(id);
+    if (id === null) setPendingPort(null);
+  };
+
+  const deleteConnection = (id: string) => {
+    saveWiring(removeConnection(resolvedWiring, id));
+    if (selectedConn === id) setSelectedConn(null);
+    setWireNote('Cable removed.');
+  };
   const handleCanvasDrop = (itemKey: string, pos: [number, number]) => {
     const item = paletteByKey.get(itemKey);
     if (!item) return;
@@ -337,7 +493,9 @@ export default function KitViewer() {
             Burger dims — the robot the gate passed. Open the{' '}
             <b>Parts palette</b> to drag bench props onto the stage and
             build a parts list — or ask the assistant in chat to add
-            parts to your build.
+            parts to your build. Flip on <b>Wiring</b> to cable that
+            build list together — a schematic diagram from the parts'
+            recorded interfaces, checked as you go.
           </p>
         </header>
 
@@ -362,8 +520,11 @@ export default function KitViewer() {
             real={real}
             propsOn={propsOn}
             placedProps={placedProps}
+            wiring={wiringView}
             life={life}
             onCanvasDrop={handleCanvasDrop}
+            onPortClick={handlePortClick}
+            onWireClick={handleWireClick}
             selectedSpecimen={selectedSpecimen}
             onReady={() => {
               readyRef.current = true;
@@ -455,6 +616,18 @@ export default function KitViewer() {
             onClick={() => setPaletteOpen(!paletteOpen)}
           >
             ▤ Parts palette
+          </button>
+          <button
+            id="wiringBtn"
+            className={wiringOn ? 'on' : undefined}
+            onClick={() => {
+              setWiringOn(!wiringOn);
+              setPendingPort(null);
+              setSelectedConn(null);
+              setWireNote(null);
+            }}
+          >
+            ⚡ Wiring
           </button>
           <button
             id="dlBtn"
@@ -549,6 +722,21 @@ export default function KitViewer() {
             <b>Palette:</b> {dropNote}{' '}
             <button onClick={() => setDropNote(null)}>Dismiss</button>
           </div>
+        )}
+        {wiringOn && (
+          <WiringPanel
+            entries={buildEntries}
+            items={paletteItems}
+            partsById={partsById}
+            wiring={resolvedWiring}
+            pendingLabel={pendingPort ? portLabelOf(pendingPort) : null}
+            selectedConn={selectedConn}
+            note={wireNote}
+            sceneActive={sceneOn && !fallback}
+            onSelectConn={setSelectedConn}
+            onDeleteConn={deleteConnection}
+            onCancelPending={() => setPendingPort(null)}
+          />
         )}
         {real && (
           <div className="box" style={{ marginTop: 14 }}>

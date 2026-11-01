@@ -83,6 +83,7 @@ export default function Robot3D({
   quality = 'balanced',
   fov, comparison, replay = 1, playing = false, onMove, onPlaybackEnd,
   teardown,
+  autoRotate = false,
   life,
 }: {
   spec: RobotSpec;
@@ -104,10 +105,13 @@ export default function Robot3D({
    * robot and dim (the newest stays bright); `isolate` fades everything
    * but that part. Omitted = the viewer behaves exactly as before. */
   teardown?: { removed: string[]; isolate: string | null };
+  /* Slow turntable spin; pauses while you drag a part or the user
+   * prefers reduced motion. */
+  autoRotate?: boolean;
   life?: RobotLife;
 }) {
-  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,life});
-  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,life};
+  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,life});
+  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,life};
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -731,6 +735,8 @@ export default function Robot3D({
             cable.pulse.visible=effects&&Boolean(endpointsVisible);
             if(effects) cable.pulse.position.copy(cable.curve.getPoint(animationPhase(clock.elapsedTime,cable.index)));
           }
+          controls.autoRotate=Boolean(settings.autoRotate)&&!reducedMotion.matches&&!dragging;
+          controls.autoRotateSpeed=1.4;
           controls.update();
           if(composer)composer.render(delta);else renderer.render(scene, camera);
         });
