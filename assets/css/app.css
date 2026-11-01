@@ -1422,3 +1422,29 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .wb-cap{margin:var(--s2) 0 0;font-size:var(--fs-xs)}
 .wb-detail{margin-top:var(--s3)}
 .wb-detail p{margin:6px 0 0}
+/* ---- verified part photos (BOM wizard, Workshop BOM tab, palette) --
+ * Hot-linked manufacturer/supplier pictures with their credit attached.
+ * The thumb variant sits in table rows; the card variant tops a palette
+ * card. The placeholder keeps the same footprint and says plainly that
+ * no verified photo exists — an illustration is never substituted. */
+.part-photo{margin:0}
+.part-photo img{display:block;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px}
+.part-photo figcaption{font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.3}
+.part-photo figcaption a{color:var(--link)}
+.part-photo-thumb img{width:56px;height:56px}
+.part-photo-thumb figcaption{max-width:72px}
+.part-photo-card img{width:100%;height:96px}
+.part-photo-none{display:flex;align-items:center;justify-content:center;background:var(--surface-3);border:1px dashed var(--border-strong);border-radius:8px;color:var(--text-muted);font-size:11px;text-align:center;padding:6px}
+.part-photo-thumb.part-photo-none{width:56px;height:56px}
+.part-photo-card.part-photo-none{height:96px}
+.bom-item-cell{display:inline-flex;align-items:flex-start;gap:10px}
+.ws-bom-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.ws-bom-photo{width:76px}
+.price-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:var(--fs-xs,12px);font-weight:600;border:1px solid var(--border-strong)}
+.price-badge.user{background:var(--surface-3);color:var(--text)}
+.price-badge.sourced{background:color-mix(in srgb,var(--ok,#2e7d32) 14%,transparent);color:var(--text)}
+.price-badge.gathered{background:color-mix(in srgb,var(--warn,#b26a00) 16%,transparent);color:var(--text)}
+.sim-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.sim-card{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface-2,var(--surface))}
+.sim-card h4{margin:0 0 6px;font-size:var(--fs-sm)}
+.sim-card p{margin:0;font-size:var(--fs-sm);color:var(--text-muted)}

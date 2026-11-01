@@ -13,6 +13,8 @@ import RobodexPicker from './RobodexPicker';
 import RobotAvatar from './RobotAvatar';
 import WiringView from '@/components/wiring/WiringView';
 const WiringBench3D = dynamic(() => import('@/components/wiring/WiringBench3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D bench…</p> });
+import WorkshopBomTab from './WorkshopBomTab';
+import WorkshopSimulateTab from './WorkshopSimulateTab';
 import { isWiring } from '@/lib/wiring';
 import { robots as dexRobots } from '@/lib/data';
 import { assetPath } from '@/components/home/asset';
@@ -45,11 +47,13 @@ function counts(lines: string[]) {
   };
 }
 
-type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'checks';
+type WorkTab = 'overview' | 'build' | 'wiring' | 'bom' | 'simulate' | 'specs' | 'checks';
 const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
+  { id: 'bom', label: 'BOM', icon: 'M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6' },
+  { id: 'simulate', label: 'Simulate', icon: 'M7 4.5l13 7.5-13 7.5z' },
   { id: 'specs', label: 'Specs', icon: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5' },
   { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
 ];
@@ -373,7 +377,7 @@ export default function Garage() {
   useEffect(() => {
     const check = (hash: string) => {
       if (hash === '#assembly') setTab('build');
-      const t = hash.match(/^#tab=(overview|build|wiring|specs|checks)$/);
+      const t = hash.match(/^#tab=(overview|build|wiring|bom|simulate|specs|checks)$/);
       if (t) setTab(t[1] as WorkTab);
     };
     check(window.location.hash);
@@ -712,6 +716,12 @@ export default function Garage() {
                 )}
                 {!benchWires && <button type="button" className="btn btn-sm" onClick={() => setBenchWires(true)}>Plan new connections on the 3D bench</button>}
               </section>
+            )}
+
+            {tab === 'bom' && <WorkshopBomTab />}
+
+            {tab === 'simulate' && (
+              <WorkshopSimulateTab robotName={robot.name} specName={draft?.name} />
             )}
 
             {/* One bench instance for Build and the Wiring planner, so picking a

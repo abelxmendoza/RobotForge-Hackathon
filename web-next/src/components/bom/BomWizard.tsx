@@ -13,6 +13,8 @@ import {
 } from "@/lib/bom";
 import { liveHealth, postJSON, routeOn } from "@/components/forge/live";
 import SourcingLinks from "@/components/robots/SourcingLinks";
+import PartPhoto from "@/components/parts/PartPhoto";
+import { photoForLine } from "@/lib/partPhoto";
 import { useBuildWiring } from "@/lib/wiringStore";
 import { harnessCsv, harnessText } from "@/lib/buildWiring";
 
@@ -497,8 +499,13 @@ export default function BomWizard() {
                     {lines.map((l) => (
                       <tr key={l.key}>
                         <td>
-                          {l.name}
-                          {l.dims ? <span className="faint"> — {l.dims}</span> : null}
+                          <span className="bom-item-cell">
+                            <PartPhoto photo={photoForLine(l, partsById)} name={l.name} />
+                            <span>
+                              {l.name}
+                              {l.dims ? <span className="faint"> — {l.dims}</span> : null}
+                            </span>
+                          </span>
                         </td>
                         <td className="num">{l.qty}</td>
                         <td>{l.sourceLabel}</td>
