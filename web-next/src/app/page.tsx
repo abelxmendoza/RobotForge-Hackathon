@@ -7,6 +7,7 @@ import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 import DemoEntryButton from "@/components/shell/DemoEntryButton";
+import DemoVideoCard from "@/components/home/DemoVideoCard";
 
 /**
  * Home — originally a port of the vanilla landing's <main> (index.html),
@@ -70,10 +71,12 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
-            Trying the demo needs no account: the app opens with sample
-            data and recorded answers. Nothing in it is live, and it
-            never touches your own robots or parts.
+            Live AI in the app runs on your account — sign up with an
+            email or continue with Meta. The demo needs no account at
+            all: one tap opens the app with sample data and recorded
+            answers, and it never touches your own robots or parts.
           </p>
+          <DemoVideoCard />
           <figure className="hero-art">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -325,30 +328,48 @@ export default function HomePage() {
       </section>
 
       {/* ============ STATUS — what's live, dated and checked.
-           Every line below was verified on the served site the night
-           it was written (bundle fingerprints, the endpoint health
-           report, the served pages themselves). If a line stops being
-           true, it comes off this page — that is the whole policy. */}
+           Every line below was verified the night it was written —
+           Oct 31, 2026 against the served site (bundle fingerprints,
+           the endpoint health report, the served pages themselves);
+           refreshed Nov 1, 2026 against main's merged code and the
+           live endpoint after the accounts, physics, palette and BOM
+           merges. If a line stops being true, it comes off this
+           page — that is the whole policy. */}
       <section className="band" id="status">
         <div className="wrap">
           <div className="section-head">
             <div className="eyebrow">Status</div>
             <h2>What&apos;s live right now.</h2>
-            <p>Checked on the served site, Oct 31, 2026.</p>
+            <p>Checked on the served site, Nov 1, 2026.</p>
           </div>
           <div className="ai-cards">
             <article className="card ai-card">
               <div className="ai-card-head">
-                <h3>Wrench, the guide</h3>
+                <h3>Wrench, the workshop operator</h3>
                 <span className="fbadge live">LIVE</span>
               </div>
               <p>
-                Say hello — it answers like a person, not a search box.
-                Facts come from recorded data and arrive with their
-                sources; follow-ups remember the robot you&apos;re
-                talking about; a failure gets a plain-language
-                explanation, and the robot can be opened in the
-                Workshop to fix.
+                Wrench runs the workshop with you — it is not a tour
+                guide. Describe a robot and it drafts the spec with
+                Muse Spark; tell it to add a part or change a number
+                and it does the work in the chat, every edit previewed
+                and checked before it lands. Its answers come from
+                recorded data and carry their sources, and when a
+                robot fails, Wrench names the check that went over
+                and sends the robot to the fix loop.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Accounts</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                Sign up with an email, or continue with Meta — both
+                live today, and live AI in the app runs on your
+                account. GitHub and Google sign-in join when those
+                providers are switched on; their buttons appear on
+                the sign-in card by themselves.
               </p>
             </article>
             <article className="card ai-card">
@@ -357,9 +378,37 @@ export default function HomePage() {
                 <span className="fbadge live">LIVE</span>
               </div>
               <p>
-                11 catalogued robots plus sightings, sorted by how we
-                know them, then by how they move. Gate badges come only
-                from recorded runs — never from a model&apos;s say-so.
+                11 catalogued robots plus your own sightings, grouped
+                by how they move. Gate badges come only from recorded
+                runs — never from a model&apos;s say-so.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Physics checks</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                A robot page can run its real URDF through a physics
+                engine in your browser: a mass audit, a stability
+                check, and a short drop test — does it stand? Robots
+                whose record isn&apos;t a URDF say so, with the
+                reason, instead of faking a result.
+              </p>
+            </article>
+            <article className="card ai-card">
+              <div className="ai-card-head">
+                <h3>Build with parts</h3>
+                <span className="fbadge live">LIVE</span>
+              </div>
+              <p>
+                The catalogue&apos;s 50 parts carry datasheet specs
+                and vendor search links — no prices are shown,
+                because none are verified. Drag parts onto the kit
+                stage or add them by chat; the build list feeds a
+                BOM wizard that exports a CSV. Every kit part is
+                parametric CAD: OpenSCAD on the kit page, with a
+                build123d back end in the project&apos;s tooling.
               </p>
             </article>
             <article className="card ai-card">
@@ -382,18 +431,6 @@ export default function HomePage() {
                 and reading robot and part photos. If a route ever goes
                 down, answers are labeled RECORDED and replay a real
                 earlier run instead.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Phone-first</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                The site is tuned for the phone in your hand: touch
-                targets at least 44 px, forms that don&apos;t zoom on
-                focus, compact cards, and nothing hiding under the
-                chat bar.
               </p>
             </article>
           </div>

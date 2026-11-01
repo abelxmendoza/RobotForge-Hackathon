@@ -38,6 +38,16 @@ section{scroll-margin-top:80px}
 .hero-art{margin:var(--s8) auto 0;max-width:1000px;position:relative}
 .hero-art img{width:100%;border-radius:var(--r-lg);border:1px solid var(--border)}
 .hero-art figcaption{margin-top:10px;color:var(--text-faint);font-size:var(--fs-xs)}
+/* Demo video card (hero secondary slot): poster facade, click-to-load.
+   In poster mode the whole frame links into the live demo itself. */
+.demo-video{margin:var(--s7) auto 0;max-width:1000px;position:relative}
+.demo-video-frame{position:relative;aspect-ratio:16/9;border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;background:var(--surface)}
+.demo-video-frame img{width:100%;height:100%;object-fit:cover;display:block}
+.demo-video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.demo-video-play{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s3);background:rgba(4,12,18,.38);border:0;cursor:pointer;text-decoration:none;width:100%}
+.demo-video-btn{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:26px;padding-left:5px;box-shadow:0 10px 34px rgba(0,0,0,.5)}
+.demo-video-cta{color:#fff;font-weight:600;font-size:var(--fs-md);text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.demo-video figcaption{margin-top:10px;color:var(--text-faint);font-size:var(--fs-xs)}
 
 /* ---------- sections ---------- */
 .band{padding:var(--s9) 0;border-top:1px solid var(--border)}
