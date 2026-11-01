@@ -496,9 +496,14 @@ export default function Garage() {
       : r)));
   };
 
+  /* Remove asks first: one click arms it, the second confirms. It
+   * disarms when another robot is picked. */
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const removeRobot = () => {
     if (!robot) return;
+    if (confirmRemove !== robot.id) { setConfirmRemove(robot.id); return; }
     persist(robots.filter((r) => r.id !== robot.id));
+    setConfirmRemove(null);
     setSelected(null);
   };
 
@@ -651,7 +656,15 @@ export default function Garage() {
               </div>
               <div className="g-head-actions">
                 <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
-                <button type="button" className="btn btn-sm btn-ghost" onClick={removeRobot}>Remove</button>
+                {confirmRemove === robot.id ? (
+                  <span className="g-remove-confirm" role="alert">
+                    Remove {draft.name || robot.name} and its {robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}? This can&apos;t be undone.{' '}
+                    <button type="button" className="btn btn-sm g-remove-yes" onClick={removeRobot}>Yes, remove</button>{' '}
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmRemove(null)}>Cancel</button>
+                  </span>
+                ) : (
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={removeRobot}>Remove</button>
+                )}
               </div>
             </div>
 
