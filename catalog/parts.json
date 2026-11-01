@@ -145,6 +145,14 @@
     {
       "id": "driver_tb6612fng",
       "image": "assets/img/parts/driver_tb6612fng.jpg",
+      "photo": {
+        "url": "https://a.pololu-files.com/picture/0J4617.1200x627.jpg?c004ffc809543b19fa467449bcefa2ed",
+        "source_page": "https://www.pololu.com/product/713",
+        "credit": "Photo: Pololu",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo"
+      },
       "license": "proprietary-part",
       "name": "TB6612FNG dual motor driver",
       "part_class": "drivers",
@@ -250,6 +258,14 @@
     {
       "id": "teensy_41",
       "image": "assets/img/parts/teensy_41.jpg",
+      "photo": {
+        "url": "https://www.pjrc.com/store/teensy41_1.jpg",
+        "source_page": "https://www.pjrc.com/store/teensy41.html",
+        "credit": "Photo: PJRC",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo"
+      },
       "license": "proprietary-part",
       "name": "Teensy 4.1",
       "part_class": "microcontrollers",
@@ -274,6 +290,14 @@
     {
       "id": "pico_rp2040",
       "image": "assets/img/parts/pico_rp2040.jpg",
+      "photo": {
+        "url": "https://assets.raspberrypi.com/static/74679d6c81ffc5503a20b64feae2ed4f/3564b/pico-rp2040.jpg",
+        "source_page": "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+        "credit": "Photo: Raspberry Pi",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo"
+      },
       "license": "proprietary-part",
       "name": "Raspberry Pi Pico (RP2040)",
       "part_class": "microcontrollers",
@@ -296,6 +320,14 @@
     {
       "id": "raspberry_pi_5",
       "image": "assets/img/parts/raspberry_pi_5.jpg",
+      "photo": {
+        "url": "https://assets.raspberrypi.com/static/c671804c05a51efc4e3c2a1bdcbafbcf/e58b5/raspberry-pi-5.png",
+        "source_page": "https://www.raspberrypi.com/products/raspberry-pi-5/",
+        "credit": "Photo: Raspberry Pi",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo"
+      },
       "license": "proprietary-part",
       "name": "Raspberry Pi 5",
       "part_class": "sbc",
@@ -375,6 +407,14 @@
     {
       "id": "sik_telemetry_v3",
       "image": "assets/img/parts/sik_telemetry_v3.jpg",
+      "photo": {
+        "url": "https://holybro.com/cdn/shop/files/17013-1.jpg?v=1770011674",
+        "source_page": "https://holybro.com/products/sik-telemetry-radio-v3",
+        "credit": "Photo: Holybro",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo"
+      },
       "license": "proprietary-part",
       "name": "SiK telemetry radio pair (915 MHz)",
       "part_class": "comms",
@@ -437,6 +477,15 @@
     {
       "id": "rplidar_a1",
       "image": "assets/img/parts/rplidar_a1.jpg",
+      "photo": {
+        "url": "https://image.slamtec.com/images/a1/a1-overview/summary-section3.webp",
+        "source_page": "https://www.slamtec.com/en/Lidar/A1",
+        "credit": "Render: SLAMTEC",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "render",
+        "note": "SLAMTEC publishes renders, not photographs, of the A1 — labelled a render wherever it appears."
+      },
       "license": "proprietary-part",
       "name": "RPLIDAR A1 2D lidar",
       "part_class": "cameras_sensors",
@@ -479,6 +528,14 @@
     {
       "id": "ultrasonic_hcsr04",
       "image": "assets/img/parts/ultrasonic_hcsr04.jpg",
+      "photo": {
+        "url": "https://www.sparkfun.com/media/catalog/product/cache/6b78ac9ed927a3c2db42a3c84dab4ce5/1/5/15569-Ultrasonic_Distance_Sensor_-_HC-SR04-01a.jpg",
+        "source_page": "https://www.sparkfun.com/products/15569",
+        "credit": "Photo: SparkFun",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo"
+      },
       "license": "proprietary-part",
       "name": "HC-SR04 ultrasonic ranger",
       "part_class": "cameras_sensors",
@@ -608,6 +665,15 @@
     {
       "id": "gearmotor_12v",
       "image": "assets/img/parts/gearmotor_12v.jpg",
+      "photo": {
+        "url": "https://a.pololu-files.com/picture/0J10485.1200x627.jpg?a6a1ee9fcf634b7cb8d8736fea7bb4ab",
+        "source_page": "https://www.pololu.com/product/4743",
+        "credit": "Photo: Pololu",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo",
+        "note": "Class exemplar: a Pololu 37D x54L mm 12 V gearmotor — the catalogue records the generic 37 mm class."
+      },
       "license": "proprietary-part",
       "name": "DC gearmotor 12 V (37 mm class)",
       "part_class": "actuators",
@@ -669,6 +735,15 @@
     {
       "id": "servo_sts3215",
       "image": "assets/img/parts/servo_sts3215.jpg",
+      "photo": {
+        "url": "https://www.waveshare.com/img/devkit/accessories/ST3215-Servo/ST3215-Servo-details-1.jpg",
+        "source_page": "https://www.waveshare.com/st3215-servo.htm",
+        "credit": "Photo: Waveshare",
+        "fetched_at": "2026-11-01",
+        "state": "web_gathered",
+        "kind": "photo",
+        "note": "Waveshare's ST3215 listing — the Feetech STS3215 serial bus servo."
+      },
       "license": "proprietary-part",
       "name": "STS3215 serial bus servo (Feetech)",
       "part_class": "actuators",

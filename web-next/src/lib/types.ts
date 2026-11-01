@@ -23,6 +23,25 @@ export interface Robot {
   gate_status?: { status: string; runs?: GateRunSummary[] } | string;
   [key: string]: unknown;
 }
+/* A REAL photograph (or, labelled, a manufacturer render) of a part,
+ * web-gathered from the manufacturer's or an official supplier's
+ * product page and hot-linked — never copied into the repo. This is
+ * deliberately NOT the part's `image` field: those are AI
+ * illustrations, and nothing may present them as photographs.
+ * Gathered under the §8 discipline of the Forge Engine plan: the
+ * record carries its receipt (source page + fetched-at) and its
+ * trust state, and it exists only where the image was verified to
+ * depict this exact part (or its recorded class exemplar, noted). */
+export interface PartPhoto {
+  url: string;
+  source_page: string;
+  credit: string;
+  fetched_at: string;
+  state: "web_gathered";
+  kind: "photo" | "render";
+  note?: string;
+}
+
 export interface Part {
   id: string;
   name: string;
@@ -30,6 +49,7 @@ export interface Part {
   blurb?: string;
   used_for?: string;
   image?: string;
+  photo?: PartPhoto | null;
   specs?: Record<string, unknown>;
   robot_types?: string[];
   notes?: string;

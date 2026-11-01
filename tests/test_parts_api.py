@@ -138,12 +138,24 @@ def test_cli_build_writes_the_records_file(tmp_path):
 def test_real_catalogue_seeds_fifty_unpriced_records():
     """Against the real catalogue (no gather output applied yet):
     every part seeds, none carries a price — the API launches
-    honest, and prices arrive only through gather/API records."""
+    honest, and prices arrive only through gather/API records.
+    Photos mirror the catalogue exactly: a seeded record carries a
+    photo only where the catalogue holds a verified photo record
+    (the 9 web-gathered records of the photo slice), never from the
+    AI-illustration `image` field."""
     catalog = json.loads((REPO / "catalog" / "parts.json").read_text())
     records = seed.build_records(catalog, [], seeded_at="2026-11-01T10:00:00Z")
     assert len(records) == 50
     assert all(r["estimates"] == [] for r in records)
-    assert all(r["photo"] is None for r in records)
+    catalog_photo_ids = {p["id"] for p in catalog["parts"] if p.get("photo")}
+    assert catalog_photo_ids, "the photo slice should have landed by now"
+    for r in records:
+        if r["id"] in catalog_photo_ids:
+            assert r["photo"] is not None, r["id"]
+            assert r["photo"]["url"].startswith("https://"), r["id"]
+            assert r["photo"]["credit"], r["id"]
+        else:
+            assert r["photo"] is None, r["id"]
     by_id = {r["id"]: r for r in records}
     assert "usb" in by_id["raspberry_pi_5"]["interfaces"]
     assert "i2c" in by_id["imu_bno055"]["interfaces"]
