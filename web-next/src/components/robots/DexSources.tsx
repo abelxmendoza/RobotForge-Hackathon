@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { families } from "@/lib/data";
-import type { Robot } from "@/lib/types";
+import { isPhotoDraft } from "@/lib/robotSource";
 import { loadSightings } from "@/lib/grouping";
 import { GARAGE_KEY, SOURCE_LABEL, type GarageRobot } from "@/lib/garage";
 import { assetPath } from "@/components/home/asset";
@@ -54,12 +54,12 @@ function catalogSightings(): DexSighting[] {
   }))));
 }
 
-/* A catalog robot whose own record says its spec is a photo draft (e.g.
- * TurtleBot3 Waffle Pi) belongs with the photo robots, not Researched. */
-export function isPhotoDraft(r: Robot): boolean {
-  const note = String((r.provenance as Record<string, unknown> | undefined)?.note ?? "");
-  return /photo draft/i.test(note) || /photo draft/i.test(String(r.description ?? ""));
-}
+/* The photo-draft rule lives in lib/robotSource (isPhotoDraft,
+ * imported above): a catalog robot whose own record says its spec
+ * is a photo draft belongs with the photo robots, not Researched —
+ * and its card badge reads the same way, from the same helper.
+ * Re-exported so existing imports from this module keep working. */
+export { isPhotoDraft };
 
 export function SourceBadge({ source }: { source: DexSource }) {
   const s = DEX_SOURCES.find((x) => x.id === source)!;
