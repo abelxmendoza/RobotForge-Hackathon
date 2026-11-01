@@ -14,6 +14,7 @@ import { families } from "@/lib/data";
 import { isPhotoDraft } from "@/lib/robotSource";
 import { loadSightings } from "@/lib/grouping";
 import { GARAGE_KEY, SOURCE_LABEL, type GarageRobot } from "@/lib/garage";
+import { readStore } from "@/lib/store";
 import { assetPath } from "@/components/home/asset";
 import RobotAvatar from "@/components/garage/RobotAvatar";
 
@@ -32,7 +33,7 @@ export function useDexSources() {
   const [mine, setMine] = useState<GarageRobot[] | null>(null);
   const [sightings, setSightings] = useState<DexSighting[]>(() => catalogSightings());
   useEffect(() => {
-    try { setMine(JSON.parse(localStorage.getItem(GARAGE_KEY) || "[]")); } catch { setMine([]); }
+    setMine(readStore<GarageRobot[]>(GARAGE_KEY, []));
     const local: DexSighting[] = loadSightings().map((e) => ({
       id: "local-" + e.sighting.id, identity: e.sighting.identity, family: e.grouping.familyName, variant: e.grouping.variantLabel,
       photo: null, spottedAt: e.sighting.spotted_at || null, where: e.sighting.where || null, dossier: null, local: true,

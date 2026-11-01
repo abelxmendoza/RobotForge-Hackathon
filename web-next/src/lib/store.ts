@@ -7,12 +7,17 @@
  * throw), and Export / Import JSON is the way to move data between
  * browsers or commit it to the repo. */
 import { useCallback, useEffect, useState } from 'react';
+import { effectiveStorageKey } from './demoMode';
 
 const EVENT = 'rf-store';
 
+/* Demo mode: visitor-data keys transparently resolve to their
+ * ".demo" twins (see lib/demoMode.ts), so every component reading
+ * or writing through here is sandboxed without knowing it. The
+ * change event keeps the LOGICAL key, so subscribers don't care. */
 export function readStore<T>(key: string, fallback: T): T {
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = window.localStorage.getItem(effectiveStorageKey(key));
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
@@ -23,7 +28,7 @@ export function readStore<T>(key: string, fallback: T): T {
  * full of photos), else null. */
 export function writeStore<T>(key: string, value: T): string | null {
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    window.localStorage.setItem(effectiveStorageKey(key), JSON.stringify(value));
     window.dispatchEvent(new CustomEvent(EVENT, { detail: key }));
     return null;
   } catch (e) {

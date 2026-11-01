@@ -4,6 +4,7 @@
  * under rf.auth.v1. Robots and inventory are NOT synced: they
  * stay in this browser's own storage, account or no account. */
 import { liveBase } from "@/components/forge/live";
+import { isDemoMode } from "@/lib/demoMode";
 
 export interface AuthUser {
   email: string;
@@ -79,6 +80,11 @@ async function post(path: string, body: unknown, token?: string): Promise<any> {
 }
 
 export async function authConfig(): Promise<{ metaLogin: boolean }> {
+  /* Demo mode makes no Worker calls on its own (see demoMode.ts).
+   * This config probe is automatic, so it is skipped in the demo;
+   * an explicit sign-in/register from the account panel is the
+   * visitor's own action — the demo's exit ramp — and still works. */
+  if (isDemoMode()) return { metaLogin: false };
   try {
     const r = await fetch(liveBase + "/auth/config", { cache: "no-cache" });
     if (!r.ok) return { metaLogin: false };

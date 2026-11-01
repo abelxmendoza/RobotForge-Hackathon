@@ -34,6 +34,7 @@
  * deployed — the shared dex sync is that endpoint's job.
  */
 import type { DexSignature, DexSighting, Family } from "./types";
+import { effectiveStorageKey } from "./demoMode";
 
 export const LOCAL_SIGHTINGS_KEY = "robotforge.dex.sightings.v1";
 
@@ -449,7 +450,7 @@ export interface StoredDexSighting {
 export function loadSightings(): StoredDexSighting[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(LOCAL_SIGHTINGS_KEY);
+    const raw = window.localStorage.getItem(effectiveStorageKey(LOCAL_SIGHTINGS_KEY));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -471,7 +472,7 @@ export function saveSighting(entry: StoredDexSighting): StoredDexSighting[] {
   const next = [...loadSightings(), entry];
   if (typeof window !== "undefined") {
     try {
-      window.localStorage.setItem(LOCAL_SIGHTINGS_KEY, JSON.stringify(next));
+      window.localStorage.setItem(effectiveStorageKey(LOCAL_SIGHTINGS_KEY), JSON.stringify(next));
     } catch {
       // Quota / private mode: saving is best-effort in v1; the
       // in-memory return still lets the caller confirm honestly

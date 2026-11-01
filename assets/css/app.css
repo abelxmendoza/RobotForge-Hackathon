@@ -674,6 +674,19 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .mode-banner.m-recorded .mode-pill{background:var(--accent);color:var(--accent-ink)}
 .mode-banner.m-mock{border-left-color:var(--marginal);background:var(--marginal-soft)}
 .mode-banner.m-mock .mode-pill{background:var(--marginal);color:#241d02}
+/* Demo mode strip (lib/demoMode.ts + shell/DemoBar.tsx): in-flow at
+ * the very top of every page, one slim line — the page underneath
+ * stays visible and usable. The welcome expansion shows once per
+ * browser session, then it never stacks again. */
+.demo-bar{background:var(--accent-soft);border-bottom:1px solid var(--accent);color:var(--text);font-size:var(--fs-sm)}
+.demo-bar-row{display:flex;gap:var(--s3);align-items:center;max-width:1200px;margin:0 auto;padding:6px 14px}
+.demo-bar-tag{flex:none;font:700 11px/1 var(--mono);letter-spacing:.08em;padding:5px 8px;border-radius:5px;background:var(--accent);color:var(--accent-ink);text-transform:uppercase}
+.demo-bar-text{color:var(--text-muted);flex:1;min-width:0}
+.demo-bar-exit{flex:none;min-height:44px;padding:6px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer}
+.demo-bar-exit:hover{border-color:var(--text-faint);background:var(--surface-3)}
+.demo-bar-welcome{max-width:1200px;margin:0 auto;padding:0 14px 12px}
+.demo-bar-welcome p{margin:0 0 10px;color:var(--text-muted);max-width:72ch}
+.demo-bar-welcome strong{color:var(--text)}
 .live-progress{margin:var(--s2) 0}
 .lp-steps{list-style:none;margin:0 0 var(--s2);padding:0;display:grid;gap:4px;font-size:var(--fs-sm)}
 .lp-steps li{padding-left:22px;position:relative;color:var(--text-faint)}
