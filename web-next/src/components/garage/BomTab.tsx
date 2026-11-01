@@ -14,6 +14,7 @@ import { bomToCsv, type BomLine } from '@/lib/bom';
 import { partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { isWiring, role } from '@/lib/wiring';
 import type { Spec } from '@/lib/garage';
+import { partArt } from '@/lib/partArt';
 
 /* have/sim: enough units of a part that fits. check: only a part of the
  * same family whose fit can't be confirmed from its name or specs.
@@ -149,7 +150,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
     <section className="ws-pane ws-bom" aria-label="Bill of materials">
       <div className="ws-history-head">
         <h3>Bill of materials</h3>
-        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Vendor links are searches; this site never shows prices.</p>
+        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own. Vendor links are searches; this site never shows prices.</p>
       </div>
       {rows.length === 0 ? (
         <p className="faint">The spec has no battery, motors, wheels or wiring yet, so there is nothing to list. Add them in Specs.</p>
@@ -164,7 +165,10 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
           <ul className="bom-list">
             {rows.map((r) => (
               <li key={r.line.key} className={'bom-row ' + r.have.state}>
-                <span className="bom-qty">{r.line.qty}×</span>
+                <span className="bom-art">
+                  {partArt(r.line.name, r.category) ? <span className="part-art" title="Illustration of a typical part like this, not a photo of yours"><img src={partArt(r.line.name, r.category)!} alt="" loading="lazy" /></span> : <span className="inv-noimg" aria-hidden="true">{r.category.slice(0, 1).toUpperCase()}</span>}
+                  <span className="bom-qty">{r.line.qty}×</span>
+                </span>
                 <div className="bom-main">
                   <strong>{r.line.name}</strong>
                   <span className="faint g-small">{r.category.replace('_', ' ')}{r.line.note ? ` · ${r.line.note}` : ''}</span>

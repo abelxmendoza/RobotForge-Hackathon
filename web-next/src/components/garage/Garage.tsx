@@ -363,6 +363,22 @@ export function LoopView({ res, rounds, running, live }: { res: LoopResult | nul
 
 /* ------------------------------------------------------------------ */
 
+/* RobotForge's own drawings (assets/img/illustrations), shown on the
+ * Overview when the robot's name matches one. A drawing of the model,
+ * never a photo of the person's own build, and captioned that way. */
+const DRAWINGS: [string, string][] = [
+  ['turtlebot3wafflepi', 'turtlebot3-waffle-pi.svg'], ['turtlebot3burger', 'turtlebot3-burger.svg'],
+  ['minipupper', 'mini-pupper.svg'], ['andino', 'andino.svg'], ['pathfinder', 'pathfinder.svg'], ['deliveryrover', 'delivery-rover.svg'],
+];
+function drawingFor(...names: unknown[]): string | null {
+  for (const n of names) {
+    const k = String(n ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const hit = k && DRAWINGS.find(([key]) => k.includes(key));
+    if (hit) return assetPath('assets/img/illustrations/' + hit[1]);
+  }
+  return null;
+}
+
 export default function Garage() {
   const [robots, saveRobots, ready] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const [inventory] = useStore<InventoryPart[]>(INVENTORY_KEY, []);
@@ -665,6 +681,16 @@ export default function Garage() {
 
             {tab === 'overview' && (
               <section className="ws-pane" aria-label="Overview">
+                {(() => {
+                  const art = drawingFor(draft?.name, robot.name, robot.id);
+                  return art ? (
+                    <figure className="ws-drawing">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={art} alt={`Drawing of a ${draft?.name || robot.name}`} />
+                      <figcaption className="faint g-small">RobotForge illustration of this model, not a photo of your build.</figcaption>
+                    </figure>
+                  ) : null;
+                })()}
                 <div className="ws-tiles">
                   {tiles.map((t) => (
                     <div className="ws-tile" key={t.label}>

@@ -46,25 +46,50 @@ function useRun(key: string): [number, () => void] {
 
 const ease = (x: number) => 1 - Math.pow(1 - x, 2);
 
-/* A small side-view rover: body box on two visible wheels. */
-function Rover({ x, y, angle, wheelR, spin, tone }: { x: number; y: number; angle: number; wheelR: number; spin: number; tone: string }) {
-  const bodyW = 74, bodyH = 22;
+/* The robot's side view, drawn at one scale from its spec: body length,
+ * wheel size and belly clearance in pixels per metre (ppm). */
+interface Shape { ppm: number; bodyW: number; bodyH: number; wheelR: number; clear: number }
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+function shapeOf(spec: Spec): Shape {
+  const L = Number(spec?.length_m) || 0.3, H = Number(spec?.height_m) || 0.15;
+  const ppm = clamp(110 / L, 120, 700);
+  const wheelR = clamp((Number(spec?.wheel?.diameter_m) || 0.06) / 2 * ppm, 5, 34);
+  const clear = clamp((Number(spec?.ground_clearance_m) || 0.02) * ppm, 2, 40);
+  const bodyW = clamp(L * ppm, 50, 130);
+  const bodyH = clamp((H - (Number(spec?.ground_clearance_m) || 0.02)) * 0.55 * ppm, 12, 40);
+  return { ppm, bodyW, bodyH, wheelR, clear };
+}
+
+/* 100 mm scale bar at the robot's scale. */
+function ScaleBar({ ppm }: { ppm: number }) {
+  const w = 0.1 * ppm;
+  return (
+    <g className="sim-scale" transform="translate(14 18)">
+      <line x1={0} y1={0} x2={w} y2={0} /><line x1={0} y1={-4} x2={0} y2={4} /><line x1={w} y1={-4} x2={w} y2={4} />
+      <text x={w + 6} y={4} className="sim-label">100 mm</text>
+    </g>
+  );
+}
+
+function Rover({ x, y, angle, shape, spin, tone, hot }: { x: number; y: number; angle: number; shape: Shape; spin: number; tone: string; hot?: 'fail' | 'marginal' | null }) {
+  const { bodyW, bodyH, wheelR, clear } = shape;
   return (
     <g transform={`translate(${x} ${y}) rotate(${-angle})`}>
-      <rect x={-bodyW / 2} y={-wheelR - bodyH + 4} width={bodyW} height={bodyH} rx={5} className={'sim-body ' + tone} />
-      <rect x={bodyW / 2 - 18} y={-wheelR - bodyH - 6} width={12} height={10} rx={2} className="sim-sensor" />
-      {[-bodyW / 2 + wheelR + 2, bodyW / 2 - wheelR - 2].map((wx) => (
+      <rect x={-bodyW / 2} y={-clear - bodyH} width={bodyW} height={bodyH} rx={5} className={'sim-body ' + tone} />
+      <rect x={bodyW / 2 - 18} y={-clear - bodyH - 9} width={12} height={9} rx={2} className="sim-sensor" />
+      {[-bodyW / 2 + wheelR, bodyW / 2 - wheelR].map((wx) => (
         <g key={wx} transform={`translate(${wx} ${-wheelR}) rotate(${spin})`}>
           <circle r={wheelR} className="sim-wheel" />
           <line x1={-wheelR + 3} y1={0} x2={wheelR - 3} y2={0} className="sim-spoke" />
           <line x1={0} y1={-wheelR + 3} x2={0} y2={wheelR - 3} className="sim-spoke" />
+          {hot && <circle r={Math.max(3, wheelR * 0.38)} className={'sim-hub ' + hot}><title>motor near its stall torque</title></circle>}
         </g>
       ))}
     </g>
   );
 }
 
-function SlopeScene({ check, slopeDeg, wheelR }: { check?: RoverCheck; slopeDeg: number; wheelR: number }) {
+function SlopeScene({ check, slopeDeg, shape }: { check?: RoverCheck; slopeDeg: number; shape: Shape }) {
   const status = check?.status ?? 'NOT_CHECKED';
   const [t, play] = useRun(`${status}-${slopeDeg}`);
   const a = Math.min(Math.max(slopeDeg, 0), 45) * Math.PI / 180;
@@ -86,7 +111,9 @@ function SlopeScene({ check, slopeDeg, wheelR }: { check?: RoverCheck; slopeDeg:
         <path d={`M ${x0 + 46} ${y0} A 46 46 0 0 0 ${x0 + 46 * Math.cos(a)} ${y0 - 46 * Math.sin(a)}`} className="sim-angle" />
         <text x={x0 + 54} y={y0 - 8} className="sim-label">{slopeDeg}°</text>
         {status === 'FAIL' && t > 0.5 && t < 0.75 && <text x={px} y={py - 48} className="sim-label sim-warn" textAnchor="middle">wheels slip</text>}
-        <Rover x={px} y={py} angle={slopeDeg > 45 ? 45 : slopeDeg} wheelR={wheelR} spin={spin} tone={STATUS_CLS[status]} />
+        <ScaleBar ppm={shape.ppm} />
+        <Rover x={px} y={py} angle={slopeDeg > 45 ? 45 : slopeDeg} shape={shape} spin={spin} tone={STATUS_CLS[status]}
+          hot={status === 'FAIL' && t > 0.3 ? 'fail' : status === 'MARGINAL' && t > 0 && t < 1 ? 'marginal' : null} />
       </svg>
       <figcaption>
         <strong>Slope climb</strong> <span className={'verdict ' + STATUS_CLS[status]}>{STATUS_TXT[status]}</span>
@@ -97,15 +124,15 @@ function SlopeScene({ check, slopeDeg, wheelR }: { check?: RoverCheck; slopeDeg:
   );
 }
 
-function StepScene({ check, stepM, wheelDiaM, wheelR }: { check?: RoverCheck; stepM: number; wheelDiaM: number; wheelR: number }) {
+function StepScene({ check, stepM, shape }: { check?: RoverCheck; stepM: number; shape: Shape }) {
+  const { wheelR } = shape;
   const status = check?.status ?? 'NOT_CHECKED';
   const [t, play] = useRun(`${status}-${stepM}`);
   const y0 = 170;
-  // kerb height drawn against the wheel: same scale as the wheel radius
-  const scale = wheelDiaM > 0 ? (wheelR * 2) / wheelDiaM : 0;
-  const h = Math.min(90, Math.max(4, stepM * scale));
+  // kerb drawn at the robot's own scale
+  const h = Math.min(120, Math.max(3, stepM * shape.ppm));
   const kerbX = 220;
-  const front = 74 / 2; // body half-length (front wheel near the nose)
+  const front = shape.bodyW / 2; // body half-length (front wheel near the nose)
   let x: number, y = y0, ang = 0;
   const stopX = kerbX - front + wheelR * 0.4;
   if (status === 'PASS' || status === 'MARGINAL') {
@@ -125,7 +152,8 @@ function StepScene({ check, stepM, wheelDiaM, wheelR }: { check?: RoverCheck; st
         <polygon points={`${kerbX},${y0} ${kerbX},${y0 - h} 380,${y0 - h} 380,200 ${kerbX},200`} className="sim-ground" />
         <text x={kerbX + 8} y={y0 - h / 2 + 4} className="sim-label">{Math.round(stepM * 1000)} mm</text>
         {status === 'FAIL' && t > 0.6 && <text x={stopX} y={y0 - 60} className="sim-label sim-warn" textAnchor="middle">can&apos;t climb it</text>}
-        <Rover x={x} y={y} angle={ang} wheelR={wheelR} spin={spin} tone={STATUS_CLS[status]} />
+        <ScaleBar ppm={shape.ppm} />
+        <Rover x={x} y={y} angle={ang} shape={shape} spin={spin} tone={STATUS_CLS[status]} hot={status === 'FAIL' && t > 0.6 ? 'fail' : null} />
       </svg>
       <figcaption>
         <strong>Step climb</strong> <span className={'verdict ' + STATUS_CLS[status]}>{STATUS_TXT[status]}</span>
@@ -181,8 +209,7 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
   setOpts: (o: RoverOpts) => void;
 }) {
   const byName = (n: string) => checks?.find((c) => c.name === n);
-  const wheelDia = Number(spec?.wheel?.diameter_m) || 0;
-  const wheelR = Math.max(8, Math.min(22, wheelDia * 160));
+  const shape = shapeOf(spec);
   const crr = TERRAINS[opts.terrain] ?? TERRAINS.outdoor;
   const maxSlope = checks ? maxSlopeDeg(spec, crr) : null;
   const match = catalogMatch(spec);
@@ -190,7 +217,7 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
     <section className="ws-pane ws-sim" aria-label="Simulate">
       <div className="ws-history-head">
         <h3>Simulate</h3>
-        <p className="faint">Quick test runs worked out from this robot&apos;s spec. They are physics estimates, not a full simulator run: change the course or the spec and they run again.</p>
+        <p className="faint">Quick test runs worked out from this robot&apos;s spec. They are physics estimates, not a full simulator run. The robot is drawn to scale from its spec (see the 100 mm bar); change the course or the spec and they run again.</p>
       </div>
       {!checks ? (
         <p className="faint">The test runs need a ground robot with wheels, motors and a battery in its spec. This one doesn&apos;t have all three yet; add them in Specs.</p>
@@ -208,8 +235,8 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
           </div>
           {maxSlope != null && <p className="g-small faint">Steepest slope this robot can hold on {opts.terrain}: about {Math.round(maxSlope)}°.</p>}
           <div className="sim-grid">
-            <SlopeScene check={byName('rover.slope_climb')} slopeDeg={opts.slopeDeg} wheelR={wheelR} />
-            <StepScene check={byName('rover.step_climb')} stepM={opts.stepM} wheelDiaM={wheelDia} wheelR={wheelR} />
+            <SlopeScene check={byName('rover.slope_climb')} slopeDeg={opts.slopeDeg} shape={shape} />
+            <StepScene check={byName('rover.step_climb')} stepM={opts.stepM} shape={shape} />
             <BatteryScene check={byName('rover.runtime')} targetMin={opts.targetMin} />
           </div>
           <details className="g-small faint"><summary>How these are worked out</summary><ul>{checks.flatMap((c) => c.assumptions).filter((a, i, all) => all.indexOf(a) === i).map((a) => <li key={a}>{a}</li>)}</ul></details>

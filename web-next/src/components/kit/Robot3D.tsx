@@ -201,6 +201,18 @@ export default function Robot3D({
         ground.receiveShadow = true;
         ground.position.z=-0.003;
         scene.add(ground);
+        /* Soft floor glow past the stage disk, fading into the background,
+         * so the stage reads as lit floor rather than a coin in space. */
+        const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=256;
+        const gctx=glowCanvas.getContext('2d');
+        if(gctx){
+          const g=gctx.createRadialGradient(128,128,0,128,128,128);
+          g.addColorStop(0,'rgba(36,159,158,0.22)');g.addColorStop(0.45,'rgba(16,33,50,0.55)');g.addColorStop(1,'rgba(8,19,33,0)');
+          gctx.fillStyle=g;gctx.fillRect(0,0,256,256);
+        }
+        const glowTex=new THREE.CanvasTexture(glowCanvas);glowTex.colorSpace=THREE.SRGBColorSpace;
+        const floorGlow=new THREE.Mesh(new THREE.PlaneGeometry(span*5,span*5),new THREE.MeshBasicMaterial({map:glowTex,transparent:true,depthWrite:false}));
+        floorGlow.position.z=-0.005;scene.add(floorGlow);
         const stageRing=new THREE.Mesh(new THREE.RingGeometry(span*1.3,span*1.305,128),new THREE.MeshBasicMaterial({color:0x249f9e,transparent:true,opacity:0.45,depthWrite:false}));
         stageRing.position.z=-0.002;scene.add(stageRing);
         const grid = new THREE.PolarGridHelper(
@@ -645,7 +657,7 @@ export default function Robot3D({
             else material?.dispose();
           });
           composer?.passes.forEach(pass=>pass.dispose());composer?.dispose();
-          environment.dispose();
+          environment.dispose();glowTex.dispose();
           renderer.dispose();
           if (renderer.domElement.parentElement === host) {
             host.removeChild(renderer.domElement);

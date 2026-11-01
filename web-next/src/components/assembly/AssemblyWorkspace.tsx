@@ -61,7 +61,8 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
   const [tdOff,setTdOff] = useState(0);
   const [tdDir,setTdDir] = useState<1|-1>(1);
   const [tdPlaying,setTdPlaying] = useState(false);
-  const [spin,setSpin] = useState(false);
+  /* Slow idle turn until the person first touches the model. */
+  const [spin,setSpin] = useState(true);
   const robot = robots.find(r => r.id === robotId);
   const spec = robot?.versions.at(-1)?.spec;
   const saved = useMemo(()=>currentAssembly(all,robotId),[all,robotId]);
@@ -184,7 +185,7 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
     {previousVersion && <fieldset className="g-group"><legend>Upgrade playback · previous assembly → latest preview</legend><input aria-label="Upgrade playback progress" type="range" min="0" max="100" value={Math.round(replay*100)} onChange={e=>{setPlaying(false);setReplay(Number(e.target.value)/100);}}/><button type="button" className="chip" onClick={()=>{setReplay(0);setPlaying(true);setDragMode(false);}}>Play upgrade</button><button type="button" className="chip" onClick={()=>{setPlaying(false);setReplay(1);}}>Latest pose</button><p>Component-pose comparison only; cables show the latest planned connections. Scrubbing does not change saved versions. Motion respects reduced-motion preferences.</p></fieldset>}
     {view==='wiring' && wiringOrParts}
     {view!=='wiring' && motionBar}
-    {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
+    {!failed3D ? <div onPointerDownCapture={()=>{if(spin)setSpin(false);}}><Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
       const wire=preview.connections.find(c=>c.id===id);
       if(wire){setSelectedWire(id);setTab('wiring');setFrom(wire.from);setTo(wire.to);setNotice('Selected planned connection · NOT_CHECKED');}
       else {setSelectedWire(null);setSelected(id);}
@@ -193,7 +194,7 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
       ghostMount={ghostMount} fov={showFov?{angleDeg:fovDeg,rangeM:fovRange}:undefined}
       comparison={previousVersion?.components} replay={replay} playing={playing}
       teardown={tdOn ? { removed: td.steps.slice(0, tdOff), isolate: null } : undefined} autoRotate={spin} onPlaybackEnd={()=>{setPlaying(false);setReplay(1);}}
-      onMove={(id,positionM)=>{const current=preview.components.find(c=>c.id===id);if(current){setSelected(id);propose({kind:'move',instanceId:id,positionM,yawDeg:current.yawDeg});}}}/> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
+      onMove={(id,positionM)=>{const current=preview.components.find(c=>c.id===id);if(current){setSelected(id);propose({kind:'move',instanceId:id,positionM,yawDeg:current.yawDeg});}}}/></div> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
     {view!=='wiring' && wiringOrParts}
     <h4>Components ({preview.components.length})</h4>
     {!preview.components.length && <p>No components yet. Add one above or through Wrench.</p>}
