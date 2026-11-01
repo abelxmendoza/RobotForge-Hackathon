@@ -4,6 +4,8 @@ import familiesDoc from "@/data/families.json";
 import gateDoc from "@/data/gate-reports.json";
 import kitsDoc from "@/data/parts-kits.json";
 import physicsDoc from "@/data/physics.json";
+import stageDoc from "@/data/stage-animation.json";
+import type { StageDoc } from "./stageAnimation";
 import simReadyDoc from "@/data/simready-props.json";
 import harnessDoc from "@/data/harness-reports.json";
 import stabilityDoc from "@/data/stability-reports.json";
@@ -22,6 +24,12 @@ export const kitOf = (slug: string): RobotKit | undefined => partsKits[slug];
 
 export const physicsChecks = (physicsDoc as unknown as { robots: Record<string, PhysicsEntry> }).robots;
 export const physicsOf = (slug: string): PhysicsEntry | undefined => physicsChecks[slug];
+
+/* Living Build Stage source data (catalog/stage-animation.json):
+ * URDF joints parsed from the pinned URDFs + recorded spec fields.
+ * The capability derivation itself lives in lib/stageAnimation.ts. */
+export const stageAnimation = stageDoc as unknown as StageDoc;
+export const stageRecordOf = (slug: string) => stageAnimation.robots[slug];
 
 export const simReadyProps = (simReadyDoc as unknown as { props: SimReadyPropEntry[] }).props;
 

@@ -14,6 +14,11 @@ import {
   type RobotSpec, type TaPart, type Wiring,
 } from "./spec";
 import { renderSide, renderTop, type TaViewState } from "./render";
+import { stageRecordOf } from "@/lib/data";
+import { robotCapability } from "@/lib/stageAnimation";
+import { useStageAnimation } from "@/lib/useStageAnimation";
+import { StageControlsRow } from "@/components/kit/StageControls";
+import type { RobotLife } from "@/components/kit/Robot3D";
 
 /* The take-apart viewer (robot.js initTakeApart + TA_PANEL + the
    taSelect family), as a React component. The spec file is fetched
@@ -77,6 +82,34 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
   const [tdDone, setTdDone] = useState(0);
   const [tdPlaying, setTdPlaying] = useState(false);
   const [tdIsolate, setTdIsolate] = useState(false);
+
+  /* Living Build Stage (Layer 0 of the digital-twin path): in 3D
+   * mode this robot animates only what recorded data licenses —
+   * the capability map comes from its pinned URDF joints and spec
+   * sensors (lib/stageAnimation). The Electrical overlay is this
+   * page's wiring mode: while it is on, stage motion pauses, the
+   * same coexistence rule the kit stage follows. Robots with no
+   * stage record (a visitor's own spec) simply get no life. */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const stage = useStageAnimation(stageRef);
+  const stageCapability = useMemo(() => {
+    const rec = spec ? stageRecordOf(spec.name) : undefined;
+    return rec ? robotCapability(rec) : null;
+  }, [spec]);
+  const robotLife: RobotLife | undefined = useMemo(() => {
+    if (!stageCapability) return undefined;
+    const travel = stageCapability.tracks.find((t) => t.kind === "travel");
+    return {
+      playing: stage.playingNow(elec) && mode === "3d" && !tdOn,
+      speed: stage.controls.speed,
+      sensors: stage.controls.sensors,
+      hover: stageCapability.tracks.some((t) => t.kind === "hover"),
+      lidarSweep: stageCapability.overlays.some(
+        (o) => o.kind === "lidar_2d" && o.drawable,
+      ),
+      gripperTravelM: travel?.joints?.[0]?.amplitude ?? null,
+    };
+  }, [stageCapability, stage, elec, mode, tdOn]);
 
   useEffect(() => {
     let live = true;
@@ -484,13 +517,14 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
               </p>
             </div>
           </div>
-          <div className="ta-view" id="ta-3dwrap" hidden={mode !== "3d"}>
+          <div className="ta-view" id="ta-3dwrap" ref={stageRef} hidden={mode !== "3d"}>
             <div id="ta-3d">
               {mode === "3d" && spec && !threeFailed ? (
                 <Robot3D
                   spec={spec as unknown as ForgeSpec}
                   explode={explode}
                   selected={selected}
+                  life={robotLife}
                   teardown={tdOn ? { removed: td.steps.slice(0, tdDone), isolate: tdFocus } : undefined}
                   onSelect={(id) => {
                     setSelected(id);
@@ -506,6 +540,58 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
               3D take-apart. Drag to orbit, pinch or scroll to zoom, tap
               a part &mdash; the panel beside it is the same one the flat views use.
             </p>
+            {mode === "3d" && stageCapability ? (
+              <>
+                <StageControlsRow
+                  controls={stage.controls}
+                  reducedMotion={stage.reducedMotion}
+                  showFlow={false}
+                  onChange={(patch) =>
+                    stage.setControls((c) => ({ ...c, ...patch }))
+                  }
+                />
+                <p className="cap">
+                  {stageCapability.tracks.filter((t) => t.kind !== "sway").length > 0 ? (
+                    <>
+                      Animates:{" "}
+                      {stageCapability.tracks
+                        .filter((t) => t.kind !== "sway")
+                        .map((t) => `${t.kind} (${t.target})`)
+                        .join(" · ")}
+                      .{" "}
+                    </>
+                  ) : (
+                    <>This robot does not animate on the stage. </>
+                  )}
+                  {stageCapability.tracks
+                    .filter((t) => t.kind === "sway")
+                    .map((t) => (
+                      <span key={t.kind + t.target}>
+                        Sway range derived and limit-checked from the recorded{" "}
+                        {t.target} limits, but not rendered in this schematic
+                        viewer — user-driven joint rendering is the Layer 1
+                        kinematic twin.{" "}
+                      </span>
+                    ))}
+                  {stageCapability.abstentions.map((a) => (
+                    <span key={a.subject}>
+                      No motion — {a.subject}: {a.reason}{" "}
+                    </span>
+                  ))}
+                  {stageCapability.overlays
+                    .filter((o) => o.kind === "lidar_2d" && o.drawable)
+                    .map((o) => (
+                      <span key={o.kind}>
+                        The sweep wedge shows the recorded scan direction at
+                        stage scale; recorded lidar range is {o.rangeM} m, not
+                        plotted to scale.{" "}
+                      </span>
+                    ))}
+                  Electrical flow for this robot lives in the 2D Electrical
+                  view above; the 3D flow stage is on the kit page.
+                </p>
+              </>
+            ) : null}
             {threeFailed ? (
               <p className="state-box" id="ta-3d-fallback">
                 3D unavailable here &mdash; the 2D take-apart still works.{" "}

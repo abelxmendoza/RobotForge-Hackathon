@@ -16,7 +16,18 @@ import { parts as libParts } from '../forge/data';
 import type { CatalogPart } from '../forge/data';
 import PartsPalette from './PartsPalette';
 import type { PlacedProp } from './KitScene';
-import { parts as catalogParts, simReadyProps } from '@/lib/data';
+import { parts as catalogParts, simReadyProps, stageRecordOf } from '@/lib/data';
+import {
+  flowPaths,
+  parseStoredWiringGraph,
+  propCapability,
+  robotCapability,
+  storedWiringKey,
+  type StoredWiringSummary,
+} from '@/lib/stageAnimation';
+import { useStageAnimation } from '@/lib/useStageAnimation';
+import { DEMO_EVENT, isDemoMode } from '@/lib/demoMode';
+import { StageControlsRow } from './StageControls';
 import { useBuildList } from '@/lib/buildList';
 import {
   addToBuildList,
@@ -159,6 +170,60 @@ export default function KitViewer() {
   const [fallback, setFallback] = useState(false);
   const readyRef = useRef(false);
 
+  /* Living Build Stage (Layer 0 of the digital-twin path): the
+   * Burger's animation capability is derived from recorded data
+   * only — its pinned URDF joints and its spec's sensors/wiring —
+   * by lib/stageAnimation. This page has no Wiring mode on main;
+   * when PR #70's wiring view lands here, its toggle feeds the
+   * same gate the hook already accepts (motion pauses in Wiring
+   * mode; the flow layer yields to it). */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const stage = useStageAnimation(stageRef);
+  const wiringMode = false;
+  const burgerRecord = stageRecordOf('turtlebot3-burger');
+  const burgerCapability = useMemo(
+    () => (burgerRecord ? robotCapability(burgerRecord) : null),
+    [burgerRecord],
+  );
+  const burgerFlows = useMemo(
+    () => (burgerRecord ? flowPaths(burgerRecord) : []),
+    [burgerRecord],
+  );
+  const burgerLidarRange = burgerCapability?.overlays.find(
+    (o) => o.kind === 'lidar_2d',
+  )?.rangeM;
+  /* PR #70's build wiring graph, if the visitor has one, read
+   * READ-ONLY in its stored shape (demo twin while demoing) and
+   * only ever summarized — this branch imports none of #70's code
+   * and writes nothing. */
+  const [storedWiring, setStoredWiring] = useState<StoredWiringSummary | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        const raw = window.localStorage.getItem(storedWiringKey(isDemoMode()));
+        setStoredWiring(raw ? parseStoredWiringGraph(JSON.parse(raw)) : null);
+      } catch {
+        setStoredWiring(null);
+      }
+    };
+    read();
+    window.addEventListener('storage', read);
+    window.addEventListener(DEMO_EVENT, read);
+    return () => {
+      window.removeEventListener('storage', read);
+      window.removeEventListener(DEMO_EVENT, read);
+    };
+  }, []);
+  const life = {
+    playing: stage.playingNow(wiringMode),
+    flowPlaying: stage.flowPlayingNow(wiringMode),
+    speed: stage.controls.speed,
+    motion: stage.controls.motion,
+    sensors: stage.controls.sensors,
+    flow: stage.controls.flow,
+    flows: burgerFlows,
+  };
+
   /* The Parts palette + the shared build list (lib/buildList.ts —
    * the same list the chat adds to and the BOM wizard starts
    * from). Bench-prop entries with a position are the scene's
@@ -276,7 +341,7 @@ export default function KitViewer() {
           </p>
         </header>
 
-        <div id="stage">
+        <div id="stage" ref={stageRef}>
           {!sceneOn && (
             <div className="kit-load">
               <p>
@@ -297,6 +362,7 @@ export default function KitViewer() {
             real={real}
             propsOn={propsOn}
             placedProps={placedProps}
+            life={life}
             onCanvasDrop={handleCanvasDrop}
             selectedSpecimen={selectedSpecimen}
             onReady={() => {
@@ -404,6 +470,80 @@ export default function KitViewer() {
             ⭳ Download .scad
           </button>
         </div>
+        <StageControlsRow
+          controls={stage.controls}
+          reducedMotion={stage.reducedMotion}
+          onChange={(patch) =>
+            stage.setControls((c) => ({ ...c, ...patch }))
+          }
+        />
+        {burgerCapability && (
+          <div className="box" style={{ marginTop: 14 }}>
+            <b>Stage life — what moves here, and why.</b>{' '}
+            <span className="dim">
+              Every track below is derived from recorded data (the Burger's
+              pinned URDF + spec); anything without recorded support does not
+              move and says why.
+            </span>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+              {burgerCapability.tracks.map((t) => (
+                <li key={t.kind + t.target}>
+                  <b>{t.kind}</b> — {t.target}: {t.source}
+                </li>
+              ))}
+              {burgerCapability.abstentions.map((a) => (
+                <li key={a.subject} className="dim">
+                  No motion — {a.subject}: {a.reason}
+                </li>
+              ))}
+            </ul>
+            {burgerLidarRange != null && (
+              <p className="dim" style={{ margin: '8px 0 0' }}>
+                The sweep wedge shows the lidar's recorded scan direction at
+                stage scale; its recorded range is {burgerLidarRange} m — far
+                beyond this stage, so the wedge is a direction indicator, not
+                a to-scale range plot.
+              </p>
+            )}
+            {burgerFlows.length > 0 && (
+              <p className="dim" style={{ margin: '8px 0 0' }}>
+                Flow paths on stage:{' '}
+                {burgerFlows
+                  .map(
+                    (f) =>
+                      `${f.from} → ${f.to} (${f.kind}${f.volts != null ? `, ${f.volts} V recorded` : ', voltage not recorded'})`,
+                  )
+                  .join(' · ')}
+                . Pulse pace and brightness key to the recorded volts or
+                interface label only — no current is recorded per connection,
+                so none is shown or implied.
+              </p>
+            )}
+            {storedWiring && (
+              <p className="dim" style={{ margin: '8px 0 0' }}>
+                Your saved build wiring (read-only here): {storedWiring.total}{' '}
+                connection{storedWiring.total === 1 ? '' : 's'} —{' '}
+                {storedWiring.power} power, {storedWiring.data} data,{' '}
+                {storedWiring.signal} signal. The stage's flow paths above come
+                from this kit's recorded spec harness.
+              </p>
+            )}
+            {placedProps.length > 0 && (
+              <p className="dim" style={{ margin: '8px 0 0' }}>
+                Placed bench props stay still:{' '}
+                {placedProps
+                  .map((p) => {
+                    const prop = simReadyProps.find((x) => x.file === p.file);
+                    return prop ? propCapability(prop).abstentions[0]?.reason : null;
+                  })
+                  .filter(Boolean)
+                  .slice(0, 1)
+                  .join('')}{' '}
+                No fake motion is added to them.
+              </p>
+            )}
+          </div>
+        )}
         {dropNote && (
           <div className="box" style={{ marginTop: 14 }}>
             <b>Palette:</b> {dropNote}{' '}
