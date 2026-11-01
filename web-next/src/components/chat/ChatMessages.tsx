@@ -2,6 +2,7 @@
 /* Message list for Wrench's bottom bar: recorded HTML, plain text and
  * hit chips, with a copy button on each response. */
 import type { Hit } from "./engine";
+import type { SourceRef } from "./wrench";
 import CopyButton from "./CopyButton";
 import { msgText } from "@/lib/copytext";
 
@@ -11,6 +12,7 @@ export interface ChatMsg {
   html?: string;
   text?: string;
   hits?: Hit[];
+  sources?: SourceRef[];
 }
 
 export default function ChatMessages({
@@ -48,6 +50,23 @@ export default function ChatMessages({
                   onClick={() => onHitClick(hit)}
                 >
                   {hit.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {m.sources && m.sources.length > 0 && (
+            <div className="fc-sources" aria-label="Sources for this answer">
+              <span className="fc-sources-label">From the record:</span>
+              {m.sources.map((s, i) => (
+                <button
+                  type="button"
+                  className="fc-source"
+                  key={i}
+                  onClick={() =>
+                    onHitClick({ kind: "source", label: s.label, route: s.route })
+                  }
+                >
+                  {s.label}
                 </button>
               ))}
             </div>
