@@ -1,0 +1,295 @@
+{
+ "comment": "Gather source registry (Forge Engine §8). One entry per catalog part: canonical public product/datasheet pages + per-class TTLs. Adding a part = adding one entry here; no code. URLs verified reachable 2026-11-01. Prices/specs are NEVER read from this file — it only says where to look.",
+ "sources": [
+  {
+   "mpn": "TB6612FNG",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "pololu",
+     "url": "https://www.pololu.com/product/713"
+    },
+    {
+     "kind": "datasheet",
+     "provides": [
+      "specs",
+      "datasheet"
+     ],
+     "supplier": "toshiba-via-pololu",
+     "url": "https://www.pololu.com/file/0J86/TB6612FNG.pdf"
+    }
+   ],
+   "part_id": "driver_tb6612fng",
+   "supplier": "pololu",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "notes": "Catalog part is the NEMA 17 class; the seeded page is Pololu's 42x38 mm, 1.7 A/phase representative model. Values gathered from it describe that representative, which the proposal diff makes visible.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "pololu",
+     "url": "https://www.pololu.com/product/2267"
+    }
+   ],
+   "part_id": "stepper_nema17",
+   "supplier": "pololu",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": "BNO055",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "adafruit",
+     "url": "https://www.adafruit.com/product/2472"
+    }
+   ],
+   "part_id": "imu_bno055",
+   "supplier": "adafruit",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "raspberry-pi",
+     "url": "https://www.raspberrypi.com/products/raspberry-pi-pico/"
+    },
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "adafruit",
+     "url": "https://www.adafruit.com/product/4864"
+    }
+   ],
+   "part_id": "pico_rp2040",
+   "supplier": "raspberry-pi",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": "HC-SR04",
+   "notes": "Seeded URL redirects to sparkfun.com/ultrasonic-distance-sensor-hc-sr04.html; the fetcher follows the redirect.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "sparkfun",
+     "url": "https://www.sparkfun.com/products/15569"
+    }
+   ],
+   "part_id": "ultrasonic_hcsr04",
+   "supplier": "sparkfun",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "pjrc",
+     "url": "https://www.pjrc.com/store/teensy41.html"
+    }
+   ],
+   "part_id": "teensy_41",
+   "supplier": "pjrc",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "specs"
+     ],
+     "supplier": "slamtec",
+     "url": "https://www.slamtec.com/en/Lidar/A1"
+    }
+   ],
+   "part_id": "rplidar_a1",
+   "supplier": "slamtec",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "notes": "Manufacturer page (from-price/specs). Retailer pricing arrives via Nexar/Mouser adapters (Forge Engine Slice 1) or additional registry pages.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "raspberry-pi",
+     "url": "https://www.raspberrypi.com/products/raspberry-pi-5/"
+    }
+   ],
+   "part_id": "raspberry_pi_5",
+   "supplier": "raspberry-pi",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "specs"
+     ],
+     "supplier": "raspberry-pi",
+     "url": "https://www.raspberrypi.com/products/camera-module-v2/"
+    }
+   ],
+   "part_id": "camera_rpi_v2",
+   "supplier": "raspberry-pi",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": null,
+   "notes": "Manufacturer developer-kit page: specs only; no direct price is expected from this source.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "specs"
+     ],
+     "supplier": "nvidia",
+     "url": "https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/nano-super-developer-kit/"
+    }
+   ],
+   "part_id": "jetson_orin_nano",
+   "supplier": "nvidia",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": "STS3215",
+   "notes": "Waveshare's listing of the Feetech STS3215 serial bus servo (the catalog part).",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "waveshare",
+     "url": "https://www.waveshare.com/st3215-servo.htm"
+    }
+   ],
+   "part_id": "servo_sts3215",
+   "supplier": "waveshare",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "mpn": "D435",
+   "notes": "Manufacturer page redirects to the 430-series family page; the fetcher follows the redirect and records what it actually read.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "specs"
+     ],
+     "supplier": "realsense-ai",
+     "url": "https://www.realsenseai.com/products/stereo-depth-camera-d435/"
+    }
+   ],
+   "part_id": "realsense_d435",
+   "supplier": "realsense-ai",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  }
+ ],
+ "version": 1
+}
