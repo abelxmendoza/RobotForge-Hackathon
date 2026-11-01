@@ -1066,3 +1066,5 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .ws-tile,.ws-card,.ws-verdict,.est-dot,.wv-detail{animation:none}
   .ws-tabs button::after,.wv-line,.wv-node rect,.wv-cable,.wv-node,.ws-tile-icon,.ws-card-icon{transition:none}
 }
+/* A recorded over-voltage stays red when the harness is powered. */
+.wv-cable.bad .wv-line.on{stroke:var(--fail);filter:drop-shadow(0 0 3px rgba(248,113,113,.6))}

@@ -664,10 +664,6 @@ export default function Garage() {
               </section>
             )}
 
-            {tab === 'build' && (
-              <AssemblyWorkspace key={robot.id} robotId={robot.id} view="components" onView={(v) => setTab(v === 'components' ? 'build' : 'wiring')} />
-            )}
-
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
                 {isWiring(draft.wiring) ? <WiringView wiring={draft.wiring} /> : (
@@ -676,12 +672,15 @@ export default function Garage() {
                     <p><strong>No wiring recorded for this robot yet.</strong> Robodex robots such as Pathfinder and TurtleBot3 come with their harness. You can plan connections on the bench below.</p>
                   </div>
                 )}
-                {!benchWires ? (
-                  <button type="button" className="btn btn-sm" onClick={() => setBenchWires(true)}>Plan new connections on the 3D bench</button>
-                ) : (
-                  <AssemblyWorkspace key={robot.id} robotId={robot.id} view="wiring" onView={(v) => setTab(v === 'components' ? 'build' : 'wiring')} />
-                )}
+                {!benchWires && <button type="button" className="btn btn-sm" onClick={() => setBenchWires(true)}>Plan new connections on the 3D bench</button>}
               </section>
+            )}
+
+            {/* One bench instance for Build and the Wiring planner, so picking a
+                planned cable in Build keeps its selection when it opens Wiring. */}
+            {(tab === 'build' || (tab === 'wiring' && benchWires)) && (
+              <AssemblyWorkspace key={robot.id} robotId={robot.id} view={tab === 'build' ? 'components' : 'wiring'}
+                onView={(v) => { if (v === 'wiring') setBenchWires(true); setTab(v === 'components' ? 'build' : 'wiring'); }} />
             )}
 
             {tab === 'specs' && (
