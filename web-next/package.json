@@ -7,8 +7,8 @@
     "build": "next build",
     "sync-data": "node scripts/sync-data.mjs",
     "parity": "node scripts/parity.mjs",
-    "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs && node scripts/make-simready-props.mjs && node scripts/make-app-icon.mjs && node scripts/make-demo-poster.mjs && node scripts/copy-vanilla.mjs",
-    "predev": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs && node scripts/make-simready-props.mjs && node scripts/make-app-icon.mjs && node scripts/make-demo-poster.mjs",
+    "prebuild": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs && node scripts/make-simready-props.mjs && node scripts/make-app-icon.mjs && node scripts/make-favicon.mjs && node scripts/make-demo-poster.mjs && node scripts/copy-vanilla.mjs",
+    "predev": "node scripts/sync-data.mjs && node scripts/make-sample-scan.mjs && node scripts/make-simready-props.mjs && node scripts/make-app-icon.mjs && node scripts/make-favicon.mjs && node scripts/make-demo-poster.mjs",
     "sample-scan": "node scripts/make-sample-scan.mjs"
   },
   "dependencies": {
