@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
 import AccountControl from "./AccountControl";
-import ChatBar from "@/components/chat/ChatBar";
+import { DemoPill } from "./DemoBar";
+import DemoIdentity from "./DemoIdentity";
+import AppGate, { GateProvider, GatedChatBar } from "./AppGate";
 import { assetPath } from "@/components/home/asset";
 
 export const REPO_URL = "https://github.com/abelxmendoza/RobotForge-Hackathon";
@@ -33,8 +35,8 @@ const NAV = [
 
 export interface Crumb { label: string; href?: string }
 
-export default function AppShell({ active, crumbs = [], wide = false, children }:
-  { active: string; crumbs?: Crumb[]; wide?: boolean; children: ReactNode }) {
+export default function AppShell({ active, crumbs = [], wide = false, gate = true, children }:
+  { active: string; crumbs?: Crumb[]; wide?: boolean; gate?: boolean; children: ReactNode }) {
   /* Every trail starts at Home; pages still passing the old "App"
    * root crumb get it replaced. */
   const trail: Crumb[] = [{ label: "Home", href: "/" }, ...crumbs.filter((c) => c.label !== "App")];
@@ -74,7 +76,8 @@ export default function AppShell({ active, crumbs = [], wide = false, children }
           <a href={REPO_URL}>GitHub</a>
         </div>
       </aside>
-      <ChatBar />
+      <GateProvider enabled={gate}>
+      <GatedChatBar />
       <div className="main">
         <header className="topbar">
           <Link className="mobile-brand" href="/" aria-label="RobotForge home"><BrandMark /></Link>
@@ -91,11 +94,16 @@ export default function AppShell({ active, crumbs = [], wide = false, children }
               );
             })}
           </nav>
+          <DemoIdentity />
+          <DemoPill />
           <AccountControl />
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>
-        <main className={wide ? "content content--wide" : "content"} id="content">{children}</main>
+        <main className={wide ? "content content--wide" : "content"} id="content">
+          {gate ? <AppGate>{children}</AppGate> : children}
+        </main>
       </div>
+      </GateProvider>
       <RevealInit />
     </div>
   );

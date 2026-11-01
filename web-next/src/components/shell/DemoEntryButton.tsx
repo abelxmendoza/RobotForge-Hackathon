@@ -13,9 +13,12 @@ import { seedDemoStores } from "@/lib/demoSeed";
 export default function DemoEntryButton({
   className = "btn",
   label = "Try the demo",
+  to = "/garage/",
 }: {
   className?: string;
   label?: string;
+  /* Where the visitor lands once demo mode is on. */
+  to?: string;
 }) {
   const demo = useDemoMode();
   const router = useRouter();
@@ -34,7 +37,7 @@ export default function DemoEntryButton({
           /* seeding is best-effort; the demo still opens */
         }
         setDemoMode(true);
-        router.push("/garage/");
+        router.push(to);
       }}
     >
       {label}

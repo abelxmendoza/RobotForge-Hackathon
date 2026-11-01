@@ -22,6 +22,13 @@ export interface AuthSession {
 
 const KEY = "rf.auth.v1";
 
+/* Fired on window whenever the stored session changes (sign-in,
+ * sign-out, OAuth capture, expiry cleanup). The app gate
+ * (components/shell/AppGate.tsx) listens for it so signing in or
+ * out from any surface — the topbar control, the landing header,
+ * the gate panel itself — locks or unlocks the app at once. */
+export const AUTH_EVENT = "rf-auth-change";
+
 export function loadSession(): AuthSession | null {
   try {
     const raw = window.localStorage.getItem(KEY);
@@ -39,6 +46,11 @@ export function saveSession(s: AuthSession | null): void {
     else window.localStorage.removeItem(KEY);
   } catch {
     /* storage full/blocked: the session just won't persist */
+  }
+  try {
+    window.dispatchEvent(new CustomEvent(AUTH_EVENT));
+  } catch {
+    /* no window (SSR): nothing to notify */
   }
 }
 

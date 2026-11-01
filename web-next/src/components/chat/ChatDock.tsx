@@ -55,7 +55,7 @@ import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from 
 import { readStore, writeStore, uid } from '@/lib/store';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { forgeValidateSpec } from '@/components/forge/validate';
-import { LIVE_ENDPOINT } from "@/components/forge/live";
+import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
 import { isDemoMode, useDemoMode } from "@/lib/demoMode";
 
 
@@ -74,6 +74,17 @@ const SUB_LIVE =
   "Recorded data first — the Robodex, the parts catalogue and the recorded gate reports. Questions they can’t answer go to a live model, badged LIVE MODEL.";
 const SUB_DEMO =
   "Demo mode — answers are recorded from real runs: the Robodex, the parts catalogue and the recorded gate reports. Nothing here calls the live model; sign in for live AI.";
+
+/* The exchanges pre-played into the demo's Wrench thread (see the
+ * demo thread seed in useForgeAssistant): ordinary questions the
+ * recorded engine answers from the recorded data, including one
+ * follow-up that resolves against the thread's memory — the demo
+ * opens mid-conversation, the way a returning user finds it. */
+const DEMO_THREAD_QUESTIONS = [
+  "Tell me about the TurtleBot3 Burger",
+  "And its battery?",
+  "Which robots passed the gate?",
+];
 
 const LIVE_BADGE =
   "LIVE MODEL — not from recorded RobotForge data; check numbers on the Evidence page";
@@ -203,6 +214,50 @@ export function useForgeAssistant() {
     [appendMsg]
   );
 
+  /* Demo thread seed: the demo workspace reads as a returning
+   * user's, so the conversation does too. On entering the demo
+   * with an empty thread, a few exchanges are pre-played through
+   * the SAME recorded engine a real question hits — the answers
+   * are the engine's own recorded output, never canned text — and
+   * the pre-demo thread is snapshotted. On exit the snapshot is
+   * restored, so the demo thread (and anything asked inside the
+   * demo) never leaks into the visitor's real conversation. A
+   * thread the visitor already has is never seeded over. */
+  const demoThreadRef = useRef<{ messages: Msg[]; memory: TurnMemory } | null>(null);
+  useEffect(() => {
+    if (demo) {
+      if (demoThreadRef.current || carry.messages.length > 0) return;
+      const snapshot = {
+        messages: [...carry.messages],
+        memory: { ...memoryRef.current },
+      };
+      const seeded: Msg[] = [];
+      let mem: TurnMemory = {};
+      for (const q of DEMO_THREAD_QUESTIONS) {
+        const turn = wrench.answerTurn(q, mem);
+        mem = turn.memory || mem;
+        seeded.push({ id: nextId++, who: "user", text: q });
+        seeded.push({
+          id: nextId++,
+          who: "bot",
+          html: turn.html,
+          hits: turn.hits,
+          sources: turn.sources,
+        });
+      }
+      demoThreadRef.current = snapshot;
+      memoryRef.current = mem;
+      setMessages(seeded);
+      setChips(wrench.contextChips(pathname || "", mem));
+    } else if (demoThreadRef.current) {
+      const snapshot = demoThreadRef.current;
+      demoThreadRef.current = null;
+      memoryRef.current = snapshot.memory;
+      setMessages(snapshot.messages);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demo]);
+
   /* ---------------- live model (deployment-configured) ------------ */
 
   const liveBase = useCallback((): string => {
@@ -243,7 +298,15 @@ export function useForgeAssistant() {
     (q: string): Promise<string> =>
       fetch(liveBase() + "/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          /* /chat is account-gated at the Worker (see
+           * live/worker.js): carry the session token. Demo mode
+           * never calls this — engine answers stay recorded. */
+          ...(sessionToken()
+            ? { Authorization: "Bearer " + sessionToken() }
+            : {}),
+        },
         body: JSON.stringify({ message: q }),
       }).then((r) =>
         r
@@ -524,7 +587,12 @@ export function useForgeAssistant() {
     try {
       const res = await fetch(liveBase() + "/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(sessionToken()
+            ? { Authorization: "Bearer " + sessionToken() }
+            : {}),
+        },
         body: JSON.stringify({ message: q, op_context: buildOpContext() }),
       });
       const body = (await res.json().catch(() => null)) as

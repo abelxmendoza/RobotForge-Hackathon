@@ -48,6 +48,18 @@
  *        OPERATOR_TOKEN secret (X-Operator-Token header). That is
  *        how Muse administers accounts for the owner.
  *
+ *   ACCOUNT GATE: every model route (describe/chat/list/photo/
+ *   fix/part/part-chat/transcribe) requires a signed-in account —
+ *   an Authorization: Bearer session JWT, verified in the
+ *   dispatcher BEFORE the handler runs and before the budget
+ *   gate, so an anonymous call is a 401 that never reaches a
+ *   model and never spends the daily budget. /health, /auth/*
+ *   and /admin/* are the only exemptions (health is the public
+ *   status probe, /auth/* is how a session is minted, /admin/*
+ *   has its own operator-token gate). The demo is unaffected by
+ *   construction: it makes no Worker calls at all (see the
+ *   site's lib/demoMode.ts).
+ *
  * The text routes (describe/chat/list/fix/part-chat) run a
  * three-provider chain in MEASURED order (fixed 24-description
  * sweep, Oct 2026): Baseten serving Muse Spark Open (24/24, key:
@@ -1686,6 +1698,23 @@ function authOff(request) {
     'Accounts are not switched on at the endpoint yet.');
 }
 
+/* The account gate for the model routes (see the header): they
+ * spend the owner's API credits, so an anonymous call is refused
+ * before the handler — and before gateBudget, so it never touches
+ * the daily budget either. The refusal uses the same {error, code}
+ * shape as every other refusal here. When accounts themselves are
+ * not configured the gate fails closed with the same 503 the
+ * /auth/* routes give: a live route never runs open by accident. */
+async function requireAccount(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const user = await sessionUser(request, env);
+  if (!user) {
+    return err(request, 401, 'auth_required',
+      'Live features need an account — sign in first. (The demo works without one and never calls this endpoint.)');
+  }
+  return null;
+}
+
 async function handleAuthRegister(request, env) {
   if (!authConfigured(env)) return authOff(request);
   const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
@@ -1913,6 +1942,12 @@ async function handleAdminGrantRole(request, env) {
   return json(request, 200, { ok: true, user: publicUser(user) });
 }
 
+/* The paths that spend model credits — exactly the routes the
+ * account gate guards. /health, /auth/* and /admin/* are NOT in
+ * this list on purpose (see the header comment). */
+const MODEL_PATHS = ['/describe', '/chat', '/list', '/photo', '/fix',
+  '/part', '/part-chat', '/transcribe'];
+
 async function handle(request, env) {
   if (originRejected(request)) {
     return err(request, 403, 'origin_rejected',
@@ -1964,6 +1999,13 @@ async function handle(request, env) {
         transcribe: Boolean(env.META_API_KEY),
       },
     });
+  }
+  /* The account gate: one check, here in the dispatcher, for
+   * exactly the model paths — the per-route dispatch below stays
+   * the single route table. */
+  if (request.method === 'POST' && MODEL_PATHS.includes(url.pathname)) {
+    const refusal = await requireAccount(request, env);
+    if (refusal) return refusal;
   }
   if (url.pathname === '/describe' && request.method === 'POST') {
     return handleDescribe(request, env);

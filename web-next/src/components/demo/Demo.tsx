@@ -36,7 +36,6 @@ import { diffSpecs, fmtValue, GARAGE_KEY, type GarageRobot, type Spec } from '@/
 import { readStore, uid, writeStore } from '@/lib/store';
 import { gateReports } from '@/lib/data';
 import Term from '@/components/shell/Term';
-import DemoEntryButton from '@/components/shell/DemoEntryButton';
 
 const FixReplay3D = dynamic(() => import('./FixReplay3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D replay…</p> });
 
@@ -324,7 +323,6 @@ export default function Demo() {
         <div className="demo-end">
           <button type="button" className="btn btn-primary" onClick={saveToGarage}>Save both versions to My robots</button>
           <Link className="btn" href="/garage/">Open My robots</Link>
-          <DemoEntryButton className="btn" label="Explore the app with sample data" />
           {saved && <span className="faint" role="status">{saved}</span>}
         </div>
       )}
