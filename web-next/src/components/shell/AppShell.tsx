@@ -25,7 +25,6 @@ export function BrandMark() {
  * every item shows in the desktop sidebar. */
 const NAV = [
   { id: "home", label: "Home", href: "/", icon: (<><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></>) },
-  { id: "demo", label: "Demo", href: "/demo/", icon: (<><circle cx="12" cy="12" r="9" /><path d="M10 8.5v7l6-3.5z" /></>) },
   { id: "workshop", label: "Workshop", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
   { id: "inventory", label: "My parts", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
   { id: "robots", more: true, label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },

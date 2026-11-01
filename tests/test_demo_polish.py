@@ -29,6 +29,27 @@ SHELL = WEB / "src/components/shell"
 
 # ---------------------------------------------------------------- wiring
 
+def test_side_menu_has_no_demo_entry_but_the_real_doors_stay():
+    """Abel (2026-11-01): "the demo in the side menu sucks, take it
+    out." The AppShell sidebar NAV carries no demo entry; the demo
+    itself is untouched — the landing keeps its RunDemoLink entries
+    and the signed-in account panel keeps "Start demo"."""
+    shell = (SHELL / "AppShell.tsx").read_text()
+    nav = shell.split("const NAV = [", 1)[1].split("];", 1)[0]
+    assert 'id: "demo"' not in nav
+    assert '"/demo/"' not in nav
+    # The rest of the nav is unchanged, in order.
+    ids = re.findall(r'id: "(\w+)"', nav)
+    assert ids == ["home", "workshop", "inventory", "robots", "bom",
+                   "evidence"], ids
+    landing = (WEB / "src/app/page.tsx").read_text()
+    assert "RunDemoLink" in landing
+    chrome = (WEB / "src/components/home/LandingChrome.tsx").read_text()
+    assert "Run the demo" in chrome
+    acct = (SHELL / "AccountControl.tsx").read_text()
+    assert "Start demo" in acct
+
+
 def test_demo_bar_is_dismissable_and_the_pill_keeps_the_exit():
     bar = (SHELL / "DemoBar.tsx").read_text()
     # The slim bar gains a real dismiss control wired to the
