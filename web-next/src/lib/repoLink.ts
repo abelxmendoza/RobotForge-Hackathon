@@ -12,3 +12,7 @@ export function repoLinkIn(text: string): RepoRef | null {
   if (["orgs", "settings", "marketplace", "topics", "features"].includes(ref.owner.toLowerCase())) return null;
   return ref;
 }
+
+/* Fired by Wrench when a repo link is pasted while /import/ is already
+ * open; detail is "owner/repo". */
+export const REPO_IMPORT_EVENT = "rf-repo-import";

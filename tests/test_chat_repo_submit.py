@@ -27,3 +27,12 @@ def test_only_explicit_github_links_count():
     link = (WEB / "lib/repoLink.ts").read_text()
     assert "github\\.com" in link
     assert "parseRepoInput" in link
+
+
+def test_a_second_link_on_the_open_importer_still_imports():
+    # Codex review on #97: a query-only navigation keeps the importer
+    # mounted, so Wrench also fires an event the importer listens for.
+    dock = (WEB / "components/chat/ChatDock.tsx").read_text()
+    imp = (WEB / "components/import/RepoImport.tsx").read_text()
+    assert "REPO_IMPORT_EVENT" in dock and "dispatchEvent" in dock
+    assert "addEventListener(REPO_IMPORT_EVENT" in imp

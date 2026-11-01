@@ -56,7 +56,7 @@ import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
-import { repoLinkIn } from '@/lib/repoLink';
+import { REPO_IMPORT_EVENT, repoLinkIn } from '@/lib/repoLink';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
@@ -641,7 +641,13 @@ export function useForgeAssistant() {
       const repo = repoLinkIn(q);
       if (repo) {
         noteBubble(`Importing ${repo.owner}/${repo.repo}. I'm opening the repo importer: it reads the README, parts list, model files and pictures, then you can save it to your Workshop.`);
-        router.push('/import/?repo=' + encodeURIComponent(repo.owner + '/' + repo.repo));
+        const slug = repo.owner + '/' + repo.repo;
+        if ((pathname || '').replace(/\/$/, '') === '/import') {
+          router.replace('/import/?repo=' + encodeURIComponent(slug));
+          window.dispatchEvent(new CustomEvent(REPO_IMPORT_EVENT, { detail: slug }));
+        } else {
+          router.push('/import/?repo=' + encodeURIComponent(slug));
+        }
         return;
       }
       if (runCommands(q)) return;
