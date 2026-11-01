@@ -365,9 +365,14 @@ export default function Garage() {
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<WorkTab>('overview');
   const [benchWires, setBenchWires] = useState(false);
-  /* #assembly (Wrench's assembly proposals link there) opens Build. */
+  /* #assembly (Wrench's assembly proposals link there) opens Build.
+   * #tab=<workshop tab> is Wrench's Tier-0 navigation landing here. */
   useEffect(() => {
-    const check = (hash: string) => { if (hash === '#assembly') setTab('build'); };
+    const check = (hash: string) => {
+      if (hash === '#assembly') setTab('build');
+      const t = hash.match(/^#tab=(overview|build|wiring|specs|checks)$/);
+      if (t) setTab(t[1] as WorkTab);
+    };
     check(window.location.hash);
     const onHash = () => check(window.location.hash);
     const onClick = (e: MouseEvent) => {
@@ -378,6 +383,19 @@ export default function Garage() {
     document.addEventListener('click', onClick, true);
     return () => { window.removeEventListener('hashchange', onHash); document.removeEventListener('click', onClick, true); };
   }, []);
+
+  /* #robot=<id> is Wrench's "open <my robot>" landing: select that robot
+   * when it exists in this browser's store. Unknown ids are ignored so a
+   * stale link can never blank the Workshop. */
+  useEffect(() => {
+    const check = () => {
+      const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)$/);
+      if (r && robots.some((x) => x.id === r[1])) setSelected(r[1]);
+    };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, [robots]);
 
   useEffect(() => { liveHealth().then(setHealth); }, []);
   const lm = useLiveMode('fix', 'mock');
