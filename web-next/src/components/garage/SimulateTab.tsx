@@ -232,7 +232,8 @@ function PhysicsRuns({ spec, opts, shape, estimates }: { spec: Spec; opts: Rover
       </div>
       {unavailable && <p className="faint g-small">The physics run {unavailable}.</p>}
       {state.err && <p className="g-small sim-err" role="alert">The physics run failed: {state.err}</p>}
-      {state.res && (
+      {state.res && stale && <p className="faint g-small">You changed the course or the spec since the last run, so its results are hidden. Press Run again to simulate the new inputs.</p>}
+      {state.res && !stale && (
         <>
           <div className="sim-grid">
             <PhysicsScene kind="slope" run={state.res.slope} shape={shape} slopeDeg={opts.slopeDeg} stepM={opts.stepM} estimate={estimates.slope} />

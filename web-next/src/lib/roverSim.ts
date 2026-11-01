@@ -87,11 +87,15 @@ async function runOne(RAPIER: R, spec: Spec, opts: { slopeDeg: number; stepM: nu
     const boxZ = clear + bodyH / 2 - z0;
     world.createCollider(RAPIER.ColliderDesc.cuboid(L / 2, W / 2, bodyH / 2).setTranslation(0, 0, boxZ).setMass(chassisMass).setFriction(0.3), chassis);
 
-    // wheel stations along x: two wheels -> mid; more -> front and rear axles
-    const xs = nWheels <= 2 ? [0] : [L / 2 - r, -(L / 2 - r)];
-    const perAxle = Math.ceil(nWheels / xs.length);
+    // wheel stations: pairs (left + right) spread evenly along the body;
+    // an odd wheel out goes on the centreline (tricycle style)
+    const pairs = Math.floor(nWheels / 2), odd = nWheels % 2 === 1;
+    const rows = pairs + (odd ? 1 : 0);
+    const span = Math.max(0, L / 2 - r);
+    const rowX = (i: number) => (rows <= 1 ? 0 : span - (2 * span * i) / (rows - 1));
     const stations: { x: number; y: number }[] = [];
-    for (const x of xs) for (let i = 0; i < perAxle && stations.length < nWheels; i++) stations.push({ x, y: (i % 2 ? -1 : 1) * (W / 2 + ww / 2) });
+    for (let i = 0; i < pairs; i++) for (const side of [1, -1]) stations.push({ x: rowX(i), y: side * (W / 2 + ww / 2) });
+    if (odd) stations.push({ x: rowX(rows - 1), y: 0 });
     if (nWheels <= 2) {
       const cr = Math.min(clear, r) * 0.9;
       for (const sx of [L / 2 - cr, -(L / 2 - cr)]) {
@@ -104,6 +108,7 @@ async function runOne(RAPIER: R, spec: Spec, opts: { slopeDeg: number; stepM: nu
       world.createCollider(RAPIER.ColliderDesc.cylinder(ww / 2, r).setMass(wheelMass).setFriction(opts.grip), wheel);
       const jd = RAPIER.JointData.revolute({ x: s.x, y: s.y, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
       const j = world.createImpulseJoint(jd, chassis, wheel, true) as InstanceType<R['RevoluteImpulseJoint']>;
+      j.setContactsEnabled(false); // a centreline wheel can sit inside the body box; the axle joint is the only link
       if (i < nDriven && torque > 0) {
         j.configureMotorModel(RAPIER.MotorModel.ForceBased);
         j.configureMotorVelocity(SPEED / r, 50);
