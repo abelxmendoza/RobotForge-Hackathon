@@ -777,14 +777,31 @@ export function resolvedPrice(item: PlanItem, profile: ConstraintsProfile): Reso
   return null;
 }
 
-export function checkBudget(items: PlanItem[], profile: ConstraintsProfile): CheckResult {
-  const money = (n: number) => `$${n.toFixed(2)}`;
-  const UNKNOWN_LINE = "Shipping, tax and stock are unknown — not included in any total.";
+/* The totals behind every price display: the sum of the buy lines
+ * that carry a price record, split by where each figure came from,
+ * with the unverified web-gathered share kept separate — it is the
+ * softest money in any total and is always reported, never folded
+ * in silently. Unpriced lines are counted, never zero-filled. The
+ * budget check below and the Workshop BOM tab both read THIS, so
+ * the two surfaces can never disagree about a total. */
+export interface PriceTotals {
+  known: number;
+  userSum: number;
+  sourcedSum: number;
+  apiSum: number;
+  gatheredSum: number;
+  gatheredUnverified: number;
+  pricedCount: number;
+  unpricedCount: number;
+}
+
+export function priceTotals(items: PlanItem[], profile: ConstraintsProfile): PriceTotals {
   let userSum = 0, sourcedSum = 0, apiSum = 0, gatheredSum = 0, gatheredUnverified = 0;
-  const unpriced: PlanItem[] = [];
+  let pricedCount = 0, unpricedCount = 0;
   for (const i of items.filter((x) => x.role === "buy")) {
     const p = resolvedPrice(i, profile);
-    if (!p) { unpriced.push(i); continue; }
+    if (!p) { unpricedCount++; continue; }
+    pricedCount++;
     if (p.kind === "user_entered") userSum += p.amount * i.qty;
     else if (p.kind === "sourced") sourcedSum += p.amount * i.qty;
     else if (p.kind === "api") apiSum += p.amount * i.qty;
@@ -795,7 +812,20 @@ export function checkBudget(items: PlanItem[], profile: ConstraintsProfile): Che
       }
     }
   }
-  const known = userSum + sourcedSum + apiSum + gatheredSum;
+  return {
+    known: userSum + sourcedSum + apiSum + gatheredSum,
+    userSum, sourcedSum, apiSum, gatheredSum, gatheredUnverified,
+    pricedCount, unpricedCount,
+  };
+}
+
+export function checkBudget(items: PlanItem[], profile: ConstraintsProfile): CheckResult {
+  const money = (n: number) => `$${n.toFixed(2)}`;
+  const UNKNOWN_LINE = "Shipping, tax and stock are unknown — not included in any total.";
+  const totals = priceTotals(items, profile);
+  const { userSum, sourcedSum, apiSum, gatheredSum, gatheredUnverified } = totals;
+  const unpricedCount = totals.unpricedCount;
+  const known = totals.known;
   const buckets = [
     userSum ? `${money(userSum)} your prices` : null,
     sourcedSum ? `${money(sourcedSum)} sourced estimates` : null,
@@ -817,21 +847,21 @@ export function checkBudget(items: PlanItem[], profile: ConstraintsProfile): Che
   if (profile.budgetCeiling === null) {
     return { id: "budget", state: "not_checked", title: "Budget",
       detail: `Recorded lines total ${money(known)} ${breakdown} but no ceiling is set ` +
-        `to check against. ${unpriced.length} buy line(s) are still unpriced. ` + UNKNOWN_LINE + unverifiedNote,
+        `to check against. ${unpricedCount} buy line(s) are still unpriced. ` + UNKNOWN_LINE + unverifiedNote,
       stepIds: ["buy"] };
   }
   if (known > profile.budgetCeiling) {
     return { id: "budget", state: "blocked", title: "Budget",
       detail: `Recorded prices already total ${money(known)} ${breakdown} against a ` +
-        `${money(profile.budgetCeiling)} ceiling — before ${unpriced.length} unpriced ` +
+        `${money(profile.budgetCeiling)} ceiling — before ${unpricedCount} unpriced ` +
         `buy line(s). ` + UNKNOWN_LINE + unverifiedNote,
       fix: "Drop or swap lines, or raise the ceiling — the plan only adds up recorded figures.",
       stepIds: ["buy"] };
   }
-  if (unpriced.length) {
+  if (unpricedCount) {
     return { id: "budget", state: "warn", title: "Budget",
       detail: `Recorded lines total ${money(known)} ${breakdown} of your ` +
-        `${money(profile.budgetCeiling)} ceiling, but ${unpriced.length} buy line(s) ` +
+        `${money(profile.budgetCeiling)} ceiling, but ${unpricedCount} buy line(s) ` +
         `have no price yet — the true total is unknown and could exceed the ceiling. ` +
         UNKNOWN_LINE + unverifiedNote,
       stepIds: ["buy"] };
