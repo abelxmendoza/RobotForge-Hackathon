@@ -17,6 +17,7 @@ import {
   withCatalogMatches, GATHER_REQUESTS_KEY,
   type ImportSdfBundle, type RepoRef, type RepoSpecimen, type Snapshot,
 } from "@/lib/repoImport";
+import { REPO_IMPORT_EVENT } from "@/lib/repoLink";
 import { repoImportFixture, RECORDED_SNAPSHOT_LABEL } from "@/lib/repoImportFixture";
 import { parts as catalogParts, simReadyProps } from "@/lib/data";
 import { GARAGE_KEY, type GarageRobot } from "@/lib/garage";
@@ -638,6 +639,32 @@ export default function RepoImport() {
     const id = new URLSearchParams(window.location.search).get("robot");
     if (id) setLinkedId(id);
   }, []);
+  // /import/?repo=<owner/repo> comes from Wrench: a repo link pasted
+  // into the chat composer fills the form and starts the import.
+  const [autoRepo, setAutoRepo] = useState<RepoRef | null>(null);
+  useEffect(() => {
+    const take = (raw: string | null) => {
+      const ref = raw ? parseRepoInput(raw) : null;
+      if (ref) {
+        setInput(`https://github.com/${ref.owner}/${ref.repo}`);
+        setAutoRepo(ref);
+      }
+    };
+    take(new URLSearchParams(window.location.search).get("repo"));
+    // A link pasted while this page is already open arrives as an event:
+    // a query-only navigation keeps this component mounted.
+    const onRepo = (e: Event) => take((e as CustomEvent<string>).detail);
+    window.addEventListener(REPO_IMPORT_EVENT, onRepo);
+    return () => window.removeEventListener(REPO_IMPORT_EVENT, onRepo);
+  }, []);
+  useEffect(() => {
+    if (autoRepo) {
+      setAutoRepo(null);
+      void runImport(autoRepo);
+    }
+    // runImport is recreated each render; the import should start once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRepo]);
   const linkedRobot = linkedId ? robots.find((r) => r.id === linkedId) : undefined;
   useEffect(() => {
     if (linkedRobot?.repoImport && !specimen) {
