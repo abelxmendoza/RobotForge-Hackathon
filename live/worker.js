@@ -36,11 +36,13 @@
  *   POST /auth/login    -> { email, password } => { token, user }
  *   GET  /auth/me       -> (Bearer) => { user }
  *   POST /auth/logout   -> { ok } (stateless: the client drops the token)
- *   GET  /auth/config   -> { metaLogin } (is Meta login switched on?)
- *   GET  /auth/meta/start    -> 302 to Facebook (501 until the Meta
- *                     app secrets exist)
- *   GET  /auth/meta/callback -> 302 back to the site with the session
- *                     token in the URL fragment
+ *   GET  /auth/config   -> { metaLogin, providers: { meta, github,
+ *                     google } } (which social logins are on)
+ *   GET  /auth/<provider>/start    -> 302 to the provider (501
+ *                     until that provider's app secrets exist)
+ *   GET  /auth/<provider>/callback -> 302 back to the site with
+ *                     the session token in the URL fragment
+ *                     (<provider> is meta, github or google)
  *   GET  /admin/users, POST /admin/seed-founder, POST
  *        /admin/grant-role — operator routes, guarded by the
  *        OPERATOR_TOKEN secret (X-Operator-Token header). That is
@@ -1394,9 +1396,15 @@ async function handlePartChat(request, env) {
  *
  * Users live in the same KV as the budget counters:
  *   auth:user:<email-lowercase> -> { email, name, passHash, role,
- *     provider, createdAt }
+ *     provider, providerId, createdAt }
+ * providerId is the creating provider's stable user id (Meta id,
+ * GitHub numeric id, Google sub); password accounts have none.
+ * Because the store is keyed by email, a social login may only
+ * find-or-create on an email the provider has VERIFIED (GitHub:
+ * the primary + verified address from /user/emails; Google:
+ * email_verified from userinfo; Meta: Facebook account email).
  * passHash is "pbkdf2$100000$<salt b64>$<hash b64>" (PBKDF2-HMAC-
- * SHA256 via WebCrypto, per-user salt) or null for Meta-login
+ * SHA256 via WebCrypto, per-user salt) or null for social-login
  * accounts, which have no password. Passwords and hashes are never
  * logged and never returned; /admin/users returns public fields
  * only. Sessions are stateless HS256 JWTs signed with the
@@ -1420,7 +1428,134 @@ function authConfigured(env) {
 }
 
 function metaConfigured(env) {
-  return Boolean(env.META_APP_ID && env.META_APP_SECRET);
+  return oauthConfigured('meta', env);
+}
+
+/* ---------------- social login (OAuth) ----------------
+ * One flow skeleton for every provider: mint a single-use state
+ * nonce in KV, 302 to the provider, exchange the returned code,
+ * fetch the profile, find-or-create the user by VERIFIED email,
+ * and 302 back to the site with a session JWT in the fragment.
+ * Only the endpoints, scopes and profile shapes differ; those
+ * live in OAUTH_PROVIDERS. A provider whose two secrets are not
+ * set is cleanly absent (501 on its routes, false in /auth/config
+ * and /health) — it never half-works. */
+
+async function oauthTokenPost(url, params) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json',
+    },
+    body: new URLSearchParams(params).toString(),
+  });
+  if (!res.ok) return null;
+  const data = await res.json().catch(() => null);
+  return data && data.access_token ? data.access_token : null;
+}
+
+async function exchangeMetaCode(env, code, redirectUri) {
+  return oauthTokenPost('https://graph.facebook.com/v21.0/oauth/access_token', {
+    client_id: env.META_APP_ID, client_secret: env.META_APP_SECRET,
+    redirect_uri: redirectUri, code,
+  });
+}
+
+async function fetchMetaProfile(accessToken) {
+  const res = await fetch('https://graph.facebook.com/me?fields=id,name,email&access_token=' +
+    encodeURIComponent(accessToken));
+  if (!res.ok) return null;
+  const me = await res.json().catch(() => null);
+  if (!me) return null;
+  /* Facebook account emails are verified by Facebook itself. */
+  return {
+    providerId: String(me.id || ''), name: String(me.name || ''),
+    email: cleanEmail(me.email),
+  };
+}
+
+async function exchangeGithubCode(env, code, redirectUri) {
+  return oauthTokenPost('https://github.com/login/oauth/access_token', {
+    client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET,
+    redirect_uri: redirectUri, code,
+  });
+}
+
+async function fetchGithubProfile(accessToken) {
+  const headers = {
+    Authorization: 'Bearer ' + accessToken,
+    Accept: 'application/vnd.github+json',
+  };
+  const res = await fetch('https://api.github.com/user', { headers });
+  if (!res.ok) return null;
+  const me = await res.json().catch(() => null);
+  if (!me) return null;
+  /* The profile email can be null (a hidden address) or public
+   * but unverified, so it is never trusted: the only address an
+   * account may be keyed on is the primary VERIFIED one from
+   * /user/emails (the user:email scope is what unlocks that call). */
+  const emailsRes = await fetch('https://api.github.com/user/emails', { headers });
+  if (!emailsRes.ok) return null;
+  const emails = await emailsRes.json().catch(() => null);
+  if (!Array.isArray(emails)) return null;
+  const primary = emails.find((e) => e && e.primary && e.verified);
+  if (!primary) return null;
+  return {
+    providerId: String(me.id || ''),
+    name: String(me.name || me.login || ''),
+    email: cleanEmail(primary.email),
+  };
+}
+
+async function exchangeGoogleCode(env, code, redirectUri) {
+  return oauthTokenPost('https://oauth2.googleapis.com/token', {
+    client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET,
+    redirect_uri: redirectUri, code, grant_type: 'authorization_code',
+  });
+}
+
+async function fetchGoogleProfile(accessToken) {
+  const res = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+    headers: { Authorization: 'Bearer ' + accessToken },
+  });
+  if (!res.ok) return null;
+  const me = await res.json().catch(() => null);
+  /* An unverified Google email must never key an account. */
+  if (!me || me.email_verified !== true) return null;
+  return {
+    providerId: String(me.sub || ''), name: String(me.name || ''),
+    email: cleanEmail(me.email),
+  };
+}
+
+const OAUTH_PROVIDERS = {
+  meta: {
+    label: 'Meta',
+    idEnv: 'META_APP_ID', secretEnv: 'META_APP_SECRET',
+    authorizeUrl: 'https://www.facebook.com/dialog/oauth',
+    scope: 'email,public_profile',
+    exchange: exchangeMetaCode, profile: fetchMetaProfile,
+  },
+  github: {
+    label: 'GitHub',
+    idEnv: 'GITHUB_CLIENT_ID', secretEnv: 'GITHUB_CLIENT_SECRET',
+    authorizeUrl: 'https://github.com/login/oauth/authorize',
+    scope: 'read:user user:email',
+    exchange: exchangeGithubCode, profile: fetchGithubProfile,
+  },
+  google: {
+    label: 'Google',
+    idEnv: 'GOOGLE_CLIENT_ID', secretEnv: 'GOOGLE_CLIENT_SECRET',
+    authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    scope: 'openid email profile',
+    exchange: exchangeGoogleCode, profile: fetchGoogleProfile,
+  },
+};
+
+function oauthConfigured(id, env) {
+  const p = OAUTH_PROVIDERS[id];
+  return Boolean(p && env[p.idEnv] && env[p.secretEnv]);
 }
 
 function bytesToB64(bytes) {
@@ -1528,7 +1663,9 @@ async function putUser(env, user) {
 function publicUser(u) {
   return {
     email: u.email, name: u.name || '', role: u.role,
-    provider: u.provider || 'password', createdAt: u.createdAt,
+    provider: u.provider || 'password',
+    ...(u.providerId ? { providerId: u.providerId } : {}),
+    createdAt: u.createdAt,
   };
 }
 
@@ -1618,76 +1755,77 @@ function handleAuthLogout(request) {
 }
 
 function handleAuthConfig(request, env) {
-  return json(request, 200, { metaLogin: metaConfigured(env) });
-}
-
-function metaRedirectUri(request) {
-  return new URL(request.url).origin + '/auth/meta/callback';
-}
-
-async function handleMetaStart(request, env) {
-  if (!metaConfigured(env)) {
-    return err(request, 501, 'meta_not_configured',
-      'Meta login is not configured yet — the founder still needs to create the Meta app and add its secrets.');
+  const providers = {};
+  for (const id of Object.keys(OAUTH_PROVIDERS)) {
+    providers[id] = oauthConfigured(id, env);
   }
+  /* metaLogin stays as the top-level alias the site first shipped
+   * with; providers is the full picture. */
+  return json(request, 200, { metaLogin: providers.meta, providers });
+}
+
+function oauthRedirectUri(request, id) {
+  return new URL(request.url).origin + '/auth/' + id + '/callback';
+}
+
+function oauthNotConfigured(request, id) {
+  const p = OAUTH_PROVIDERS[id];
+  return err(request, 501, id + '_not_configured',
+    p.label + ' login is not configured yet — the founder still needs to ' +
+    'create the ' + p.label + ' app and add its secrets.');
+}
+
+async function handleOAuthStart(id, request, env) {
+  if (!oauthConfigured(id, env)) return oauthNotConfigured(request, id);
+  const p = OAUTH_PROVIDERS[id];
   const state = bytesToB64Url(crypto.getRandomValues(new Uint8Array(16)));
   if (env.RF_LIVE_KV) {
-    await env.RF_LIVE_KV.put('auth:state:' + state, '1', { expirationTtl: 600 });
+    /* The nonce remembers which provider minted it, so a state
+     * from one provider's flow cannot be replayed at another's
+     * callback. */
+    await env.RF_LIVE_KV.put('auth:state:' + state, id, { expirationTtl: 600 });
   }
   const q = new URLSearchParams({
-    client_id: env.META_APP_ID,
-    redirect_uri: metaRedirectUri(request),
-    scope: 'email,public_profile',
-    state, response_type: 'code',
+    client_id: env[p.idEnv],
+    redirect_uri: oauthRedirectUri(request, id),
+    scope: p.scope, state, response_type: 'code',
   });
   return new Response(null, {
     status: 302,
-    headers: { Location: 'https://www.facebook.com/dialog/oauth?' + q.toString() },
+    headers: { Location: p.authorizeUrl + '?' + q.toString() },
   });
 }
 
-async function handleMetaCallback(request, env) {
+async function handleOAuthCallback(id, request, env) {
+  const p = OAUTH_PROVIDERS[id];
   const fail = () => new Response(null, {
     status: 302,
-    headers: { Location: SITE_HOME + '/#auth_error=meta_login_failed' },
+    headers: { Location: SITE_HOME + '/#auth_error=' + id + '_login_failed' },
   });
-  if (!metaConfigured(env)) {
-    return err(request, 501, 'meta_not_configured',
-      'Meta login is not configured yet — the founder still needs to create the Meta app and add its secrets.');
-  }
+  if (!oauthConfigured(id, env)) return oauthNotConfigured(request, id);
   if (!authConfigured(env)) return authOff(request);
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   if (!code || !state) return fail();
   const stateKey = 'auth:state:' + state;
-  if (!(await env.RF_LIVE_KV.get(stateKey))) return fail();
+  if ((await env.RF_LIVE_KV.get(stateKey)) !== id) return fail();
   await env.RF_LIVE_KV.delete(stateKey);
   try {
-    const tokenRes = await fetch('https://graph.facebook.com/v21.0/oauth/access_token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: env.META_APP_ID, client_secret: env.META_APP_SECRET,
-        redirect_uri: metaRedirectUri(request), code,
-      }).toString(),
-    });
-    if (!tokenRes.ok) return fail();
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return fail();
-    const meRes = await fetch('https://graph.facebook.com/me?fields=id,name,email&access_token=' +
-      encodeURIComponent(tokenData.access_token));
-    if (!meRes.ok) return fail();
-    const me = await meRes.json();
-    const email = cleanEmail(me.email);
+    const accessToken = await p.exchange(env, code, oauthRedirectUri(request, id));
+    if (!accessToken) return fail();
+    const profile = await p.profile(accessToken);
+    if (!profile) return fail();
+    const email = cleanEmail(profile.email);
     if (!EMAIL_RE.test(email)) return fail();
     let user = await getUser(env, email);
     if (!user) {
       user = {
-        email, name: String(me.name || '').trim().slice(0, 80) || email.split('@')[0],
+        email, name: String(profile.name || '').trim().slice(0, 80) || email.split('@')[0],
         passHash: null,
         role: email === FOUNDER_EMAIL ? 'founder' : 'user',
-        provider: 'meta', createdAt: new Date().toISOString(),
+        provider: id, providerId: profile.providerId || '',
+        createdAt: new Date().toISOString(),
       };
       await putUser(env, user);
     }
@@ -1751,6 +1889,7 @@ async function handleAdminSeedFounder(request, env) {
     passHash: await hashPassword(password),
     role: 'founder',
     provider: (existing && existing.provider) || 'password',
+    providerId: (existing && existing.providerId) || '',
     createdAt: (existing && existing.createdAt) || new Date().toISOString(),
   };
   await putUser(env, user);
@@ -1811,10 +1950,13 @@ async function handle(request, env) {
        * Baseten -> Meta -> Fireworks chain (any one key lights
        * them); photo/part/transcribe need the Meta key. */
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY) },
-      /* Accounts: on when the JWT secret + KV exist. Meta login
-       * stays off until the founder adds the Meta app secrets. */
+      /* Accounts: on when the JWT secret + KV exist. Each social
+       * login stays off until the founder adds that provider's
+       * app secrets. */
       auth: authConfigured(env),
       metaLogin: metaConfigured(env),
+      githubLogin: oauthConfigured('github', env),
+      googleLogin: oauthConfigured('google', env),
       routes: {
         describe: textProvider, chat: textProvider, list: textProvider,
         fix: textProvider, part_chat: textProvider,
@@ -1862,11 +2004,11 @@ async function handle(request, env) {
   if (url.pathname === '/auth/config' && request.method === 'GET') {
     return handleAuthConfig(request, env);
   }
-  if (url.pathname === '/auth/meta/start' && request.method === 'GET') {
-    return handleMetaStart(request, env);
-  }
-  if (url.pathname === '/auth/meta/callback' && request.method === 'GET') {
-    return handleMetaCallback(request, env);
+  const oauthMatch = url.pathname.match(/^\/auth\/(meta|github|google)\/(start|callback)$/);
+  if (oauthMatch && request.method === 'GET') {
+    return oauthMatch[2] === 'start'
+      ? handleOAuthStart(oauthMatch[1], request, env)
+      : handleOAuthCallback(oauthMatch[1], request, env);
   }
   if (url.pathname === '/admin/users' && request.method === 'GET') {
     return handleAdminUsers(request, env);

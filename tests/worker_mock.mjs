@@ -117,6 +117,8 @@ const PART_CHAT_REPLY = {
 
 let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft | fix | part-chat
 let metaMode = 'photo';   // photo | junk | document | document-bad | part
+let githubMode = 'ok';    // ok | hidden | unverified
+let googleMode = 'ok';    // ok | unverified
 const upstreamCalls = [];
 globalThis.fetch = async (url, opts) => {
   upstreamCalls.push({ url: String(url), opts });
@@ -139,6 +141,45 @@ globalThis.fetch = async (url, opts) => {
       : 'this is not json at all';
     return new Response(JSON.stringify({
       choices: [{ message: { content } }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u.startsWith('https://graph.facebook.com/')) {
+    if (u.includes('/oauth/access_token')) {
+      return new Response(JSON.stringify({ access_token: 'fb-token-123' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify(
+      { id: 'fb-777', name: 'Fran Dev', email: 'fran@example.com' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u === 'https://github.com/login/oauth/access_token') {
+    return new Response(JSON.stringify({ access_token: 'gh-token-123' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u === 'https://api.github.com/user') {
+    return new Response(JSON.stringify({
+      id: 4242, login: 'octo', name: 'Octo Dev',
+      /* 'hidden' mode: the profile email is null, like a GitHub
+       * account with a private address. */
+      email: githubMode === 'hidden' ? null : 'octo-public@example.com',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u === 'https://api.github.com/user/emails') {
+    const list = githubMode === 'unverified'
+      ? [{ email: 'octo@example.com', primary: true, verified: false }]
+      : [{ email: 'octo-secondary@example.com', primary: false, verified: true },
+         { email: 'octo@example.com', primary: true, verified: true }];
+    return new Response(JSON.stringify(list),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u === 'https://oauth2.googleapis.com/token') {
+    return new Response(JSON.stringify({ access_token: 'goog-token-123' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u.startsWith('https://openidconnect.googleapis.com/v1/userinfo')) {
+    return new Response(JSON.stringify({
+      sub: 'g-123', name: 'Gina Dev', email: 'gina@example.com',
+      email_verified: googleMode !== 'unverified',
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   assert.ok(u.startsWith('https://inference.baseten.co/'),
@@ -615,7 +656,8 @@ await scenario('health reports auth on and meta login off', async () => {
   assert.strictEqual(r.body.auth, true);
   assert.strictEqual(r.body.metaLogin, false);
   const c = await call(makeEnv(), '/auth/config');
-  assert.deepStrictEqual(c.body, { metaLogin: false });
+  assert.deepStrictEqual(c.body, { metaLogin: false,
+    providers: { meta: false, github: false, google: false } });
 });
 
 await scenario('auth register then login then me', async () => {
@@ -772,6 +814,157 @@ await scenario('auth meta routes are a 501 while unconfigured', async () => {
   assert.strictEqual(start.body.code, 'meta_not_configured');
   const cb = await call(env, '/auth/meta/callback?code=x&state=y');
   assert.strictEqual(cb.status, 501);
+});
+
+/* Run one provider's start -> callback dance against the stubbed
+ * upstreams and hand back both responses. */
+async function oauthDance(env, provider) {
+  const start = await call(env, `/auth/${provider}/start`);
+  assert.strictEqual(start.status, 302, provider + ' start should redirect');
+  const loc = start.headers.get('Location') || '';
+  const state = new URL(loc).searchParams.get('state');
+  assert.ok(state, provider + ' start mints a state nonce');
+  const cb = await call(env,
+    `/auth/${provider}/callback?code=mock-code&state=${encodeURIComponent(state)}`);
+  assert.strictEqual(cb.status, 302, provider + ' callback should redirect');
+  return { loc, cb };
+}
+
+function fragmentToken(res) {
+  const m = (res.headers.get('Location') || '').match(/#auth=([^&]+)/);
+  return m ? m[1] : null;
+}
+
+await scenario('auth config reports providers on when their secrets exist', async () => {
+  const env = makeEnv({
+    META_APP_ID: 'm-id', META_APP_SECRET: 'm-secret',
+    GITHUB_CLIENT_ID: 'gh-id', GITHUB_CLIENT_SECRET: 'gh-secret',
+    GOOGLE_CLIENT_ID: 'g-id', GOOGLE_CLIENT_SECRET: 'g-secret',
+  });
+  const c = await call(env, '/auth/config');
+  assert.deepStrictEqual(c.body, { metaLogin: true,
+    providers: { meta: true, github: true, google: true } });
+  const h = await call(env, '/health');
+  assert.strictEqual(h.body.metaLogin, true);
+  assert.strictEqual(h.body.githubLogin, true);
+  assert.strictEqual(h.body.googleLogin, true);
+});
+
+await scenario('auth github and google routes are a 501 while unconfigured', async () => {
+  const env = makeEnv();
+  for (const [provider, code] of [['github', 'github_not_configured'],
+                                  ['google', 'google_not_configured']]) {
+    const start = await call(env, `/auth/${provider}/start`);
+    assert.strictEqual(start.status, 501);
+    assert.strictEqual(start.body.code, code);
+    const cb = await call(env, `/auth/${provider}/callback?code=x&state=y`);
+    assert.strictEqual(cb.status, 501);
+  }
+});
+
+await scenario('auth meta login happy path still works', async () => {
+  const env = makeEnv({ META_APP_ID: 'm-id', META_APP_SECRET: 'm-secret' });
+  const { loc, cb } = await oauthDance(env, 'meta');
+  assert.ok(loc.startsWith('https://www.facebook.com/dialog/oauth'), loc);
+  const token = fragmentToken(cb);
+  assert.ok(token, 'callback returns a session in the fragment');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + token } });
+  assert.strictEqual(me.body.user.email, 'fran@example.com');
+  assert.strictEqual(me.body.user.provider, 'meta');
+  assert.strictEqual(me.body.user.providerId, 'fb-777');
+});
+
+await scenario('auth github login happy path', async () => {
+  githubMode = 'ok';
+  const env = makeEnv({ GITHUB_CLIENT_ID: 'gh-id', GITHUB_CLIENT_SECRET: 'gh-secret' });
+  const { loc, cb } = await oauthDance(env, 'github');
+  assert.ok(loc.startsWith('https://github.com/login/oauth/authorize'), loc);
+  assert.ok(loc.includes('scope=read%3Auser+user%3Aemail'), loc);
+  const token = fragmentToken(cb);
+  assert.ok(token, 'callback returns a session in the fragment');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + token } });
+  assert.strictEqual(me.status, 200);
+  /* The account keys on the primary VERIFIED email from
+   * /user/emails — not the public profile address, and not the
+   * verified-but-secondary one. */
+  assert.strictEqual(me.body.user.email, 'octo@example.com');
+  assert.strictEqual(me.body.user.provider, 'github');
+  assert.strictEqual(me.body.user.providerId, '4242');
+  assert.strictEqual(me.body.user.name, 'Octo Dev');
+});
+
+await scenario('auth github login works with a hidden profile email', async () => {
+  githubMode = 'hidden';
+  const env = makeEnv({ GITHUB_CLIENT_ID: 'gh-id', GITHUB_CLIENT_SECRET: 'gh-secret' });
+  const { cb } = await oauthDance(env, 'github');
+  const token = fragmentToken(cb);
+  assert.ok(token, 'hidden profile email still signs in via /user/emails');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + token } });
+  assert.strictEqual(me.body.user.email, 'octo@example.com');
+  githubMode = 'ok';
+});
+
+await scenario('auth github login fails without a verified primary email', async () => {
+  githubMode = 'unverified';
+  const env = makeEnv({ GITHUB_CLIENT_ID: 'gh-id', GITHUB_CLIENT_SECRET: 'gh-secret' });
+  const { cb } = await oauthDance(env, 'github');
+  const loc = cb.headers.get('Location') || '';
+  assert.ok(loc.includes('#auth_error=github_login_failed'), loc);
+  const users = await call(env, '/admin/users',
+    { headers: { 'X-Operator-Token': 'mock-operator-token' } });
+  assert.strictEqual(users.body.count, 0,
+    'no account may be created from an unverified email');
+  githubMode = 'ok';
+});
+
+await scenario('auth google login happy path', async () => {
+  googleMode = 'ok';
+  const env = makeEnv({ GOOGLE_CLIENT_ID: 'g-id', GOOGLE_CLIENT_SECRET: 'g-secret' });
+  const { loc, cb } = await oauthDance(env, 'google');
+  assert.ok(loc.startsWith('https://accounts.google.com/o/oauth2/v2/auth'), loc);
+  const token = fragmentToken(cb);
+  assert.ok(token, 'callback returns a session in the fragment');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + token } });
+  assert.strictEqual(me.body.user.email, 'gina@example.com');
+  assert.strictEqual(me.body.user.provider, 'google');
+  assert.strictEqual(me.body.user.providerId, 'g-123');
+});
+
+await scenario('auth google login fails when the email is unverified', async () => {
+  googleMode = 'unverified';
+  const env = makeEnv({ GOOGLE_CLIENT_ID: 'g-id', GOOGLE_CLIENT_SECRET: 'g-secret' });
+  const { cb } = await oauthDance(env, 'google');
+  const loc = cb.headers.get('Location') || '';
+  assert.ok(loc.includes('#auth_error=google_login_failed'), loc);
+  const users = await call(env, '/admin/users',
+    { headers: { 'X-Operator-Token': 'mock-operator-token' } });
+  assert.strictEqual(users.body.count, 0,
+    'no account may be created from an unverified email');
+  googleMode = 'ok';
+});
+
+await scenario('auth oauth same email lands in the existing account', async () => {
+  googleMode = 'ok';
+  const env = makeEnv({ GOOGLE_CLIENT_ID: 'g-id', GOOGLE_CLIENT_SECRET: 'g-secret' });
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'gina@example.com', password: 'password-123', name: 'Gina Password' } });
+  assert.strictEqual(reg.status, 201);
+  const { cb } = await oauthDance(env, 'google');
+  const token = fragmentToken(cb);
+  assert.ok(token);
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + token } });
+  /* First channel wins: the record stays the password account and
+   * the social login signs into it rather than duplicating it. */
+  assert.strictEqual(me.body.user.provider, 'password');
+  assert.strictEqual(me.body.user.name, 'Gina Password');
+  const users = await call(env, '/admin/users',
+    { headers: { 'X-Operator-Token': 'mock-operator-token' } });
+  assert.strictEqual(users.body.count, 1);
 });
 
 await scenario('auth is a 503 when the JWT secret is missing', async () => {
