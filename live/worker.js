@@ -32,6 +32,20 @@
  *   POST /part-chat-> { part, message, history? } => { reply, update,
  *                     confirmed, model } — talk a part through until
  *                     the owner confirms what it is.
+ *   GET  /parts         -> the Parts API: RobotForge's own supplier
+ *                     API (public read; filters q, category,
+ *                     interface). Suppliers won't give us an API,
+ *                     so the catalogue + the gather pipeline's
+ *                     provenance-carrying output are seeded into
+ *                     RF_LIVE_KV (tools/parts-api/seed.py) and
+ *                     served back with trust states intact.
+ *   GET  /parts/<id>    -> one part's full record + price estimates
+ *   GET  /parts/<id>/estimate -> best current estimate + alternates
+ *   POST /bom/estimate  -> { lines: [{partId, qty}] } => a
+ *                     deterministic BOM price rollup (no model
+ *                     call). Every price served rides on a source
+ *                     record, is labeled an estimate, and shipping /
+ *                     tax / stock stay explicit unknowns.
  *   POST /auth/register -> { email, password, name? } => { token, user }
  *   POST /auth/login    -> { email, password } => { token, user }
  *   GET  /auth/me       -> (Bearer) => { user }
@@ -1942,6 +1956,291 @@ async function handleAdminGrantRole(request, env) {
   return json(request, 200, { ok: true, user: publicUser(user) });
 }
 
+/* ---------------- Parts API ----------------
+ * Suppliers won't give RobotForge an API, so RobotForge is the
+ * API: the catalogue + the gather pipeline's provenance-carrying
+ * output are seeded into RF_LIVE_KV as part records
+ * (tools/parts-api/seed.py), and these routes serve them back with
+ * trust states intact. Public read — no account, no model call, no
+ * budget spend. When supplier API keys arrive they become another
+ * upstream feeding the same records; this surface never changes.
+ *
+ * The honesty rules are enforced HERE, not left to clients:
+ *   - a price is served only from an estimate that carries its
+ *     source record (a supplier URL + a fetched-at timestamp) —
+ *     no source record, no currency, anywhere;
+ *   - an expired estimate is flagged expired, never silently
+ *     fresh, and a BOM rollup will not total it;
+ *   - unpriced lines are listed as unpriced, never zero-filled;
+ *   - shipping, tax and stock stay explicit unknowns in every
+ *     priced response. */
+
+const PARTS_DISCLAIMER = 'Estimates — verify price and availability before purchase.';
+const PARTS_UNKNOWNS = ['shipping', 'tax', 'stock'];
+const ESTIMATE_STATE_RANK = { confirmed: 3, cross_checked: 2, web_gathered: 1 };
+const ESTIMATE_KIND_RANK = { api: 3, web_gathered: 2, user_entered: 1 };
+
+function partsJson(request, status, body, cacheControl) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json',
+      'Cache-Control': cacheControl, ...corsHeaders(request) },
+  });
+}
+
+function partsOff(request) {
+  return err(request, 503, 'parts_not_configured',
+    'The parts catalogue is not seeded on this endpoint yet.');
+}
+
+/* An estimate may carry currency only with its source record
+ * attached: a supplier URL and the moment it was fetched. This is
+ * the API-layer form of the rule the build-plan engine enforces:
+ * no source record, no price. */
+function servableEstimate(est) {
+  return Boolean(est && typeof est === 'object'
+    && Number.isFinite(est.unit_price)
+    && (est.supplier_url || est.url)
+    && est.fetched_at);
+}
+
+function estimateExpired(est, nowMs) {
+  if (!est.expires_at) return false;
+  const t = Date.parse(est.expires_at);
+  return Number.isFinite(t) && t <= nowMs;
+}
+
+function publicEstimate(est, nowMs) {
+  return { ...est, expired: estimateExpired(est, nowMs) };
+}
+
+/* The deterministic "best" pick: unexpired beats expired; then
+ * trust state (confirmed > cross_checked > web_gathered); then
+ * source kind (api > web_gathered > user_entered); then freshest.
+ * Splits a record's servable estimates into best / alternates /
+ * expired so no caller ever has to guess which figure is live. */
+function rankEstimates(record, nowMs) {
+  const all = (Array.isArray(record.estimates) ? record.estimates : [])
+    .filter(servableEstimate);
+  const byRank = (a, b) =>
+    (ESTIMATE_STATE_RANK[b.state] || 0) - (ESTIMATE_STATE_RANK[a.state] || 0)
+    || (ESTIMATE_KIND_RANK[b.source_kind] || 0) - (ESTIMATE_KIND_RANK[a.source_kind] || 0)
+    || String(b.fetched_at).localeCompare(String(a.fetched_at));
+  const fresh = all.filter(e => !estimateExpired(e, nowMs)).sort(byRank);
+  const stale = all.filter(e => estimateExpired(e, nowMs)).sort(byRank);
+  return {
+    best: fresh.length ? fresh[0] : null,
+    alternates: fresh.slice(1),
+    expired: stale,
+  };
+}
+
+/* The price break a quantity actually reaches: the largest break
+ * at or below qty, else the smallest break on record. */
+function appliedBreak(est, qty) {
+  const breaks = (Array.isArray(est.price_breaks) ? est.price_breaks : [])
+    .filter(b => Number.isFinite(b.qty) && Number.isFinite(b.unit_price))
+    .sort((a, b) => a.qty - b.qty);
+  if (!breaks.length) return { qty_break: 1, unit_price: est.unit_price };
+  let pick = breaks[0];
+  for (const b of breaks) if (b.qty <= qty) pick = b;
+  return { qty_break: pick.qty, unit_price: pick.unit_price };
+}
+
+async function loadPartRecord(env, id) {
+  if (!env.RF_LIVE_KV) return null;
+  const raw = await env.RF_LIVE_KV.get('parts:' + id);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+async function loadPartsIndex(env) {
+  if (!env.RF_LIVE_KV) return null;
+  const raw = await env.RF_LIVE_KV.get('parts:index');
+  if (!raw) return null;
+  try {
+    const idx = JSON.parse(raw);
+    return Array.isArray(idx.ids) ? idx : null;
+  } catch (e) { return null; }
+}
+
+function partSummary(record, nowMs) {
+  const { best } = rankEstimates(record, nowMs);
+  return {
+    id: record.id,
+    name: record.name,
+    mpn: record.mpn ?? null,
+    category: record.category,
+    specs: record.specs ?? {},
+    interfaces: record.interfaces ?? [],
+    photo: record.photo ?? null,
+    best_estimate: best ? {
+      unit_price: best.unit_price,
+      currency: best.currency || 'USD',
+      supplier: best.supplier ?? null,
+      source_kind: best.source_kind ?? null,
+      state: best.state ?? null,
+      fetched_at: best.fetched_at,
+      expires_at: best.expires_at ?? null,
+    } : null,
+  };
+}
+
+async function handlePartsList(request, env) {
+  if (!env.RF_LIVE_KV) return partsOff(request);
+  const nowMs = Date.now();
+  const url = new URL(request.url);
+  const q = (url.searchParams.get('q') || '').toLowerCase();
+  const category = (url.searchParams.get('category') || '').toLowerCase();
+  const iface = (url.searchParams.get('interface') || '').toLowerCase();
+  const index = await loadPartsIndex(env);
+  if (!index) {
+    return partsJson(request, 200, {
+      ok: true, seeded: false, count: 0, parts: [],
+      as_of: new Date(nowMs).toISOString(),
+    }, 'public, max-age=60, s-maxage=300');
+  }
+  const parts = [];
+  for (const id of index.ids) {
+    const record = await loadPartRecord(env, id);
+    if (!record) continue;
+    if (q && !(String(record.name || '').toLowerCase().includes(q)
+      || String(record.mpn || '').toLowerCase().includes(q))) continue;
+    if (category && String(record.category || '').toLowerCase() !== category) continue;
+    if (iface && !(record.interfaces || [])
+      .some(i => String(i).toLowerCase() === iface)) continue;
+    parts.push(partSummary(record, nowMs));
+  }
+  return partsJson(request, 200, {
+    ok: true, seeded: true, count: parts.length, parts,
+    as_of: new Date(nowMs).toISOString(),
+    disclaimer: PARTS_DISCLAIMER,
+  }, 'public, max-age=60, s-maxage=3600');
+}
+
+async function handlePartGet(request, env, id) {
+  if (!env.RF_LIVE_KV) return partsOff(request);
+  const record = await loadPartRecord(env, id);
+  if (!record) {
+    return err(request, 404, 'part_not_found',
+      'No part with id "' + id + '" in the catalogue.');
+  }
+  const nowMs = Date.now();
+  const ranked = rankEstimates(record, nowMs);
+  const estimates = (Array.isArray(record.estimates) ? record.estimates : [])
+    .filter(servableEstimate).map(e => publicEstimate(e, nowMs));
+  const body = {
+    ...record,
+    estimates,
+    best_estimate: ranked.best ? publicEstimate(ranked.best, nowMs) : null,
+    as_of: new Date(nowMs).toISOString(),
+  };
+  if (estimates.length) body.disclaimer = PARTS_DISCLAIMER;
+  return partsJson(request, 200, body, 'public, max-age=60, s-maxage=3600');
+}
+
+async function handlePartEstimate(request, env, id) {
+  if (!env.RF_LIVE_KV) return partsOff(request);
+  const record = await loadPartRecord(env, id);
+  if (!record) {
+    return err(request, 404, 'part_not_found',
+      'No part with id "' + id + '" in the catalogue.');
+  }
+  const nowMs = Date.now();
+  const ranked = rankEstimates(record, nowMs);
+  return partsJson(request, 200, {
+    ok: true, part_id: id,
+    as_of: new Date(nowMs).toISOString(),
+    estimate: ranked.best ? publicEstimate(ranked.best, nowMs) : null,
+    alternates: ranked.alternates.map(e => publicEstimate(e, nowMs)),
+    expired: ranked.expired.map(e => publicEstimate(e, nowMs)),
+    unknowns: PARTS_UNKNOWNS,
+    disclaimer: PARTS_DISCLAIMER,
+  }, 'public, max-age=60, s-maxage=300');
+}
+
+/* Deterministic BOM rollup — arithmetic only, no model call, no
+ * budget spend. A line is priced from its part's best unexpired
+ * estimate at the break its quantity reaches; every other outcome
+ * (unknown part, no estimate, expired-only, non-USD) is reported
+ * on the line and kept OUT of the totals. */
+async function handleBomEstimate(request, env) {
+  if (!env.RF_LIVE_KV) return partsOff(request);
+  const { data, error } = await readJsonBody(request);
+  if (error) return err(request, 400, 'bad_body', error);
+  if (!data || !Array.isArray(data.lines) || data.lines.length === 0) {
+    return err(request, 400, 'bad_lines',
+      'Body must be { lines: [{ partId, qty }] } with at least one line.');
+  }
+  if (data.lines.length > 100) {
+    return err(request, 400, 'too_many_lines', 'At most 100 lines per estimate.');
+  }
+  const nowMs = Date.now();
+  const round2 = n => Math.round(n * 100) / 100;
+  const lines = [];
+  const unpriced = [];
+  const stale = [];
+  const totals = { currency: 'USD', priced_total: 0,
+    by_source_kind: { api: 0, web_gathered: 0, user_entered: 0 },
+    unverified_web_gathered_total: 0, priced_lines: 0 };
+  for (const rawLine of data.lines) {
+    const partId = rawLine && typeof rawLine.partId === 'string' ? rawLine.partId : null;
+    const qty = rawLine ? rawLine.qty : null;
+    if (!partId || !Number.isInteger(qty) || qty < 1) {
+      lines.push({ partId, qty: qty ?? null, status: 'error',
+        error: 'each line needs a partId and a positive integer qty' });
+      continue;
+    }
+    const record = await loadPartRecord(env, partId);
+    if (!record) {
+      lines.push({ partId, qty, status: 'unknown_part' });
+      unpriced.push(partId);
+      continue;
+    }
+    const ranked = rankEstimates(record, nowMs);
+    if (!ranked.best) {
+      if (ranked.expired.length) {
+        lines.push({ partId, qty, status: 'stale',
+          estimate: publicEstimate(ranked.expired[0], nowMs) });
+        stale.push(partId);
+      } else {
+        lines.push({ partId, qty, status: 'unpriced',
+          reason: 'no_estimate_on_record' });
+        unpriced.push(partId);
+      }
+      continue;
+    }
+    const est = ranked.best;
+    const currency = est.currency || 'USD';
+    if (currency !== 'USD') {
+      lines.push({ partId, qty, status: 'unpriced',
+        reason: 'non_usd_estimate', currency });
+      unpriced.push(partId);
+      continue;
+    }
+    const applied = appliedBreak(est, qty);
+    const lineTotal = round2(applied.unit_price * qty);
+    totals.priced_total = round2(totals.priced_total + lineTotal);
+    const kind = est.source_kind || 'user_entered';
+    if (totals.by_source_kind[kind] === undefined) totals.by_source_kind[kind] = 0;
+    totals.by_source_kind[kind] = round2(totals.by_source_kind[kind] + lineTotal);
+    if (est.state === 'web_gathered') {
+      totals.unverified_web_gathered_total =
+        round2(totals.unverified_web_gathered_total + lineTotal);
+    }
+    totals.priced_lines += 1;
+    lines.push({ partId, qty, status: 'priced',
+      qty_break: applied.qty_break, unit_price: applied.unit_price,
+      line_total: lineTotal, currency,
+      estimate: publicEstimate(est, nowMs) });
+  }
+  return partsJson(request, 200, {
+    ok: true, as_of: new Date(nowMs).toISOString(),
+    disclaimer: PARTS_DISCLAIMER, unknowns: PARTS_UNKNOWNS,
+    lines, totals, unpriced, stale,
+  }, 'no-store');
+}
+
 /* The paths that spend model credits — exactly the routes the
  * account gate guards. /health, /auth/* and /admin/* are NOT in
  * this list on purpose (see the header comment). */
@@ -1997,6 +2296,9 @@ async function handle(request, env) {
         fix: textProvider, part_chat: textProvider,
         photo: Boolean(env.META_API_KEY), part: Boolean(env.META_API_KEY),
         transcribe: Boolean(env.META_API_KEY),
+        /* The Parts API serves from KV: on when the namespace
+         * exists (records themselves land at seed time). */
+        parts: Boolean(env.RF_LIVE_KV),
       },
     });
   }
@@ -2061,7 +2363,23 @@ async function handle(request, env) {
   if (url.pathname === '/admin/grant-role' && request.method === 'POST') {
     return handleAdminGrantRole(request, env);
   }
-  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe or /auth/*.');
+  /* Parts API — public read, no account gate (it spends nothing).
+   * The estimate route is matched before the bare part route. */
+  if (url.pathname === '/parts' && request.method === 'GET') {
+    return handlePartsList(request, env);
+  }
+  const partEstimateMatch = url.pathname.match(/^\/parts\/([A-Za-z0-9_-]+)\/estimate$/);
+  if (partEstimateMatch && request.method === 'GET') {
+    return handlePartEstimate(request, env, partEstimateMatch[1]);
+  }
+  const partMatch = url.pathname.match(/^\/parts\/([A-Za-z0-9_-]+)$/);
+  if (partMatch && request.method === 'GET') {
+    return handlePartGet(request, env, partMatch[1]);
+  }
+  if (url.pathname === '/bom/estimate' && request.method === 'POST') {
+    return handleBomEstimate(request, env);
+  }
+  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe, /parts, /bom/estimate or /auth/*.');
 }
 
 export default { fetch: handle };

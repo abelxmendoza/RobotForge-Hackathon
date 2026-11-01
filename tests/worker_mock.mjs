@@ -397,7 +397,7 @@ await scenario('health reports which routes are configured', async () => {
   const plain = await call(makeEnv(), '/health');
   assert.deepStrictEqual(plain.body.routes,
     { describe: true, chat: true, list: true, fix: true, part_chat: true,
-      photo: false, part: false, transcribe: false });
+      photo: false, part: false, transcribe: false, parts: true });
   const withMeta = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/health');
   assert.strictEqual(withMeta.body.routes.photo, true);
   assert.strictEqual(withMeta.body.routes.transcribe, true);
@@ -1080,6 +1080,232 @@ await scenario('live routes fail closed when accounts are not configured', async
   assert.strictEqual(r.status, 503);
   assert.strictEqual(r.body.code, 'auth_not_configured');
   assert.strictEqual(upstreamCalls.length, before);
+});
+
+/* ---------------- Parts API ----------------
+ * Records are seeded straight into the fake KV, in the shape
+ * tools/parts-api/seed.py writes. Expiry dates are pinned to
+ * 2000/2999 so the scenarios never rot with the calendar. */
+
+const PART_RECORDS = [
+  {
+    id: 'driver_tb6612fng', name: 'TB6612FNG dual motor driver',
+    mpn: 'TB6612FNG', category: 'drivers',
+    specs: { channels: 2, voltage_v_max: 15 },
+    interfaces: ['pwm'], photo: null,
+    estimates: [{
+      unit_price: 4.95, currency: 'USD',
+      price_breaks: [{ qty: 1, unit_price: 4.95 },
+                     { qty: 100, unit_price: 3.85 }],
+      supplier: 'Pololu', supplier_url: 'https://www.pololu.com/product/713',
+      source_kind: 'web_gathered', state: 'web_gathered',
+      fetched_at: '2026-11-01T09:25:48Z', expires_at: '2999-01-01T00:00:00Z',
+      quote: '1+ $4.95', stock_wording: 'backorders allowed',
+    }],
+  },
+  {
+    id: 'multi_source_part', name: 'Multi Source Widget',
+    mpn: null, category: 'sbc', specs: {}, interfaces: ['usb'],
+    photo: { url: 'https://example.com/widget.jpg', credit: 'Photo: Example',
+             source_page: 'https://example.com/widget' },
+    estimates: [
+      {
+        unit_price: 10, currency: 'USD',
+        price_breaks: [{ qty: 1, unit_price: 10 }],
+        supplier: 'Pololu', supplier_url: 'https://www.pololu.com/product/999',
+        source_kind: 'web_gathered', state: 'web_gathered',
+        fetched_at: '2026-11-01T00:00:00Z', expires_at: '2999-01-01T00:00:00Z',
+        quote: '$10.00',
+      },
+      {
+        unit_price: 11, currency: 'USD',
+        price_breaks: [{ qty: 1, unit_price: 11 }],
+        supplier: 'Mouser', supplier_url: 'https://www.mouser.com/ProductDetail/999',
+        source_kind: 'api', state: 'confirmed',
+        fetched_at: '2026-10-01T00:00:00Z', expires_at: '2999-01-01T00:00:00Z',
+        quote: null,
+      },
+    ],
+  },
+  {
+    id: 'stale_part', name: 'Stale Part', mpn: null, category: 'power',
+    specs: {}, interfaces: [], photo: null,
+    estimates: [{
+      unit_price: 7.5, currency: 'USD',
+      price_breaks: [{ qty: 1, unit_price: 7.5 }],
+      supplier: 'Pololu', supplier_url: 'https://www.pololu.com/product/111',
+      source_kind: 'web_gathered', state: 'web_gathered',
+      fetched_at: '2000-01-01T00:00:00Z', expires_at: '2000-01-02T00:00:00Z',
+      quote: '$7.50',
+    }],
+  },
+  {
+    /* A price with NO source record behind it: the API must
+     * refuse to serve it as currency anywhere. */
+    id: 'bare_price_part', name: 'Bare Price Part', mpn: null,
+    category: 'power', specs: {}, interfaces: [], photo: null,
+    estimates: [{ unit_price: 9.99 }],
+  },
+  {
+    id: 'plain_part', name: 'Plain Part', mpn: null, category: 'structure',
+    specs: {}, interfaces: [], photo: null, estimates: [],
+  },
+];
+
+async function seedParts(env) {
+  for (const r of PART_RECORDS) {
+    await env.RF_LIVE_KV.put('parts:' + r.id, JSON.stringify(r));
+  }
+  await env.RF_LIVE_KV.put('parts:index', JSON.stringify({
+    ids: PART_RECORDS.map(r => r.id), count: PART_RECORDS.length,
+    seeded_at: '2026-11-01T00:00:00Z', seed_version: 'test',
+  }));
+  return env;
+}
+
+await scenario('parts list serves seeded records, anonymously, with filters', async () => {
+  const env = await seedParts(makeEnv());
+  const all = await call(env, '/parts');
+  assert.strictEqual(all.status, 200);
+  assert.strictEqual(all.body.seeded, true);
+  assert.strictEqual(all.body.count, 5);
+  assert.ok(all.body.disclaimer.includes('Estimates'));
+  assert.ok((all.headers.get('Cache-Control') || '').includes('s-maxage=3600'));
+  const driver = all.body.parts.find(p => p.id === 'driver_tb6612fng');
+  assert.strictEqual(driver.best_estimate.unit_price, 4.95);
+  assert.strictEqual(driver.best_estimate.state, 'web_gathered');
+  const byQ = await call(env, '/parts?q=tb6612');
+  assert.deepStrictEqual(byQ.body.parts.map(p => p.id), ['driver_tb6612fng']);
+  const byMpn = await call(env, '/parts?q=TB6612FNG');
+  assert.strictEqual(byMpn.body.count, 1);
+  const byCat = await call(env, '/parts?category=power');
+  assert.deepStrictEqual(byCat.body.parts.map(p => p.id).sort(),
+    ['bare_price_part', 'stale_part']);
+  const byIface = await call(env, '/parts?interface=pwm');
+  assert.deepStrictEqual(byIface.body.parts.map(p => p.id), ['driver_tb6612fng']);
+  const none = await call(env, '/parts?interface=can');
+  assert.strictEqual(none.body.count, 0);
+});
+
+await scenario('parts routes are a 503 without KV, and health says so', async () => {
+  const env = makeEnv();
+  delete env.RF_LIVE_KV;
+  const r = await call(env, '/parts');
+  assert.strictEqual(r.status, 503);
+  assert.strictEqual(r.body.code, 'parts_not_configured');
+  const h = await call(env, '/health');
+  assert.strictEqual(h.body.routes.parts, false);
+});
+
+await scenario('parts list on an unseeded namespace is an honest empty', async () => {
+  const r = await call(makeEnv(), '/parts');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.seeded, false);
+  assert.strictEqual(r.body.count, 0);
+});
+
+await scenario('part get returns the full record; unknown id is a clean 404', async () => {
+  const env = await seedParts(makeEnv());
+  const r = await call(env, '/parts/multi_source_part');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.photo.credit, 'Photo: Example');
+  assert.strictEqual(r.body.estimates.length, 2);
+  assert.strictEqual(r.body.estimates[0].expired, false);
+  const missing = await call(env, '/parts/no_such_part');
+  assert.strictEqual(missing.status, 404);
+  assert.strictEqual(missing.body.code, 'part_not_found');
+});
+
+await scenario('estimate endpoint: confirmed beats fresher web-gathered', async () => {
+  const env = await seedParts(makeEnv());
+  const r = await call(env, '/parts/multi_source_part/estimate');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.estimate.unit_price, 11);
+  assert.strictEqual(r.body.estimate.state, 'confirmed');
+  assert.strictEqual(r.body.estimate.expired, false);
+  assert.strictEqual(r.body.alternates.length, 1);
+  assert.strictEqual(r.body.alternates[0].unit_price, 10);
+  assert.deepStrictEqual(r.body.unknowns, ['shipping', 'tax', 'stock']);
+  assert.ok(r.body.disclaimer.includes('Estimates'));
+  assert.ok(r.body.as_of);
+});
+
+await scenario('estimate endpoint flags expired money, never serves it fresh', async () => {
+  const env = await seedParts(makeEnv());
+  const r = await call(env, '/parts/stale_part/estimate');
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.estimate, null);
+  assert.strictEqual(r.body.expired.length, 1);
+  assert.strictEqual(r.body.expired[0].expired, true);
+  const g = await call(env, '/parts/stale_part');
+  assert.strictEqual(g.body.best_estimate, null);
+  assert.strictEqual(g.body.estimates[0].expired, true);
+});
+
+await scenario('a price without a source record is never served', async () => {
+  const env = await seedParts(makeEnv());
+  const g = await call(env, '/parts/bare_price_part');
+  assert.strictEqual(g.status, 200);
+  assert.deepStrictEqual(g.body.estimates, []);
+  assert.strictEqual(g.body.best_estimate, null);
+  const e = await call(env, '/parts/bare_price_part/estimate');
+  assert.strictEqual(e.body.estimate, null);
+});
+
+await scenario('bom rollup: qty breaks, trust split, unverified share', async () => {
+  const env = await seedParts(makeEnv());
+  const before = upstreamCalls.length;
+  const r = await call(env, '/bom/estimate', { method: 'POST', body: {
+    lines: [
+      { partId: 'driver_tb6612fng', qty: 150 },
+      { partId: 'multi_source_part', qty: 1 },
+      { partId: 'plain_part', qty: 1 },
+      { partId: 'bare_price_part', qty: 2 },
+      { partId: 'ghost_part', qty: 1 },
+    ] } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  const byId = Object.fromEntries(r.body.lines.map(l => [l.partId, l]));
+  /* 150 units reach the 100+ break: 3.85, not the 1+ price. */
+  assert.strictEqual(byId.driver_tb6612fng.status, 'priced');
+  assert.strictEqual(byId.driver_tb6612fng.qty_break, 100);
+  assert.strictEqual(byId.driver_tb6612fng.line_total, 577.5);
+  assert.strictEqual(byId.multi_source_part.line_total, 11);
+  assert.strictEqual(byId.plain_part.status, 'unpriced');
+  assert.strictEqual(byId.bare_price_part.status, 'unpriced');
+  assert.strictEqual(byId.ghost_part.status, 'unknown_part');
+  assert.strictEqual(r.body.totals.priced_total, 588.5);
+  assert.strictEqual(r.body.totals.by_source_kind.web_gathered, 577.5);
+  assert.strictEqual(r.body.totals.by_source_kind.api, 11);
+  assert.strictEqual(r.body.totals.unverified_web_gathered_total, 577.5);
+  assert.deepStrictEqual(r.body.unpriced.sort(),
+    ['bare_price_part', 'ghost_part', 'plain_part']);
+  assert.strictEqual(upstreamCalls.length, before,
+    'the rollup must not call a model');
+  const h = await call(env, '/health');
+  assert.strictEqual(h.body.budget.used, 0,
+    'the rollup must not spend the daily budget');
+});
+
+await scenario('bom rollup keeps expired money out of the totals', async () => {
+  const env = await seedParts(makeEnv());
+  const r = await call(env, '/bom/estimate', { method: 'POST', body: {
+    lines: [{ partId: 'stale_part', qty: 1 }] } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.lines[0].status, 'stale');
+  assert.strictEqual(r.body.lines[0].estimate.expired, true);
+  assert.strictEqual(r.body.totals.priced_total, 0);
+  assert.deepStrictEqual(r.body.stale, ['stale_part']);
+});
+
+await scenario('bom estimate validates its body and lines', async () => {
+  const env = await seedParts(makeEnv());
+  const empty = await call(env, '/bom/estimate', { method: 'POST', body: {} });
+  assert.strictEqual(empty.status, 400);
+  assert.strictEqual(empty.body.code, 'bad_lines');
+  const badQty = await call(env, '/bom/estimate', { method: 'POST', body: {
+    lines: [{ partId: 'plain_part', qty: 0 }] } });
+  assert.strictEqual(badQty.status, 200);
+  assert.strictEqual(badQty.body.lines[0].status, 'error');
 });
 
 const failed = results.filter(r => r.startsWith('FAIL'));
