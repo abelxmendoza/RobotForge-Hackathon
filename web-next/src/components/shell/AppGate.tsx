@@ -40,6 +40,7 @@ import {
   saveSession,
 } from "@/lib/auth";
 import { DEMO_EVENT, isDemoMode } from "@/lib/demoMode";
+import { usePathname } from "next/navigation";
 import SignInCard from "./SignInCard";
 import DemoEntryButton from "./DemoEntryButton";
 import ChatBar from "@/components/chat/ChatBar";
@@ -153,6 +154,8 @@ export function GateProvider({
 }
 
 function GateScreen({ expired }: { expired: boolean }) {
+  /* Entering the demo keeps you on the page you came for (e.g. /demo/). */
+  const pathname = usePathname();
   return (
     <div className="gate">
       <div className="gate-intro">
@@ -171,7 +174,7 @@ function GateScreen({ expired }: { expired: boolean }) {
         )}
       </div>
       <div className="gate-cards">
-        <SignInCard onAuthed={(s) => saveSession(s)} />
+        <SignInCard onAuthed={(s) => saveSession(s)} hideDemo />
         <div className="acct-card gate-demo">
           <span className="fbadge local">NO ACCOUNT</span>
           <div>
@@ -183,7 +186,7 @@ function GateScreen({ expired }: { expired: boolean }) {
               and asks for nothing.
             </p>
           </div>
-          <DemoEntryButton className="btn btn-primary acct-cta" label="Enter the demo" />
+          <DemoEntryButton className="btn btn-primary acct-cta" label="Enter the demo" to={pathname || "/garage/"} />
           <p className="acct-note">
             Exit any time from the demo bar. Your own robots and
             inventory are never touched — the demo keeps its own

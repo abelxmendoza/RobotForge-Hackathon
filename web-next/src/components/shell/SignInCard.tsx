@@ -108,6 +108,7 @@ export default function SignInCard({
   onAuthed,
   onClose,
   notice,
+  hideDemo = false,
 }: {
   /* Called with the fresh session after a successful email
    * sign-in/register. The host owns storing it (saveSession) and
@@ -117,6 +118,8 @@ export default function SignInCard({
   onClose?: () => void;
   /* A notice to show above the form (e.g. a failed social login). */
   notice?: string;
+  /* The gate shows its own demo card, so it hides this one. */
+  hideDemo?: boolean;
 }) {
   const [mode, setMode] = useState<"signin" | "register">("signin");
   const [providers, setProviders] = useState<Record<OAuthProviderId, boolean>>(
@@ -273,9 +276,11 @@ export default function SignInCard({
         Your robots and inventory stay on this device either way —
         no cloud sync yet, and no email verification or password
         reset in this version.
-        <div className="acct-guest-demo">
-          <DemoEntryButton label="Try the demo" />
-        </div>
+        {!hideDemo && (
+          <div className="acct-guest-demo">
+            <DemoEntryButton label="Try the demo" />
+          </div>
+        )}
       </div>
 
       <p className="acct-legal">

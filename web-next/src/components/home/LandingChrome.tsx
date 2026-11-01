@@ -3,18 +3,18 @@ import { useEffect } from "react";
 import Link from "next/link";
 import RevealInit from "@/components/shell/RevealInit";
 import AccountControl from "@/components/shell/AccountControl";
-import DemoEntryButton from "@/components/shell/DemoEntryButton";
+import RunDemoLink from "@/components/shell/RunDemoLink";
 import { DemoPill } from "@/components/shell/DemoBar";
 import DemoIdentity from "@/components/shell/DemoIdentity";
 import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
 
-/* One set of names, each always the same page (see AppShell's NAV). */
+/* One set of names, each always the same page (see AppShell's NAV).
+ * The demo and the app are the two buttons on the right, so they are
+ * not repeated as links here: one way in to each (Abel, 2026-11-01). */
 const SITE_NAV = [
   { label: "Home", href: "/" },
-  { label: "Demo", href: "/demo/" },
-  { label: "App", href: "/garage/" },
-  { label: "Evidence", href: "/evidence/" },
   { label: "Robots", href: "/robots/" },
+  { label: "Evidence", href: "/evidence/" },
   { label: "How it works", href: "/how-it-works/" },
 ];
 
@@ -44,13 +44,12 @@ export function LandingHeader() {
         </nav>
         <nav className="site-nav site-nav-aside" aria-label="More">
           <a href={REPO_URL}>GitHub</a>
-          <DemoEntryButton className="btn btn-sm" label="Try the demo" />
           <DemoIdentity />
           <DemoPill />
           <AccountControl />
         </nav>
         <Link className="btn btn-app" href="/garage/">Open the app</Link>
-        <Link className="btn btn-primary" href="/demo/">Run the demo &rarr;</Link>
+        <RunDemoLink className="btn btn-primary">Run the demo &rarr;</RunDemoLink>
         <details className="site-menu">
           <summary aria-label="Menu">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -59,6 +58,7 @@ export function LandingHeader() {
             {SITE_NAV.map((n) => (
               <Link key={n.href} href={n.href} aria-current={n.href === "/" ? "page" : undefined}>{n.label}</Link>
             ))}
+            <Link href="/garage/">Open the app</Link>
             <a href={REPO_URL}>GitHub</a>
           </div>
         </details>

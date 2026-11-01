@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
 import AccountControl from "./AccountControl";
-import DemoEntryButton from "./DemoEntryButton";
 import { DemoPill } from "./DemoBar";
 import DemoIdentity from "./DemoIdentity";
 import AppGate, { GateProvider, GatedChatBar } from "./AppGate";
@@ -95,7 +94,6 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
               );
             })}
           </nav>
-          <DemoEntryButton className="btn btn-sm" label="Try the demo" />
           <DemoIdentity />
           <DemoPill />
           <AccountControl />
