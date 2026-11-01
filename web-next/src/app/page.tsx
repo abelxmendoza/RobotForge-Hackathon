@@ -27,9 +27,9 @@ import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/L
 export const metadata: Metadata = {
   // Absolute: the vanilla landing's <title>, bypassing the layout's
   // "%s · RobotForge" template.
-  title: { absolute: "RobotForge — build, fix, modify and upgrade your robot before you spend a dollar" },
+  title: { absolute: "RobotForge — build, fix, modify, upgrade and simulate your robot before you spend a dollar" },
   description:
-    "Build, fix, modify and upgrade your robot before you spend a dollar. Describe it in words, a photo or a parts list; RobotForge checks every change and its simulated twin has to pass a driving test.",
+    "Build, fix, modify, upgrade and simulate your robot before you spend a dollar. Describe it in words, a photo or a parts list; RobotForge checks every change and its simulated twin has to pass a driving test.",
 };
 
 const VERBS: { verb: string; body: string; go: string; to: string }[] = [
@@ -57,6 +57,12 @@ const VERBS: { verb: string; body: string; go: string; to: string }[] = [
     go: "Plan an upgrade",
     to: "/garage/",
   },
+  {
+    verb: "Simulate",
+    body: "The twin drives a test in the Gazebo simulator, and in-browser physics shows whether it stands, tilts or topples.",
+    go: "Run the physics checks",
+    to: "/robots/turtlebot3-burger/#physics",
+  },
 ];
 
 export default function HomePage() {
@@ -81,8 +87,9 @@ export default function HomePage() {
             Built with Meta&apos;s Muse Spark · Meta Global AI Developer Hackathon
           </div>
           <h1 className="hero-verbs">
-            <span>Build</span>, <span>Fix</span>, <span>Modify</span>, and{" "}
-            <span>Upgrade</span> your robot before you spend a dollar.
+            <span>Build</span>, <span>Fix</span>, <span>Modify</span>,{" "}
+            <span>Upgrade</span>, and <span>Simulate</span> your robot
+            before you spend a dollar.
           </h1>
           <p className="lede">
             Describe a robot in words, a photo or a parts list. RobotForge
@@ -102,7 +109,7 @@ export default function HomePage() {
             finishes you can explore the whole app with its sample data,
             which never touches your own robots or parts.
           </p>
-          {/* The four verbs from the headline, each a door into the
+          {/* The five verbs from the headline, each a door into the
                part of the app that does it (demo mode for visitors
                with no account). */}
           <ul className="verb-cards">

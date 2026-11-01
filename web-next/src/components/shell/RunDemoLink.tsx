@@ -15,7 +15,7 @@ import { isDemoMode, setDemoMode } from "@/lib/demoMode";
 import { seedDemoStores } from "@/lib/demoSeed";
 
 /* `to` sends the click somewhere other than /demo/ (the landing's
- * Build / Fix / Modify / Upgrade cards deep-link into the Workshop);
+ * Build / Fix / Modify / Upgrade / Simulate cards deep-link into the Workshop);
  * visitors with no session still get demo mode turned on first. */
 export default function RunDemoLink({ className, style, children, to = "/demo/" }: { className?: string; style?: CSSProperties; children: ReactNode; to?: string }) {
   const router = useRouter();
