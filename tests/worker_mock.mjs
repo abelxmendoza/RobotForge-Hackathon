@@ -114,10 +114,19 @@ globalThis.fetch = async (url, opts) => {
   upstreamCalls.push({ url: String(url), opts });
   const u = String(url);
   if (u.startsWith('https://api.meta.ai/')) {
+    if (u.includes('/asr/transcribe')) {
+      assert.ok(opts.body instanceof FormData, 'transcribe sends multipart');
+      return new Response(JSON.stringify({
+        transcript: 'a small indoor rover with four wheels',
+        audioDurationMs: 3000, turns: [],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     assert.strictEqual(opts.headers.Authorization, 'Bearer meta-key-456');
     const content = metaMode === 'photo' ? JSON.stringify(PHOTO_DRAFT)
       : metaMode === 'document' ? JSON.stringify(DOC_DRAFT)
       : metaMode === 'document-bad' ? JSON.stringify(DOC_BAD)
+      : metaMode === 'spec' ? JSON.stringify(GOOD_SPEC)
+      : metaMode === 'chat' ? 'A concise Meta answer.'
       : metaMode === 'part' ? JSON.stringify(PART_REPLY)
       : 'this is not json at all';
     return new Response(JSON.stringify({
@@ -127,6 +136,9 @@ globalThis.fetch = async (url, opts) => {
   assert.ok(u.startsWith('https://inference.baseten.co/'),
     'worker fetched an unexpected URL: ' + url);
   assert.strictEqual(opts.headers.Authorization, 'Bearer test-key-123');
+  if (basetenMode === 'http500') {
+    return new Response('upstream boom', { status: 500 });
+  }
   const content = basetenMode === 'spec' ? JSON.stringify(GOOD_SPEC)
     : basetenMode === 'fenced' ? '```json\n' + JSON.stringify(GOOD_SPEC) + '\n```'
     : basetenMode === 'chat' ? 'A concise live answer.'
@@ -316,9 +328,10 @@ await scenario('health reports which routes are configured', async () => {
   const plain = await call(makeEnv(), '/health');
   assert.deepStrictEqual(plain.body.routes,
     { describe: true, chat: true, list: true, fix: true, part_chat: true,
-      photo: false, part: false });
+      photo: false, part: false, transcribe: false });
   const withMeta = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/health');
   assert.strictEqual(withMeta.body.routes.photo, true);
+  assert.strictEqual(withMeta.body.routes.transcribe, true);
 });
 
 await scenario('photo without the Meta key is a 501, no call attempted', async () => {
@@ -519,6 +532,70 @@ await scenario('part-chat plain-text reply changes nothing', async () => {
   assert.strictEqual(r.status, 200);
   assert.strictEqual(r.body.update, null);
   assert.strictEqual(r.body.confirmed, false);
+});
+
+await scenario('Meta direct answers when Baseten fails, and says so', async () => {
+  basetenMode = 'http500'; metaMode = 'spec';
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const before = upstreamCalls.length;
+  const r = await call(env, '/describe',
+    { method: 'POST', body: { description: 'a small rover' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.model, 'muse-spark-1.3');
+  const hosts = upstreamCalls.slice(before).map(c => new URL(c.url).host);
+  assert.deepStrictEqual(hosts, ['inference.baseten.co', 'api.meta.ai']);
+});
+
+await scenario('a pinned provider is the only one attempted', async () => {
+  basetenMode = 'chat'; metaMode = 'chat';
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const before = upstreamCalls.length;
+  const r = await call(env, '/chat', { method: 'POST',
+    body: { message: 'hi', provider: 'meta' } });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.answer, 'A concise Meta answer.');
+  assert.strictEqual(r.body.model, 'muse-spark-1.3');
+  const calls = upstreamCalls.slice(before);
+  assert.strictEqual(calls.length, 1);
+  assert.ok(calls[0].url.startsWith('https://api.meta.ai/'));
+});
+
+await scenario('pinning an unconfigured provider fails honestly', async () => {
+  basetenMode = 'chat';
+  const r = await call(makeEnv(), '/chat', { method: 'POST',
+    body: { message: 'hi', provider: 'meta' } });
+  assert.strictEqual(r.status, 502);
+  assert.strictEqual(r.body.code, 'upstream_error');
+});
+
+await scenario('transcribe happy path returns the transcript', async () => {
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const wav = new Uint8Array(48);
+  wav.set([0x52, 0x49, 0x46, 0x46], 0); // 'RIFF'
+  wav.set([0x57, 0x41, 0x56, 0x45], 8); // 'WAVE'
+  const r = await call(env, '/transcribe', { method: 'POST',
+    body: { audio_b64: Buffer.from(wav).toString('base64') } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.transcript, 'a small indoor rover with four wheels');
+  assert.strictEqual(r.body.model, 'muse-voice-transcribe-1.0');
+  assert.strictEqual(r.body.audio_duration_ms, 3000);
+});
+
+await scenario('transcribe without the Meta key is a 501', async () => {
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv(), '/transcribe', { method: 'POST',
+    body: { audio_b64: 'UklGRg==' } });
+  assert.strictEqual(r.status, 501);
+  assert.strictEqual(r.body.code, 'transcribe_not_configured');
+  assert.strictEqual(upstreamCalls.length, before);
+});
+
+await scenario('transcribe rejects non-WAV audio', async () => {
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const r = await call(env, '/transcribe', { method: 'POST',
+    body: { audio_b64: Buffer.from('not a wav file at all........').toString('base64') } });
+  assert.strictEqual(r.status, 400);
+  assert.strictEqual(r.body.code, 'bad_audio');
 });
 
 const failed = results.filter(r => r.startsWith('FAIL'));

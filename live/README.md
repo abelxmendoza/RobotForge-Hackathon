@@ -15,30 +15,35 @@ one constant lights the live steps up.
 | Route | What it does | Key needed |
 |---|---|---|
 | `GET /health` | `{ok, mode, configured, kv, budget, routes}` — never spends a model call | — |
-| `POST /describe` | `{description}` → validated spec JSON (Baseten, `meta-models/muse-spark-open`, RobotForge's describe prompt) | `BASETEN_API_KEY` |
-| `POST /chat` | `{message}` → Forge Guide live-model answer (Baseten) | `BASETEN_API_KEY` |
-| `POST /list` | `{text}` → model-generated parts-list import matched against the site catalogue (Baseten) | `BASETEN_API_KEY` |
+| `POST /describe` | `{description}` → validated spec JSON (provider chain below, RobotForge's describe prompt) | any one chain key |
+| `POST /chat` | `{message}` → Forge Guide live-model answer (provider chain below) | any one chain key |
+| `POST /list` | `{text}` → model-generated parts-list import matched against the site catalogue (provider chain below) | any one chain key |
 | `POST /fix` | `{spec, findings}` → `{changes, summary}`: Muse Spark **proposes** bounded spec edits for the validator's findings (only allow-listed fields, typed and positive); the page re-validates — the model never sets a verdict | `BASETEN_API_KEY` |
 | `POST /part` | `{image_data_url, note?}` → one inventory part identified from a photo (name, category, label-read specs, a confirming question; catalogue ids sanitized) | `META_API_KEY` (**optional**) |
-| `POST /part-chat` | `{part, message, history?}` → `{reply, update, confirmed}`: talk a part through until its owner confirms it | `BASETEN_API_KEY` |
+| `POST /part-chat` | `{part, message, history?}` → `{reply, update, confirmed}`: talk a part through until its owner confirms it | any one chain key |
 | `POST /photo` | `{image_data_url, note?, mode?}` → photo draft spec (Meta Model API vision, `muse-spark-1.3`). `mode` omitted/`"photo"`: an ESTIMATED draft from a robot photo. `mode: "document"`: a TRANSCRIBED draft from a spec-sheet/blueprint photo (below) | `META_API_KEY` (**optional**) |
+| `POST /transcribe` | `{audio_b64}` → `{transcript, model}`: one spoken description transcribed by Muse Voice Transcribe (`muse-voice-transcribe-1.0`). WAV only — the batch endpoint rejects MP3/WebM containers (verified 2026-10-31), so the site encodes recordings to WAV in the browser | `META_API_KEY` (**optional**) |
 
 `/photo` without the Meta key answers `501 photo_not_configured`
 and the site falls back to its recorded photo sample — that is the
 designed behavior, not an error. Malformed model output is a 502
 with a plain error; raw model junk never reaches the page.
 
-Fireworks AI is not a Worker *primary* provider in this deployment —
-since 2026-10-28 it serves as the Worker's optional **fallback**:
-when the `FIREWORKS_API_KEY`
-secret is set, a failed Baseten attempt (HTTP error, network
-failure, empty reply) retries once against Fireworks' hosted Muse
-Spark Open before the route answers 502. Same Meta model, different
-host — resilience for the live demo, not a model swap. `/health`
-reports it under `providers.fireworks`; either provider key lights
-the text routes. Its transport also remains in the Python CLI's
-describe chain (see the top-level README, "Optional Fireworks
-transport").
+The text routes run a **three-provider chain in measured order**
+(fixed 24-description sweep, Oct 2026): **Baseten** serving Muse
+Spark Open (24/24) → **Meta Model API direct** serving the hosted
+`muse-spark-1.3` (23/24) → **Fireworks** serving Muse Spark Open
+(21/24, re-measured 18/24). A provider is attempted only when its
+secret is set and every earlier attempt failed (HTTP error, network
+failure, empty reply); any one key lights the text routes, and
+`/health` reports each under `providers`. Responses report the
+model that actually answered — the Meta attempt is a *different
+model* (hosted Spark 1.3), not the same model on another host. A
+request may pin one provider with `"provider": "baseten" | "meta"
+| "fireworks"`; the site never sends it — it exists so the sweep
+can be re-measured through this endpoint. Fireworks' transport
+also remains in the Python CLI's describe chain (see the top-level
+README, "Optional Fireworks transport").
 
 ## Document mode (`/photo` with `mode: "document"`)
 
