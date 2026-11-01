@@ -105,9 +105,10 @@ export default function HomePage() {
             </RunDemoLink>
           </div>
           <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
-            The demo needs no account and runs in your browser. When it
-            finishes you can explore the whole app with its sample data,
-            which never touches your own robots or parts.
+            Live AI in the app runs on your account — sign up with an
+            email or continue with Meta. The demo needs no account at
+            all: one tap opens the app with sample data and recorded
+            answers, and it never touches your own robots or parts.
           </p>
           {/* The five verbs from the headline, each a door into the
                part of the app that does it (demo mode for visitors
