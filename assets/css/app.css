@@ -1505,6 +1505,26 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .bom-have{grid-column:2;text-align:left;max-width:none}
 }
 
+/* Workshop Tools & Materials tab (Forge Engine §11): the two
+   ownership states get the BOM tab's colors — accent for on hand,
+   amber for simulated — so the state reads the same everywhere. */
+.tm-group{margin:var(--s4) 0 var(--s2)}
+.tm-list{list-style:none;margin:0 0 var(--s3);padding:0;display:grid;gap:8px}
+.tm-row{display:grid;grid-template-columns:1fr auto;gap:var(--s3);align-items:start;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border-strong);border-radius:var(--r);padding:var(--s3) var(--s4)}
+.tm-row.on_hand{border-left-color:var(--accent)}
+.tm-row.simulated{border-left-color:#f5b942}
+.tm-main{display:grid;gap:2px;min-width:0}
+.tm-side{display:grid;gap:6px;justify-items:end}
+.tm-badge{font-size:var(--fs-xs);font-weight:700;border:1px solid currentColor;border-radius:999px;padding:0 8px;white-space:nowrap}
+.tm-badge.on_hand{color:var(--accent)}
+.tm-badge.simulated{color:#f5b942}
+.tm-expired{color:#ff6b6b;font-weight:700}
+.tm-fit{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--s3) var(--s4);margin:0 0 var(--s3)}
+@media (max-width:560px){
+  .tm-row{grid-template-columns:1fr}
+  .tm-side{justify-items:start}
+}
+
 /* Workshop Overview drawing (Tier 1 visuals, 2026-11-01) */
 .ws-drawing{margin:0 0 var(--s4);display:grid;justify-items:center;gap:6px;background:radial-gradient(ellipse at 50% 85%,rgba(45,212,191,.10),transparent 65%),var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--s4) var(--s4) var(--s3)}
 .ws-drawing img{width:100%;max-width:360px;max-height:220px;object-fit:contain}
