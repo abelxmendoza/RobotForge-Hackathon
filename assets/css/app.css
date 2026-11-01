@@ -1482,11 +1482,12 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .bom-row.have{border-left-color:var(--accent)}
 .bom-row.sim{border-left-color:#f5b942}
 .bom-row.need{border-left-color:#ff6b6b}
+.bom-row.check{border-left-color:#f5b942;border-left-style:dashed}
 .bom-qty{font:700 var(--fs-md)/1.4 var(--mono);color:var(--text-muted)}
 .bom-main{display:grid;gap:2px;min-width:0}
 .bom-main .prov{margin-top:4px!important;font-size:var(--fs-xs)}
 .bom-have{font-size:var(--fs-xs);font-weight:600;max-width:220px;text-align:right}
-.bom-have.have{color:var(--accent)}.bom-have.sim{color:#f5b942}.bom-have.need{color:#ff6b6b}
+.bom-have.have{color:var(--accent)}.bom-have.sim{color:#f5b942}.bom-have.need{color:#ff6b6b}.bom-have.check{color:#f5b942}
 @media (max-width:560px){
   .bom-row{grid-template-columns:36px 1fr}
   .bom-have{grid-column:2;text-align:left;max-width:none}
