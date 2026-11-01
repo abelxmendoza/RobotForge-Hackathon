@@ -7,6 +7,8 @@ import { ASSEMBLY_KEY, applyAssembly, currentAssembly, operationFor, previewAsse
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { downloadJSON, readStore, uid, useStore, writeStore } from '@/lib/store';
 import type { RobotSpec } from '@/components/forge/model';
+import { taBuildParts } from '@/components/kit/takeapart';
+import { teardownSteps } from '@/lib/teardown';
 const Robot3D = dynamic(() => import('@/components/kit/Robot3D'), { ssr: false, loading: () => <p>Loading 3D assembly…</p> });
 
 function PoseEditor({ instance, onMove }: {instance: ComponentInstance; onMove: (p: Pose, yaw: number) => void}) {
@@ -52,6 +54,14 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
   const [playing,setPlaying] = useState(false);
   const [retry,setRetry] = useState(0);
   const [from,setFrom] = useState(''); const [to,setTo] = useState('');
+  /* Take-apart motion (Abel, 2026-11-01: "animate the robots in build,
+   * use the take apart skill"): parts come off one at a time in the
+   * bench order from lib/teardown.ts, or start apart and go back on. */
+  const [tdOn,setTdOn] = useState(false);
+  const [tdOff,setTdOff] = useState(0);
+  const [tdDir,setTdDir] = useState<1|-1>(1);
+  const [tdPlaying,setTdPlaying] = useState(false);
+  const [spin,setSpin] = useState(false);
   const robot = robots.find(r => r.id === robotId);
   const spec = robot?.versions.at(-1)?.spec;
   const saved = useMemo(()=>currentAssembly(all,robotId),[all,robotId]);
@@ -64,6 +74,15 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
   const collisionIds = useMemo(()=>[...new Set(overlaps.flat())],[overlaps]);
   const previousVersion = (all[robotId]??[]).at(-2);
   const instance = preview.components.find(c => c.id === selected);
+  const built = useMemo(() => { try { return spec ? taBuildParts(spec as RobotSpec) : null; } catch { return null; } }, [spec]);
+  const td = useMemo(() => teardownSteps(built ? built.parts.map(p => p.id) : []), [built]);
+  useEffect(() => {
+    if (!tdPlaying) return;
+    const end = tdDir > 0 ? td.steps.length : 0;
+    if (tdOff === end) { setTdPlaying(false); return; }
+    const t = setTimeout(() => setTdOff(n => n + tdDir), 1500);
+    return () => clearTimeout(t);
+  }, [tdPlaying, tdOff, tdDir, td.steps.length]);
   const definition = instance ? componentById(instance.componentId) : null;
   if (!ready || !spec) return <p>Loading saved robot assembly…</p>;
   const propose = (args: Parameters<typeof operationFor>[3]) => {
@@ -88,6 +107,32 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
     const part = componentById(componentId)!;
     propose({kind:'add',instanceId:uid('part'),componentId,positionM:[0,0,Number(spec.ground_clearance_m ?? 0)+0.003+part.sizeM[2]/2]});
   };
+  const partName = (id: string | null) => { const p = built?.parts.find(x => x.id === id); return p ? (p.qty > 1 ? `${p.name} ×${p.qty}` : p.name) : (id ?? ''); };
+  const startTd = (dir: 1|-1) => { setExplode(0); setDragMode(false); setTdOn(true); setTdDir(dir); setTdOff(dir > 0 ? 0 : td.steps.length); setTdPlaying(true); };
+  const stopTd = () => { setTdPlaying(false); setTdOn(false); setTdOff(0); };
+  const tdStatus = !tdOn ? '' : tdOff === 0
+    ? `Assembled · ${td.steps.length} parts, then the ${partName(td.core).toLowerCase()}`
+    : tdOff >= td.steps.length
+      ? `All ${td.steps.length} parts off · the ${partName(td.core).toLowerCase()} is left on the bench`
+      : `${tdOff} of ${td.steps.length} off · ${tdDir > 0 ? 'just removed' : 'next on'}: ${partName(td.steps[tdOff - 1])}`;
+  const motionBar = td.steps.length > 0 && !failed3D ? <div className="ta-controls ta-teardown ws-motion" aria-label="Animate the robot">
+    {!tdOn ? <>
+      <button type="button" className="btn btn-sm btn-primary" onClick={() => startTd(1)}>Take it apart</button>
+      <button type="button" className="btn btn-sm" onClick={() => startTd(-1)}>Watch it go together</button>
+    </> : <>
+      <button type="button" className="btn btn-sm" disabled={tdOff === 0} onClick={() => { setTdPlaying(false); setTdOff(n => Math.max(0, n - 1)); }}>&larr; Put back</button>
+      <button type="button" className="btn btn-sm btn-primary" disabled={tdOff >= td.steps.length} onClick={() => { setTdPlaying(false); setTdOff(n => Math.min(td.steps.length, n + 1)); }}>Next part &rarr;</button>
+      <button type="button" className="btn btn-sm" onClick={() => {
+        if (tdPlaying) { setTdPlaying(false); return; }
+        const end = tdDir > 0 ? td.steps.length : 0;
+        if (tdOff === end) setTdOff(tdDir > 0 ? 0 : td.steps.length);
+        setTdPlaying(true);
+      }}>{tdPlaying ? 'Pause' : 'Play'}</button>
+      <button type="button" className="btn btn-sm" onClick={stopTd}>Reassemble</button>
+    </>}
+    <button type="button" className="btn btn-sm ta-toggle" aria-pressed={spin} onClick={() => setSpin(v => !v)}>Spin {spin ? 'on' : 'off'}</button>
+    {tdStatus && <span className="ta-teardown-label" role="status">{tdStatus}</span>}
+  </div> : null;
   const wiringOrParts = tab==='components' ? <>
       <label className="g-field"><span>Add a component by name</span><select value={componentId} onChange={e=>setComponentId(e.target.value)}>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <p className="faint">{componentById(componentId)?.note}</p>
@@ -126,7 +171,7 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
       <label className="g-field"><span>Graphics quality</span><select value={quality} onChange={e=>setQuality(e.target.value as 'high'|'balanced')}><option value="high">Studio · highest quality</option><option value="balanced">Balanced · lighter GPU load</option></select></label>
       <button type="button" className="chip" aria-pressed={animate} onClick={()=>setAnimate(v=>!v)}>Motion effects {animate?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={xray} onClick={()=>setXray(v=>!v)}>X-ray {xray?'on':'off'}</button>
-      <button type="button" className="chip" aria-pressed={dragMode} disabled={explode>0||replay<1||playing} onClick={()=>setDragMode(v=>!v)}>Drag placement {dragMode?'on':'off'}</button>
+      <button type="button" className="chip" aria-pressed={dragMode} disabled={explode>0||replay<1||playing||tdOn} onClick={()=>setDragMode(v=>!v)}>Drag placement {dragMode?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={snapDeck} onClick={()=>setSnapDeck(v=>!v)}>Snap to deck {snapDeck?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={ghostMount} onClick={()=>setGhostMount(v=>!v)}>Ghost tray {ghostMount?'on':'off'}</button>
       <button type="button" className="chip" aria-pressed={showFov} onClick={()=>setShowFov(v=>!v)}>FOV sketch {showFov?'on':'off'}</button>
@@ -138,14 +183,16 @@ export default function AssemblyWorkspace({robotId, view, onView}: {robotId: str
     {showFov && <fieldset className="g-group"><legend>Illustrative FOV on selected component · local +X forward</legend><label className="g-field"><span>Full cone angle (degrees)</span><input type="number" min="5" max="150" value={fovDeg} onChange={e=>setFovDeg(Math.max(5,Math.min(150,Number(e.target.value)||60)))}/></label><label className="g-field"><span>Range (m)</span><input type="number" min="0.05" max="5" step="0.05" value={fovRange} onChange={e=>setFovRange(Math.max(0.05,Math.min(5,Number(e.target.value)||0.5)))}/></label><p>Assumed visualization inputs, not a sensor datasheet or an obstruction test.</p></fieldset>}
     {previousVersion && <fieldset className="g-group"><legend>Upgrade playback · previous assembly → latest preview</legend><input aria-label="Upgrade playback progress" type="range" min="0" max="100" value={Math.round(replay*100)} onChange={e=>{setPlaying(false);setReplay(Number(e.target.value)/100);}}/><button type="button" className="chip" onClick={()=>{setReplay(0);setPlaying(true);setDragMode(false);}}>Play upgrade</button><button type="button" className="chip" onClick={()=>{setPlaying(false);setReplay(1);}}>Latest pose</button><p>Component-pose comparison only; cables show the latest planned connections. Scrubbing does not change saved versions. Motion respects reduced-motion preferences.</p></fieldset>}
     {view==='wiring' && wiringOrParts}
+    {view!=='wiring' && motionBar}
     {!failed3D ? <Robot3D key={retry} spec={spec as RobotSpec} explode={explode} selected={selectedWire??selected} onSelect={id=>{
       const wire=preview.connections.find(c=>c.id===id);
       if(wire){setSelectedWire(id);setTab('wiring');setFrom(wire.from);setTo(wire.to);setNotice('Selected planned connection · NOT_CHECKED');}
       else {setSelectedWire(null);setSelected(id);}
     }} onFail={()=>setFailed3D(true)} instances={preview.components} connections={preview.connections} animate={animate} xray={xray} quality={quality}
-      collisionIds={collisionIds} dragMode={dragMode&&explode===0&&replay===1&&!playing} snapDeck={snapDeck}
+      collisionIds={collisionIds} dragMode={dragMode&&explode===0&&replay===1&&!playing&&!tdOn} snapDeck={snapDeck}
       ghostMount={ghostMount} fov={showFov?{angleDeg:fovDeg,rangeM:fovRange}:undefined}
-      comparison={previousVersion?.components} replay={replay} playing={playing} onPlaybackEnd={()=>{setPlaying(false);setReplay(1);}}
+      comparison={previousVersion?.components} replay={replay} playing={playing}
+      teardown={tdOn ? { removed: td.steps.slice(0, tdOff), isolate: null } : undefined} autoRotate={spin} onPlaybackEnd={()=>{setPlaying(false);setReplay(1);}}
       onMove={(id,positionM)=>{const current=preview.components.find(c=>c.id===id);if(current){setSelected(id);propose({kind:'move',instanceId:id,positionM,yawDeg:current.yawDeg});}}}/> : <div className="card" role="status"><h4>3D needs WebGL</h4><p>This browser could not create a 3D graphics context. Try a browser with hardware acceleration enabled. Your assembly is saved; no 2D view is substituted.</p><button type="button" className="btn btn-sm" onClick={()=>{setFailed3D(false);setRetry(v=>v+1);}}>Retry 3D</button></div>}
     {view!=='wiring' && wiringOrParts}
     <h4>Components ({preview.components.length})</h4>

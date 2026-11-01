@@ -1408,3 +1408,17 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .gate-demo .fbadge{justify-self:start}
 .gate-checking{color:var(--text-muted);font-size:var(--fs-sm);margin:0}
 @media (max-width:820px){.gate-cards{grid-template-columns:1fr}}
+
+/* ---------- 3D motion: Build take-apart + wiring bench (2026-11-01) ---------- */
+.ws-motion{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:var(--s3) 0}
+.ws-motion .ta-teardown-label{flex-basis:100%;font-size:var(--fs-sm);color:var(--text-muted)}
+.wb{margin-bottom:var(--s5)}
+.wb-stage{position:relative;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:#081321;min-height:260px}
+.wb-stage canvas{display:block;touch-action:none}
+.wb-labels{position:absolute;inset:0;pointer-events:none}
+.wb-label{pointer-events:auto;cursor:pointer;font:600 11px/1.2 var(--font,inherit);color:#e8f4f6;background:rgba(8,19,33,.78);border:1px solid rgba(66,214,196,.35);padding:3px 7px;border-radius:999px;white-space:nowrap;transform:translateY(-6px)}
+.wb-label.sel{border-color:var(--accent);color:var(--accent)}
+.wb-label.bad{border-color:var(--fail);color:#ffb4b4}
+.wb-cap{margin:var(--s2) 0 0;font-size:var(--fs-xs)}
+.wb-detail{margin-top:var(--s3)}
+.wb-detail p{margin:6px 0 0}
