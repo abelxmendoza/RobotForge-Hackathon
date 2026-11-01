@@ -307,7 +307,14 @@ function SaveToRobots({ spec }: { spec: RobotSpec }) {
   );
 }
 
-export default function ForgeThread() {
+export default function ForgeThread({ docked = false }: { docked?: boolean } = {}) {
+  /* Docked (the Workshop): only the oval composer shows at the bottom of
+   * the page, like the bar on other pages; the conversation opens above
+   * it when there is something to read, and collapses with ▾. */
+  const [open, setOpen] = useState(!docked);
+  const welcomeIdRef = useRef(0);
+  const convoLenRef = useRef(0);
+  const panelBodyRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const assistant = useForgeAssistant();
   const assistantRef = useRef(assistant);
@@ -1301,10 +1308,11 @@ export default function ForgeThread() {
     /* The welcome goes first, above any conversation carried in from
      * the bottom bar (those entries were pushed by an earlier effect). */
     const welcomeId = ++idRef.current;
+    welcomeIdRef.current = welcomeId;
     setEntries((prev) => [{ kind: 'note', id: welcomeId, node: (
       <p>
         <strong>Ask Wrench.</strong> Ask questions, manage inventory, or change a saved robot here; switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
-        the live endpoint; spec files, scans and the recorded samples below
+        the live endpoint; spec files, scans and the recorded samples
         always work.
       </p>
     ) }, ...prev]);
@@ -1339,7 +1347,7 @@ export default function ForgeThread() {
       setStatus(
         'Routes: ' +
           bits.join(' · ') +
-          '. Spec checks always run in your browser, and the recorded samples below always work.',
+          '. Spec checks always run in your browser, and the recorded samples always work.',
       );
     })();
     /* Old step-walk deep links (#words, #photo, #list, #document)
@@ -1388,7 +1396,24 @@ export default function ForgeThread() {
     return ASSISTANT_NAME + ':\n' + body;
   };
 
-  return (
+  /* Anything new in the conversation (a reply, a step, a file handed
+   * over from another page) opens the docked panel so it can be read. */
+  const convoLen = entries.filter((e) => e.id !== welcomeIdRef.current).length;
+  useEffect(() => {
+    if (docked && convoLen > convoLenRef.current) setOpen(true);
+    convoLenRef.current = convoLen;
+    const body = panelBodyRef.current;
+    if (docked && body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+  }, [docked, convoLen]);
+  useEffect(() => {
+    if (!docked) return;
+    const fromHash = () => { if (/^#(wrench|words|photo|list|document)\b/.test(window.location.hash)) setOpen(true); };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+    return () => window.removeEventListener('hashchange', fromHash);
+  }, [docked]);
+
+  const panel = (
     <>
       <ModeBanner mode={mode.mode} reason={mode.why}>
         {mode.mode === 'checking' ? null : status}
@@ -1497,6 +1522,20 @@ export default function ForgeThread() {
       </div>
       {assistant.actions}
       <div className="main-chat-suggestions g-tabs" aria-label="Workspace suggestions">{['List my robots','List my inventory','Operations'].map(q=><button className="chip" type="button" key={q} onClick={()=>{pushUser(<p>{q}</p>);assistant.ask(q);}}>{q}</button>)}</div>
+    </>
+  );
+
+  return (
+    <>
+      {docked ? (
+        <section className="chat-bar-panel wrench-panel" aria-label={`${ASSISTANT_NAME} conversation`} hidden={!open}>
+          <div className="fc-head">
+            <div><strong>{ASSISTANT_NAME}</strong></div>
+            <button type="button" className="fc-close" onClick={() => setOpen(false)} aria-label="Collapse conversation" title="Collapse conversation">▾</button>
+          </div>
+          <div className="wrench-panel-body" ref={panelBodyRef}>{panel}</div>
+        </section>
+      ) : panel}
       <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
         <div className="g-tabs" aria-label="Message mode"><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button></div>
         <div className="attach-row" hidden={!attach}>
@@ -1518,6 +1557,18 @@ export default function ForgeThread() {
         {/* Same oval composer as Wrench's bottom bar on every other page:
             paperclip, one line that grows, round send button. */}
         <div className="chat-bar-composer wrench-composer">
+          {docked && (
+            <button
+              type="button"
+              className="chat-bar-toggle"
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+              aria-label={open ? 'Collapse conversation' : 'Open conversation'}
+              title={open ? 'Collapse conversation' : 'Open conversation'}
+            >
+              {open ? '▾' : '▴'}
+            </button>
+          )}
           <button
             type="button"
             className="chat-bar-attach"
