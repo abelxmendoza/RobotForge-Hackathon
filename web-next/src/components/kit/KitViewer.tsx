@@ -28,6 +28,14 @@ import {
   removeConnection,
   resolveConnections,
 } from '@/lib/buildWiring';
+import type { Part } from '@/lib/types';
+import {
+  addToBuildList,
+  buildPaletteItems,
+  removeFromBuildList,
+  setBuildQty,
+  type PaletteItem,
+} from '@/lib/palette';
 import { stageRecordOf } from '@/lib/data';
 import {
   flowPaths,
@@ -40,14 +48,6 @@ import {
 import { useStageAnimation } from '@/lib/useStageAnimation';
 import { DEMO_EVENT, isDemoMode } from '@/lib/demoMode';
 import { StageControlsRow } from './StageControls';
-import type { Part } from '@/lib/types';
-import {
-  addToBuildList,
-  buildPaletteItems,
-  removeFromBuildList,
-  setBuildQty,
-  type PaletteItem,
-} from '@/lib/palette';
 import { uid } from '@/lib/store';
 import {
   GENERATED_KEYS,
