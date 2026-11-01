@@ -10,6 +10,7 @@ import { assetPath } from "@/components/home/asset";
 import RobotCard from "./RobotCard";
 import GroupCard, { gateTally, groupSlug } from "./GroupCard";
 import LocalDexSightings from "./LocalDexSightings";
+import { DEX_SOURCES, MyRobotsGrid, SightingsGrid, SourceBadge, useDexSources, type DexSource } from "./DexSources";
 
 /* Robodex index (Abel, 2026-10-30): no filter chips. The index opens
    on a grid of group cards — one per mobility class, in taxonomy
@@ -26,12 +27,30 @@ function groupFromHash(): string | null {
   return MOBILITY_CLASSES.find((cls) => groupSlug(cls) === m[1]) ?? null;
 }
 
+function sourceFromHash(): DexSource | null {
+  if (typeof window === "undefined") return null;
+  if (/^#group=/.test(window.location.hash)) return "researched";
+  const m = window.location.hash.match(/^#source=([a-z]+)$/);
+  return m && DEX_SOURCES.some((s) => s.id === m[1]) ? (m[1] as DexSource) : null;
+}
+
 export default function RobotsIndex() {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [source, setSource] = useState<DexSource | null>(null);
   const groupHeadRef = useRef<HTMLHeadingElement>(null);
+  const dex = useDexSources();
+  /* Default tab: My robots when you have any, otherwise Researched. */
+  const shown: DexSource = source ?? (dex.mine && dex.mine.length ? "mine" : "researched");
+  const counts: Record<DexSource, number | null> = {
+    mine: dex.mine ? dex.mine.length : null, sighted: dex.sighted.length, photos: dex.photos.length, researched: robots.length,
+  };
+  const pickSource = (id: DexSource) => {
+    setSource(id); setOpenGroup(null);
+    window.history.pushState(null, "", `#source=${id}`);
+  };
 
   useEffect(() => {
-    const sync = () => setOpenGroup(groupFromHash());
+    const sync = () => { setOpenGroup(groupFromHash()); setSource(sourceFromHash()); };
     sync();
     window.addEventListener("hashchange", sync);
     window.addEventListener("popstate", sync);
@@ -66,15 +85,26 @@ export default function RobotsIndex() {
           <div className="eyebrow">Robots</div>
           <h1><Term k="robodex">Robodex</Term></h1>
           <p className="lede">
-            Every robot RobotForge knows, shelved by how it moves — open a
-            group to see its robots. A badge comes only from a recorded
-            gate run — untested robots are marked NOT GATED.{" "}
+            Every robot RobotForge knows, sorted by how we know it. The
+            source tells you how far to trust its numbers.{" "}
             <Link href="/#workflow">How the test works →</Link>
           </p>
         </div>
       </div>
 
-      {openGroup === null ? (
+      <div className="dex-tabs" role="tablist" aria-label="Where the robot comes from">
+        {DEX_SOURCES.map((s) => (
+          <button key={s.id} type="button" role="tab" aria-selected={shown === s.id} className={"dex-tab src-" + s.id} onClick={() => pickSource(s.id)}>
+            {s.label}{counts[s.id] !== null && <span className="dex-count">{counts[s.id]}</span>}
+          </button>
+        ))}
+      </div>
+      <p className="dex-blurb"><SourceBadge source={shown} /> {DEX_SOURCES.find((s) => s.id === shown)!.blurb}</p>
+
+      {shown === "mine" ? <MyRobotsGrid mine={dex.mine} />
+        : shown === "sighted" ? <SightingsGrid items={dex.sighted} source="sighted" />
+        : shown === "photos" ? <SightingsGrid items={dex.photos} source="photos" />
+        : openGroup === null ? (
         <div className="group-grid" id="group-grid">
           {MOBILITY_CLASSES.map((cls) => (
             <GroupCard

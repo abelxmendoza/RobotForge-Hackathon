@@ -1068,3 +1068,26 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 }
 /* A recorded over-voltage stays red when the harness is powered. */
 .wv-cable.bad .wv-line.on{stroke:var(--fail);filter:drop-shadow(0 0 3px rgba(248,113,113,.6))}
+
+/* Robodex split by source (2026-11-01). Each source has its own hue and a
+   trust label: mine teal, sighted violet, photo amber, researched blue. */
+.dex-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:var(--s2) 0 var(--s3)}
+.dex-tab{--c:var(--accent);display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font:600 var(--fs-sm)/1 var(--font);cursor:pointer;transition:background .2s var(--ease),color .2s,border-color .2s}
+.dex-tab:hover{color:var(--text);border-color:var(--border-strong)}
+.dex-tab[aria-selected="true"]{color:var(--text);border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--surface));box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 14%,transparent)}
+.dex-count{font:700 12px/1 var(--mono);padding:3px 7px;border-radius:999px;background:var(--surface-3);color:var(--text)}
+.src-mine{--c:var(--accent)}.src-sighted{--c:#b49cff}.src-photos{--c:var(--marginal)}.src-researched{--c:var(--link)}
+.dex-blurb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--text-muted);font-size:var(--fs-sm);margin-bottom:var(--s4)}
+.dex-src{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 var(--mono);letter-spacing:.04em;padding:4px 4px 4px 8px;border-radius:999px;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);background:color-mix(in srgb,var(--c) 10%,transparent);width:max-content}
+.dex-trust{padding:2px 6px;border-radius:999px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--text);font-weight:600}
+.dex-src-grid .robot-card{animation:ws-rise .35s var(--ease) both}
+.dex-src-grid .robot-card .body{display:grid;gap:6px}
+.dex-ph{display:grid;place-items:center;width:100%;height:100%;min-height:140px;background:var(--surface-2)}
+.dex-ph .r-avatar{border-radius:18px}
+.dex-sighting .ph img{width:100%;height:100%;object-fit:cover}
+.dex-where{font-size:var(--fs-xs);color:var(--text-muted)}
+.dex-local{font-size:var(--fs-xs)}
+.dex-empty{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s4);border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface)}
+.dex-empty p{flex:1 1 260px;margin:0;color:var(--text-muted)}
+.dex-empty strong{color:var(--text)}
+@media (prefers-reduced-motion:reduce){.dex-src-grid .robot-card{animation:none}.dex-tab{transition:none}}
