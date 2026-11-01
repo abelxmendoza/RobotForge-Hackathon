@@ -986,3 +986,34 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .garage-main:has(.ws-tabs){gap:0}
 .garage-main:has(.ws-tabs) > .g-error{margin-bottom:var(--s3)}
 .ws-pane > * + *{margin-top:var(--s4)}
+
+/* Workshop PR 2: pictures, icons, colour. Verdict colours carry meaning
+   (green pass, amber marginal/estimated, red fail, grey not run); teal stays
+   for actions. Each robot gets a picture: its Robodex photo or a drawn face. */
+.r-avatar{flex:none;display:inline-grid;place-items:center;border-radius:10px;overflow:hidden;background:var(--surface-3);border:1px solid var(--border)}
+.r-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.r-avatar.drawn{color:hsl(var(--h) 70% 68%);background:hsl(var(--h) 45% 22% / .55);border-color:hsl(var(--h) 40% 40% / .6);padding:3px}
+.g-robot{grid-template-columns:auto 1fr;align-items:center;column-gap:10px}
+.g-robot-text{display:grid;gap:2px;min-width:0}
+.g-robot-text strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ws-title .r-avatar{border-radius:12px}
+.ws-tile{position:relative}
+.ws-tile-icon{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;margin-bottom:6px;color:var(--link);background:rgba(131,184,255,.12)}
+.ws-tile-label{display:inline-flex;align-items:center;gap:6px}
+.ws-card-icon{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;margin-bottom:4px;color:var(--accent);background:var(--accent-soft)}
+.ws-card.pass .ws-card-icon{color:var(--pass);background:var(--pass-soft)}
+.ws-card.marginal .ws-card-icon{color:var(--marginal);background:var(--marginal-soft)}
+.ws-card.fail .ws-card-icon{color:var(--fail);background:var(--fail-soft)}
+.est-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--marginal);box-shadow:0 0 0 3px var(--marginal-soft);margin-left:6px;vertical-align:middle;font-style:normal;cursor:help}
+.g-field.is-est input{border-color:color-mix(in srgb,var(--marginal) 55%,var(--border))}
+.ws-estnote{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 14px;border:1px dashed var(--marginal);border-radius:12px;background:var(--marginal-soft);color:var(--text);font:inherit;font-size:var(--fs-sm);cursor:pointer}
+.ws-estnote .est-dot{margin-left:0}
+.ws-estnote span{margin-left:auto;color:var(--accent);font-weight:600;white-space:nowrap}
+.g-addchip{display:inline-flex;align-items:center;gap:6px}
+.g-empty-art{display:block;width:min(260px,70%);height:auto;margin:0 0 var(--s3)}
+.g-empty-bot{animation:g-bob 3s ease-in-out infinite;transform-origin:120px 80px}
+@keyframes g-bob{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.g-empty-bot{animation:none}}
+@media (max-width:760px){.g-robot{grid-template-columns:auto 1fr}}
+.ws-tile{min-width:0;overflow:hidden}
+.ws-tile strong{font-size:clamp(.95rem,1.35vw,1.2rem)}

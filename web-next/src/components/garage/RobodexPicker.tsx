@@ -5,14 +5,8 @@
 import { useEffect, useRef } from 'react';
 import { robots as dexRobots, robotSlug } from '@/lib/data';
 import type { Robot } from '@/lib/types';
-import { assetPath } from '@/components/home/asset';
 import RobotPhoto from '@/components/robots/RobotPhoto';
-
-function photoSrc(r: Robot): string {
-  if (r.image_url) return r.image_url.startsWith('assets/') ? assetPath(r.image_url) : r.image_url;
-  if (r.name === 'Pathfinder') return assetPath('assets/img/pathfinder.jpg');
-  return '';
-}
+import { dexPhotoSrc as photoSrc } from './RobotAvatar';
 
 export default function RobodexPicker({ open, onClose, onPick }: {
   open: boolean;
