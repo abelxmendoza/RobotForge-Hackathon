@@ -616,3 +616,17 @@ def test_bom_tables_with_link_or_status_columns_survive(tmp_path):
                    {"md": md, "catalog": catalog(), "tree": ["README.md"]})
     names = [p["name"] for p in out["parts"]]
     assert names == ["HC-SR04", "RPLIDAR A1", "BNO055"]
+
+
+def test_notes_never_rename_a_named_part(tmp_path):
+    # Codex review on #96: the Details fallback is for role names only.
+    md = (
+        "| Part | Qty | Notes |\n|---|---|---|\n"
+        "| OV5647 | 1 | Raspberry Pi 5 (CSI connector) |\n"
+        "| Ultrasonic | 1 | HC-SR04 |\n"
+    )
+    out = run_node(tmp_path, "readme_parts",
+                   {"md": md, "catalog": catalog(), "tree": ["README.md"]})
+    by = {p["name"]: p["catalogId"] for p in out["parts"]}
+    assert by["OV5647"] is None  # NOT the Pi it plugs into
+    assert by["Ultrasonic"] == "ultrasonic_hcsr04"

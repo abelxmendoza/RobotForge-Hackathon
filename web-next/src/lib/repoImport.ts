@@ -679,6 +679,12 @@ const GENERIC_PART_WORDS = new Set([
   "wheels",
 ]);
 
+/** True when a name is only a role ("Camera", "Motor driver"), not a part. */
+export function isGenericPartName(name: string): boolean {
+  const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return !words.length || words.every((w) => GENERIC_PART_WORDS.has(w));
+}
+
 /** Match a free-text part name against the catalogue: squashed
  *  substring, or all-token containment, over ids and names. No fuzzy
  *  matching — near-misses (BNO085 vs BNO055, Pi 4 vs Pi 5) miss, and
@@ -688,9 +694,7 @@ export function matchCatalogPart(
   catalog: { id: string; name: string }[],
 ): string | null {
   const sq = squashName(name);
-  if (!sq) return null;
-  const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-  if (!words.length || words.every((w) => GENERIC_PART_WORDS.has(w))) return null;
+  if (!sq || isGenericPartName(name)) return null;
   for (const part of catalog) {
     if (sq.length >= 3 &&
       (squashName(part.id).includes(sq) || squashName(part.name).includes(sq))) {
@@ -864,9 +868,14 @@ export function withCatalogMatches(
     parts: specimen.parts.map((p) => ({
       ...p,
       // A "Role | Details" hardware table puts the actual part in the
-      // details ("Ultrasonic | HC-SR04 (GPIO 27…)"), so try its head too.
+      // details ("Ultrasonic | HC-SR04 (GPIO 27…)"), so when the name is
+      // only a role, try the head of the details. A named part
+      // ("OV5647 | Raspberry Pi 5 (CSI connector)") never takes its
+      // identity from the notes, which may describe something else.
       catalogId: matchCatalogPart(p.name, catalog) ??
-        (p.notes ? matchCatalogPart(p.notes.split(/[(\u2014\u2013,;]/)[0].trim(), catalog) : null),
+        (p.notes && isGenericPartName(p.name)
+          ? matchCatalogPart(p.notes.split(/[(\u2014\u2013,;]/)[0].trim(), catalog)
+          : null),
     })),
   };
 }
