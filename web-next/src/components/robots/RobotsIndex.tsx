@@ -11,15 +11,27 @@ import RobotCard from "./RobotCard";
 import GroupCard, { gateTally, groupSlug } from "./GroupCard";
 import LocalDexSightings from "./LocalDexSightings";
 import {
-  ROBOT_SOURCE_META,
-  ROBOT_SOURCE_ORDER,
-  type RobotSource,
-} from "@/lib/robotSource";
+  DEX_SOURCES,
+  isPhotoDraft,
+  MyRobotsGrid,
+  SightingsGrid,
+  SourceBadge,
+  useDexSources,
+  type DexSource,
+} from "./DexSources";
 
-/* The source tabs answer how RobotForge knows a robot. Inside each source,
-   the existing group cards keep the mobility taxonomy intact. Opening a
-   group swaps the view to that group's robot grid; the open group lives in
-   the URL hash so the view is shareable and Back returns to the group grid. */
+/* The Robodex split by how each robot is known (ported from PR #54):
+   My robots (the Workshop garage), Sighted and From photos (sightings —
+   a place recorded means seen in person), and Researched (the catalog).
+   Inside Researched, the existing group cards keep the mobility taxonomy
+   intact. Opening a group swaps the view to that group's robot grid; the
+   open tab and group live in the URL hash so the view is shareable and
+   Back returns to the group grid. A catalog robot whose own record marks
+   it a photo draft (TurtleBot3 Waffle Pi) files under From photos, not
+   Researched — see isPhotoDraft in DexSources. */
+
+const researchedRobots = robots.filter((r) => !isPhotoDraft(r));
+const photoDraftRobots = robots.filter(isPhotoDraft);
 
 function groupFromHash(): string | null {
   if (typeof window === "undefined") return null;
@@ -28,13 +40,40 @@ function groupFromHash(): string | null {
   return MOBILITY_CLASSES.find((cls) => groupSlug(cls) === m[1]) ?? null;
 }
 
+function sourceFromHash(): DexSource | null {
+  if (typeof window === "undefined") return null;
+  if (/^#group=/.test(window.location.hash)) return "researched";
+  const m = window.location.hash.match(/^#source=([a-z]+)$/);
+  return m && DEX_SOURCES.some((s) => s.id === m[1])
+    ? (m[1] as DexSource)
+    : null;
+}
+
 export default function RobotsIndex() {
-  const [activeSource, setActiveSource] = useState<RobotSource>("researched");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [source, setSource] = useState<DexSource | null>(null);
   const groupHeadRef = useRef<HTMLHeadingElement>(null);
+  const dex = useDexSources();
+  /* Default tab: My robots when you have any, otherwise Researched. */
+  const shown: DexSource =
+    source ?? (dex.mine && dex.mine.length ? "mine" : "researched");
+  const counts: Record<DexSource, number | null> = {
+    mine: dex.mine ? dex.mine.length : null,
+    sighted: dex.sighted.length,
+    photos: dex.photos.length + photoDraftRobots.length,
+    researched: researchedRobots.length,
+  };
+  const pickSource = (id: DexSource) => {
+    setSource(id);
+    setOpenGroup(null);
+    window.history.pushState(null, "", `#source=${id}`);
+  };
 
   useEffect(() => {
-    const sync = () => setOpenGroup(groupFromHash());
+    const sync = () => {
+      setOpenGroup(groupFromHash());
+      setSource(sourceFromHash());
+    };
     sync();
     window.addEventListener("hashchange", sync);
     window.addEventListener("popstate", sync);
@@ -54,27 +93,9 @@ export default function RobotsIndex() {
     window.history.pushState(null, "", window.location.pathname + window.location.search);
   };
 
-  const selectSource = (source: RobotSource) => {
-    setActiveSource(source);
-    setOpenGroup(null);
-    window.history.replaceState(
-      null,
-      "",
-      window.location.pathname + window.location.search,
-    );
-  };
-
-  const sourceMembers = robots.filter((robot) => robot.source === activeSource);
-  const sourceCounts = Object.fromEntries(
-    ROBOT_SOURCE_ORDER.map((source) => [
-      source,
-      robots.filter((robot) => robot.source === source).length,
-    ]),
-  ) as Record<RobotSource, number>;
-
   const byClass = new Map<string, typeof robots>();
   for (const cls of MOBILITY_CLASSES) byClass.set(cls, []);
-  for (const r of sourceMembers) {
+  for (const r of researchedRobots) {
     const m = r.mobility_class ?? "";
     if (byClass.has(m)) byClass.get(m)!.push(r);
   }
@@ -87,55 +108,54 @@ export default function RobotsIndex() {
           <div className="eyebrow">Robots</div>
           <h1><Term k="robodex">Robodex</Term></h1>
           <p className="lede">
-            Every robot RobotForge knows, first sorted by how we know it,
-            then shelved by how it moves. Source badges tell you what kind
-            of evidence sits behind the entry; gate badges still come only
-            from recorded runs.{" "}
+            Every robot RobotForge knows, sorted by how we know it. The
+            source tells you how far to trust its numbers.{" "}
             <Link href="/#workflow">How the test works →</Link>
           </p>
         </div>
       </div>
 
-      <div className="tabs source-tabs" role="tablist" aria-label="Robot source">
-        {ROBOT_SOURCE_ORDER.map((source) => (
+      <div className="dex-tabs" role="tablist" aria-label="Where the robot comes from">
+        {DEX_SOURCES.map((s) => (
           <button
-            className="tab"
+            key={s.id}
             type="button"
             role="tab"
-            aria-selected={activeSource === source}
-            key={source}
-            onClick={() => selectSource(source)}
+            aria-selected={shown === s.id}
+            className={"dex-tab src-" + s.id}
+            onClick={() => pickSource(s.id)}
           >
-            {ROBOT_SOURCE_META[source].label} ({sourceCounts[source]})
+            {s.label}
+            {counts[s.id] !== null && (
+              <span className="dex-count">{counts[s.id]}</span>
+            )}
           </button>
         ))}
       </div>
-      <p className="sub source-summary">
-        {ROBOT_SOURCE_META[activeSource].description}
+      <p className="dex-blurb">
+        <SourceBadge source={shown} />{" "}
+        {DEX_SOURCES.find((s) => s.id === shown)!.blurb}
       </p>
 
-      {sourceMembers.length === 0 ? (
-        <div className="state-box source-empty" role="tabpanel">
-          <h2>No {ROBOT_SOURCE_META[activeSource].label.toLowerCase()} yet</h2>
-          {activeSource === "my" ? (
-            <p>
-              Robots you own live in <Link href="/garage/">My Robots</Link> in
-              the Workshop. A future catalog sync can promote them here without
-              making private browser data public.
-            </p>
-          ) : activeSource === "sighted" ? (
-            <p>
-              Add an in-person sighting with your photo, where and when you saw
-              it, and credit for its owner. Measurements stay estimates unless
-              the owner let you measure the robot.
-            </p>
-          ) : (
-            <p>
-              Start a robot from a 2D image in <Link href="/garage/">My Robots</Link>.
-              Photo-only dimensions stay clearly marked as estimated.
-            </p>
+      {shown === "mine" ? (
+        <MyRobotsGrid mine={dex.mine} />
+      ) : shown === "sighted" ? (
+        <SightingsGrid items={dex.sighted} source="sighted" />
+      ) : shown === "photos" ? (
+        <>
+          {photoDraftRobots.length > 0 && (
+            <div className="robot-grid dex-src-grid">
+              {photoDraftRobots.map((r) => (
+                <RobotCard key={r.name} robot={r} />
+              ))}
+            </div>
           )}
-        </div>
+          <SightingsGrid
+            items={dex.photos}
+            source="photos"
+            hasOther={photoDraftRobots.length > 0}
+          />
+        </>
       ) : openGroup === null ? (
         <div className="group-grid" id="group-grid">
           {MOBILITY_CLASSES.map((cls) => (
