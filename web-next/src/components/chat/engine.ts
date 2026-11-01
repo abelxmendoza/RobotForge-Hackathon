@@ -1432,6 +1432,306 @@ function textAnswer(
   return out;
 }
 
+/* ---------------- conversational layer ----------------
+ * Small talk is not a data lookup. A greeting, a "who are you",
+ * a "hi, I'm using this from my phone" used to fall through every
+ * matcher below and land on the recorded-data fallback, which
+ * reads like a failed search. This layer sits in front of the
+ * data path and answers purely conversational messages
+ * conversationally — short, warm, steering back to what Wrench
+ * can actually do. It only fires on whole-message conversational
+ * shapes: a greeting plus at most an introduction or a context
+ * remark, a thanks, a farewell, a meta question. Anything
+ * carrying a factual payload keeps going to the matchers, and
+ * the honest fallback for unknown facts is untouched. */
+
+export type ConversationMode = "chat" | "design";
+
+const GREETING_HEADS = [
+  "good morning",
+  "good afternoon",
+  "good evening",
+  "hi there",
+  "hello there",
+  "hey there",
+  "hello",
+  "hi",
+  "hey",
+  "hiya",
+  "howdy",
+  "morning",
+  "yo",
+];
+
+/* Words that, right after "i'm", mean it is not a name. */
+const NOT_A_NAME = new Set([
+  "using", "on", "here", "new", "just", "testing", "trying",
+  "looking", "browsing", "not", "so", "very", "really", "stuck",
+  "lost", "curious", "interested", "back", "sorry", "happy",
+  "glad", "confused", "sure", "in", "at", "from",
+]);
+
+const TESTING_SET = new Set([
+  "just testing", "testing", "just testing this", "just testing things",
+  "test", "just checking", "just checking it out", "just trying",
+  "just trying this", "trying it out", "just looking",
+  "just looking around", "just browsing", "looking around", "browsing",
+  "just exploring", "exploring",
+]);
+
+const THANKS_SET = new Set([
+  "thanks", "thank you", "thanks so much", "thank you so much",
+  "many thanks", "thx", "ty", "thanks a lot", "thanks wrench",
+  "thank you wrench",
+]);
+
+const BYE_SET = new Set([
+  "bye", "goodbye", "good bye", "bye bye", "see you", "see ya",
+  "see you later", "later", "gtg", "gotta go", "got to go",
+  "i have to go", "i gotta go", "thats all", "that is all",
+  "nothing else", "i m done", "im done", "all done",
+]);
+
+const APPROVAL_SET = new Set([
+  "cool", "nice", "awesome", "great", "sweet", "neat", "wow",
+  "ok", "okay", "k", "got it", "understood", "sounds good",
+  "makes sense", "perfect", "excellent", "brilliant", "love it",
+  "good", "good stuff", "very cool", "so cool", "thats cool",
+  "that is cool", "nice one", "great stuff",
+]);
+
+const IDENTITY_SET = new Set([
+  "who are you", "what are you", "who is wrench", "what is wrench",
+  "who is this", "are you an ai", "are you a live ai", "are you real",
+  "are you a robot", "are you human", "are you a human",
+  "are you chatgpt", "you re an ai", "what is this",
+  "what is this app", "what is this site",
+]);
+
+const CAPABILITIES_SET = new Set([
+  "what can you do", "what do you do", "what can i do",
+  "what can i do here", "what can you answer", "what can i ask",
+  "what can i ask you", "help", "help me", "i need help",
+  "how do i start", "where do i start", "how do i begin",
+  "where do i begin", "get started", "getting started",
+  "how does this work", "i m new", "i am new", "im new",
+  "new here", "i m new here",
+]);
+
+const CHIP_PICKS = [
+  "Which robots passed the gate?",
+  "Tell me about Andino",
+  "Plan a differential rover build",
+];
+
+function convChips(suggestions: string[]): string[] {
+  const pool = suggestions && suggestions.length ? suggestions : CHIP_PICKS;
+  const out = CHIP_PICKS.filter((p) => pool.indexOf(p) >= 0);
+  return (out.length ? out : CHIP_PICKS).slice(0, 3);
+}
+
+function capName(raw: string): string {
+  return raw
+    .split(" ")
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+type ConvKind =
+  | "greeting"
+  | "phone"
+  | "testing"
+  | "thanks"
+  | "bye"
+  | "approval"
+  | "identity"
+  | "capabilities";
+
+function convReply(
+  kind: ConvKind,
+  mode: ConversationMode,
+  name: string | null,
+  suggestions: string[]
+): AnswerResult {
+  const hi = name ? "Hi " + esc(capName(name)) + " — " : "Hi — ";
+  if (mode === "design") {
+    const byKind: Record<ConvKind, string> = {
+      greeting:
+        "<p>" + hi + "you&rsquo;re in Design a robot. Tell me what you want " +
+        "to build — what it should do, where it will run, about how big — " +
+        "and I&rsquo;ll draft a spec for it, ready to check.</p>",
+      phone:
+        "<p>" + hi + "phones are fine here; the Forge runs in your " +
+        "browser. When you&rsquo;re ready, describe the robot you want " +
+        "and I&rsquo;ll draft its spec.</p>",
+      testing:
+        "<p>Test away — describing a robot here only drafts a spec, and " +
+        "nothing is saved until you keep it. If you want a shape to try: " +
+        "&ldquo;a small rover that patrols a warehouse aisle&rdquo;.</p>",
+      thanks:
+        "<p>Any time. Describe the next robot whenever you&rsquo;re " +
+        "ready.</p>",
+      bye: "<p>See you. Your saved robots stay in My robots.</p>",
+      approval:
+        "<p>Glad to hear it. Describe the robot and I&rsquo;ll draft " +
+        "the spec.</p>",
+      identity:
+        "<p>I&rsquo;m Wrench. On this side of the Forge I draft robot " +
+        "specs from plain descriptions — you describe it, I draft it, " +
+        "and the checks run before anything is saved.</p>",
+      capabilities:
+        "<p>Here I draft a robot spec from your description. Say what " +
+        "the robot should do, where it will run, and roughly how big — " +
+        "for example, &ldquo;a differential rover for carrying parts " +
+        "across a workshop&rdquo;. The spec then goes through the same " +
+        "checks as any RobotForge build.</p>",
+    };
+    return { html: byKind[kind] };
+  }
+  const chips = convChips(suggestions);
+  const byKind: Record<ConvKind, string> = {
+    greeting:
+      "<p>" + hi + "I&rsquo;m Wrench, RobotForge&rsquo;s guide. I answer " +
+      "from the recorded data — Robodex gate verdicts, the parts " +
+      "catalogue, build planning — and I say so when something " +
+      "isn&rsquo;t recorded.</p><p>Try one of these:</p>",
+    phone:
+      "<p>" + hi + "phones are fine here. RobotForge runs in your " +
+      "browser, and Ask Wrench works the same on a phone as on a " +
+      "desktop.</p><p>Ask me for a gate verdict, a part from the " +
+      "catalogue, or a build plan:</p>",
+    testing:
+      "<p>Go ahead and test — asking me questions changes nothing, and " +
+      "anything that would change a saved robot asks you first.</p>" +
+      "<p>Try one of these:</p>",
+    thanks:
+      "<p>Any time. If you want to keep going — a gate verdict, a part " +
+      "lookup, or a build plan — just say the word.</p>",
+    bye:
+      "<p>See you. The Robodex, the catalogue and your saved robots " +
+      "will be here when you come back.</p>",
+    approval:
+      "<p>Glad to hear it. Want to keep going — a gate verdict, a " +
+      "part, or a build plan?</p>",
+    identity:
+      "<p>I&rsquo;m Wrench, RobotForge&rsquo;s guide. I answer from " +
+      "the recorded data — Robodex gate verdicts, the parts catalogue, " +
+      "build plans, and how the gate works — and I say so when " +
+      "something isn&rsquo;t in it. Questions the data can&rsquo;t " +
+      "answer can go to a live model when the endpoint is on; those " +
+      "answers are badged LIVE MODEL.</p>",
+    capabilities:
+      "<p>Here&rsquo;s what I can do from the recorded data: pull up " +
+      "any Robodex robot and its gate verdict, find parts in the " +
+      "catalogue, plan a build from a starter kind and list what " +
+      "you&rsquo;d need, and explain how the gate works and its " +
+      "thresholds.</p><p>Pick one to start:</p>",
+  };
+  const noChips: ConvKind[] = ["bye"];
+  return noChips.indexOf(kind) >= 0
+    ? { html: byKind[kind] }
+    : { html: byKind[kind], chips: chips };
+}
+
+export function conversationalAnswer(
+  question: string,
+  mode: ConversationMode,
+  suggestions: string[]
+): AnswerResult | null {
+  const n = normalize(question);
+  if (!n) return null;
+
+  /* Strip a leading greeting (and a "wrench" vocative after it);
+   * what remains decides the kind. */
+  let rest = n;
+  let greeted = false;
+  const heads = GREETING_HEADS.slice().sort(
+    (a, b) => b.length - a.length
+  );
+  for (const g of heads) {
+    if (rest === g) {
+      rest = "";
+      greeted = true;
+      break;
+    }
+    if (rest.indexOf(g + " ") === 0) {
+      rest = rest.slice(g.length + 1);
+      greeted = true;
+      break;
+    }
+  }
+  if (greeted) {
+    while (
+      rest === "wrench" ||
+      rest.indexOf("wrench ") === 0 ||
+      rest === "robotforge" ||
+      rest.indexOf("robotforge ") === 0
+    ) {
+      const cut = rest.indexOf(" ");
+      rest = cut < 0 ? "" : rest.slice(cut + 1);
+      if (!rest) break;
+    }
+  }
+
+  /* "i m ..." stripped copy: several remarks wear an intro. */
+  const bare =
+    rest.indexOf("i m ") === 0
+      ? rest.slice(4)
+      : rest.indexOf("i am ") === 0
+        ? rest.slice(5)
+        : rest;
+
+  /* Phone / mobile context remark ("hi i'm using this from my
+   * phone"): the word phone/mobile plus "my", kept short, wins
+   * over the greeting it rode in on. */
+  const rtoks = tokens(rest);
+  if (
+    rtoks.length > 0 &&
+    rtoks.length <= 10 &&
+    rtoks.indexOf("my") >= 0 &&
+    (rtoks.indexOf("phone") >= 0 || rtoks.indexOf("mobile") >= 0)
+  ) {
+    return convReply("phone", mode, null, suggestions);
+  }
+
+  if (!rest) {
+    return greeted ? convReply("greeting", mode, null, suggestions) : null;
+  }
+
+  /* Name introduction: "i'm Abel", "my name is Abel", "this is Abel". */
+  const intro = rest.match(
+    /^(?:i m|i am|my name is|this is) ([a-z]+)( [a-z]+)?$/
+  );
+  if (intro && !NOT_A_NAME.has(intro[1])) {
+    return convReply(
+      "greeting",
+      mode,
+      intro[1] + (intro[2] || ""),
+      suggestions
+    );
+  }
+
+  if (TESTING_SET.has(rest) || TESTING_SET.has(bare)) {
+    return convReply("testing", mode, null, suggestions);
+  }
+  if (THANKS_SET.has(rest) || THANKS_SET.has(bare) || THANKS_SET.has(n)) {
+    return convReply("thanks", mode, null, suggestions);
+  }
+  if (BYE_SET.has(rest) || BYE_SET.has(n)) {
+    return convReply("bye", mode, null, suggestions);
+  }
+  if (APPROVAL_SET.has(rest) || APPROVAL_SET.has(bare)) {
+    return convReply("approval", mode, null, suggestions);
+  }
+  if (IDENTITY_SET.has(n) || IDENTITY_SET.has(rest)) {
+    return convReply("identity", mode, null, suggestions);
+  }
+  if (CAPABILITIES_SET.has(n) || CAPABILITIES_SET.has(rest)) {
+    return convReply("capabilities", mode, null, suggestions);
+  }
+  return null;
+}
+
 /* ---------------- the engine ---------------- */
 
 export function createEngine(data: EngineData): Engine {
@@ -1466,6 +1766,10 @@ export function createEngine(data: EngineData): Engine {
     if (!qt.length) {
       return { html: "<p>Ask me about a robot, a part, or the gate.</p>", chips: suggestions };
     }
+
+    /* 0. conversational layer: small talk is not a data lookup */
+    const conv = conversationalAnswer(q, "chat", suggestions);
+    if (conv) return conv;
 
     /* 1. robots: strong entity match wins */
     const rHits = findRobots(qt, ctx.data.robots).filter((h) => h.score >= 6);

@@ -39,6 +39,7 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useForgeAssistant } from '@/components/chat/ChatDock';
+import { conversationalAnswer } from '@/components/chat/engine';
 import PartPhotoIntake from '@/components/inventory/PartPhotoIntake';
 import { useDispatch } from 'react-redux';
 import { setStep, setTab } from '@/store/forgeSlice';
@@ -1291,7 +1292,15 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       else if (a && a.kind === 'photo') await runPhoto(a.file, value);
       else if (a && a.kind === 'doc') await runDoc(a.file, value);
       else if (a && a.kind === 'scan') await runScan(a.file);
-      else if(inputMode==='design')await runText(value);
+      else if(inputMode==='design'){
+        /* Small talk is not a spec: greetings and meta questions get
+         * a conversational reply that steers back to describing a
+         * robot, instead of being sent to the describe endpoint (or
+         * replayed as the recorded sample) as if they were one. */
+        const conv=conversationalAnswer(value,'design',[]);
+        if(conv){pushUser(<p>{value}</p>);pushNote(<div className="main-assistant-reply"><div dangerouslySetInnerHTML={{__html:conv.html}}/></div>);}
+        else await runText(value);
+      }
       else{pushUser(<p>{value}</p>);assistant.ask(value);}
     } finally {
       busyRef.current = false;
