@@ -1,0 +1,4 @@
+# runtime artifacts: content-addressed page cache + generated proposals
+cache/
+proposals/
+__pycache__/
