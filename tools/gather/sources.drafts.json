@@ -1,0 +1,45 @@
+{
+ "version": 1,
+ "comment": "Draft gather registry entries for parts NOT yet in the catalog, created by gather_part.py (on-demand gathering, Forge Engine §8). Same shape as sources.json. An entry is promoted into sources.json by `gather.py apply` when its new-part proposal is applied.",
+ "sources": [
+  {
+   "part_id": "as5600_magnetic_encoder",
+   "mpn": "AS5600",
+   "supplier": "seeedstudio",
+   "ttl_seconds": {
+    "price": 86400,
+    "stock": 21600,
+    "specs": 2592000,
+    "datasheet": 7776000
+   },
+   "pages": [
+    {
+     "kind": "product",
+     "url": "https://www.seeedstudio.com/Grove-12-bit-Magnetic-Rotary-Position-Sensor-AS5600-p-4192.html",
+     "supplier": "seeedstudio",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ]
+    },
+    {
+     "kind": "datasheet",
+     "url": "https://files.allicdata.com/pdf/ds/2811/AS5600-ASOM%20datasheet.pdf",
+     "supplier": "allicdata",
+     "provides": [
+      "specs",
+      "datasheet"
+     ]
+    }
+   ],
+   "draft": true,
+   "origin": {
+    "via": "gather_part",
+    "requested_name": "AS5600 magnetic encoder",
+    "requested_by": "torque (live proof)",
+    "at": "2026-11-01T10:26:25Z"
+   }
+  }
+ ]
+}

@@ -78,6 +78,88 @@ source is what later lets a value become `cross_checked`) and datasheet
 pages, whose values override product-page values on conflict, with the
 override noted in the proposal.
 
+## Gathering an UNKNOWN part (on demand)
+
+`gather.py` refreshes parts the catalog already knows. When chat, a BOM,
+or a Parts-API 404 names a part the catalog does NOT know, `gather_part.py`
+is the intake — it never dead-ends and never writes the catalog:
+
+```bash
+# 1. dedupe first: a known part stops here, before any fetch
+python3 tools/gather/gather_part.py "TB6612"
+#   -> {"status": "known", "part_id": "driver_tb6612fng", ...}
+
+# 2. a genuine miss: an agent/human resolves sources by web search
+#    (manufacturer product page + one distributor listing), then:
+python3 tools/gather/gather_part.py "AS5600 magnetic encoder" \
+    --url https://www.seeedstudio.com/Grove-12-bit-Magnetic-Rotary-Position-Sensor-AS5600-p-4192.html \
+    --url https://files.allicdata.com/pdf/ds/2811/AS5600-ASOM%20datasheet.pdf \
+    --mpn AS5600
+#   -> draft registry entry + proposal, state web_gathered
+
+# 3. a miss with no sources yet is queued, not dropped
+python3 tools/gather/gather_part.py "Some new part"
+#   -> one line in requests.jsonl, status needs_sources
+
+# 4. drain the queue
+python3 tools/gather/gather_part.py --from-requests
+```
+
+How each step behaves:
+
+- **Dedupe** is deterministic (squashed-substring + all-token matching
+  over catalog ids, names, and `source` strings). No fuzzy edit distance:
+  `BNO085` does NOT match the catalog's `BNO055`. A hit costs no fetch,
+  no model call, no proposal, and no registry entry.
+- **Registry draft.** A miss creates ONE entry in `sources.drafts.json`
+  (same shape as `sources.json`, marked `"draft": true` with its origin).
+  Re-running reuses it and merges in any new page URLs — there is never a
+  second entry for the same part. Page kinds default by URL (`.pdf` =
+  datasheet) or per-URL `--kind`; suppliers default from the host.
+- **Gather.** Each page runs through the same pipeline (content-hash
+  cache, Muse Spark extraction, literal-quote validation, unit
+  normalization) against a synthetic stub part, so every value arrives as
+  a `spec_new`/`price_update` change in the usual proposal format, plus
+  `new_part: true`, the `part_stub`, and a deterministic **photo
+  candidate** (the first product page's `og:image`, with supplier credit,
+  state `web_gathered`). A re-run over unchanged pages makes **zero model
+  calls** and proposes zero changes — the §8.1 property holds on this
+  path too.
+- **Conflicts.** When two sources disagree on a spec, the datasheet value
+  wins (the pipeline's precedence), the losing value is recorded on the
+  change under `conflicts`, a note names both values with their quotes,
+  and the change is forced into the "Confirm individually" queue.
+- **Apply.** `gather.py apply <run-id>` stays the separate step. For a
+  `new_part` entry it creates the catalog part (specs, `price_estimate`,
+  `photo`) and promotes the draft entry from `sources.drafts.json` into
+  `sources.json` — one registry entry per part, in exactly one registry.
+
+### The requests queue — `requests.jsonl`
+
+One JSON object per line:
+
+```json
+{"name": "AS5600 magnetic encoder", "hint_url": "https://…", "requested_by": "chat", "at": "2026-11-01T10:00:00Z", "status": "pending"}
+```
+
+Fields: `name` (required, free text), `hint_url` or `urls` (optional —
+the sources an agent resolved; a `kinds` list parallel to `urls` is
+honored), `requested_by`, `at`, `status`. Statuses: `pending` →
+`proposed` (drain gathered it; `part_id`/`run_id` recorded), `known`
+(dedupe hit; `part_id` recorded), `needs_sources` (no URLs yet — an
+agent resolves sources and adds them, then the next drain picks it up).
+A line whose sources all fail to fetch stays actionable with a
+`last_attempt` note rather than being silently dropped, and a duplicate
+of a part already proposed in the same drain is marked as such instead
+of being gathered twice. Queueing dedupes too: a second open line for
+the same normalized name is refused.
+
+This file is the intake that chat / BOM / API-404 triggers append to.
+The site-side counterpart — a Worker endpoint that accepts an
+unknown-part report from the web app and appends to this queue — is a
+documented **follow-up**, not part of this change; today the queue is
+drained from the CLI.
+
 ## How this feeds the rest of the Engine
 
 The build-plan engine's price/spec lines accept `source_kind: web_gathered`
