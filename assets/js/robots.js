@@ -1,19 +1,32 @@
 'use strict';
-/* Robots page: verdict + class filter chips and parts search. The
+/* Robots page: source tabs, verdict + class filter chips, and parts search. The
    cards and parts are server-rendered by `robotforge site`; this only
    hides. The two chip rows are independent filters — a card shows
-   only when it matches both. Class chips come from the Robodex
+   only when it matches all three. Class chips come from the Robodex
    taxonomy (catalog.MOBILITY_TAXONOMY); classes with no robots are
    rendered disabled server-side and never reach this handler. */
 
-const rfFilters = { status: 'all', mobility: 'all' };
+const rfFilters = { source: 'researched', status: 'all', mobility: 'all' };
 function rfApplyFilters() {
+  let shown = 0;
   $$('#robot-grid .robot-card').forEach(card => {
     card.hidden =
+      card.dataset.source !== rfFilters.source ||
       (rfFilters.status !== 'all' && card.dataset.status !== rfFilters.status) ||
       (rfFilters.mobility !== 'all' && card.dataset.mobility !== rfFilters.mobility);
+    if (!card.hidden) shown++;
   });
+  const empty = $('#robots-empty');
+  if (empty) empty.hidden = shown > 0;
 }
+
+$$('[data-sfilter]').forEach(tab => tab.addEventListener('click', () => {
+  rfFilters.source = tab.dataset.sfilter;
+  $$('[data-sfilter]').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+  const summary = $('#source-summary');
+  if (summary) summary.textContent = tab.dataset.description;
+  rfApplyFilters();
+}));
 
 $$('[data-filter]').forEach(chip => chip.addEventListener('click', () => {
   rfFilters.status = chip.dataset.filter;

@@ -29,10 +29,22 @@ def test_robots_index_shows_every_robot_with_its_true_badge():
         card = next(c for c in cards if f'href="{slugify(r.name)}/"' in c)
         status = r.gate_status.status
         assert f'data-status="{status}"' in card
+        assert f'data-source="{r.source}"' in card
+        assert f'class="source-badge source-{r.source}"' in card
         assert LABEL[status] in card
         for other, label in LABEL.items():
             if other != status:
                 assert label not in card, (r.name, other)
+
+
+def test_robots_index_has_source_tabs_with_honest_counts():
+    page = render_robots_index(dex, cat)
+    assert 'role="tablist" aria-label="Robot source"' in page
+    assert '>My Robots (0)</button>' in page
+    assert '>Sighted Robots (0)</button>' in page
+    assert '>From Photos (0)</button>' in page
+    assert f'>Researched ({len(dex.robots)})</button>' in page
+    assert page.count('class="source-badge source-researched"') == len(dex.robots)
 
 
 def test_robot_pages_show_measured_numbers_and_take_apart():

@@ -84,6 +84,7 @@ LICENSE_ALLOWLIST = ("MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause",
                      "CC-BY-4.0", "CC-BY-SA-4.0", "proprietary-part")
 
 GATE_STATUSES = ("PASS", "MARGINAL", "FAIL", "NOT_GATED")
+ROBOT_SOURCES = ("my", "sighted", "photo", "researched")
 
 # Non-gate evidence. A *check* is a computation recorded beside the gate
 # status — never inside it: it cannot back a gate badge, change a gate
@@ -403,6 +404,7 @@ class RobotEntry:
     spec_file: str | None
     provenance: dict
     gate_status: GateStatus
+    source: str
     mobility_class: str = ""
     subtype: str = ""
     image_url: str | None = None
@@ -429,6 +431,11 @@ class RobotEntry:
     def from_dict(cls, d: dict) -> "RobotEntry":
         mobility_class = str(d.get("mobility_class", ""))
         subtype = str(d.get("subtype", ""))
+        source = str(d.get("source", ""))
+        if source not in ROBOT_SOURCES:
+            raise CatalogError(
+                f"{d.get('name')}: source {source!r} is not one of "
+                f"{ROBOT_SOURCES}")
         if mobility_class not in MOBILITY_CLASSES:
             raise CatalogError(
                 f"{d.get('name')}: unknown mobility class "
@@ -449,6 +456,7 @@ class RobotEntry:
                    spec_file=d.get("spec_file"),
                    provenance=dict(d.get("provenance", {})),
                    gate_status=GateStatus.from_dict(d["gate_status"]),
+                   source=source,
                    mobility_class=mobility_class,
                    subtype=subtype,
                    image_url=d.get("image_url"),
@@ -458,6 +466,7 @@ class RobotEntry:
     def to_dict(self) -> dict:
         d = {"number": self.number, "name": self.name,
                 "class": self.robot_class,
+                "source": self.source,
                 "description": self.description,
                 "key_specs": self.key_specs,
                 "mobility_class": self.mobility_class,

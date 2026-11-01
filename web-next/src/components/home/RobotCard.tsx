@@ -3,6 +3,7 @@ import { robotSlug } from "@/lib/data";
 import type { Robot } from "@/lib/types";
 import { assetPath } from "./asset";
 import RobotPhoto from "@/components/robots/RobotPhoto";
+import { sourceBadge } from "@/lib/robotSource";
 
 /**
  * One Robodex card in the landing robot row — a line-for-line port of
@@ -90,6 +91,7 @@ export default function RobotCard({ robot }: { robot: Robot }) {
       )}
       <div className="body">
         <span className="dex">{dex}</span>
+        <span className={`source-badge source-${robot.source}`}>{sourceBadge(robot)}</span>
         <h3>{robot.name}</h3>
         <span className="cls">
           {robot.mobility_class} · {robot.subtype}

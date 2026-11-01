@@ -222,6 +222,11 @@ img{max-width:100%}
 .robot-card .ph.ai img{object-fit:cover;padding:0}
 .robot-card .body{padding:var(--s4) var(--s4) var(--s5);display:grid;gap:6px}
 .robot-card .dex{font:600 12px/1 var(--mono);color:var(--text-faint)}
+.source-badge{justify-self:start;padding:4px 7px;border:1px solid var(--border-strong);border-radius:999px;
+  color:var(--text-muted);background:var(--surface-2);font:700 10px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.source-badge.source-my{border-color:var(--accent);color:var(--accent)}
+.source-badge.source-sighted{border-color:var(--marginal);color:var(--marginal)}
+.source-badge.source-photo{border-style:dashed}
 .robot-card h3{font-size:var(--fs-lg)}
 .robot-card .cls{color:var(--text-muted);font-size:var(--fs-xs)}
 .robot-card .verdict{justify-self:start;margin-top:6px}
