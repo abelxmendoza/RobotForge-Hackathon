@@ -499,6 +499,7 @@ export default function Garage() {
   /* Remove asks first: one click arms it, the second confirms. It
    * disarms when another robot is picked. */
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  useEffect(() => { setConfirmRemove(null); }, [robot?.id]);
   const removeRobot = () => {
     if (!robot) return;
     if (confirmRemove !== robot.id) { setConfirmRemove(robot.id); return; }

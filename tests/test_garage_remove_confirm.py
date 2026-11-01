@@ -12,3 +12,7 @@ def test_remove_needs_a_second_click():
     assert arm < delete
     assert "Yes, remove" in SRC and "Cancel" in SRC
     assert "can&apos;t be undone" in SRC
+
+
+def test_switching_robots_disarms_remove():
+    assert "useEffect(() => { setConfirmRemove(null); }, [robot?.id]);" in SRC
