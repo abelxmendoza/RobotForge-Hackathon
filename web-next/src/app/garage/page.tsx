@@ -1,5 +1,5 @@
 /* Workshop — your robots and Wrench on one page: bring a robot in, edit
- * it, keep every upgrade as a version, and ask Wrench beside it. */
+ * it, keep every upgrade as a version, and ask Wrench from the bar at the bottom. */
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import Workshop from "@/components/garage/Workshop";
@@ -16,7 +16,7 @@ export default function WorkshopPage() {
         <div>
           <h1>Workshop</h1>
           <p className="lede">
-            Your robots, and Wrench beside them. Bring in the robot you have,
+            Your robots, with Wrench at the bottom of the page. Bring in the robot you have,
             even a broken one, try upgrades before you buy parts, or ask Wrench
             to check, change or design one. Every change is checked and saved
             as a version.

@@ -862,27 +862,30 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .ta-teardown{flex-wrap:wrap;gap:var(--s2);align-items:center}
 .ta-teardown-label{font-size:var(--fs-sm,13px);font-weight:600;margin-left:var(--s2)}
 
-/* Workshop: your robots and Wrench on one page */
+/* Workshop: your robots full width, Wrench pinned at the bottom centre
+   (the same oval as the bar on other pages; .chat-bar positions it). */
 .content--wide{max-width:1680px}
-.workshop{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,440px);gap:var(--s5);align-items:start}
-.workshop-toggle{display:none}
+.workshop{padding-bottom:140px}
 .workshop-robots{min-width:0}
-.workshop-wrench{
-  position:sticky;top:var(--s4);min-width:0;
-  max-height:calc(100dvh - 2*var(--s4));overflow-y:auto;overscroll-behavior:contain;
-  border:1px solid var(--border-strong);border-radius:var(--r-lg);
-  background:var(--surface);padding:var(--s4);
-}
-.workshop-wrench-title{font-size:var(--fs-lg);margin:0 0 var(--s3)}
-.workshop-wrench .forge-samples,.workshop-wrench .composer-row{flex-wrap:wrap}
-/* Wrench's composer in the Workshop: the same oval as the bottom bar,
-   kept in reach while the docked thread scrolls. */
 .main-chat-composer{background:transparent;border:0;padding:0;gap:var(--s2)}
-.workshop-wrench .forge-composer{
-  position:sticky;bottom:calc(-1 * var(--s4));z-index:2;
-  margin:0 calc(-1 * var(--s4)) calc(-1 * var(--s4));
-  padding:var(--s3) var(--s4) var(--s4);
-  background:linear-gradient(to bottom, transparent, var(--surface) 28%);
+.workshop-wrench .wrench-panel[hidden]{display:none}
+.wrench-panel-body{overflow-y:auto;overscroll-behavior:contain;padding:0 var(--s4) var(--s4);min-height:120px}
+.wrench-panel-body .forge-samples,.wrench-panel-body .main-chat-suggestions{flex-wrap:wrap}
+/* Samples and suggestions sit above the thread, so the newest reply is
+   what shows at the bottom of the panel. */
+.wrench-panel-body{display:flex;flex-direction:column}
+.wrench-panel-body > .mode-banner{order:-3;margin-top:var(--s3)}
+.wrench-panel-body > .forge-samples{order:-2;margin:var(--s3) 0 var(--s2)}
+.wrench-panel-body > .main-chat-suggestions{order:-1;margin-bottom:var(--s3)}
+.workshop-wrench .forge-composer .composer-note{display:none}
+.workshop-wrench .forge-composer .g-tabs{align-self:flex-start}
+.workshop-wrench .forge-composer .g-tabs .chip,
+.workshop-wrench .forge-composer .attach-row{background:var(--surface);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.workshop-wrench .forge-composer .g-tabs .chip[aria-pressed="true"]{background:var(--surface-2)}
+.workshop-wrench .forge-composer .attach-row{align-self:flex-start;border:1px solid var(--border-strong);border-radius:999px;padding:4px 4px 4px 12px}
+.workshop-wrench .forge-composer .attach-row[hidden]{display:none}
+@media (max-width:900px){
+  .workshop{padding-bottom:calc(240px + env(safe-area-inset-bottom))}
 }
 .wrench-composer textarea{
   flex:1;min-width:0;width:auto;background:transparent;border:0;border-radius:0;resize:none;
@@ -891,20 +894,3 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 }
 .wrench-composer textarea:focus{outline:none}
 .main-chat-composer .composer-note{font-size:var(--fs-xs);margin:0 12px}
-@media (max-width:1180px){
-  .workshop{grid-template-columns:minmax(0,1fr)}
-  .workshop-toggle{
-    display:inline-flex;gap:4px;padding:4px;justify-self:start;
-    border:1px solid var(--border);border-radius:999px;background:var(--surface);
-  }
-  .workshop-toggle button{
-    padding:7px 16px;border-radius:999px;border:0;background:transparent;cursor:pointer;
-    font:600 var(--fs-sm)/1.2 var(--font);color:var(--text-muted);
-  }
-  .workshop-toggle button[aria-selected="true"]{background:var(--surface-2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border-strong)}
-  .workshop[data-pane="robots"] .workshop-wrench{display:none}
-  .workshop[data-pane="wrench"] .workshop-robots{display:none}
-  .workshop-wrench{position:static;max-height:none;overflow:visible;border:0;background:transparent;padding:0}
-  .workshop-wrench-title{display:none}
-  .workshop-wrench .forge-composer{position:static;margin:0;padding:0;background:none}
-}
