@@ -16,7 +16,7 @@ import PartsKitSection from "./PartsKitSection";
 import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
 import SpecWiring from "@/components/wiring/SpecWiring";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
-import RobotPhoto from "./RobotPhoto";
+import HeroPhoto from "./HeroPhoto";
 
 /* render_robot_page (site.py): hero, spec + provenance, gate runs,
    static stability summary, harness checks, take-apart, reproduce.
@@ -308,13 +308,9 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
     <>
       <div className="robot-hero">
         {img ? (
-          <figure>
-            <div className={img.ai ? "ph ai" : "ph"}>
-              <RobotPhoto src={imgSrc(img.src)} slug={slug} name={robot.name}
-                alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")} />
-            </div>
-            {img.caption ? <figcaption>{img.caption}</figcaption> : null}
-          </figure>
+          <HeroPhoto src={imgSrc(img.src)} slug={slug} name={robot.name} ai={img.ai}
+            caption={img.caption}
+            alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")} />
         ) : null}
         <div>
           <span className="dex">{dexId(robot)}</span>
@@ -342,6 +338,12 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
           phones (mobile-ux.css): inside the hero it could only
           stick within the hero's own box. */}
       <nav className="jump" aria-label="On this page">
+        {/* Mobile only (mobile-ux.css): pins the robot's name and
+            verdict to the left of the sticky rail while its chips
+            scroll sideways, so a long page never loses context. */}
+        <span className="jump-context" aria-hidden="true">
+          {robot.name} · {gs.status.replace("_", " ")}
+        </span>
         {jump.map((j) => (
           <a key={j.href} className="chip" href={j.href}>{j.label}</a>
         ))}
