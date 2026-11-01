@@ -1,4 +1,4 @@
-# Gather — the web-gathering pipeline (Forge Engine §8)
+# Gather — the web-gathering pipeline (Forge Engine §8, kinds §10)
 
 Muse Spark acts as RobotForge's librarian: this pipeline fetches public
 supplier pages and datasheets, extracts prices/specs with Muse Spark, and
@@ -9,9 +9,9 @@ record — applying a proposal is a separate, explicit step.
 
 ```bash
 # dry run: fetch -> extract -> validate -> diff -> proposals/<run-id>.{json,md}
-python3 tools/gather/gather.py run [--part <catalog-part-id>] [--force]
+python3 tools/gather/gather.py run [--part <item-id>] [--kind <kind>] [--force]
 
-# after reviewing the .md diff, write it into catalog/parts.json
+# after reviewing the .md diff, write it into the catalogs
 python3 tools/gather/gather.py apply <run-id>
 ```
 
@@ -20,6 +20,42 @@ changes proposed, fields rejected. Extraction uses the Meta Model API
 connector helper (`meta_api.py`); point `META_API_HELPER` at it if it lives
 somewhere else. No API key is handled by this tool — the connector's
 surrogate credential does that.
+
+## Three item kinds: parts, materials, tools (§10)
+
+The registry and pipeline are kind-aware. Every registry entry carries a
+`kind` — `part` (the default when absent), `material`, or `tool` — and
+`run` covers every kind in the registry, or one kind with `--kind`.
+
+- **Where records live.** Parts live in `catalog/parts.json`. Materials
+  live in `catalog/materials.json` — EXCEPT the material records that
+  predate the split (PLA/PETG filament), which stay in `parts.json` and
+  are refreshed there. Tools live in `catalog/tools.json`. `apply`
+  routes each proposal entry to its home file; a material/tool with no
+  record yet gathers against a stub and `apply` CREATES the record in
+  its home file.
+- **Per-kind extraction schemas** (in `validate.py`; the same literal-
+  quote trust gate applies to every field of every kind — a value
+  without a verbatim quote is dropped):
+  - *material* → price **with its basis** (what the price buys — per
+    1 kg spool / per sheet / per unit, as the page states it; a material
+    price without a basis is meaningless), `density_g_cm3` (feeds the
+    print math), sizes (`spool_weight_g`, `filament_diameter_mm`, sheet
+    length/width/thickness), and the process window (`nozzle_temp_c`,
+    `bed_temp_c` ranges). Density and the temps route to the individual
+    confirm queue.
+  - *tool* → price, a photo candidate, and headline specs by tool type:
+    printers → `build_volume_x/y/z_mm` (feeds the build plan's
+    print-fit check; confirm queue) and `supported_materials`;
+    soldering → `power_w`, `temp_range_c`; oscilloscopes →
+    `bandwidth_mhz`, `sample_rate_gsps`, `channels`; calipers →
+    `measuring_range_mm`, `resolution_mm`. A spec the page doesn't
+    print stays ABSENT — never guessed from the tool class.
+- **Catalog files are the data layer.** The web app does not read
+  `catalog/materials.json` / `catalog/tools.json` yet. The Parts API
+  follow-up (§9) is to serve them from the Worker as `/materials` and
+  `/tools` endpoints in the same record shape as `/parts` — documented
+  here, deliberately NOT built with the pipeline change.
 
 ## Why repeat runs are cheap (§8.1)
 
@@ -57,13 +93,15 @@ Per-domain politeness is built in: minimum interval between requests,
 an identifying User-Agent, and robots.txt is respected — a disallowed path
 is skipped and the skip is reported.
 
-## Adding a part (one entry, no code)
+## Adding an item (one entry, no code)
 
 Add one object to `sources.json` (shape: `sources.schema.json`):
 
 ```json
 {
-  "part_id": "<catalog id>", "mpn": "<MPN or null>", "supplier": "<name>",
+  "part_id": "<catalog item id>", "kind": "part | material | tool",
+  "name": "<display name — required for a material/tool with no record yet>",
+  "mpn": "<MPN or null>", "supplier": "<name>",
   "ttl_seconds": {"price": 86400, "stock": 21600, "specs": 2592000, "datasheet": 7776000},
   "pages": [
     {"kind": "product", "url": "https://…", "supplier": "…", "provides": ["price", "stock", "specs"]},
@@ -73,16 +111,33 @@ Add one object to `sources.json` (shape: `sources.schema.json`):
 ```
 
 TTLs are per data class: prices/stock short, specs long, datasheets longest
-(they change by revision). A part can have several product pages (a second
+(they change by revision). An item can have several product pages (a second
 source is what later lets a value become `cross_checked`) and datasheet
 pages, whose values override product-page values on conflict, with the
 override noted in the proposal.
 
+Seeded beyond the 12 parts (§10): materials — PLA and PETG filament
+(refreshing their `parts.json` records from Polymaker's store), ASA and
+TPU 95A filament (new records), carbon-fiber plate (McMaster-Carr),
+6061 aluminum sheet (MetalsDepot), Baltic birch plywood (Woodworkers
+Source); tools — an Ender-3-class printer (Creality V3 SE, the build
+plan's 220×220×250 default class), Prusa MK4S (the MK4 URL now serves
+the MK4S), Bambu Lab X1C, Hakko FX-888D, Rigol DS1054Z, and a Mitutoyo
+500-series caliper. Manufacturer-direct pages are preferred; where a
+maker doesn't sell direct (Hakko, Mitutoyo) the seeded page is a specs
+source and no price is expected from it.
+
 ## Gathering an UNKNOWN part (on demand)
 
-`gather.py` refreshes parts the catalog already knows. When chat, a BOM,
-or a Parts-API 404 names a part the catalog does NOT know, `gather_part.py`
-is the intake — it never dead-ends and never writes the catalog:
+`gather.py` refreshes items the catalogs already know. When chat, a BOM,
+or a Parts-API 404 names an item the catalogs do NOT know, `gather_part.py`
+is the intake — it never dead-ends and never writes the catalog. The flow
+is kind-aware: `--item-kind material|tool` (default `part`) picks the
+extraction schema and the home catalog file an apply will create the
+record in, and dedupe checks **all three catalogs** — an unknown
+"material" that already lives in `parts.json` (PLA/PETG) or a tool in
+`tools.json` is known, not new. Queue lines in `requests.jsonl` may
+carry a `"kind"` field, honored on drain.
 
 ```bash
 # 1. dedupe first: a known part stops here, before any fetch
@@ -108,9 +163,10 @@ python3 tools/gather/gather_part.py --from-requests
 How each step behaves:
 
 - **Dedupe** is deterministic (squashed-substring + all-token matching
-  over catalog ids, names, and `source` strings). No fuzzy edit distance:
-  `BNO085` does NOT match the catalog's `BNO055`. A hit costs no fetch,
-  no model call, no proposal, and no registry entry.
+  over catalog ids, names, and `source` strings, across parts +
+  materials + tools). No fuzzy edit distance: `BNO085` does NOT match
+  the catalog's `BNO055`, and `DS1104Z` does NOT match its `DS1054Z`.
+  A hit costs no fetch, no model call, no proposal, and no registry entry.
 - **Registry draft.** A miss creates ONE entry in `sources.drafts.json`
   (same shape as `sources.json`, marked `"draft": true` with its origin).
   Re-running reuses it and merges in any new page URLs — there is never a

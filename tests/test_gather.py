@@ -304,12 +304,34 @@ def test_pdf_text_fallback_extracts_strings():
 
 
 def test_registry_seeds_match_catalog():
+    # Extended for item kinds (§10): the PART entries keep the original
+    # discipline exactly (12 seeded entries, every id a real parts.json
+    # record). Material entries resolve to a material record in parts.json
+    # or materials.json — or carry a name, marking them as declared seeds
+    # whose record apply will create; tool entries likewise for tools.json.
     registry = load_registry(REPO / "tools" / "gather" / "sources.json")
-    assert 8 <= len(registry) <= 12 + 2
     catalog = json.loads((REPO / "catalog" / "parts.json").read_text())
     ids = {p["id"] for p in catalog["parts"]}
+    materials_path = REPO / "catalog" / "materials.json"
+    tools_path = REPO / "catalog" / "tools.json"
+    material_ids = {m["id"] for m in
+                    json.loads(materials_path.read_text())["materials"]} \
+        if materials_path.exists() else set()
+    tool_ids = {t["id"] for t in
+                json.loads(tools_path.read_text())["tools"]} \
+        if tools_path.exists() else set()
+    parts_entries = [e for e in registry if e.get("kind", "part") == "part"]
+    assert len(parts_entries) == 12
     for entry in registry:
-        assert entry["part_id"] in ids, entry["part_id"]
+        kind = entry.get("kind", "part")
+        if kind == "part":
+            assert entry["part_id"] in ids, entry["part_id"]
+        elif kind == "material":
+            assert entry["part_id"] in ids | material_ids \
+                or entry.get("name"), entry["part_id"]
+        else:
+            assert entry["part_id"] in tool_ids \
+                or entry.get("name"), entry["part_id"]
         for page in entry["pages"]:
             assert page["url"].startswith("https://")
     schema = json.loads((REPO / "tools" / "gather" / "sources.schema.json").read_text())

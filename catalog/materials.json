@@ -1,0 +1,208 @@
+{
+ "comment": "Gathered material records (Forge Engine §10): filament and sheet stock that does not live in catalog/parts.json. Every gathered value carries provenance_gathered (source URL, fetched-at, literal quote, state) and stays web_gathered until a human confirms it. Seeded by the gather pipeline's apply step; see tools/gather/.",
+ "materials": [
+  {
+   "id": "tpu_filament",
+   "name": "TPU 95A filament 1.75 mm, 0.75 kg spool (Polymaker PolyFlex TPU95)",
+   "specs": {
+    "bed_temp_c_max": 60.0,
+    "bed_temp_c_min": 25.0,
+    "density_g_cm3": 1.22,
+    "filament_diameter_mm": 1.75,
+    "nozzle_temp_c_max": 230.0,
+    "nozzle_temp_c_min": 210.0,
+    "spool_weight_g": 750.0
+   },
+   "kind": "material",
+   "gather_history": [
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "bed_temp_c_max",
+     "prior": null,
+     "new": 60.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "bed_temp_c_min",
+     "prior": null,
+     "new": 25.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "density_g_cm3",
+     "prior": null,
+     "new": 1.22,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "filament_diameter_mm",
+     "prior": null,
+     "new": 1.75,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "nozzle_temp_c_max",
+     "prior": null,
+     "new": 230.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "nozzle_temp_c_min",
+     "prior": null,
+     "new": 210.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "spool_weight_g",
+     "prior": null,
+     "new": 750.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    },
+    {
+     "run_id": "20261101T182821Z-0d8bed",
+     "applied_at": "2026-11-01T18:29:17Z",
+     "field": "price_estimate",
+     "prior": null,
+     "new": {
+      "unit_price": 29.99,
+      "currency": "USD",
+      "price_breaks": [
+       {
+        "qty": 1,
+        "unit_price": 29.99
+       }
+      ],
+      "stock_wording": "Sold out",
+      "source_kind": "web_gathered",
+      "supplier_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+      "fetched_at": "2026-11-01T18:28:25Z",
+      "expires_at": "2026-11-02T18:28:25Z",
+      "quote": "$29.99",
+      "basis": "Black / 1.75mm / 0.75kg"
+     },
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    }
+   ],
+   "provenance_gathered": {
+    "bed_temp_c_max": {
+     "value": 60.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "Bed Temperature: 25˚C - 60˚C",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "bed_temp_c_min": {
+     "value": 25.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "Bed Temperature: 25˚C - 60˚C",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "density_g_cm3": {
+     "value": 1.22,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "1.22\n g/cm³",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "filament_diameter_mm": {
+     "value": 1.75,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "1.75mm",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "nozzle_temp_c_max": {
+     "value": 230.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "Printing Temperature: 210˚C - 230˚C",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "nozzle_temp_c_min": {
+     "value": 210.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "Printing Temperature: 210˚C - 230˚C",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "spool_weight_g": {
+     "value": 750.0,
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "0.75kg",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    },
+    "price_estimate": {
+     "value": {
+      "unit_price": 29.99,
+      "currency": "USD",
+      "price_breaks": [
+       {
+        "qty": 1,
+        "unit_price": 29.99
+       }
+      ],
+      "stock_wording": "Sold out",
+      "source_kind": "web_gathered",
+      "supplier_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+      "fetched_at": "2026-11-01T18:28:25Z",
+      "expires_at": "2026-11-02T18:28:25Z",
+      "quote": "$29.99",
+      "basis": "Black / 1.75mm / 0.75kg"
+     },
+     "source_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+     "fetched_at": "2026-11-01T18:28:25Z",
+     "quote": "$29.99",
+     "state": "web_gathered",
+     "pipeline_version": "gather/0.1.0",
+     "run_id": "20261101T182821Z-0d8bed"
+    }
+   },
+   "price_estimate": {
+    "unit_price": 29.99,
+    "currency": "USD",
+    "price_breaks": [
+     {
+      "qty": 1,
+      "unit_price": 29.99
+     }
+    ],
+    "stock_wording": "Sold out",
+    "source_kind": "web_gathered",
+    "supplier_url": "https://shop.polymaker.com/products/polyflex-tpu95",
+    "fetched_at": "2026-11-01T18:28:25Z",
+    "expires_at": "2026-11-02T18:28:25Z",
+    "quote": "$29.99",
+    "basis": "Black / 1.75mm / 0.75kg"
+   }
+  }
+ ]
+}

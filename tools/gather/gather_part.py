@@ -35,6 +35,12 @@ Usage:
       -> miss without sources: queued in requests.jsonl as needs_sources
   python3 tools/gather/gather_part.py --from-requests
       -> drain requests.jsonl (see README: the requests queue)
+  python3 tools/gather/gather_part.py "PolyLite ASA" --item-kind material \
+      --url <product page>
+      -> materials/tools work the same way (§10): --item-kind picks the
+         extraction schema and the home catalog file (materials.json /
+         tools.json); dedupe always checks all three catalogs, so a
+         "material" that already lives in parts.json is known, not new.
 
 Source resolution is an AGENT step, done before the CLI runs: a human or
 agent finds the manufacturer's product page and one distributor listing
@@ -61,7 +67,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from gather import PIPELINE_VERSION  # noqa: E402
 from gather.extract import MetaModelExtractor  # noqa: E402
 from gather.fetcher import Fetcher  # noqa: E402
-from gather.gather import DEFAULT_TTLS, iso, run_pipeline  # noqa: E402
+from gather.gather import (DEFAULT_TTLS, _catalog_docs, iso,  # noqa: E402
+                           load_catalog_set, run_pipeline)
 from gather.propose import _close, write_proposal  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -98,17 +105,16 @@ def _token_match(query_tok: str, part_tok: str) -> bool:
             and (query_tok in part_tok or part_tok in query_tok))
 
 
-def lookup_part(name: str, catalog: dict) -> tuple[dict | None, list[str]]:
-    """Deterministic dedupe of a free-text part name against the catalog.
-
-    Returns (best_part, also_matched_ids) or (None, []). A hit requires
-    either a squashed-substring match on id/name/source, or EVERY query
-    token matching some catalog token. No edit-distance fuzz: BNO085
-    must not resolve to BNO055."""
+def _score_items(name: str, items: list) -> list:
+    """Score (record, kind, home) candidates for a free-text name.
+    Deterministic: a hit requires either a squashed-substring match on
+    id/name/source, or EVERY query token matching some catalog token.
+    No edit-distance fuzz: BNO085 must not resolve to BNO055."""
     q_squash = _squash(name)
     q_tokens = _tokens(name)
-    scored: list[tuple[int, int, dict]] = []
-    for idx, part in enumerate(catalog.get("parts", [])):
+    scored: list[tuple[int, int, tuple]] = []
+    for idx, cand in enumerate(items):
+        part = cand[0]
         texts = [part.get("id", "").replace("_", " "),
                  part.get("name", ""), part.get("source") or ""]
         p_tokens: set[str] = set()
@@ -125,13 +131,51 @@ def lookup_part(name: str, catalog: dict) -> tuple[dict | None, list[str]]:
                             for qt in q_tokens):
             score = max(score, 50 + sum(len(qt) for qt in q_tokens))
         if score:
-            scored.append((score, idx, part))
+            scored.append((score, idx, cand))
+    scored.sort(key=lambda s: (-s[0], s[1]))
+    return scored
+
+
+def lookup_part(name: str, catalog: dict) -> tuple[dict | None, list[str]]:
+    """Deterministic dedupe of a free-text part name against the parts
+    catalog. Returns (best_part, also_matched_ids) or (None, [])."""
+    scored = _score_items(name, [(p, "part", "parts")
+                                 for p in catalog.get("parts", [])])
     if not scored:
         return None, []
-    scored.sort(key=lambda s: (-s[0], s[1]))
-    best = scored[0][2]
-    also = [p["id"] for _, _, p in scored[1:]]
+    best = scored[0][2][0]
+    also = [c[0]["id"] for _, _, c in scored[1:]]
     return best, also
+
+
+def _record_kind(record: dict, home: str) -> str:
+    if home == "tools":
+        return "tool"
+    if home == "materials":
+        return "material"
+    if record.get("kind") == "material" or record.get("part_class") == "materials":
+        return "material"  # material records living in parts.json
+    return "part"
+
+
+def lookup_item(name: str, catalogs: dict) -> tuple[dict | None, str, str, list]:
+    """Dedupe across ALL THREE catalogs (§10): parts, materials (in
+    materials.json AND the material records living in parts.json) and
+    tools. Returns (record, kind, home, also_matched_ids) or
+    (None, "", "", []) on a miss. Same deterministic rules as
+    lookup_part — a near-miss (DS1104Z vs the catalog's DS1054Z) does
+    NOT resolve."""
+    docs = _catalog_docs(catalogs)
+    items: list[tuple[dict, str, str]] = []
+    for home in ("parts", "materials", "tools"):
+        for record in docs[home].get(home, []):
+            items.append((record, _record_kind(record, home), home))
+    scored = _score_items(name, items)
+    if not scored:
+        return None, "", "", []
+    record, kind, home = scored[0][2]
+    also = [c[0]["id"] for _, _, c in scored[1:]]
+    return record, kind, home, also
 
 
 def slugify_part_id(name: str) -> str:
@@ -183,11 +227,12 @@ def build_page(url: str, kind: str | None = None,
 def build_draft_entry(part_id: str, name: str, urls: list[str], *,
                       mpn: str | None = None, kinds: list | None = None,
                       suppliers: list | None = None,
-                      requested_by: str = "cli", at: str = "") -> dict:
+                      requested_by: str = "cli", at: str = "",
+                      item_kind: str = "part") -> dict:
     pages = [build_page(u, kinds[i] if kinds and i < len(kinds) else None,
                         suppliers[i] if suppliers and i < len(suppliers) else None)
              for i, u in enumerate(urls)]
-    return {
+    entry = {
         "part_id": part_id, "mpn": mpn,
         "supplier": pages[0]["supplier"] if pages else "unknown",
         "ttl_seconds": dict(DEFAULT_TTLS),
@@ -196,6 +241,9 @@ def build_draft_entry(part_id: str, name: str, urls: list[str], *,
         "origin": {"via": "gather_part", "requested_name": name,
                    "requested_by": requested_by, "at": at},
     }
+    if item_kind != "part":
+        entry["kind"] = item_kind
+    return entry
 
 
 # ---------------------------------------------------------------- photo
@@ -322,20 +370,38 @@ def merge_page_entries(part_id: str, per_page: list) -> tuple[dict, list[str]]:
 
 # ---------------------------------------------------------------- core
 
+HOME_FOR_KIND = {"part": "parts", "material": "materials", "tool": "tools"}
+
+
 def gather_unknown(name: str, urls: list[str], *, catalog: dict,
                    drafts_path: Path, fetcher: Fetcher, extractor,
                    proposals_dir: Path, mpn: str | None = None,
                    kinds: list | None = None, suppliers: list | None = None,
                    requested_by: str = "cli",
-                   now: float | None = None) -> dict:
-    """Dedupe -> draft -> gather -> proposal for one unknown part name.
+                   now: float | None = None,
+                   item_kind: str = "part",
+                   catalogs: dict | None = None) -> dict:
+    """Dedupe -> draft -> gather -> proposal for one unknown item name.
     Pure orchestration over the existing pipeline machinery; the catalog
-    dict passed in is never mutated (a synthetic copy carries the stub)."""
+    dicts passed in are never mutated (a synthetic copy carries the stub).
+
+    Dedupe checks ALL THREE catalogs when `catalogs` (the catalog set)
+    is given — an unknown "material" that is already a parts.json
+    material record is known, not new. `item_kind` ("part" | "material"
+    | "tool") decides the extraction schema, the draft entry's kind, and
+    the home catalog file a later apply creates the record in."""
     now = time.time() if now is None else now
-    hit, also = lookup_part(name, catalog)
-    if hit is not None:
-        return {"status": "known", "part_id": hit["id"],
-                "name": hit.get("name"), "also_matched": also}
+    if catalogs is not None:
+        hit, hit_kind, hit_home, also = lookup_item(name, catalogs)
+        if hit is not None:
+            return {"status": "known", "part_id": hit["id"],
+                    "name": hit.get("name"), "kind": hit_kind,
+                    "catalog_home": hit_home, "also_matched": also}
+    else:
+        hit, also = lookup_part(name, catalog)
+        if hit is not None:
+            return {"status": "known", "part_id": hit["id"],
+                    "name": hit.get("name"), "also_matched": also}
 
     part_id = slugify_part_id(name)
     drafts = load_drafts(drafts_path)
@@ -345,7 +411,8 @@ def gather_unknown(name: str, urls: list[str], *, catalog: dict,
     if entry is None:
         entry = build_draft_entry(part_id, name, urls, mpn=mpn, kinds=kinds,
                                   suppliers=suppliers,
-                                  requested_by=requested_by, at=iso(now))
+                                  requested_by=requested_by, at=iso(now),
+                                  item_kind=item_kind)
         drafts["sources"].append(entry)
         save_drafts(drafts_path, drafts)
         draft_state = "created"
@@ -366,8 +433,12 @@ def gather_unknown(name: str, urls: list[str], *, catalog: dict,
                 "registry_draft": draft_state}
 
     stub = {"id": part_id, "name": name, "specs": {}}
-    synth = {"parts": [*(catalog.get("parts") or []), stub],
-             "templates": catalog.get("templates", [])}
+    docs = _catalog_docs(catalogs if catalogs is not None else catalog)
+    home = HOME_FOR_KIND[item_kind]
+    synth = {}
+    for h, doc in docs.items():
+        synth[h] = {**doc, h: list(doc.get(h, []))}
+    synth[home][home].append(stub)
     calls_before = getattr(extractor, "calls", 0)
     per_page, summaries = [], []
     for page in entry["pages"]:
@@ -380,6 +451,8 @@ def gather_unknown(name: str, urls: list[str], *, catalog: dict,
     merged["new_part"] = True
     merged["part_stub"] = stub
     merged["requested_name"] = name
+    merged["kind"] = item_kind
+    merged["catalog_home"] = home
     photo = photo_candidate(fetcher, entry)
     if photo:
         merged["photo_candidate"] = photo
@@ -405,7 +478,7 @@ def gather_unknown(name: str, urls: list[str], *, catalog: dict,
     json_path, md_path = write_proposal(proposal, Path(proposals_dir))
     fetched_ok = any(not pg.get("skipped_reason") for pg in merged["pages"])
     return {"status": "proposed" if fetched_ok else "no_data",
-            "part_id": part_id, "run_id": run_id,
+            "part_id": part_id, "kind": item_kind, "run_id": run_id,
             "proposal_json": str(json_path), "proposal_md": str(md_path),
             "model_calls": summary["model_calls"],
             "changes": len(merged["changes"]), "conflicts": conflicts,
@@ -435,9 +508,11 @@ def save_requests(path: Path, lines: list[dict]) -> None:
 
 def queue_request(path: Path, name: str, *, requested_by: str = "cli",
                   hint_url: str | None = None, urls: list | None = None,
-                  now: float | None = None) -> dict:
-    """Append one unknown-part request unless an open line for the same
-    normalized name already exists (the queue dedupes like the catalog)."""
+                  now: float | None = None,
+                  item_kind: str = "part") -> dict:
+    """Append one unknown-item request unless an open line for the same
+    normalized name already exists (the queue dedupes like the catalog).
+    A line may carry "kind" ("material" / "tool"); absent means part."""
     now = time.time() if now is None else now
     lines = load_requests(path)
     key = _squash(name)
@@ -448,6 +523,8 @@ def queue_request(path: Path, name: str, *, requested_by: str = "cli",
                     "already_queued": True, "line": line}
     line = {"name": name, "requested_by": requested_by, "at": iso(now),
             "status": "pending" if (urls or hint_url) else "needs_sources"}
+    if item_kind != "part":
+        line["kind"] = item_kind
     if hint_url:
         line["hint_url"] = hint_url
     if urls:
@@ -459,12 +536,15 @@ def queue_request(path: Path, name: str, *, requested_by: str = "cli",
 
 def drain_requests(path: Path, *, catalog: dict, drafts_path: Path,
                    fetcher: Fetcher, extractor, proposals_dir: Path,
-                   now: float | None = None) -> list[dict]:
+                   now: float | None = None,
+                   catalogs: dict | None = None) -> list[dict]:
     """Process every actionable queue line, honestly:
     known name -> "known"; URLs resolvable -> gather -> "proposed";
     no URLs -> "needs_sources"; a total fetch failure stays actionable
     with a last_attempt note; a repeat of a part already proposed in
-    this same drain is marked a duplicate, never re-gathered."""
+    this same drain is marked a duplicate, never re-gathered. Dedupe
+    checks all three catalogs when `catalogs` is given; a line's "kind"
+    (default "part") drives its gather."""
     now = time.time() if now is None else now
     lines = load_requests(path)
     outcomes: list[dict] = []
@@ -473,7 +553,10 @@ def drain_requests(path: Path, *, catalog: dict, drafts_path: Path,
         if line.get("status") not in ACTIONABLE_STATUSES:
             continue
         name = line["name"]
-        hit, _also = lookup_part(name, catalog)
+        if catalogs is not None:
+            hit, _k, _h, _also = lookup_item(name, catalogs)
+        else:
+            hit, _also = lookup_part(name, catalog)
         if hit is not None:
             line["status"] = "known"
             line["part_id"] = hit["id"]
@@ -500,7 +583,9 @@ def drain_requests(path: Path, *, catalog: dict, drafts_path: Path,
                              extractor=extractor, proposals_dir=proposals_dir,
                              kinds=line.get("kinds"),
                              requested_by=line.get("requested_by", "queue"),
-                             now=now)
+                             now=now,
+                             item_kind=line.get("kind", "part"),
+                             catalogs=catalogs)
         if rep["status"] == "proposed":
             line["status"] = "proposed"
             line["part_id"] = rep["part_id"]
@@ -535,6 +620,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--supplier", action="append", default=[],
                     help="supplier slug per --url (default: from the host)")
     ap.add_argument("--mpn", help="manufacturer part number, if known")
+    ap.add_argument("--item-kind", choices=["part", "material", "tool"],
+                    default="part", dest="item_kind",
+                    help="what kind of item this is (default: part). Dedupe "
+                         "always checks all three catalogs; the kind picks "
+                         "the extraction schema and the home catalog file "
+                         "an apply creates the record in.")
     ap.add_argument("--requested-by", default="cli",
                     help="who asked for this part (recorded on the draft "
                          "entry / queue line)")
@@ -555,6 +646,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     catalog = json.loads(args.catalog.read_text())
+    catalogs = load_catalog_set(args.catalog)
 
     if args.from_requests:
         fetcher = Fetcher(cache_dir=args.cache_dir)
@@ -562,7 +654,8 @@ def main(argv: list[str] | None = None) -> int:
         outcomes = drain_requests(args.requests, catalog=catalog,
                                   drafts_path=args.drafts, fetcher=fetcher,
                                   extractor=extractor,
-                                  proposals_dir=args.proposals_dir)
+                                  proposals_dir=args.proposals_dir,
+                                  catalogs=catalogs)
         print(json.dumps({"drained": outcomes}, indent=1))
         return 0
 
@@ -571,16 +664,18 @@ def main(argv: list[str] | None = None) -> int:
                                    "--from-requests)"}))
         return 2
 
-    hit, also = lookup_part(args.name, catalog)
+    hit, hit_kind, hit_home, also = lookup_item(args.name, catalogs)
     if hit is not None:
         print(json.dumps({"status": "known", "part_id": hit["id"],
-                          "name": hit.get("name"), "also_matched": also},
+                          "name": hit.get("name"), "kind": hit_kind,
+                          "catalog_home": hit_home, "also_matched": also},
                          indent=1))
         return 0
 
     if not args.url:
         rep = queue_request(args.requests, args.name,
-                            requested_by=args.requested_by)
+                            requested_by=args.requested_by,
+                            item_kind=args.item_kind)
         print(json.dumps({"status": rep["status"],
                           "queued": rep["queued"],
                           "already_queued": rep.get("already_queued", False),
@@ -594,7 +689,8 @@ def main(argv: list[str] | None = None) -> int:
                          extractor=extractor, proposals_dir=args.proposals_dir,
                          mpn=args.mpn, kinds=args.kind or None,
                          suppliers=args.supplier or None,
-                         requested_by=args.requested_by)
+                         requested_by=args.requested_by,
+                         item_kind=args.item_kind, catalogs=catalogs)
     print(json.dumps(rep, indent=1))
     return 0 if rep["status"] == "proposed" else 2
 

@@ -33,9 +33,14 @@ def _fmt(value) -> str:
 
 
 def diff_part(part: dict, validated_by_field: dict, price_info: dict | None,
-              fetched_at_iso: str, ttl_price_s: int) -> list[dict]:
+              fetched_at_iso: str, ttl_price_s: int,
+              safety_fields=None) -> list[dict]:
     """validated_by_field: {field_name: ValidField} (ranges already split to
-    *_min/*_max entries by the pipeline). Returns change dicts."""
+    *_min/*_max entries by the pipeline). Returns change dicts. Works for
+    any catalog record shape (part, material or tool): specs live under
+    "specs", the price under "price_estimate". `safety_fields` is the item
+    kind's confirm-queue set; defaults to the part schema's."""
+    safety = SAFETY_FIELDS if safety_fields is None else safety_fields
     specs = part.get("specs", {})
     changes: list[dict] = []
     for name, vf in sorted(validated_by_field.items()):
@@ -52,7 +57,7 @@ def diff_part(part: dict, validated_by_field: dict, price_info: dict | None,
             "source_url": vf.source_url,
             "fetched_at": fetched_at_iso,
             "state": "web_gathered",
-            "safety_relevant": name in SAFETY_FIELDS,
+            "safety_relevant": name in safety,
             "pipeline_version": PIPELINE_VERSION,
         })
     if price_info and price_info.get("price_breaks"):
@@ -70,11 +75,16 @@ def diff_part(part: dict, validated_by_field: dict, price_info: dict | None,
             "expires_at": _plus_seconds(fetched_at_iso, ttl_price_s),
             "quote": applied["quote"],
         }
+        if price_info.get("basis"):
+            # What the price buys ("per 1 kg spool", "per sheet") — for
+            # materials the number is meaningless without it.
+            proposed_price["basis"] = price_info["basis"]
         current_price = part.get("price_estimate")
         same = (
             isinstance(current_price, dict)
             and current_price.get("unit_price") == proposed_price["unit_price"]
             and current_price.get("supplier_url") == proposed_price["supplier_url"]
+            and current_price.get("basis") == proposed_price.get("basis")
         )
         if not same:
             changes.append({
@@ -158,9 +168,10 @@ def _change_line(c: dict) -> str:
     if c["field"] == "price_estimate":
         p = c["proposed"]
         breaks = ", ".join(f"{b['qty']}+ @ {b['unit_price']}" for b in p["price_breaks"])
+        basis = f"; basis: {p['basis']}" if p.get("basis") else ""
         return (f"- **price**: {_fmt(c['current'] and c['current'].get('unit_price'))} → "
                 f"**{p['unit_price']} {p['currency']}** (breaks: {breaks}; "
-                f"stock: {p.get('stock_wording') or 'not stated'})\n"
+                f"stock: {p.get('stock_wording') or 'not stated'}{basis})\n"
                 f"  - quote: “{c['quote']}”\n"
                 f"  - source: {c['source_url']} · fetched {c['fetched_at']} · "
                 f"state: web-gathered estimate")

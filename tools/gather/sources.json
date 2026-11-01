@@ -1,5 +1,5 @@
 {
- "comment": "Gather source registry (Forge Engine §8). One entry per catalog part: canonical public product/datasheet pages + per-class TTLs. Adding a part = adding one entry here; no code. URLs verified reachable 2026-11-01. Prices/specs are NEVER read from this file — it only says where to look.",
+ "comment": "Gather source registry (Forge Engine §8, kinds §10). One entry per catalog item: kind part | material | tool (absent = part), canonical public product/datasheet pages + per-class TTLs. Adding an item = adding one entry here; no code. Part URLs verified reachable 2026-11-01; material/tool URLs verified reachable 2026-11-01 (see per-entry notes for redirects and known-thin pages). Prices/specs are NEVER read from this file — it only says where to look.",
  "sources": [
   {
    "mpn": "TB6612FNG",
@@ -283,6 +283,333 @@
    ],
    "part_id": "realsense_d435",
    "supplier": "realsense-ai",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "PLA filament 1.75 mm, 1 kg (Polymaker PolyLite PLA)",
+   "notes": "Material record lives in catalog/parts.json (part_class materials); this entry refreshes it there. Seeded page is Polymaker's own store listing for PolyLite PLA.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "polymaker",
+     "url": "https://shop.polymaker.com/products/polylite-pla"
+    }
+   ],
+   "part_id": "pla_filament",
+   "supplier": "polymaker",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "PETG filament 1.75 mm, 1 kg (Polymaker PolyLite PETG)",
+   "notes": "Material record lives in catalog/parts.json (part_class materials); this entry refreshes it there.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "polymaker",
+     "url": "https://shop.polymaker.com/products/petg"
+    }
+   ],
+   "part_id": "petg_filament",
+   "supplier": "polymaker",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "ASA filament 1.75 mm, 1 kg (Polymaker PolyLite ASA)",
+   "notes": "New material: no catalog record yet — a run gathers against a stub and apply creates the record in catalog/materials.json.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "polymaker",
+     "url": "https://shop.polymaker.com/products/asa"
+    }
+   ],
+   "part_id": "asa_filament",
+   "supplier": "polymaker",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "TPU 95A filament 1.75 mm, 0.75 kg spool (Polymaker PolyFlex TPU95)",
+   "notes": "New material: record created in catalog/materials.json by the §10 live proof (run 20261101T182821Z-0d8bed, applied). PolyFlex TPU95 ships on a 0.75 kg spool.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "stock",
+      "specs"
+     ],
+     "supplier": "polymaker",
+     "url": "https://shop.polymaker.com/products/polyflex-tpu95"
+    }
+   ],
+   "part_id": "tpu_filament",
+   "supplier": "polymaker",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "Carbon fiber plate sheet, 2 mm",
+   "notes": "New material — CURRENTLY UNGATHERABLE, kept as the source of record: McMaster-Carr's robots.txt disallows this path, so every run skips it and reports the skip (verified live 2026-11-01). Alternates tried the same day: DragonPlate (JS-only, zero extractable text), ACP Composites (store redirects to homepage), GraphiteStore (404), Rock West Composites (connection closed from this network). Revisit when a reachable seller appears.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "mcmaster-carr",
+     "url": "https://www.mcmaster.com/products/carbon-fiber-sheets/"
+    }
+   ],
+   "part_id": "carbon_fiber_plate",
+   "supplier": "mcmaster-carr",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "6061 aluminum sheet stock",
+   "notes": "New material. MetalsDepot's 6061 sheet listing (cut-to-size seller; prices are per size, so a gathered price carries its basis or none).",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "metals-depot",
+     "url": "https://www.metalsdepot.com/aluminum-products/aluminum-sheet"
+    }
+   ],
+   "part_id": "aluminum_sheet_6061",
+   "supplier": "metals-depot",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "material",
+   "mpn": null,
+   "name": "Baltic birch plywood sheet",
+   "notes": "New material. Woodworkers Source Baltic birch listing (sold by the sheet in several thicknesses).",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "woodworkers-source",
+     "url": "https://www.woodworkerssource.com/plywood-sheet-goods/baltic-birch-plywood.html"
+    }
+   ],
+   "part_id": "baltic_birch_plywood",
+   "supplier": "woodworkers-source",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "tool",
+   "mpn": null,
+   "name": "Ender-3-class 3D printer (Creality Ender-3 V3 SE)",
+   "notes": "New tool. The 220x220x250 mm class the build plan's default printer profile names; seeded page is Creality's own V3 SE product page.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "creality",
+     "url": "https://www.creality.com/products/creality-ender-3-v3-se"
+    }
+   ],
+   "part_id": "printer_ender3_class",
+   "supplier": "creality",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "tool",
+   "mpn": null,
+   "name": "Prusa MK4S 3D printer",
+   "notes": "New tool: record created in catalog/tools.json by the §10 live proof (run 20261101T182851Z-cd8c25, applied). Prusa's MK4 product URL now serves the MK4S successor page (the MK4 was superseded); the record is the MK4S.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "prusa",
+     "url": "https://www.prusa3d.com/product/original-prusa-mk4-3d-printer-3/"
+    }
+   ],
+   "part_id": "printer_prusa_mk4s",
+   "supplier": "prusa",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "tool",
+   "mpn": null,
+   "name": "Bambu Lab X1 Carbon 3D printer",
+   "notes": "New tool. Bambu's store geo-redirects this client to a collections page, so the seeded page is the official product page on bambulab.com.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "bambu-lab",
+     "url": "https://bambulab.com/en/x1"
+    }
+   ],
+   "part_id": "printer_bambu_x1c",
+   "supplier": "bambu-lab",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "tool",
+   "mpn": "FX-888D",
+   "name": "Hakko FX-888D soldering station",
+   "notes": "New tool. Hakko's own product page: specs source (Hakko does not sell direct from it, so no price is expected from this source).",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "specs"
+     ],
+     "supplier": "hakko",
+     "url": "https://www.hakko.com/english/products/hakko_fx888d.html"
+    }
+   ],
+   "part_id": "soldering_hakko_fx888d",
+   "supplier": "hakko",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "tool",
+   "mpn": "DS1054Z",
+   "name": "Rigol DS1054Z oscilloscope",
+   "notes": "New tool. Rigol North America's DS1054Z product page.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "price",
+      "specs"
+     ],
+     "supplier": "rigol",
+     "url": "https://www.rigolna.com/products/digital-oscilloscopes/1000z/ds1054z/"
+    }
+   ],
+   "part_id": "scope_rigol_ds1054z",
+   "supplier": "rigol",
+   "ttl_seconds": {
+    "datasheet": 7776000,
+    "price": 86400,
+    "specs": 2592000,
+    "stock": 21600
+   }
+  },
+  {
+   "kind": "tool",
+   "mpn": null,
+   "name": "Mitutoyo 500-series digital caliper (0-150 mm class)",
+   "notes": "New tool. Mitutoyo America's caliper listing covers the 500 series; Mitutoyo sells through dealers, so no direct price is expected from this source.",
+   "pages": [
+    {
+     "kind": "product",
+     "provides": [
+      "specs"
+     ],
+     "supplier": "mitutoyo",
+     "url": "https://www.mitutoyo.com/products/small-tool-instruments/caliper/"
+    }
+   ],
+   "part_id": "calipers_mitutoyo_500",
+   "supplier": "mitutoyo",
    "ttl_seconds": {
     "datasheet": 7776000,
     "price": 86400,
