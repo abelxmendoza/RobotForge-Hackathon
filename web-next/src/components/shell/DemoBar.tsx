@@ -5,18 +5,43 @@
  * entry in a browser session expands it once with what the demo
  * is; after that it stays one line: "Demo · sample data" + Exit.
  * Exit only clears the flag — the visitor's real stores were
- * never touched, so there is nothing to restore. */
-import { useEffect, useState } from "react";
+ * never touched, so there is nothing to restore.
+ *
+ * The strip can also be dismissed outright (its ×). Dismissal is
+ * not the end of the labeling: while the bar is hidden, DemoPill
+ * (below) stays in the topbar — a small DEMO tag whose menu holds
+ * "Show the demo bar" and "Exit demo" — so sample data is never
+ * on screen without a demo marker. The dismissal is keyed to the
+ * demo session's start stamp (lib/demoMode.ts): it survives page
+ * loads inside one demo session and a fresh demo start shows the
+ * bar again. */
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { setDemoMode, useDemoMode } from "@/lib/demoMode";
+import {
+  setDemoBarDismissed,
+  setDemoMode,
+  useDemoBarDismissed,
+  useDemoMode,
+} from "@/lib/demoMode";
 
 const WELCOMED_KEY = "rf.demo.welcomed";
 
-export default function DemoBar() {
-  const demo = useDemoMode();
-  const [welcomed, setWelcomed] = useState(true);
+/* Leaving the demo: clear the flag and, away from the landing,
+ * land there — the demo's entry point and the sign-in live there. */
+export function useDemoExit() {
   const pathname = usePathname();
   const router = useRouter();
+  return () => {
+    setDemoMode(false);
+    if (pathname && pathname !== "/") router.push("/");
+  };
+}
+
+export default function DemoBar() {
+  const demo = useDemoMode();
+  const barDismissed = useDemoBarDismissed();
+  const [welcomed, setWelcomed] = useState(true);
+  const exit = useDemoExit();
 
   useEffect(() => {
     if (!demo) return;
@@ -27,20 +52,15 @@ export default function DemoBar() {
     }
   }, [demo]);
 
-  if (!demo) return null;
+  if (!demo || barDismissed) return null;
 
-  const dismiss = () => {
+  const dismissWelcome = () => {
     try {
       window.sessionStorage.setItem(WELCOMED_KEY, "1");
     } catch {
       /* ignore */
     }
     setWelcomed(true);
-  };
-
-  const exit = () => {
-    setDemoMode(false);
-    if (pathname && pathname !== "/") router.push("/");
   };
 
   return (
@@ -54,21 +74,113 @@ export default function DemoBar() {
         <button type="button" className="demo-bar-exit" onClick={exit}>
           Exit demo
         </button>
+        <button
+          type="button"
+          className="demo-bar-dismiss"
+          aria-label="Dismiss demo bar"
+          title="Hide this bar — a DEMO pill stays in the top bar"
+          onClick={() => setDemoBarDismissed(true)}
+        >
+          ×
+        </button>
       </div>
       {!welcomed && (
         <div className="demo-bar-welcome">
           <p>
             <strong>You&apos;re exploring the RobotForge demo.</strong> It is
-            the real app, preloaded: a demo copy of the TurtleBot3 Burger in
-            the Workshop, the robot catalogue, and a sample inventory split
-            into real vs sim-only parts and tools. Wrench, the guide, answers
-            from recorded real runs — live AI is off in the demo, so it costs
-            nothing and claims nothing it didn&apos;t do. Anything you change
-            lives in the demo sandbox only; your own robots and parts are
-            never touched. For live AI and your own shelf, exit and sign in.
+            the real app, preloaded to feel lived-in: two demo robots in the
+            Workshop — a TurtleBot3 Burger with a saved baseline and a
+            planned upgrade, and a Pathfinder with a short build history —
+            the robot catalogue, a sample inventory split into real vs
+            sim-only parts and tools, and a Wrench thread already in
+            progress. Wrench — the workshop&apos;s build partner, not just a
+            guide — is here too: it designs specs with you in the Forge,
+            carries out build operations from chat, and checks the work
+            (gate results, physics, the BOM). In the demo it answers from
+            recorded real runs — live AI is off in the demo, so it costs
+            nothing and claims nothing it didn&apos;t do. Anything you change lives in the demo
+            sandbox only; your own robots and parts are never touched. For
+            live AI and your own shelf, exit and sign in. You can hide this
+            bar with its × — a DEMO pill in the top bar keeps the demo
+            labeled, and Exit demo lives inside it.
           </p>
-          <button type="button" className="btn btn-primary btn-sm" onClick={dismiss}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={dismissWelcome}>
             Start exploring
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* The persistent DEMO marker shown while the bar is dismissed.
+ * Mounted in the app topbar and the landing header; renders
+ * nothing unless demo mode is on AND the bar is hidden. Its menu
+ * is the exit ramp that survives the dismissal: "Show the demo
+ * bar" restores the strip, "Exit demo" leaves the demo. */
+export function DemoPill() {
+  const demo = useDemoMode();
+  const barDismissed = useDemoBarDismissed();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const exit = useDemoExit();
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open ]);
+
+  if (!demo || !barDismissed) return null;
+
+  return (
+    <div className="demo-pill" ref={rootRef}>
+      <button
+        type="button"
+        className="demo-pill-btn"
+        aria-expanded={open}
+        aria-label="Demo mode options"
+        onClick={() => setOpen((o) => !o)}
+      >
+        Demo
+      </button>
+      {open && (
+        <div className="demo-pill-menu" role="menu" aria-label="Demo mode">
+          <p className="demo-pill-note">
+            Demo mode — sample data, recorded answers. Your own robots and
+            parts are untouched.
+          </p>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setDemoBarDismissed(false);
+              setOpen(false);
+            }}
+          >
+            Show the demo bar
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              exit();
+            }}
+          >
+            Exit demo
           </button>
         </div>
       )}
