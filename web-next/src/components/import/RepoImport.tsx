@@ -638,6 +638,25 @@ export default function RepoImport() {
     const id = new URLSearchParams(window.location.search).get("robot");
     if (id) setLinkedId(id);
   }, []);
+  // /import/?repo=<owner/repo> comes from Wrench: a repo link pasted
+  // into the chat composer fills the form and starts the import.
+  const [autoRepo, setAutoRepo] = useState<RepoRef | null>(null);
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("repo");
+    const ref = raw ? parseRepoInput(raw) : null;
+    if (ref) {
+      setInput(`https://github.com/${ref.owner}/${ref.repo}`);
+      setAutoRepo(ref);
+    }
+  }, []);
+  useEffect(() => {
+    if (autoRepo) {
+      setAutoRepo(null);
+      void runImport(autoRepo);
+    }
+    // runImport is recreated each render; the import should start once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRepo]);
   const linkedRobot = linkedId ? robots.find((r) => r.id === linkedId) : undefined;
   useEffect(() => {
     if (linkedRobot?.repoImport && !specimen) {
