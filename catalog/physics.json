@@ -1,0 +1,97 @@
+{
+ "note": "Per-robot physics-check data for the in-browser checks (URDF + Rapier). urdf_url points at the official model at the SAME pinned commit the robot's specimen import recorded (catalog/specimens/*.json) — nothing is re-hosted. Robots whose recorded model is not a plain URDF carry status 'none' and the reason, and the site shows that reason instead of results. catalog_mass_kg is the catalogue's own stated figure (key specs / provenance) for the mass audit; it is never the URDF's own sum.",
+ "robots": {
+  "andino": {
+   "reason": "Andino's official model ships as xacro (andino.urdf.xacro plus included files) — a format a build tool must expand before anything can parse it. No plain URDF is recorded for this entry, so there is nothing honest to run the checks on.",
+   "status": "none"
+  },
+  "crazyflie-2-1": {
+   "catalog_mass_kg": 0.029,
+   "catalog_mass_label": "Bitcraze datasheet takeoff weight: 29 g (Robodex key specs)",
+   "license": "MIT",
+   "model_note": "The source model is a single rigid body: every joint is fixed, the four propellers carry no mass and no collision shape, and the one collision shape is a cylinder standing in for the frame. The checks below are exactly that simple — read them as a check of the model, not of the aircraft.",
+   "source_label": "utiasDSL/gym-pybullet-drones @ 2c2470c — the specimen import's pinned commit",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/utiasDSL/gym-pybullet-drones/2c2470c2043eb4cf474d9af2681c9fa10f2d0e2f/gym_pybullet_drones/assets/cf2p.urdf"
+  },
+  "mini-pupper": {
+   "reason": "No URDF is recorded in the catalogue for this entry — its Robodex spec comes from MangDang's published specification pages, which carry no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "openmanipulator-x": {
+   "catalog_mass_kg": 0.7,
+   "catalog_mass_label": "ROBOTIS e-Manual published weight: 0.70 kg, excluding the base plate (catalogue provenance note)",
+   "license": "Apache-2.0",
+   "model_note": "Collision geometry is STL meshes (drawn at 0.001 scale in the model). Each mesh collider is approximated by the mesh's own bounding box, and the results say where that approximation is in play. In service this arm is bolted to a bench; the settle check stands it on its base plate unbolted, which is the harsher test.",
+   "packages": {
+    "open_manipulator_description": "https://raw.githubusercontent.com/ROBOTIS-GIT/open_manipulator/bc555a9c41ebd7493dc945ddabc43fc649681b62/open_manipulator_description/"
+   },
+   "source_label": "ROBOTIS-GIT/open_manipulator @ bc555a9 — the specimen import's pinned commit",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/open_manipulator/bc555a9c41ebd7493dc945ddabc43fc649681b62/open_manipulator_description/urdf/open_manipulator_x/open_manipulator_x.urdf"
+  },
+  "pathfinder": {
+   "catalog_mass_kg": null,
+   "catalog_mass_label": "No independent catalogue figure to audit against — the spec's mass is this generator's input, so the audit would be circular. The model's own sum is reported.",
+   "generated": true,
+   "license": "Apache-2.0",
+   "model_note": "A generated twin, not a manufacturer's model: a box chassis and cylinder wheels carrying the spec's masses. The generator assigns the full spec mass (3.4 kg) to the chassis link and adds the wheels' component mass (0.5 kg) on top, so the model's sum is higher than the spec's headline mass — the checks report the model's numbers as they are.",
+   "source_label": "Generated in this repo: `robotforge urdf examples/pathfinder.json` (src/robotforge/urdf.py)",
+   "status": "urdf",
+   "urdf_url": "urdf/pathfinder.urdf"
+  },
+  "px4-x500": {
+   "reason": "The recorded model for the X500 is an SDF from PX4's Gazebo models repo (models/x500_base/model.sdf), not a URDF. The physics checks parse URDF, so they do not run on this entry.",
+   "status": "none"
+  },
+  "robotis-op3": {
+   "reason": "The recorded model for the OP3 is an MJCF from the MuJoCo menagerie, not a URDF. The physics checks parse URDF, so they do not run on this entry.",
+   "status": "none"
+  },
+  "turtlebot3-burger": {
+   "catalog_mass_kg": 0.93,
+   "catalog_mass_label": "Robodex key specs: 0.93 kg (reference spec)",
+   "license": "Apache-2.0",
+   "model_note": "Collision geometry in this model is boxes and cylinders — the checks use the model's own shapes, no mesh approximation.",
+   "packages": {
+    "turtlebot3_description": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/"
+   },
+   "source_label": "ROBOTIS-GIT/turtlebot3 @ fc817ce — the specimen import's pinned commit",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/urdf/turtlebot3_burger.urdf"
+  },
+  "turtlebot3-waffle-pi": {
+   "catalog_mass_kg": 1.8,
+   "catalog_mass_label": "Robodex key specs: 1.8 kg (photo draft — an estimate, not a measurement)",
+   "license": "Apache-2.0",
+   "model_note": "Collision geometry in this model is boxes and cylinders — the checks use the model's own shapes, no mesh approximation.",
+   "packages": {
+    "turtlebot3_description": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/"
+   },
+   "source_label": "ROBOTIS-GIT/turtlebot3 @ fc817ce — the repo the catalogue records for this entry (the Burger specimen's pinned commit)",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/urdf/turtlebot3_waffle_pi.urdf"
+  },
+  "unitree-g1": {
+   "catalog_mass_kg": 35.0,
+   "catalog_mass_label": "Unitree's published figure: ~35 kg with battery (Robodex key specs)",
+   "license": "BSD-3-Clause",
+   "model_note": "Collision geometry is STL meshes. Each mesh collider is approximated by the mesh's own bounding box, and the results say where that approximation is in play. Meshes load from the pinned upstream commit when the checks run.",
+   "source_label": "unitreerobotics/unitree_ros @ 267182b (the Go2 specimen's pinned commit for the same repo) — the file the catalogue's provenance note parsed: 36 link masses summing to 35.115 kg",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/unitreerobotics/unitree_ros/267182b8521c8d6a631bab1fe63836873237a525/robots/g1_description/g1_29dof.urdf"
+  },
+  "unitree-go2": {
+   "catalog_mass_kg": 15.0,
+   "catalog_mass_label": "Unitree's published figure: ~15 kg with battery (catalogue provenance note)",
+   "license": "BSD-3-Clause",
+   "model_note": "Collision geometry is boxes, cylinders and spheres (the feet are spheres). The .dae files in the model are visuals only and are never loaded.",
+   "packages": {
+    "go2_description": "https://raw.githubusercontent.com/unitreerobotics/unitree_ros/267182b8521c8d6a631bab1fe63836873237a525/robots/go2_description/"
+   },
+   "source_label": "unitreerobotics/unitree_ros @ 267182b — the specimen import's pinned commit",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/unitreerobotics/unitree_ros/267182b8521c8d6a631bab1fe63836873237a525/robots/go2_description/urdf/go2_description.urdf"
+  }
+ }
+}

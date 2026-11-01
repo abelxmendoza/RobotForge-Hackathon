@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { parts } from "@/lib/data";
+import { partSearchQuery } from "@/lib/sourcing";
 import type { Part } from "@/lib/types";
+import SourcingLinks from "./SourcingLinks";
 import type { AppDispatch, RootState } from "@/store/store";
 import { setQuery } from "@/store/catalogSlice";
 import { imgSrc, partClassLabel, partHaystack, partSpecsText } from "./shared";
@@ -67,6 +69,7 @@ function PartCard({ part, query, highlight, cardRef }: {
       <h4>{part.name}</h4>
       {part.blurb ? <p>{part.blurb}</p> : null}
       {specs ? <div className="specs">{specs}</div> : null}
+      <SourcingLinks query={partSearchQuery(part)} />
     </div>
   );
 }
