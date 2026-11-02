@@ -25,11 +25,12 @@ import { promptWrench } from '@/lib/wrenchPrompt';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
+import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
-  detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
+  clearRepos, detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
@@ -374,6 +375,8 @@ function drawingFor(...names: unknown[]): string | null {
   return null;
 }
 
+const ALL_REPOS = '*all*';
+
 export default function Garage() {
   const [robots, saveRobots, ready] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const [inventory] = useStore<InventoryPart[]>(INVENTORY_KEY, []);
@@ -503,13 +506,14 @@ export default function Garage() {
     setSelected(null);
   };
 
-  /* Detaching a repo also asks twice; the robot and its versions stay. */
+  /* Removing a repo also asks twice; the robot and its versions stay.
+   * ALL_REPOS stands for "Remove all". */
   const [confirmDetach, setConfirmDetach] = useState<string | null>(null);
   useEffect(() => { setConfirmDetach(null); }, [robot?.id]);
   const detach = (repoUrl: string) => {
     if (!robot) return;
     if (confirmDetach !== repoUrl) { setConfirmDetach(repoUrl); return; }
-    persist(robots.map((r) => (r.id === robot.id ? detachRepo(r, repoUrl) : r)));
+    persist(robots.map((r) => (r.id === robot.id ? (repoUrl === ALL_REPOS ? clearRepos(r) : detachRepo(r, repoUrl)) : r)));
     setConfirmDetach(null);
   };
 
@@ -730,6 +734,76 @@ export default function Garage() {
                     </div>
                   ))}
                 </div>
+                <section className="g-repos" aria-label="Code repos">
+                  <h3>Code repos{robotRepos(robot).length > 0 && <span className="faint"> · {robotRepos(robot).length}</span>}</h3>
+                  {robotRepos(robot).length === 0 ? (
+                    <p className="faint g-small">No repos yet. Add the robot&apos;s firmware, ROS packages or CAD repo and RobotForge reads its parts and model files.</p>
+                  ) : (
+                    <ul>
+                      {robotRepos(robot).map((x) => {
+                        const slug = `${x.provenance.owner}/${x.provenance.repo}`;
+                        return (
+                          <li key={x.provenance.repoUrl} className="g-repo-card">
+                            {(() => {
+                              const pics = cardImagesOf(x);
+                              const hasImages = (x.images?.length ?? 0) > 0;
+                              return (
+                                <div className="g-repo-pics">
+                                  {pics.length ? (
+                                    <>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img className="g-repo-cover" src={pics[0].url} alt={pics[0].alt || `Image from ${slug}`} loading="lazy" referrerPolicy="no-referrer" />
+                                      {pics.length > 1 && (
+                                        <span className="g-repo-strip">
+                                          {pics.slice(1, 4).map((p) => (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img key={p.url} src={p.url} alt={p.alt || ''} loading="lazy" referrerPolicy="no-referrer" />
+                                          ))}
+                                          {pics.length > 4 && <span className="faint">+{pics.length - 4}</span>}
+                                        </span>
+                                      )}
+                                      <span className="g-repo-credit faint">Image via {slug} · {x.provenance.license.label}, not your build</span>
+                                    </>
+                                  ) : (
+                                    <Link className="g-repo-nopic faint g-small" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}#repo-images`}>
+                                      {hasImages ? `Choose card pictures (${x.images.length} in the repo)` : 'No pictures in this repo'}
+                                    </Link>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            <a href={x.provenance.repoUrl} target="_blank" rel="noreferrer"><strong>{slug}</strong></a>
+                            <span className="faint g-small"> @ {x.provenance.commitSha.slice(0, 7)} · {x.parts.length} part{x.parts.length === 1 ? '' : 's'}{x.model ? ` · ${x.model.format} model` : ''}</span>
+                            <span className="g-repo-actions">
+                              <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}`}>Details</Link>
+                              {cardImagesOf(x).length > 0 && <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}#repo-images`}>Pictures</Link>}
+                              {confirmDetach === x.provenance.repoUrl ? (
+                                <span className="g-remove-confirm" role="alert">
+                                  Remove {slug} from {robot.name}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(x.provenance.repoUrl)}>Yes, remove</button>
+                                  <button type="button" className="btn btn-sm" onClick={() => setConfirmDetach(null)}>Cancel</button>
+                                </span>
+                              ) : (
+                                <button type="button" className="btn btn-sm" onClick={() => detach(x.provenance.repoUrl)} aria-label={`Remove ${slug}`}>Remove</button>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <p className="g-repo-foot">
+                    <Link className="btn btn-sm" href={`/import/?attach=${encodeURIComponent(robot.id)}`}>+ Add {robotRepos(robot).length ? 'more repos' : 'repos'}</Link>
+                    {robotRepos(robot).length > 1 && (confirmDetach === ALL_REPOS ? (
+                      <span className="g-remove-confirm" role="alert">
+                        Remove all {robotRepos(robot).length} repos from {robot.name}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(ALL_REPOS)}>Yes, remove all</button>
+                        <button type="button" className="btn btn-sm" onClick={() => setConfirmDetach(null)}>Cancel</button>
+                      </span>
+                    ) : (
+                      <button type="button" className="btn btn-sm" onClick={() => detach(ALL_REPOS)}>Remove all</button>
+                    ))}
+                    <span className="faint g-small">Removing a repo keeps the robot, its specs and its versions.</span>
+                  </p>
+                </section>
                 <div className="ws-cards">
                   <button type="button" className={'ws-card ' + verdict.cls} onClick={() => setTab('checks')}>
                     <span className="ws-card-icon"><Icon d={ICON.checks} size={22} /></span>
@@ -763,36 +837,6 @@ export default function Garage() {
                     <i className="est-dot" aria-hidden="true" /> {estimated.size} number{estimated.size === 1 ? ' is' : 's are'} guessed from the photo. <span>Measure in Specs →</span>
                   </button>
                 )}
-                <section className="g-repos" aria-label="Code repos">
-                  <h3>Code repos</h3>
-                  {robotRepos(robot).length === 0 ? (
-                    <p className="faint g-small">No repos yet. Add the robot&apos;s firmware, ROS packages or CAD repo and RobotForge reads its parts and model files.</p>
-                  ) : (
-                    <ul>
-                      {robotRepos(robot).map((x) => {
-                        const slug = `${x.provenance.owner}/${x.provenance.repo}`;
-                        return (
-                          <li key={x.provenance.repoUrl}>
-                            <a href={x.provenance.repoUrl} target="_blank" rel="noreferrer"><strong>{slug}</strong></a>
-                            <span className="faint g-small"> @ {x.provenance.commitSha.slice(0, 7)} · {x.parts.length} part{x.parts.length === 1 ? '' : 's'}{x.model ? ` · ${x.model.format} model` : ''}</span>
-                            <span className="g-repo-actions">
-                              <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}`}>Details</Link>
-                              {confirmDetach === x.provenance.repoUrl ? (
-                                <span className="g-remove-confirm" role="alert">
-                                  Detach {slug}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(x.provenance.repoUrl)}>Yes, detach</button>
-                                  <button type="button" className="btn btn-sm" onClick={() => setConfirmDetach(null)}>Cancel</button>
-                                </span>
-                              ) : (
-                                <button type="button" className="btn btn-sm" onClick={() => detach(x.provenance.repoUrl)}>Detach</button>
-                              )}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                  <Link className="btn btn-sm" href={`/import/?attach=${encodeURIComponent(robot.id)}`}>+ Add {robotRepos(robot).length ? 'another' : 'a'} repo</Link>
-                </section>
                 <p><Link className="btn btn-sm" href={'/inventory/?robot=' + encodeURIComponent(robot.id)}>Photos & parts for {robot.name}</Link> </p>
               </section>
             )}

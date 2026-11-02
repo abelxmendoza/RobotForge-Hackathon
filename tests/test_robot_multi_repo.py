@@ -16,7 +16,7 @@ WEB = ROOT / "web-next" / "src"
 GARAGE_TS = WEB / "lib" / "garage.ts"
 
 RUN = r"""
-import { robotRepos, attachRepo, detachRepo } from "./garage.ts";
+import { robotRepos, attachRepo, detachRepo, clearRepos } from "./garage.ts";
 const spec = (owner, repo, sha) => ({
   kind: "repo-import", name: repo, parts: [], model: null,
   provenance: { repoUrl: `https://github.com/${owner}/${repo}`, owner, repo, commitSha: sha },
@@ -42,6 +42,10 @@ r = detachRepo(r, "https://github.com/abelxmendoza/omega-cad");
 out.none = names(r); out.keys = Object.keys(r).sort();
 const legacy = { id: "old", name: "Old", createdAt: "", versions: [], repoImport: spec("a", "b", "c") };
 out.legacy = names(legacy);
+let many = attachRepo(attachRepo(legacy, spec("a", "x", "1")), spec("a", "y", "2"));
+out.beforeClear = names(many).length;
+many = clearRepos(many);
+out.afterClear = names(many); out.clearKeys = Object.keys(many).sort();
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -69,6 +73,9 @@ def test_helpers_attach_update_detach(tmp_path: Path) -> None:
     assert out["none"] == []
     assert "repoImport" not in out["keys"] and "repos" not in out["keys"]
     assert out["legacy"] == ["b@c"]
+    # "Remove all" empties the list and keeps the robot itself.
+    assert out["beforeClear"] == 3 and out["afterClear"] == []
+    assert out["clearKeys"] == ["createdAt", "id", "name", "versions"]
 
 
 def test_import_page_can_add_to_an_existing_robot() -> None:
@@ -86,6 +93,56 @@ def test_workshop_lists_every_repo_with_add_and_detach() -> None:
     assert 'aria-label="Code repos"' in src
     assert "robotRepos(robot).map" in src
     assert "/import/?attach=" in src
-    assert "Yes, detach" in src
-    assert "detachRepo(r, repoUrl)" in src
+    assert "Yes, remove" in src and "Yes, remove all" in src
+    assert "detachRepo(r, repoUrl)" in src and "clearRepos(r)" in src
+    # The repos list sits near the top of the Overview, above the cards.
+    assert src.index('aria-label="Code repos"') < src.index('<div className="ws-cards">')
     assert "repos` : 'From repo'" in src
+
+
+PARSE_RUN = r"""
+import { parseRepoList } from "./repoImport.ts";
+const out = {};
+out.many = parseRepoList("https://github.com/abelxmendoza/Omega-Code\nabelxmendoza/omega-ros, git@github.com:a/b.git  ABELXMENDOZA/omega-code");
+out.bad = parseRepoList("owner/repo not-a-repo");
+out.empty = parseRepoList("   ");
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def test_several_repo_links_parse_once_each(tmp_path: Path) -> None:
+    src = (WEB / "lib" / "repoImport.ts").read_text()
+    start = src.index("export function parseRepoInput")
+    end = src.index("export function repoUrl")
+    (tmp_path / "repoImport.ts").write_text(
+        "export type RepoRef = { owner: string; repo: string };\n" + src[start:end])
+    (tmp_path / "package.json").write_text('{"type": "module"}')
+    (tmp_path / "run.mjs").write_text(PARSE_RUN)
+    proc = subprocess.run(
+        ["node", "--experimental-strip-types", "run.mjs"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    out = json.loads(proc.stdout)
+    assert [f"{r['owner']}/{r['repo']}" for r in out["many"]["refs"]] == [
+        "abelxmendoza/Omega-Code", "abelxmendoza/omega-ros", "a/b"]
+    assert out["many"]["bad"] == []
+    assert out["bad"]["bad"] == ["not-a-repo"]
+    assert out["empty"] == {"refs": [], "bad": []}
+
+
+def test_import_page_takes_several_links_and_can_undo() -> None:
+    src = (WEB / "components" / "import" / "RepoImport.tsx").read_text()
+    assert "<textarea" in src and "parseRepoList(input)" in src
+    assert "runBatch(refs)" in src
+    assert "Import ${repoCount} repos" in src
+    # Each repo of a batch is saved against a fresh read of the Garage.
+    assert "readStore<GarageRobot[]>(GARAGE_KEY, [])" in src
+    assert "removeBatchRow(i)" in src
+    # Undo after a save, a remove for a saved repo, and Discard before saving.
+    assert "Undo this save" in src and "Yes, remove" in src
+    assert ">Discard</button>" in src
+    assert "undo.created" in src and "undo.prev" in src
+    # Discard forgets a Workshop-linked robot, and Enter can't start a
+    # second import while one is running.
+    assert src.index("setLinkedId(null);", src.index("const discard")) < src.index("setSpecimen(null);", src.index("const discard"))
+    assert "if (busy) return;" in src

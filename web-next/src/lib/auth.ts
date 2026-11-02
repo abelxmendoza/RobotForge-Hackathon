@@ -1,8 +1,9 @@
 /* Accounts (v1) — identity + role only, served by the live
  * endpoint's /auth/* routes. The session token (a JWT issued by
  * the Worker) and the public user record live in localStorage
- * under rf.auth.v1. Robots and inventory are NOT synced: they
- * stay in this browser's own storage, account or no account. */
+ * under rf.auth.v1. Robots and inventory live in this browser's
+ * storage; the Save button copies them to the account on demand
+ * (lib/accountSync.ts, the Worker's /account/* routes). */
 import { liveBase } from "@/components/forge/live";
 import { isDemoMode } from "@/lib/demoMode";
 
