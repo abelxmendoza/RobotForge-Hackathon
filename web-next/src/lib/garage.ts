@@ -46,20 +46,26 @@ export function robotRepos(r: GarageRobot | undefined | null): Specimen[] {
   return [r.repoImport, ...(r.repos ?? [])].filter((x): x is Specimen => Boolean(x));
 }
 
+/* GitHub owner/repo names are case-insensitive: Omega-Code and
+ * omega-code are the same repo. */
+export function sameRepo(a: string, b: string): boolean {
+  return a.toLowerCase().replace(/\/+$/, '') === b.toLowerCase().replace(/\/+$/, '');
+}
+
 /* Attach a repo to a robot. The same repo (by URL) replaces the
  * copy already there, so re-importing at a newer commit updates it
  * instead of listing it twice. */
 export function attachRepo(r: GarageRobot, spec: Specimen): GarageRobot {
   const url = spec.provenance.repoUrl;
   const all = robotRepos(r);
-  const at = all.findIndex((x) => x.provenance.repoUrl === url);
+  const at = all.findIndex((x) => sameRepo(x.provenance.repoUrl, url));
   const next = at >= 0 ? all.map((x, i) => (i === at ? spec : x)) : [...all, spec];
   return withRepos(r, next);
 }
 
 /* Detach one repo. The robot and its versions stay. */
 export function detachRepo(r: GarageRobot, repoUrl: string): GarageRobot {
-  return withRepos(r, robotRepos(r).filter((x) => x.provenance.repoUrl !== repoUrl));
+  return withRepos(r, robotRepos(r).filter((x) => !sameRepo(x.provenance.repoUrl, repoUrl)));
 }
 
 function withRepos(r: GarageRobot, list: Specimen[]): GarageRobot {

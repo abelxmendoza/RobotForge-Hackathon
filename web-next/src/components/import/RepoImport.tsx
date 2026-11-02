@@ -21,7 +21,7 @@ import {
 import { REPO_IMPORT_EVENT } from "@/lib/repoLink";
 import { repoImportFixture, RECORDED_SNAPSHOT_LABEL } from "@/lib/repoImportFixture";
 import { parts as catalogParts, simReadyProps } from "@/lib/data";
-import { attachRepo, GARAGE_KEY, robotRepos, type GarageRobot } from "@/lib/garage";
+import { attachRepo, GARAGE_KEY, robotRepos, sameRepo, type GarageRobot } from "@/lib/garage";
 import { uid, useStore } from "@/lib/store";
 import { useBuildList } from "@/lib/buildList";
 import { addToBuildList, buildPaletteItems } from "@/lib/palette";
@@ -741,7 +741,7 @@ export default function RepoImport() {
   const saveToGarage = () => {
     if (!specimen) return;
     const sameRecord = (x: RepoSpecimen) =>
-      x.provenance.repoUrl === specimen.provenance.repoUrl &&
+      sameRepo(x.provenance.repoUrl, specimen.provenance.repoUrl) &&
       x.provenance.commitSha === specimen.provenance.commitSha;
     const existing = robots.find((r) => robotRepos(r).some(sameRecord));
     if (existing && (!targetRobot || existing.id === targetRobot.id)) {
@@ -752,7 +752,7 @@ export default function RepoImport() {
     }
     if (targetRobot) {
       const had = robotRepos(targetRobot).some(
-        (x) => x.provenance.repoUrl === specimen.provenance.repoUrl,
+        (x) => sameRepo(x.provenance.repoUrl, specimen.provenance.repoUrl),
       );
       const failure = saveRobots(
         robots.map((r) => (r.id === targetRobot.id ? attachRepo(r, specimen) : r)),

@@ -32,6 +32,9 @@ r = attachRepo(r, spec("abelxmendoza", "omega-cad", "ccc"));
 out.three = names(r); out.firstIsPrimary = r.repoImport.provenance.repo;
 r = attachRepo(r, spec("abelxmendoza", "omega-ros", "ddd"));
 out.updated = names(r);
+r = attachRepo(r, spec("AbelXMendoza", "OMEGA-ROS", "eee"));
+out.caseInsensitive = robotRepos(r).length;
+r = attachRepo(r, spec("abelxmendoza", "omega-ros", "ddd"));
 r = detachRepo(r, "https://github.com/abelxmendoza/Omega-Code");
 out.afterDetachFirst = names(r); out.promoted = r.repoImport.provenance.repo;
 r = detachRepo(r, "https://github.com/abelxmendoza/omega-ros");
@@ -58,6 +61,8 @@ def test_helpers_attach_update_detach(tmp_path: Path) -> None:
     assert out["firstIsPrimary"] == "Omega-Code"
     # Re-importing the same repo replaces it in place, never a duplicate.
     assert out["updated"] == ["Omega-Code@aaa", "omega-ros@ddd", "omega-cad@ccc"]
+    # GitHub names are case-insensitive: a different spelling updates, too.
+    assert out["caseInsensitive"] == 3
     # Detaching the first repo promotes the next one.
     assert out["afterDetachFirst"] == ["omega-ros@ddd", "omega-cad@ccc"]
     assert out["promoted"] == "omega-ros"
