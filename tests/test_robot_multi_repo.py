@@ -142,3 +142,7 @@ def test_import_page_takes_several_links_and_can_undo() -> None:
     assert "Undo this save" in src and "Yes, remove" in src
     assert ">Discard</button>" in src
     assert "undo.created" in src and "undo.prev" in src
+    # Discard forgets a Workshop-linked robot, and Enter can't start a
+    # second import while one is running.
+    assert src.index("setLinkedId(null);", src.index("const discard")) < src.index("setSpecimen(null);", src.index("const discard"))
+    assert "if (busy) return;" in src

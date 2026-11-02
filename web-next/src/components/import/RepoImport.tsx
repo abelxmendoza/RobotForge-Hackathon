@@ -882,6 +882,10 @@ export default function RepoImport() {
 
   /* Drop the import on screen without saving anything. */
   const discard = () => {
+    // Opened from Workshop Details (?robot=…): forget that robot too, or
+    // the linked-robot effect reloads its repo the moment this clears.
+    setLinkedId(null);
+    setLinkedSrc(null);
     setSpecimen(null);
     setSavedId(null);
     setUndo(null);
@@ -953,6 +957,9 @@ export default function RepoImport() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          // Enter in the box still submits while the button is disabled:
+          // one import (or batch) at a time.
+          if (busy) return;
           const { refs, bad } = parseRepoList(input);
           if (!refs.length) {
             setError("That does not look like a GitHub repo. Paste a URL like https://github.com/owner/repo, or just owner/repo.");
