@@ -328,7 +328,7 @@ export interface CheckResult {
 
 const PRINT_STEP = (key: string) => `print:${key}`;
 
-function fitsInBed(d: ItemDims, bed: [number, number, number]): boolean {
+export function fitsInBed(d: ItemDims, bed: [number, number, number]): boolean {
   const dims = [d.x, d.y, d.z];
   /* A prescribed orientation (recorded print note) pins the
    * modeled z vertical; otherwise every orientation is tried. */

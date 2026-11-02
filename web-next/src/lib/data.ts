@@ -7,6 +7,9 @@ import physicsDoc from "@/data/physics.json";
 import stageDoc from "@/data/stage-animation.json";
 import type { StageDoc } from "./stageAnimation";
 import simReadyDoc from "@/data/simready-props.json";
+import toolsDoc from "@/data/tools.json";
+import materialsDoc from "@/data/materials.json";
+import { tmItemsFromCatalog, type TmItem } from "./toolsMaterials";
 import harnessDoc from "@/data/harness-reports.json";
 import stabilityDoc from "@/data/stability-reports.json";
 import type { Family, GateReportRun, Part, PartTemplate, PhysicsEntry, Robot, RobotKit, SimReadyPropEntry } from "./types";
@@ -32,6 +35,13 @@ export const stageAnimation = stageDoc as unknown as StageDoc;
 export const stageRecordOf = (slug: string) => stageAnimation.robots[slug];
 
 export const simReadyProps = (simReadyDoc as unknown as { props: SimReadyPropEntry[] }).props;
+
+/* Tools & materials (Forge Engine §11): the gathered tools and
+ * materials catalogues, unified with the parts catalogue's
+ * materials-class records by lib/toolsMaterials.ts — the one
+ * builder every surface reads. Ownership state resolves there,
+ * never in a component. */
+export const toolMaterialItems: TmItem[] = tmItemsFromCatalog(toolsDoc, materialsDoc, parts);
 
 export const harnessReports = harnessDoc as unknown as Record<string, Record<string, unknown>>;
 export const stabilityReports = stabilityDoc as unknown as Record<string, Record<string, unknown>>;
