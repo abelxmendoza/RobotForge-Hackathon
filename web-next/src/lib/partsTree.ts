@@ -26,28 +26,66 @@ export const SUBSYSTEM_LABEL: Record<SubsystemId, string> = {
   drive: 'Drive', power: 'Power', compute: 'Compute', sensing: 'Sensing', frame: 'Frame and wiring', tools: 'Tools',
 };
 
-/* The parent a part actually hangs under: a missing or looping
- * parent_id (an old import, a deleted part) reads as no parent. */
-export function effectiveParent(parts: InventoryPart[], p: InventoryPart): string | null {
+/* One index per inventory array: effective parent, children and
+ * descendant counts, built in a single pass and cached by the array
+ * itself (the store hands out a new array on every change). Every
+ * lookup below reads it, so a whole grid renders in linear time. */
+interface TreeIndex { parent: Map<string, string | null>; children: Map<string, InventoryPart[]>; below: Map<string, number> }
+const indexCache = new WeakMap<InventoryPart[], TreeIndex>();
+
+function indexOf(parts: InventoryPart[]): TreeIndex {
+  const hit = indexCache.get(parts);
+  if (hit) return hit;
   const byId = new Map(parts.map((x) => [x.id, x]));
-  const seen = new Set<string>([p.id]);
-  let cur = p.parent_id ? byId.get(p.parent_id) : undefined;
-  while (cur) {
-    if (seen.has(cur.id)) return null;
-    seen.add(cur.id);
-    cur = cur.parent_id ? byId.get(cur.parent_id) : undefined;
+  const parent = new Map<string, string | null>();
+  // A missing or looping parent_id (an old import, a deleted part)
+  // reads as no parent.
+  const resolve = (p: InventoryPart): string | null => {
+    if (parent.has(p.id)) return parent.get(p.id)!;
+    const seen = new Set<string>([p.id]);
+    let cur = p.parent_id ? byId.get(p.parent_id) : undefined;
+    let ok = Boolean(cur);
+    while (cur) {
+      if (seen.has(cur.id)) { ok = false; break; }
+      seen.add(cur.id);
+      cur = cur.parent_id ? byId.get(cur.parent_id) : undefined;
+    }
+    const out = ok ? p.parent_id! : null;
+    parent.set(p.id, out);
+    return out;
+  };
+  const children = new Map<string, InventoryPart[]>();
+  for (const p of parts) {
+    const pid = resolve(p);
+    if (pid) children.set(pid, [...(children.get(pid) ?? []), p]);
   }
-  return p.parent_id && byId.has(p.parent_id) ? p.parent_id : null;
+  const below = new Map<string, number>();
+  const count = (id: string): number => {
+    if (below.has(id)) return below.get(id)!;
+    below.set(id, 0);
+    const n = (children.get(id) ?? []).reduce((a, c) => a + 1 + count(c.id), 0);
+    below.set(id, n);
+    return n;
+  };
+  for (const p of parts) count(p.id);
+  const idx = { parent, children, below };
+  indexCache.set(parts, idx);
+  return idx;
+}
+
+export function effectiveParent(parts: InventoryPart[], p: InventoryPart): string | null {
+  return indexOf(parts).parent.get(p.id) ?? null;
 }
 
 export function childrenOf(parts: InventoryPart[], id: string): InventoryPart[] {
-  return parts.filter((x) => x.id !== id && effectiveParent(parts, x) === id);
+  return indexOf(parts).children.get(id) ?? [];
 }
 
 export function descendantIds(parts: InventoryPart[], id: string): Set<string> {
+  const idx = indexOf(parts);
   const out = new Set<string>();
   const walk = (pid: string) => {
-    for (const c of childrenOf(parts, pid)) if (!out.has(c.id)) { out.add(c.id); walk(c.id); }
+    for (const c of idx.children.get(pid) ?? []) if (!out.has(c.id)) { out.add(c.id); walk(c.id); }
   };
   walk(id);
   return out;
@@ -142,7 +180,7 @@ export function rootParts(shelfParts: InventoryPart[], all: InventoryPart[], sub
 
 /* Everything under a part, at any depth, for counts. */
 export function countUnder(parts: InventoryPart[], id: string): number {
-  return descendantIds(parts, id).size;
+  return indexOf(parts).below.get(id) ?? 0;
 }
 
 /* Keep a filtered list's matches visible in the tree: add back every

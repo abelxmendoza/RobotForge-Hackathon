@@ -51,6 +51,11 @@ const w = T.withAncestors(parts, [parts.find((p) => p.id === "encoder")]);
 out.filtered = w.parts.map((p) => p.id).sort(); out.context = [...w.context];
 const rm = T.removePart(parts, "lidar");
 out.promoted = rm.promoted; out.usbAfter = rm.parts.find((p) => p.id === "usb").parent_id;
+const big = Array.from({ length: 2000 }, (_, i) => part("p" + i, "motor", i % 10 ? { parent_id: "p" + (i - 1) } : {}));
+const t0 = Date.now();
+let total = 0;
+for (const p of big) total += T.countUnder(big, p.id);
+out.bigMs = Date.now() - t0; out.bigTop = T.countUnder(big, "p0"); out.bigTotal = total;
 process.stdout.write(JSON.stringify(out));
 """
 
@@ -90,6 +95,14 @@ def test_tree_rules(tmp_path: Path) -> None:
     assert out["filtered"] == ["encoder", "motor"] and out["context"] == ["motor"]
     # Deleting a parent promotes its children.
     assert out["promoted"] == 1 and out["usbAfter"] is None
+    # One index per inventory: 2,000 records (chains of 10) count fast.
+    assert out["bigTop"] == 9 and out["bigTotal"] == 200 * 45
+    assert out["bigMs"] < 1500, out["bigMs"]
+
+
+def test_chat_robot_assignment_goes_through_the_tree() -> None:
+    src = (WEB / "components/chat/InventoryProposal.tsx").read_text()
+    assert "setRobot(current,operation.partId,operation.robotId)" in src
 
 
 def test_inventory_page_wiring() -> None:
