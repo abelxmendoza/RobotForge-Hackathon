@@ -6,6 +6,11 @@ name = "robotforge-live"
 main = "worker.js"
 compatibility_date = "2025-09-01"
 workers_dev = true
+# Keep variables set in the Cloudflare dashboard (e.g. META_APP_ID) on
+# deploy. Without this, `wrangler deploy` replaces them with only the
+# [vars] below; that switched Meta login off on 2026-11-02. Values in
+# [vars] still win. Secrets are never touched by a deploy either way.
+keep_vars = true
 
 # Guardrail defaults. These are plain vars, not secrets — raise or
 # lower them here and redeploy. The Worker reads them per request.
