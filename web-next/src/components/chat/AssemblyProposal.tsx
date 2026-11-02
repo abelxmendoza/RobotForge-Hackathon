@@ -5,8 +5,11 @@ import { componentById } from '@/lib/components';
 import { ASSEMBLY_KEY, applyAssembly, previewAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { readStore, uid, useStore, writeStore } from '@/lib/store';
+import { activeRecords } from '@/lib/lifecycle';
+import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 export default function AssemblyProposal({operation,onApplied,onCancel,onError}: {operation: AssemblyOperation; onApplied:(id:string)=>void; onCancel:()=>void; onError:(text:string)=>void}) {
-  const [robots] = useStore<GarageRobot[]>(GARAGE_KEY,[]);
+  const [storedRobots] = useStore<GarageRobot[]>(GARAGE_KEY,[]);
+  const robots = activeRecords(storedRobots);
   const [all,,ready] = useStore<Assemblies>(ASSEMBLY_KEY,{});
   const consumed=useRef(false);
   let note='',error='';
@@ -21,7 +24,7 @@ export default function AssemblyProposal({operation,onApplied,onCancel,onError}:
       if(consumed.current) return; consumed.current=true;
       try {
         const versionId=uid('assembly');
-        const next=applyAssembly(readStore<GarageRobot[]>(GARAGE_KEY,[]),readStore<Assemblies>(ASSEMBLY_KEY,{}),operation,versionId,new Date().toISOString());
+        const next=applyAssembly(readActiveRobots(()=>readStore<GarageRobot[]>(GARAGE_KEY,[])),readStore<Assemblies>(ASSEMBLY_KEY,{}),operation,versionId,new Date().toISOString());
         const failure=writeStore(ASSEMBLY_KEY,next); if(failure) throw new Error(failure);
         onApplied(versionId);
       } catch(e) {onError((e as Error).message);}

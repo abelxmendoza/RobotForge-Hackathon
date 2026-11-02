@@ -118,7 +118,10 @@ def test_scan_ui_is_honest() -> None:
     edit = (WEB / "components" / "garage" / "ScanEditor.tsx").read_text()
     assert "Scaniverse" in edit and "realsense_scan.py" in edit and "Yes, remove" in edit
     garage = (WEB / "components" / "garage" / "Garage.tsx").read_text()
-    assert "scan={robot.scan}" in garage and "removeScanFile(robot.id)" in garage
+    assert "scan={robot.scan}" in garage
+    # Archiving a robot keeps its scan for Restore. Explicit scan deletion
+    # remains inside ScanEditor, where it has its own confirmation.
+    assert "removeScanFile" not in garage
 
 
 def test_frames_are_shrunk_before_storage() -> None:

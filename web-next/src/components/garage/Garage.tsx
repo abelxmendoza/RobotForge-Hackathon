@@ -26,7 +26,6 @@ import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
-import { removeScanFile } from '@/lib/scanStore';
 import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
@@ -38,6 +37,8 @@ import {
 } from '@/lib/garage';
 import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
+import { activeRecords, activeSelection, archivedRecords, recordSnapshot } from '@/lib/lifecycle';
+import { archiveRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
 
 const now = () => new Date().toISOString();
 
@@ -383,6 +384,8 @@ const ALL_REPOS = '*all*';
 
 export default function Garage() {
   const [robots, saveRobots, ready] = useStore<GarageRobot[]>(GARAGE_KEY, []);
+  const activeRobots = useMemo(() => activeRecords(robots), [robots]);
+  const archivedRobots = useMemo(() => archivedRecords(robots), [robots]);
   const [inventory] = useStore<InventoryPart[]>(INVENTORY_KEY, []);
   const [selected, setSelected] = useState<string | null>(null);
   const [baseId, setBaseId] = useState<string | null>(null);
@@ -401,6 +404,7 @@ export default function Garage() {
   const [withWarnings, setWithWarnings] = useState(true);
   const [rover, setRover] = useState({ terrain: 'outdoor', slopeDeg: 15, stepM: 0.05, targetMin: 30 });
   const [saveError, setSaveError] = useState('');
+  const [lifecycleNotice, setLifecycleNotice] = useState('');
   const [adding, setAdding] = useState(false);
   /* The built-in Omega1 twin specimen (lib/omega1Twin.ts): not a
    * stored robot — a fixed entry whose view replaces the workshop
@@ -433,12 +437,12 @@ export default function Garage() {
   useEffect(() => {
     const check = () => {
       const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)$/);
-      if (r && robots.some((x) => x.id === r[1])) { setSelected(r[1]); setTwinOpen(false); }
+      if (r && activeRobots.some((x) => x.id === r[1])) { setSelected(r[1]); setTwinOpen(false); }
     };
     check();
     window.addEventListener('hashchange', check);
     return () => window.removeEventListener('hashchange', check);
-  }, [robots]);
+  }, [activeRobots]);
 
   useEffect(() => { liveHealth().then(setHealth); }, []);
   const lm = useLiveMode('fix', 'mock');
@@ -447,14 +451,15 @@ export default function Garage() {
    * robot's editor or overwrite newer edits. */
   const runRef = useRef(0);
 
-  const robot = robots.find((r) => r.id === selected) ?? null;
+  const robot = activeRobots.find((r) => r.id === selected) ?? null;
   const latest = robot ? robot.versions[robot.versions.length - 1] : null;
   const base = robot ? robot.versions.find((v) => v.id === baseId) ?? latest : null;
 
   useEffect(() => {
     if (!ready) return;
-    if (!selected && robots.length) setSelected(robots[0].id);
-  }, [ready, robots, selected]);
+    const next = activeSelection(activeRobots, selected);
+    if (next !== selected) setSelected(next);
+  }, [ready, activeRobots, selected]);
 
   useEffect(() => {
     if (!robot) { setDraft(null); return; }
@@ -521,17 +526,32 @@ export default function Garage() {
       : r)));
   };
 
-  /* Remove asks first: one click arms it, the second confirms. It
-   * disarms when another robot is picked. */
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
-  useEffect(() => { setConfirmRemove(null); }, [robot?.id]);
-  const removeRobot = () => {
+  /* Archive asks first and always commits against a fresh store read.
+   * Switching robots disarms the pending action. */
+  const [confirmArchive, setConfirmArchive] = useState<string | null>(null);
+  useEffect(() => { setConfirmArchive(null); }, [robot?.id]);
+  const archiveRobot = () => {
     if (!robot) return;
-    if (confirmRemove !== robot.id) { setConfirmRemove(robot.id); return; }
-    persist(robots.filter((r) => r.id !== robot.id));
-    if (robot.scan) void removeScanFile(robot.id).catch(() => {});
-    setConfirmRemove(null);
-    setSelected(null);
+    if (confirmArchive !== robot.id) { setConfirmArchive(robot.id); return; }
+    const result = archiveRobotInStore(
+      () => readStore<GarageRobot[]>(GARAGE_KEY, []), saveRobots,
+      robot.id, recordSnapshot(robot), now(),
+    );
+    if (!result.ok) { setSaveError(result.error); return; }
+    const next = activeRecords(readStore<GarageRobot[]>(GARAGE_KEY, []));
+    setConfirmArchive(null);
+    setSelected(next[0]?.id ?? null);
+    setLifecycleNotice(`Archived ${robot.name}. You can restore it below.`);
+  };
+  const restoreRobot = (archived: GarageRobot) => {
+    const result = restoreRobotInStore(
+      () => readStore<GarageRobot[]>(GARAGE_KEY, []), saveRobots,
+      archived.id, recordSnapshot(archived),
+    );
+    if (!result.ok) { setSaveError(result.error); return; }
+    setSelected(archived.id);
+    setAdding(false);
+    setLifecycleNotice(`Restored ${archived.name}.`);
   };
 
   /* Removing a repo also asks twice; the robot and its versions stay.
@@ -622,9 +642,9 @@ export default function Garage() {
     <div className="garage">
       <aside className="garage-list" aria-label="Your robots">
         <h2>Your robots</h2>
-        {robots.length === 0 && <p className="faint g-small">No robots yet.</p>}
-        <ul hidden={!robots.length}>
-          {robots.map((r) => (
+        {activeRobots.length === 0 && <p className="faint g-small">No active robots yet.</p>}
+        <ul hidden={!activeRobots.length}>
+          {activeRobots.map((r) => (
             <li key={r.id}>
               <button type="button" className="g-robot" aria-current={r.id === selected && !twinOpen ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); setTwinOpen(false); }}>
                 <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
@@ -650,15 +670,32 @@ export default function Garage() {
           <span className="fbadge live">Digital twin</span>
           <span className="faint">ProjectSim reconstruction · estimated</span></span>
         </button>
-        {robots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
+        {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
+        {archivedRobots.length > 0 && (
+          <details className="g-archived">
+            <summary>Archived robots ({archivedRobots.length})</summary>
+            <ul>
+              {archivedRobots.map((archived) => (
+                <li key={archived.id}>
+                  <span className="g-robot-text">
+                    <strong>{archived.name}</strong>
+                    <span className="faint">{archived.versions.length} version{archived.versions.length === 1 ? '' : 's'} · archived {new Date(archived.archivedAt!).toLocaleDateString()}</span>
+                  </span>
+                  <button type="button" className="btn btn-sm" onClick={() => restoreRobot(archived)}>Restore</button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         <p className="faint g-small" title="Saved in this browser only. Use Export to keep a copy.">Saved in this browser</p>
       </aside>
 
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
+        {lifecycleNotice && <p className="g-notice" role="status">{lifecycleNotice}</p>}
         {twinOpen && <Omega1Twin />}
-        {!twinOpen && (adding || robots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={robots.length === 0} />}
+        {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} />}
 
         {!twinOpen && !adding && robot && draft && (() => {
           const verdict = verdictOf(draftLines);
@@ -704,14 +741,14 @@ export default function Garage() {
               <div className="g-head-actions">
                 <button type="button" className="btn btn-sm" onClick={saveCopy} title="Save a separate copy of this robot in your Garage — versions and provenance carried over; the original is unchanged">Save a copy</button>
                 <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
-                {confirmRemove === robot.id ? (
+                {confirmArchive === robot.id ? (
                   <span className="g-remove-confirm" role="alert">
-                    Remove {draft.name || robot.name} and its {robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}? This can&apos;t be undone.{' '}
-                    <button type="button" className="btn btn-sm g-remove-yes" onClick={removeRobot}>Yes, remove</button>{' '}
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmRemove(null)}>Cancel</button>
+                    Archive {draft.name || robot.name} and its {robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}? You can restore it later.{' '}
+                    <button type="button" className="btn btn-sm" onClick={archiveRobot}>Yes, archive</button>{' '}
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmArchive(null)}>Cancel</button>
                   </span>
                 ) : (
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={removeRobot}>Remove</button>
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={archiveRobot}>Archive</button>
                 )}
               </div>
             </div>
