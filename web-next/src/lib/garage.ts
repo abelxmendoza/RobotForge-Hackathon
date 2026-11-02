@@ -27,6 +27,8 @@ export interface GarageRobot {
   id: string;
   name: string;
   createdAt: string;
+  /** Reversible removal marker. Missing or invalid values remain active. */
+  archivedAt?: string;
   versions: RobotVersion[];
   /* Set when this robot was imported from a GitHub repo (lib/repoImport.ts):
    * the full specimen record — provenance, hardware, parts, images —

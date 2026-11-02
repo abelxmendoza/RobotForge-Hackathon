@@ -23,6 +23,8 @@ import {
   type Pose,
 } from '@/lib/assembly';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
+import { activeRecords } from '@/lib/lifecycle';
+import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 import { downloadJSON, readStore, uid, useStore, writeStore } from '@/lib/store';
 import type { RobotSpec } from '@/components/forge/model';
 import { taBuildParts } from '@/components/kit/takeapart';
@@ -221,7 +223,8 @@ export default function AssemblyWorkspace({
   view?: 'components' | 'wiring';
   onView?: (v: 'components' | 'wiring') => void;
 }) {
-  const [robots] = useStore<GarageRobot[]>(GARAGE_KEY, []);
+  const [storedRobots] = useStore<GarageRobot[]>(GARAGE_KEY, []);
+  const robots = useMemo(() => activeRecords(storedRobots), [storedRobots]);
   const [all, , ready] = useStore<Assemblies>(ASSEMBLY_KEY, {});
   /* The Workshop's Build and Wiring tabs pick the view; standalone, the
    * workbench keeps its own sub-tabs. */
@@ -348,7 +351,7 @@ export default function AssemblyWorkspace({
     const op = proposal;
     setProposal(null);
     try {
-      const freshRobots = readStore<GarageRobot[]>(GARAGE_KEY, []);
+      const freshRobots = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
       const fresh = readStore<Assemblies>(ASSEMBLY_KEY, {});
       const next = applyAssembly(
         freshRobots,

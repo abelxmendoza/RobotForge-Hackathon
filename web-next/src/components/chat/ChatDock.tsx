@@ -58,6 +58,8 @@ import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
+import { activeRecords } from '@/lib/lifecycle';
+import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 import { REPO_IMPORT_EVENT, repoLinkIn } from '@/lib/repoLink';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { appendFreshBaseline, buildDexEntry, copyAsNew, parseSaveChoice, parseSaveCommand, planSave, recordAddedPart, resolveCataloguePart, resolveSaveTarget, uniqueCopyName, type DexRobotRef } from '@/lib/saveRobot';
@@ -566,7 +568,7 @@ export function useForgeAssistant() {
       if(stockCommand){
         try{
           const stock=readStore<InventoryPart[]>(INVENTORY_KEY,[]);
-          const robots=readStore<GarageRobot[]>(GARAGE_KEY,[]);
+          const robots=readActiveRobots(()=>readStore<GarageRobot[]>(GARAGE_KEY,[]));
           if(stockCommand.kind==='list'){
             let shown=stock;
             if(stockCommand.robotName){const match=robots.filter(r=>r.name.toLowerCase()===stockCommand.robotName!.toLowerCase());if(match.length!==1)throw new Error('Use a unique saved robot name.');shown=stock.filter(p=>p.robot_id===match[0].id);}
@@ -576,7 +578,7 @@ export function useForgeAssistant() {
         return true;
       }
       try {
-        const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        const saved = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
         const assemblies = readStore<Assemblies>(ASSEMBLY_KEY, {});
         const assembly = parseAssemblyCommand(q, saved, assemblies, uid('part'));
         if (assembly) {
@@ -597,7 +599,7 @@ export function useForgeAssistant() {
        * all returns null and falls through to the paths below. */
       const buildReq = parseBuildRequest(q, PALETTE_ITEMS, [
         ...robots.map((r) => r.name),
-        ...readStore<GarageRobot[]>(GARAGE_KEY, []).map((r) => r.name),
+        ...readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, [])).map((r) => r.name),
       ]);
       if (buildReq) {
         try {
@@ -629,7 +631,7 @@ export function useForgeAssistant() {
         PALETTE_ITEMS,
         [
           ...robots.map((r) => r.name),
-          ...readStore<GarageRobot[]>(GARAGE_KEY, []).map((r) => r.name),
+          ...readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, [])).map((r) => r.name),
         ],
         () => uid('wire'),
       );
@@ -646,7 +648,8 @@ export function useForgeAssistant() {
       const command = parseCommand(q);
       if (command) {
         try {
-          const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const allSaved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const saved = activeRecords(allSaved);
           if (command.kind === 'help') {
             noteBubble('Submit a robot: paste its GitHub repo link (https://github.com/owner/repo) and I open the repo importer with it, or attach a photo, parts list or spec file with the paperclip. Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Navigation: open "TurtleBot3 Burger"; go to wiring; show the legged robots. Free-form operation requests (for example “make Omega1’s wheels bigger”) go to the live model when it is available: it proposes a command in this same grammar, the app validates it, and you still tap Apply. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
@@ -655,6 +658,7 @@ export function useForgeAssistant() {
             const last = lastApplied.current;
             if (!last) throw new Error('No chat change to undo in this session.');
             if (last.scope === 'assembly') {
+              if (!saved.some((robot) => robot.id === last.robotId)) throw new Error('That robot is archived or no longer exists.');
               const fresh = readStore<Assemblies>(ASSEMBLY_KEY, {});
               const next = undoAssembly(fresh,last.robotId,last.versionId,uid('assembly'),new Date().toISOString());
               const error = writeStore(ASSEMBLY_KEY,next); if(error) throw new Error(error);
@@ -662,7 +666,8 @@ export function useForgeAssistant() {
               noteBubble('Previous assembly restored as a new version.');
               return true;
             }
-            const next = undoOperation(saved, last.robotId, last.versionId, uid('v'), new Date().toISOString());
+            if (!saved.some((robot) => robot.id === last.robotId)) throw new Error('That robot is archived or no longer exists.');
+            const next = undoOperation(allSaved, last.robotId, last.versionId, uid('v'), new Date().toISOString());
             const error = writeStore(GARAGE_KEY, next);
             if (error) throw new Error(error);
             lastApplied.current = null;
@@ -681,7 +686,7 @@ export function useForgeAssistant() {
   /* ---------------- Tier 0: navigation ---------------- */
 
   const navContext = () => ({
-    saved: readStore<GarageRobot[]>(GARAGE_KEY, []).map((r) => ({ id: r.id, name: r.name })),
+    saved: readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, [])).map((r) => ({ id: r.id, name: r.name })),
     dex: robots.map((r) => ({ name: r.name, slug: robotSlug(r) })),
     groups: MOBILITY_CLASSES.map((cls) => ({ cls, slug: groupSlug(cls) })),
   });
@@ -726,7 +731,7 @@ export function useForgeAssistant() {
   /* ---------------- Tier 1: model-proposed operations ---------------- */
 
   const buildOpContext = () => {
-    const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const saved = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
     const stock = readStore<InventoryPart[]>(INVENTORY_KEY, []);
     return {
       robots: saved.map((r) => r.name),
@@ -958,7 +963,8 @@ export function useForgeAssistant() {
           return r.json() as Promise<Spec>;
         })
         .then((spec) => {
-          const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const allSaved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const saved = activeRecords(allSaved);
           if (saved.some((g) => g.name === robot.name)) {
             noteBubble(
               "“" + robot.name + "” is already in your Workshop — opening it there. Its saved versions are unchanged."
@@ -980,7 +986,7 @@ export function useForgeAssistant() {
                 },
               ],
             };
-            const error = writeStore(GARAGE_KEY, [...saved, entry]);
+            const error = writeStore(GARAGE_KEY, [...allSaved, entry]);
             if (error) throw new Error(error);
             noteBubble(
               "I put “" + robot.name + "” in your Workshop with its recorded spec as the Baseline version. " +
@@ -1037,7 +1043,7 @@ export function useForgeAssistant() {
           onError={text => {setAssemblyProposal(null); noteBubble(text);}} />}
         {proposal && (() => {
           const op = proposal.operation;
-          const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const saved = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
           let checks: string[] = [];
           try {
             const candidate = applyOperation(saved, op, 'preview', 'preview');
@@ -1055,6 +1061,7 @@ export function useForgeAssistant() {
               setProposal(null);
               try {
                 const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+                if (!activeRecords(current).some((robot) => robot.id === op.robotId)) throw new Error('That robot is archived or no longer exists.');
                 const versionId = uid('v');
                 const next = applyOperation(current, op, versionId, new Date().toISOString());
                 const error = writeStore(GARAGE_KEY, next);

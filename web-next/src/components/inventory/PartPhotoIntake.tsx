@@ -5,9 +5,11 @@ import {intakePartPhoto} from '@/lib/partIntake';
 import {GARAGE_KEY,type GarageRobot} from '@/lib/garage';
 import {INVENTORY_KEY,type InventoryPart} from '@/lib/inventory';
 import {readStore,useStore,writeStore} from '@/lib/store';
+import {activeRecords} from '@/lib/lifecycle';
 export default function PartPhotoIntake({file}:{file:File}){
   const started=useRef(false);const [id,setId]=useState('');const [error,setError]=useState('');
-  const [robots]=useStore<GarageRobot[]>(GARAGE_KEY,[]);
+  const [storedRobots]=useStore<GarageRobot[]>(GARAGE_KEY,[]);
+  const robots=activeRecords(storedRobots);
   const [parts]=useStore<InventoryPart[]>(INVENTORY_KEY,[]);
   const part=parts.find(p=>p.id===id);
   useEffect(()=>{if(started.current)return;started.current=true;intakePartPhoto(file,null).then(result=>{setId(result.id);setError(result.warning);}).catch(e=>setError((e as Error).message));},[file]);
