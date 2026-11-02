@@ -1750,3 +1750,7 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .ps-edit{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .ps-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 @media (prefers-reduced-motion: reduce){.ps-hint{display:none}}
+/* 3D scan view (Workshop Overview). */
+.scan-stage{position:relative;width:100%;min-height:240px;border-radius:var(--r);overflow:hidden;background:var(--surface);border:1px solid var(--border);touch-action:none}
+.scan-stage canvas{display:block;cursor:grab}
+.scan-wait{padding:var(--s4);margin:0}

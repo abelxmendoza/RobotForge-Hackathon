@@ -26,6 +26,7 @@ import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
+import { removeScanFile } from '@/lib/scanStore';
 import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
@@ -463,6 +464,14 @@ export default function Garage() {
   }, [robot?.id]);
 
   const persist = (next: GarageRobot[]) => setSaveError(saveRobots(next) ?? '');
+  /* Photos and scans take a while to process: read the garage as it is
+   * now, so edits made meanwhile are kept, and skip a robot deleted
+   * while they were processing. */
+  const patchRobot = (id: string, fn: (r: GarageRobot) => GarageRobot): string | null => {
+    const now = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    if (!now.some((r) => r.id === id)) return 'That robot was removed before the upload finished.';
+    return saveRobots(now.map((r) => (r.id === id ? fn(r) : r))) ?? null;
+  };
 
   const addRobot = (name: string, spec: Spec, source: VersionSource, why: string) => {
     const r: GarageRobot = {
@@ -503,6 +512,7 @@ export default function Garage() {
     if (!robot) return;
     if (confirmRemove !== robot.id) { setConfirmRemove(robot.id); return; }
     persist(robots.filter((r) => r.id !== robot.id));
+    if (robot.scan) void removeScanFile(robot.id).catch(() => {});
     setConfirmRemove(null);
     setSelected(null);
   };
@@ -727,23 +737,21 @@ export default function Garage() {
                   return (
                     <OverviewMedia
                       key={robot.id}
+                      robotId={robot.id}
                       spin={robot.spin}
+                      scan={robot.scan}
                       name={robot.name}
                       model={<OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
-                      onSave={(next) => {
-                        // Photos take a while to shrink: read the garage as it is
-                        // now, so edits made meanwhile are kept, and skip a robot
-                        // deleted while they were processing.
-                        const id = robot.id;
-                        const now = readStore<GarageRobot[]>(GARAGE_KEY, []);
-                        if (!now.some((r) => r.id === id)) return 'That robot was removed before the photos finished.';
-                        return saveRobots(now.map((r) => {
-                          if (r.id !== id) return r;
-                          if (next) return { ...r, spin: next };
-                          const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
-                          return rest;
-                        })) ?? null;
-                      }}
+                      onSave={(next) => patchRobot(robot.id, (r) => {
+                        if (next) return { ...r, spin: next };
+                        const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+                        return rest;
+                      })}
+                      onScanSave={(next) => patchRobot(robot.id, (r) => {
+                        if (next) return { ...r, scan: next };
+                        const { scan: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+                        return rest;
+                      })}
                     />
                   );
                 })()}

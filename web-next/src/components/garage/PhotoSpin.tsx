@@ -3,12 +3,20 @@
  * played back as a view you drag to turn. This is the photorealistic
  * 360: it IS the robot, not a model of it. Photos (or a walk-around
  * video) are shrunk in the browser and stored with the robot. */
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { spinFrame, videoFrames } from '@/lib/image';
 import {
   evenPick, frameAfterDrag, naturalOrder, stepFrame,
   SPIN_MAX_FRAMES, SPIN_MIN_FRAMES, SPIN_VIDEO_FRAMES, type PhotoSpin as Spin,
 } from '@/lib/photoSpin';
+import type { ScanMeta } from '@/lib/scan3d';
+import ScanEditor from './ScanEditor';
+
+const ScanView = dynamic(() => import('./ScanView'), {
+  ssr: false,
+  loading: () => <p className="faint scan-wait">Loading the 3D viewer…</p>,
+});
 
 export function PhotoSpinViewer({ spin, name }: { spin: Spin; name: string }) {
   const n = spin.frames.length;
@@ -168,35 +176,50 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
   );
 }
 
-/* The Overview's picture: the real photo spin when there is one (with a
- * switch to the 3D model), otherwise the model, with a way to add one. */
-export function OverviewMedia({ spin, name, model, onSave }: {
+/* The Overview's picture: the real photo spin or 3D scan when there is
+ * one (with a switch to the 3D model), otherwise the model, with ways
+ * to add either. */
+type View = 'photos' | 'scan' | 'model';
+export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScanSave }: {
+  robotId: string;
   spin: Spin | undefined;
+  scan: ScanMeta | undefined;
   name: string;
   model: ReactNode;
   onSave: (next: Spin | null) => string | null;
+  onScanSave: (next: ScanMeta | null) => string | null;
 }) {
-  const [view, setView] = useState<'photos' | 'model'>('photos');
-  const showPhotos = Boolean(spin) && view === 'photos';
+  const [pick, setPick] = useState<View | null>(null);
+  const view: View = pick === 'photos' && spin ? 'photos'
+    : pick === 'scan' && scan ? 'scan'
+    : pick === 'model' ? 'model'
+    : spin ? 'photos' : scan ? 'scan' : 'model';
   return (
     <div className="ps-overview">
-      {spin && (
+      {(spin || scan) && (
         <div className="ps-switch" role="group" aria-label="Overview picture">
-          <button type="button" className="btn btn-sm" aria-pressed={showPhotos} onClick={() => setView('photos')}>Photo spin</button>
-          <button type="button" className="btn btn-sm" aria-pressed={!showPhotos} onClick={() => setView('model')}>3D model</button>
+          {spin && <button type="button" className="btn btn-sm" aria-pressed={view === 'photos'} onClick={() => setPick('photos')}>Photo spin</button>}
+          {scan && <button type="button" className="btn btn-sm" aria-pressed={view === 'scan'} onClick={() => setPick('scan')}>3D scan</button>}
+          <button type="button" className="btn btn-sm" aria-pressed={view === 'model'} onClick={() => setPick('model')}>3D model</button>
         </div>
       )}
-      {showPhotos && spin ? (
+      {view === 'photos' && spin ? (
         <figure className="ps-figure">
           <PhotoSpinViewer key={spin.addedAt} spin={spin} name={name} />
           <figcaption className="faint g-small">
             Your own photos of {name} ({spin.frames.length} {spin.source === 'video' ? 'frames from a video' : 'photos'}).
           </figcaption>
         </figure>
+      ) : view === 'scan' && scan ? (
+        <ScanView key={scan.addedAt} robotId={robotId} scan={scan} name={name} />
       ) : model}
       <details className="ps-details">
         <summary>{spin ? 'Change the photo spin' : 'Add a real 360 from your photos'}</summary>
-        <PhotoSpinEditor spin={spin} onSave={(next) => { const err = onSave(next); if (!err && next) setView('photos'); return err; }} />
+        <PhotoSpinEditor spin={spin} onSave={(next) => { const err = onSave(next); if (!err && next) setPick('photos'); return err; }} />
+      </details>
+      <details className="ps-details">
+        <summary>{scan ? 'Change the 3D scan' : 'Add a 3D scan (Scaniverse, RealSense)'}</summary>
+        <ScanEditor robotId={robotId} scan={scan} onSave={(next) => { const err = onScanSave(next); if (!err && next) setPick('scan'); return err; }} />
       </details>
     </div>
   );

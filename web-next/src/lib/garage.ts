@@ -39,6 +39,8 @@ export interface GarageRobot {
   /* Real photos taken around the robot, played as a drag-to-turn view
    * on the Overview (lib/photoSpin.ts). */
   spin?: import('./photoSpin').PhotoSpin;
+  /* A 3D scan of the real robot; the file is in IndexedDB (lib/scanStore.ts). */
+  scan?: import('./scan3d').ScanMeta;
 }
 
 type Specimen = import('./repoImport').RepoSpecimen;

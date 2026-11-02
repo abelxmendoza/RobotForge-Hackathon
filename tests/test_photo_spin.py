@@ -60,7 +60,7 @@ def test_overview_uses_photo_spin() -> None:
     # The 3D turntable is still there as the other view.
     assert "<OverviewTurntable" in garage
     # Saving reads the garage as it is when the photos finish, not a stale copy.
-    assert "readStore<GarageRobot[]>(GARAGE_KEY, [])" in garage
+    assert "readStore<GarageRobot[]>(GARAGE_KEY, [])" in garage and "patchRobot(robot.id" in garage
     assert "spin?: import('./photoSpin').PhotoSpin" in (WEB / "lib" / "garage.ts").read_text()
 
 
@@ -79,6 +79,46 @@ def test_spin_ui_is_honest_and_accessible() -> None:
     assert "onSave(" in ui and "KB" in ui
     css = (ROOT / "assets" / "css" / "app.css").read_text()
     assert ".ps-stage{" in css and "touch-action:pan-y" in css
+
+
+SCAN_RUN = r"""
+import { scanFormat, scanProblem, fitScan, fmtBytes, scanKey, SCAN_MAX_BYTES } from "./scan3d.ts";
+const out = {
+  fmts: ["a.GLB", "b.obj", "c.ply", "d.gltf", "e.stl", "noext"].map(scanFormat),
+  gltf: scanProblem("d.gltf", 10), stl: scanProblem("e.stl", 10), empty: scanProblem("a.glb", 0),
+  big: scanProblem("a.glb", SCAN_MAX_BYTES + 1), ok: scanProblem("a.glb", 1000),
+  fit: fitScan([2, 0.5, 4]), fitZero: fitScan([0, 0, 0]),
+  bytes: [fmtBytes(512), fmtBytes(2048), fmtBytes(5 * 1024 * 1024 + 1)],
+  keys: [scanKey("r1", false), scanKey("r1", true)],
+};
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def test_scan_helpers(tmp_path: Path) -> None:
+    (tmp_path / "scan3d.ts").write_text((WEB / "lib" / "scan3d.ts").read_text())
+    (tmp_path / "package.json").write_text('{"type": "module"}')
+    (tmp_path / "run.mjs").write_text(SCAN_RUN)
+    proc = subprocess.run(["node", "--experimental-strip-types", "run.mjs"],
+                          cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    out = json.loads(proc.stdout)
+    assert out["fmts"] == ["glb", "obj", "ply", None, None, None]
+    assert "GLB" in out["gltf"] and "Scaniverse" in out["stl"] and out["empty"]
+    assert "limit" in out["big"] and out["ok"] is None
+    assert out["fit"]["scale"] == 0.25 and out["fitZero"]["scale"] == 1
+    assert out["bytes"] == ["512 B", "2 KB", "5.0 MB"]
+    # Demo scans are kept apart from a signed-in garage's.
+    assert out["keys"] == ["r1", "demo:r1"]
+
+
+def test_scan_ui_is_honest() -> None:
+    view = (WEB / "components" / "garage" / "ScanView.tsx").read_text()
+    assert "Your own 3D scan of" in view and "Save to account does not copy it" in view
+    edit = (WEB / "components" / "garage" / "ScanEditor.tsx").read_text()
+    assert "Scaniverse" in edit and "realsense_scan.py" in edit and "Yes, remove" in edit
+    garage = (WEB / "components" / "garage" / "Garage.tsx").read_text()
+    assert "scan={robot.scan}" in garage and "removeScanFile(robot.id)" in garage
 
 
 def test_frames_are_shrunk_before_storage() -> None:
