@@ -30,6 +30,7 @@ import { removeScanFile } from '@/lib/scanStore';
 import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
+import Omega1Twin from './Omega1Twin';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
   clearRepos, detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
@@ -401,6 +402,10 @@ export default function Garage() {
   const [rover, setRover] = useState({ terrain: 'outdoor', slopeDeg: 15, stepM: 0.05, targetMin: 30 });
   const [saveError, setSaveError] = useState('');
   const [adding, setAdding] = useState(false);
+  /* The built-in Omega1 twin specimen (lib/omega1Twin.ts): not a
+   * stored robot — a fixed entry whose view replaces the workshop
+   * while it is open. */
+  const [twinOpen, setTwinOpen] = useState(false);
   const [tab, setTab] = useState<WorkTab>('overview');
   const [benchWires, setBenchWires] = useState(true);
   /* #assembly (Wrench's assembly proposals link there) opens Build.
@@ -428,7 +433,7 @@ export default function Garage() {
   useEffect(() => {
     const check = () => {
       const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)$/);
-      if (r && robots.some((x) => x.id === r[1])) setSelected(r[1]);
+      if (r && robots.some((x) => x.id === r[1])) { setSelected(r[1]); setTwinOpen(false); }
     };
     check();
     window.addEventListener('hashchange', check);
@@ -621,7 +626,7 @@ export default function Garage() {
         <ul hidden={!robots.length}>
           {robots.map((r) => (
             <li key={r.id}>
-              <button type="button" className="g-robot" aria-current={r.id === selected ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); }}>
+              <button type="button" className="g-robot" aria-current={r.id === selected && !twinOpen ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); setTwinOpen(false); }}>
                 <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
                 <span className="g-robot-text"><strong>{r.name}</strong>
                 {robotRepos(r).length > 0 && <span className="fbadge live">{robotRepos(r).length > 1 ? `${robotRepos(r).length} repos` : 'From repo'}</span>}
@@ -638,16 +643,24 @@ export default function Garage() {
             </li>
           ))}
         </ul>
-        {robots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => setAdding(true)}>+ Add a robot</button>}
+        <p className="faint g-small" style={{ marginTop: 14 }}>Built-in specimen</p>
+        <button type="button" className="g-robot" aria-current={twinOpen ? 'true' : undefined} onClick={() => { setTwinOpen(true); setAdding(false); }}>
+          <RobotAvatar names={['Omega1']} size={36} />
+          <span className="g-robot-text"><strong>Omega1</strong>
+          <span className="fbadge live">Digital twin</span>
+          <span className="faint">ProjectSim reconstruction · estimated</span></span>
+        </button>
+        {robots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
         <p className="faint g-small" title="Saved in this browser only. Use Export to keep a copy.">Saved in this browser</p>
       </aside>
 
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
-        {(adding || robots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={robots.length === 0} />}
+        {twinOpen && <Omega1Twin />}
+        {!twinOpen && (adding || robots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={robots.length === 0} />}
 
-        {!adding && robot && draft && (() => {
+        {!twinOpen && !adding && robot && draft && (() => {
           const verdict = verdictOf(draftLines);
           const roverCounts = roverDraft ? {
             pass: roverDraft.filter((c) => c.status === 'PASS').length,
