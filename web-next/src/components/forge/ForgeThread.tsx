@@ -1562,6 +1562,32 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       ) : panel}
       <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
         <div className="g-tabs" aria-label="Message mode"><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button></div>
+        {/* The assistant's suggestion chips belong to THIS surface on
+            /garage: the bottom ChatBar that renders them on other
+            pages returns null on /garage, /forge and /chat, so the
+            Workshop's per-tab chips (PR #120) had no render surface
+            in the docked thread until this row — the grounding half
+            of #120 worked here (same hook), the chips half was
+            invisible on its own page. Docked only: the full-page
+            thread keeps its existing layout. */}
+        {docked && inputMode === 'chat' && assistant.chips.length > 0 && (
+          <div className="fc-chips" aria-label="Suggestions for the open Workshop tab">
+            {assistant.chips.map((c) => (
+              <button
+                type="button"
+                className="fc-hit"
+                key={c}
+                onClick={() => {
+                  setOpen(true);
+                  pushUser(<p>{c}</p>);
+                  assistant.ask(c);
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="attach-row" hidden={!attach}>
           <span className="attach-chip">
             {attach ? (
