@@ -39,6 +39,8 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useForgeAssistant } from '@/components/chat/ChatDock';
+import { repoLinkIn } from '@/lib/repoLink';
+import { WRENCH_PROMPT_EVENT, type WrenchPrompt } from '@/lib/wrenchPrompt';
 import { conversationalAnswer } from '@/components/chat/engine';
 import PartPhotoIntake from '@/components/inventory/PartPhotoIntake';
 import VoiceButton from '@/components/chat/VoiceButton';
@@ -349,6 +351,24 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     any: useRef<HTMLInputElement>(null),
   };
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  /* Other pages can ready the composer (mode, text, focus, file picker). */
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      const p = ((e as CustomEvent).detail || {}) as WrenchPrompt;
+      if (p.mode) setInputMode(p.mode);
+      if (typeof p.text === 'string') setText(p.text);
+      if (p.attach) { fileRefs.any.current?.click(); return; }
+      requestAnimationFrame(() => {
+        const ta = inputRef.current;
+        if (!ta) return;
+        ta.focus();
+        const end = ta.value.length;
+        ta.setSelectionRange(end, end);
+      });
+    };
+    window.addEventListener(WRENCH_PROMPT_EVENT, onPrompt);
+    return () => window.removeEventListener(WRENCH_PROMPT_EVENT, onPrompt);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---------------- thread primitives ---------------- */
   const push = useCallback((e: Omit<Entry, 'id'>): number => {
@@ -1293,7 +1313,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       else if (a && a.kind === 'photo') await runPhoto(a.file, value);
       else if (a && a.kind === 'doc') await runDoc(a.file, value);
       else if (a && a.kind === 'scan') await runScan(a.file);
-      else if(inputMode==='design'){
+      else if(inputMode==='design' && !repoLinkIn(value)){
         /* Small talk is not a spec: greetings and meta questions get
          * a conversational reply that steers back to describing a
          * robot, instead of being sent to the describe endpoint (or

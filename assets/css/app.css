@@ -1610,3 +1610,16 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 }
 .g-remove-confirm{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--text-muted)}
 .g-remove-yes{border-color:var(--fail);color:var(--fail)}
+
+/* Workshop "Bring a robot in": everything goes through the Wrench composer */
+.g-ways{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.g-way{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:12px 14px;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;font:inherit}
+.g-way:hover{border-color:var(--accent);background:var(--surface-3)}
+.g-way svg{flex:none;margin-top:2px;color:var(--accent)}
+.g-way span{display:grid;gap:2px}
+.g-way small{color:var(--text-muted);font-size:var(--fs-xs);line-height:1.45}
+.g-other-ways{border-top:1px solid var(--border);padding-top:var(--s3)}
+.g-other-ways > summary{cursor:pointer;color:var(--text-muted);font-size:var(--fs-sm)}
+.g-other-ways[open] > summary{margin-bottom:var(--s3)}
+.g-other-ways > .g-field,.g-other-ways > .g-tabs,.g-other-ways > .g-pane{margin-top:var(--s3)}
