@@ -10,8 +10,9 @@
  * own navy/teal palette and copy.
  *
  * Honest scope, stated in the card itself: an account is
- * identity + role. Robots and inventory stay on this device —
- * there is no cloud sync yet. */
+ * identity + role. Robots and inventory live on this device; the
+ * top bar's Save button (AccountSave.tsx) copies them to the
+ * account on demand. */
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -273,9 +274,9 @@ export default function SignInCard({
         <strong>Just visiting?</strong> The demo is the no-account
         way in — sample robots and recorded answers, nothing sent
         anywhere. A free account opens the full app and live AI.
-        Your robots and inventory stay on this device either way —
-        no cloud sync yet, and no email verification or password
-        reset in this version.
+        Your robots and parts live on this device; signed in, the
+        Save button also keeps a copy in your account. No email
+        verification or password reset in this version.
         {!hideDemo && (
           <div className="acct-guest-demo">
             <DemoEntryButton label="Try the demo" />

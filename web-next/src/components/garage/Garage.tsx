@@ -25,6 +25,7 @@ import { promptWrench } from '@/lib/wrenchPrompt';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
+import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
@@ -742,11 +743,40 @@ export default function Garage() {
                       {robotRepos(robot).map((x) => {
                         const slug = `${x.provenance.owner}/${x.provenance.repo}`;
                         return (
-                          <li key={x.provenance.repoUrl}>
+                          <li key={x.provenance.repoUrl} className="g-repo-card">
+                            {(() => {
+                              const pics = cardImagesOf(x);
+                              const hasImages = (x.images?.length ?? 0) > 0;
+                              return (
+                                <div className="g-repo-pics">
+                                  {pics.length ? (
+                                    <>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img className="g-repo-cover" src={pics[0].url} alt={pics[0].alt || `Image from ${slug}`} loading="lazy" referrerPolicy="no-referrer" />
+                                      {pics.length > 1 && (
+                                        <span className="g-repo-strip">
+                                          {pics.slice(1, 4).map((p) => (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img key={p.url} src={p.url} alt={p.alt || ''} loading="lazy" referrerPolicy="no-referrer" />
+                                          ))}
+                                          {pics.length > 4 && <span className="faint">+{pics.length - 4}</span>}
+                                        </span>
+                                      )}
+                                      <span className="g-repo-credit faint">Image via {slug} · {x.provenance.license.label}, not your build</span>
+                                    </>
+                                  ) : (
+                                    <Link className="g-repo-nopic faint g-small" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}#repo-images`}>
+                                      {hasImages ? `Choose card pictures (${x.images.length} in the repo)` : 'No pictures in this repo'}
+                                    </Link>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <a href={x.provenance.repoUrl} target="_blank" rel="noreferrer"><strong>{slug}</strong></a>
                             <span className="faint g-small"> @ {x.provenance.commitSha.slice(0, 7)} · {x.parts.length} part{x.parts.length === 1 ? '' : 's'}{x.model ? ` · ${x.model.format} model` : ''}</span>
                             <span className="g-repo-actions">
                               <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}`}>Details</Link>
+                              {cardImagesOf(x).length > 0 && <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}#repo-images`}>Pictures</Link>}
                               {confirmDetach === x.provenance.repoUrl ? (
                                 <span className="g-remove-confirm" role="alert">
                                   Remove {slug} from {robot.name}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(x.provenance.repoUrl)}>Yes, remove</button>

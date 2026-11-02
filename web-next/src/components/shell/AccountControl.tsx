@@ -29,6 +29,7 @@ import { isDemoMode, setDemoMode, useDemoMode } from "@/lib/demoMode";
 import { seedDemoStores } from "@/lib/demoSeed";
 import SignInCard, { PROVIDER_LABELS } from "./SignInCard";
 import { useDemoExit } from "./DemoBar";
+import { applyAccountData, fetchAccountData, readSavedMark } from "@/lib/accountSync";
 
 function roleBadge(role: string) {
   if (role === "founder") return <span className="fbadge live">FOUNDER</span>;
@@ -171,6 +172,30 @@ export default function AccountControl() {
     };
   }, [open, session]);
 
+  /* Load from account replaces this browser's robots and parts with
+   * the account's saved copy, so it asks first. */
+  const [loadState, setLoadState] = useState<{ step: "idle" | "checking" | "confirm" | "done" | "error"; msg?: string; savedAt?: string; data?: Record<string, unknown> }>({ step: "idle" });
+  useEffect(() => { if (!open) setLoadState({ step: "idle" }); }, [open]);
+  const loadFromAccount = async () => {
+    if (!session) return;
+    if (loadState.step === "confirm" && loadState.data && loadState.savedAt) {
+      const failure = applyAccountData(session.user.email, loadState.savedAt, loadState.data);
+      setLoadState(failure ? { step: "error", msg: failure } : { step: "done", msg: "Loaded. This browser now has your saved robots and parts." });
+      return;
+    }
+    setLoadState({ step: "checking" });
+    try {
+      const r = await fetchAccountData(session.token);
+      if (!r.saved || !r.data || !r.savedAt) {
+        setLoadState({ step: "error", msg: "Nothing is saved in your account yet. Use Save in the top bar first." });
+        return;
+      }
+      setLoadState({ step: "confirm", savedAt: r.savedAt, data: r.data });
+    } catch (e) {
+      setLoadState({ step: "error", msg: (e as Error).message });
+    }
+  };
+
   const signOut = async () => {
     if (session) await authLogout(session.token);
     adopt(null);
@@ -233,10 +258,29 @@ export default function AccountControl() {
               </p>
             </div>
           )}
-          <p className="acct-note">
-            Accounts are identity + role for now. Your robots and inventory stay on
-            this device — no cloud sync yet.
-          </p>
+          {!inDemo && (
+            <div className="acct-sync">
+              <p className="acct-note">
+                Save in the top bar keeps your robots, parts and BOM prices in your account.
+                {(() => {
+                  const m = readSavedMark(user.email);
+                  return m ? ` Last saved from this browser ${new Date(m.savedAt).toLocaleString()}.` : " Nothing saved from this browser yet.";
+                })()}
+              </p>
+              {loadState.step === "confirm" ? (
+                <p className="acct-note" role="alert">
+                  Replace this browser&apos;s robots and parts with your account&apos;s copy from {new Date(loadState.savedAt!).toLocaleString()}?{" "}
+                  <button type="button" className="btn btn-sm g-remove-yes" onClick={loadFromAccount}>Yes, load it</button>{" "}
+                  <button type="button" className="btn btn-sm" onClick={() => setLoadState({ step: "idle" })}>Cancel</button>
+                </p>
+              ) : (
+                <button type="button" className="btn" onClick={loadFromAccount} disabled={loadState.step === "checking"}>
+                  {loadState.step === "checking" ? "Checking your account…" : "Load from account"}
+                </button>
+              )}
+              {loadState.msg && <p className="acct-note" role="status">{loadState.msg}</p>}
+            </div>
+          )}
           {inDemo ? (
             <>
               <p className="acct-note">

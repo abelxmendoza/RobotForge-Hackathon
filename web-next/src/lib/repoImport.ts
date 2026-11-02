@@ -158,6 +158,10 @@ export interface RepoSpecimen {
   parts: SpecimenPart[];
   images: RepoImage[];
   imagesAttested: boolean;
+  /** Image URLs (from `images`) the user picked for this repo's card,
+   *  in order; the first is the cover. Shown only while imageGate
+   *  allows the repo's images to be displayed. */
+  cardImages?: string[];
   physics?: PhysicsSummary;
 }
 
@@ -196,6 +200,24 @@ export function parseRepoList(input: string): { refs: RepoRef[]; bad: string[] }
     refs.push(ref);
   }
   return { refs, bad };
+}
+
+/* The pictures for a repo's card: the user's picks that are still in
+ * the repo's image list, and nothing when the license gate says the
+ * images can only be linked. */
+export function cardImagesOf(
+  s: Pick<RepoSpecimen, "images" | "imagesAttested" | "cardImages" | "provenance">,
+): RepoImage[] {
+  if (!imageGate(s.provenance.license, s.imagesAttested).display) return [];
+  const byUrl = new Map(s.images.map((i) => [i.url, i]));
+  return (s.cardImages ?? []).map((u) => byUrl.get(u)).filter((x): x is RepoImage => Boolean(x));
+}
+
+/* Add or remove one picture from the card; `cover` moves it first. */
+export function toggleCardImage(picked: string[] | undefined, url: string, cover = false): string[] {
+  const list = (picked ?? []).filter((u) => u !== url);
+  if (cover) return [url, ...list];
+  return (picked ?? []).includes(url) ? list : [...list, url];
 }
 
 export function repoUrl(ref: RepoRef): string {

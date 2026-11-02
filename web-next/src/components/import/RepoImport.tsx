@@ -13,7 +13,7 @@ import Link from "next/link";
 import {
   blobUrl, buildImportedSdfBundle, buildSpecimen, commitUrl, filterVendored,
   MAX_TREE_ENTRIES,
-  gatherRequestFor, imageGate, parseRepoInput, parseRepoList, physicsEntryFor,
+  gatherRequestFor, imageGate, parseRepoInput, parseRepoList, physicsEntryFor, toggleCardImage,
   pickFiles, rawUrl, slugifyRepo, validateHardwareItems,
   withCatalogMatches, GATHER_REQUESTS_KEY,
   type ImportSdfBundle, type RepoRef, type RepoSpecimen, type Snapshot,
@@ -375,7 +375,7 @@ function SpecimenDetail({
         )}
       </section>
 
-      <section aria-label="Images">
+      <section aria-label="Images" id="repo-images">
         <h3>Images from the repo</h3>
         {specimen.images.length === 0 && <p className="faint">No images were found in this repo.</p>}
         {specimen.images.length > 0 && (
@@ -393,16 +393,42 @@ function SpecimenDetail({
             )}
             {gate.display ? (
               <>
+                <p className="faint">
+                  Pick the pictures for this repo&apos;s card in the Workshop. The first one you pick is the cover.
+                </p>
                 <div className="repo-gallery">
-                  {specimen.images.map((img, i) => (
-                    <figure key={i}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={img.url} alt={img.alt} loading="lazy" referrerPolicy="no-referrer" />
-                      <figcaption className="faint">
-                        Image via {prov.owner}/{prov.repo} · {prov.license.label}
-                      </figcaption>
-                    </figure>
-                  ))}
+                  {specimen.images.map((img, i) => {
+                    const at = (specimen.cardImages ?? []).indexOf(img.url);
+                    return (
+                      <figure key={i} className={at >= 0 ? "on-card" : undefined}>
+                        {at === 0 && <span className="repo-cover-tag">Cover</span>}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.url} alt={img.alt} loading="lazy" referrerPolicy="no-referrer" />
+                        <figcaption className="faint">
+                          Image via {prov.owner}/{prov.repo} · {prov.license.label}
+                        </figcaption>
+                        <div className="repo-card-pick">
+                          <button
+                            type="button"
+                            className={"btn btn-sm" + (at >= 0 ? " btn-primary" : "")}
+                            aria-pressed={at >= 0}
+                            onClick={() => onChange({ ...specimen, cardImages: toggleCardImage(specimen.cardImages, img.url) })}
+                          >
+                            {at >= 0 ? "On the card ✓" : "Show on card"}
+                          </button>
+                          {at > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => onChange({ ...specimen, cardImages: toggleCardImage(specimen.cardImages, img.url, true) })}
+                            >
+                              Make cover
+                            </button>
+                          )}
+                        </div>
+                      </figure>
+                    );
+                  })}
                 </div>
                 <p className="faint">
                   These are the source repo’s images, shown with credit — not photos of your build.

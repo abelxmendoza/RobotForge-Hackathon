@@ -1792,6 +1792,66 @@ async function handleAuthMe(request, env) {
   return json(request, 200, { user: publicUser(user) });
 }
 
+/* ---------------- account save (robots + parts) ----------------
+ * POST /account/save stores this browser's Workshop data under the
+ * signed-in account; GET /account/data hands it back on any browser.
+ * One KV write per save, a per-account daily cap so a stuck client
+ * can't burn the namespace's free writes, a size cap, and only the
+ * known RobotForge stores are kept (nothing else from the body). */
+const ACCOUNT_DATA_KEYS = ['rf.garage.v1', 'rf.inventory.v1', 'rf.assemblies.v1',
+  'rf.buildplan.v1', 'rf.ownership.v1'];
+const ACCOUNT_DATA_MAX_BYTES = 5 * 1024 * 1024;
+const ACCOUNT_SAVES_PER_DAY = 50;
+
+function accountDataKey(email) { return 'account:data:' + email; }
+
+async function readAccountRecord(env, email) {
+  const raw = await env.RF_LIVE_KV.get(accountDataKey(email));
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+async function handleAccountData(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const user = await sessionUser(request, env);
+  if (!user) return err(request, 401, 'unauthorized', 'Sign in to load your saved robots.');
+  const rec = await readAccountRecord(env, user.email);
+  if (!rec) return json(request, 200, { saved: false });
+  return json(request, 200, { saved: true, savedAt: rec.savedAt, bytes: rec.bytes, data: rec.data });
+}
+
+async function handleAccountSave(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const user = await sessionUser(request, env);
+  if (!user) return err(request, 401, 'unauthorized', 'Sign in to save to your account.');
+  const text = await request.text();
+  const bytes = textEnc.encode(text).length;
+  if (bytes > ACCOUNT_DATA_MAX_BYTES) {
+    return err(request, 413, 'too_large',
+      'Your saved data is over 5 MB, mostly photos. Remove a few part photos and save again.');
+  }
+  let body;
+  try { body = JSON.parse(text); } catch (e) { body = null; }
+  const incoming = body && typeof body.data === 'object' && body.data && !Array.isArray(body.data) ? body.data : null;
+  if (!incoming) return err(request, 400, 'bad_body', 'Expected { data: { ... } }.');
+  const data = {};
+  for (const k of ACCOUNT_DATA_KEYS) {
+    if (k in incoming) data[k] = incoming[k];
+  }
+  if (!Object.keys(data).length) return err(request, 400, 'bad_body', 'Nothing to save.');
+  const prev = await readAccountRecord(env, user.email);
+  const day = dayStamp();
+  const savesToday = prev && prev.day === day ? (prev.savesToday || 0) : 0;
+  if (savesToday >= ACCOUNT_SAVES_PER_DAY) {
+    return err(request, 429, 'save_limit',
+      `You have saved ${ACCOUNT_SAVES_PER_DAY} times today. Your last save is kept; try again tomorrow (UTC).`);
+  }
+  const savedAt = new Date().toISOString();
+  await env.RF_LIVE_KV.put(accountDataKey(user.email),
+    JSON.stringify({ savedAt, day, savesToday: savesToday + 1, bytes, data }));
+  return json(request, 200, { ok: true, savedAt, bytes, savesLeftToday: ACCOUNT_SAVES_PER_DAY - savesToday - 1 });
+}
+
 function handleAuthLogout(request) {
   /* Stateless sessions: logging out is the client dropping the token. */
   return json(request, 200, { ok: true });
@@ -2344,6 +2404,12 @@ async function handle(request, env) {
   }
   if (url.pathname === '/auth/logout' && request.method === 'POST') {
     return handleAuthLogout(request);
+  }
+  if (url.pathname === '/account/data' && request.method === 'GET') {
+    return handleAccountData(request, env);
+  }
+  if (url.pathname === '/account/save' && request.method === 'POST') {
+    return handleAccountSave(request, env);
   }
   if (url.pathname === '/auth/config' && request.method === 'GET') {
     return handleAuthConfig(request, env);
