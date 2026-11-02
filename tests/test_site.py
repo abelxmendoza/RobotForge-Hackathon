@@ -137,3 +137,12 @@ def test_chat_rail_comes_before_the_nav_sidebar():
     # shell, so chat is the far-left column, nav second.
     page = render_robots_index(dex, cat)
     assert page.index('id="forge-chat"') < page.index('<aside class="sidebar">')
+
+
+def test_next_landing_final_cta_has_no_dense_demo_screenshot():
+    page = (REPO / "web-next/src/app/page.tsx").read_text()
+    assert "See a broken robot get fixed in one click." in page
+    assert "Run the demo" in page
+    assert "Open the app" in page
+    assert 'assets/img/demo-shot.jpg' not in page
+    assert "The one-click demo, mid-run." not in page
