@@ -568,16 +568,6 @@ export default function HomePage() {
               Open the app →
             </Link>
           </div>
-          <figure className="hero-art hero-shot" style={{ marginTop: "var(--s7)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={assetPath("assets/img/demo-shot.jpg")}
-              width={872}
-              height={640}
-              alt="The one-click demo: the engineering checks flag a voltage mismatch and a clearance error, and the Forge loop fixes both in one round"
-            />
-            <figcaption>The one-click demo, mid-run.</figcaption>
-          </figure>
         </div>
       </section>
     </main>
