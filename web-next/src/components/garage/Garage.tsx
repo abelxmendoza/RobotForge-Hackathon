@@ -19,7 +19,7 @@ import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
 import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveStatus';
-import type { LiveHealth } from '@/components/forge/model';
+import type { LiveHealth, RobotSpec } from '@/components/forge/model';
 import { downloadJSON, uid, useStore } from '@/lib/store';
 import { preparePhoto } from '@/lib/image';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
@@ -403,7 +403,7 @@ export default function Garage() {
   const [saveError, setSaveError] = useState('');
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<WorkTab>('overview');
-  const [benchWires, setBenchWires] = useState(false);
+  const [benchWires, setBenchWires] = useState(true);
   /* #assembly (Wrench's assembly proposals link there) opens Build.
    * #tab=<workshop tab> is Wrench's Tier-0 navigation landing here. */
   useEffect(() => {
@@ -764,7 +764,7 @@ export default function Garage() {
 
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
-                {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} /></> : (
+                {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} spec={draft as unknown as RobotSpec} /></> : (
                   <div className="ws-empty">
                     <svg viewBox="0 0 120 60" width="140" aria-hidden="true"><rect x="6" y="20" width="30" height="20" rx="4" fill="var(--surface-3)" /><rect x="84" y="8" width="30" height="18" rx="4" fill="var(--surface-3)" /><rect x="84" y="34" width="30" height="18" rx="4" fill="var(--surface-3)" /><path d="M36 30 C60 30 60 17 84 17" stroke="var(--marginal)" strokeWidth="2" fill="none" /><path d="M36 30 C60 30 60 43 84 43" stroke="var(--link)" strokeWidth="2" strokeDasharray="5 4" fill="none" /></svg>
                     <p><strong>No wiring recorded for this robot yet.</strong> Robodex robots such as Pathfinder and TurtleBot3 come with their harness. You can plan connections on the bench below.</p>
