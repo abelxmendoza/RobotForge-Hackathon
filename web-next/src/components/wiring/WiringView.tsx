@@ -6,11 +6,18 @@
  * a recorded over-voltage. Click a part to trace its paths and run the
  * "if this part dies" test; click a cable to read it. */
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { assetPath } from '@/components/home/asset';
+import type { RobotSpec } from '@/components/forge/model';
 import {
   badConns, cableField, callout, chipText, failure, layout, nodeMap, nodeStatus,
   shortLabel, stageOf, trace, volts, type Wiring,
 } from '@/lib/wiring';
+
+const Robot3D = dynamic(() => import('@/components/kit/Robot3D'), {
+  ssr: false,
+  loading: () => <p className="faint">Loading 3D wiring harness model…</p>,
+});
 
 /* Electronics terms (AWG, BEC, ESC...) get their meaning on hover/tap. */
 let glossaryCache: Record<string, string> | null = null;
@@ -52,12 +59,15 @@ function Marked({ text, g }: { text: string; g: Record<string, string> | null })
 
 type Sel = { type: 'node'; id: string } | { type: 'conn'; i: number } | null;
 
-export default function WiringView({ wiring: w }: { wiring: Wiring }) {
+export default function WiringView({ wiring: w, spec }: { wiring: Wiring; spec?: RobotSpec }) {
   const g = useGlossary();
   const L = useMemo(() => layout(w), [w]);
   const bad = useMemo(() => badConns(w), [w]);
   const nodes = useMemo(() => nodeMap(w), [w]);
   const [mode, setMode] = useState<'simple' | 'full'>('simple');
+  const [show3D, setShow3D] = useState(true);
+  const [explode3D, setExplode3D] = useState(0);
+  const [failed3D, setFailed3D] = useState(false);
   const [sel, setSel] = useState<Sel>(null);
   const [tr, setTr] = useState<{ nodes: string[]; conns: number[] } | null>(null);
   const [dead, setDead] = useState<string | null>(null);
@@ -65,6 +75,35 @@ export default function WiringView({ wiring: w }: { wiring: Wiring }) {
   const [stage, setStage] = useState(0);
   const timers = useRef<number[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const effectiveSpec = useMemo<RobotSpec>(() => {
+    const wiringBlock = w as unknown as RobotSpec['wiring'];
+    if (spec) return { ...spec, wiring: wiringBlock };
+    return {
+      name: 'Harness Chassis',
+      drivetrain: 'differential',
+      length_m: 0.24,
+      width_m: 0.18,
+      height_m: 0.14,
+      mass_kg: 1.8,
+      ground_clearance_m: 0.03,
+      wheel: { count: 2, diameter_m: 0.066, width_m: 0.022 },
+      motor: { kind: 'brushed_dc', count: 2, voltage_v: 12 },
+      battery: { chemistry: 'LiPo', voltage_v: 11.1, capacity_mah: 2200 },
+      sensors: [
+        ...(w.nodes.some((n) => n.id === 'lidar' || n.kit === 'lidar')
+          ? [{ kind: 'lidar_2d', position: 'top' }]
+          : []),
+        ...(w.nodes.some((n) => n.id === 'camera' || n.kit === 'camera')
+          ? [{ kind: 'depth_camera', position: 'front' }]
+          : []),
+        ...(w.nodes.some((n) => n.id === 'ultrasonic' || n.kit === 'ultrasonic')
+          ? [{ kind: 'ultrasonic', position: 'front' }]
+          : []),
+      ],
+      wiring: wiringBlock,
+    };
+  }, [spec, w]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   useEffect(() => { setSel(null); setTr(null); setDead(null); }, [w]);
@@ -168,6 +207,9 @@ export default function WiringView({ wiring: w }: { wiring: Wiring }) {
             <button key={m} type="button" className="chip" role="tab" aria-selected={mode === m} aria-pressed={mode === m} onClick={() => setMode(m)}>{m === 'simple' ? 'Simple' : 'Full labels'}</button>
           ))}
         </div>
+        <button type="button" className="chip" aria-pressed={show3D} onClick={() => setShow3D((v) => !v)}>
+          3D harness & build {show3D ? 'on' : 'off'}
+        </button>
         <button type="button" className={'btn btn-sm wv-power' + (power ? ' on' : '')} aria-pressed={power} onClick={togglePower}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 3v8M6.3 7.3a8 8 0 1 0 11.4 0" /></svg>
           {power ? 'Power off' : 'Power on'}
@@ -176,6 +218,36 @@ export default function WiringView({ wiring: w }: { wiring: Wiring }) {
         <button type="button" className="btn btn-sm btn-ghost" onClick={print}>Print harness sheet</button>
       </div>
       {w.note && <details className="g-howto wv-notebox"><summary>About this harness</summary><p className="wv-note"><Marked text={w.note} g={g} /></p></details>}
+      {show3D && !failed3D && (
+        <div className="card" style={{ marginBottom: 14, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 }}>
+            <div>
+              <strong>3D Wiring & Build Model</strong>{' '}
+              <span className="faint" style={{ fontSize: 12 }}>
+                Amber tubes = power rails · Cyan tubes = data buses · Red = over-voltage · Drag to orbit, scroll to zoom
+              </span>
+            </div>
+            <label className="g-field" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12 }}>Explode 3D build ({explode3D} mm)</span>
+              <input type="range" min="0" max="100" value={explode3D} onChange={(e) => setExplode3D(Number(e.target.value))} />
+            </label>
+          </div>
+          <Robot3D
+            spec={effectiveSpec}
+            explode={explode3D}
+            selected={sel?.type === 'node' ? sel.id : null}
+            onSelect={(id) => {
+              if (nodes[id]) pickNode(id);
+            }}
+            onFail={() => setFailed3D(true)}
+            showSpecWiring={true}
+            animate={true}
+          />
+          <p className="faint" style={{ fontSize: 11, margin: '6px 0 0' }}>
+            Illustrative 3D harness layout derived from the spec&apos;s wiring graph and kit geometry; not a physical cable-routing solver.
+          </p>
+        </div>
+      )}
       <div className="wv-stage">
         <div className="wv-diagram">
           <svg viewBox={`0 0 ${L.width} ${L.height}`} width="100%" role="img" aria-label="Wiring schematic" style={{ display: 'block', maxWidth: Math.min(L.width, 980) }}>
