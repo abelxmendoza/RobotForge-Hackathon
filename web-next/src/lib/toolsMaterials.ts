@@ -19,9 +19,15 @@
  * run this real code against the real catalogues. */
 import {
   MATERIAL_OPTIONS,
+  TOOL_OPTIONS,
   fitsInBed,
+  requiredTools,
+  type BuildPlan,
+  type BuyListEntry,
   type ConstraintsProfile,
   type ItemDims,
+  type PlanItem,
+  type StepNeed,
 } from "./buildPlan";
 
 export type Ownership = "on_hand" | "simulated";
@@ -257,6 +263,164 @@ export function printerFit(
     (fitsInBed(d.dims, bed) ? out.fits : out.tooBig).push(d.name);
   }
   return out;
+}
+
+/* One line of price provenance, in the words every surface
+ * shares: the figure, that it is a gathered estimate, when it was
+ * fetched, what it buys (basis), and when it expires. */
+export function priceLabel(price: TmPrice): string {
+  return [
+    price.sourceKind === "web_gathered" ? "web-gathered estimate" : "recorded estimate",
+    price.fetchedAt ? `fetched ${price.fetchedAt.slice(0, 10)}` : null,
+    price.basis ? `basis: ${price.basis}` : null,
+    price.expiresAt ? `expires ${price.expiresAt.slice(0, 10)}` : null,
+  ].filter(Boolean).join(", ");
+}
+
+/* The buy list for a set of unowned needs (Phase 3): each need
+ * named once, with its catalogue price where a gathered record
+ * carries one. The join back to a record is by recorded identity
+ * only: a tool need joins the catalogue's printer record when the
+ * need IS the plan's 3d_printer; a material need joins the record
+ * of its family. Generic bench tools have no catalogue record —
+ * they are listed unpriced, never given an invented figure. */
+export function buyListForNeeds(
+  needs: StepNeed[],
+  items: TmItem[],
+  now: string | Date,
+): BuyListEntry[] {
+  const out: BuyListEntry[] = [];
+  const seen = new Set<string>();
+  for (const need of needs) {
+    const key = `${need.kind}:${need.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    let record: TmItem | undefined;
+    if (need.kind === "tool" && need.id === "3d_printer") {
+      record = items.find((i) => isPrinter(i));
+    } else if (need.kind === "material" && need.id) {
+      record = items.find((i) => materialFamily(i) === need.id);
+    }
+    const st = record ? priceState(record, now) : null;
+    out.push({
+      name: record ? record.name : need.name,
+      kind: need.kind,
+      ...(st ? {
+        price: {
+          amount: st.price.amount, currency: st.price.currency,
+          label: priceLabel(st.price), expired: st.expired,
+        },
+      } : {}),
+    });
+  }
+  return out;
+}
+
+/* Attach the buy list to a generated plan: the union of every
+ * future step's missing tools/materials, priced from the
+ * catalogues where records exist. Returns a new plan object; the
+ * engine's own output is never mutated. */
+export function planBuyList(
+  plan: BuildPlan,
+  items: TmItem[],
+  now: string | Date,
+): BuyListEntry[] {
+  return buyListForNeeds(plan.steps.flatMap((s) => s.missing), items, now);
+}
+
+export function withBuyList(
+  plan: BuildPlan,
+  items: TmItem[],
+  now: string | Date,
+): BuildPlan {
+  const buyList = planBuyList(plan, items, now);
+  return buyList.length ? { ...plan, buyList } : plan;
+}
+
+/* The chat's view of a build's tools/materials (Phase 4): the
+ * same split the Workshop speaks, computed here so the chat
+ * engine only ever renders finished, recorded facts. `missing`
+ * carries the plan's "Future — needs X" names; `onHand` the needs
+ * that are covered; `simulated` names any catalogue item a missing
+ * need maps to that is simulated — it is named as simulated in
+ * the reply, never silently assumed owned. */
+export interface TmPlanView {
+  missing: StepNeed[];
+  onHand: string[];
+  simulated: string[];
+  buyList: BuyListEntry[];
+}
+
+export function planView(
+  planItems: PlanItem[],
+  items: TmItem[],
+  overrides: OwnershipMap,
+  profile: ConstraintsProfile,
+  now: string | Date,
+): TmPlanView {
+  const derived = deriveProfile(profile, items, overrides);
+  const missing: StepNeed[] = [];
+  const onHand: string[] = [];
+  const toolLabelOf = (id: string) => TOOL_OPTIONS.find((t) => t.id === id)?.label ?? id;
+  for (const req of requiredTools(planItems)) {
+    if (derived.toolsOnHand.includes(req.tool)) onHand.push(toolLabelOf(req.tool));
+    else missing.push({ name: toolLabelOf(req.tool), kind: "tool", id: req.tool });
+  }
+  for (const it of planItems.filter((i) => i.role === "material")) {
+    const fam = MATERIAL_OPTIONS.find((f) => it.name.toUpperCase().startsWith(f));
+    if (!fam) continue;
+    if (derived.materialsOnHand.some((m) => m.toUpperCase() === fam)) {
+      if (!onHand.includes(fam)) onHand.push(fam);
+    } else if (!missing.some((m) => m.kind === "material" && m.id === fam)) {
+      missing.push({ name: fam, kind: "material", id: fam });
+    }
+  }
+  const simulated: string[] = [];
+  if (missing.some((m) => m.kind === "tool" && m.id === "3d_printer")) {
+    const printer = items.find((i) => isPrinter(i));
+    if (printer && ownershipOf(printer, overrides) === "simulated") simulated.push(printer.name);
+  }
+  return { missing, onHand, simulated, buyList: buyListForNeeds(missing, items, now) };
+}
+
+/* The snapshot the chat is handed at answer time: the catalogue
+ * items split by resolved state, the profile's own tool list in
+ * labels, and planFor() — the Phase-4 plan view over plain item
+ * shapes (the chat's template items), converted to plan items
+ * here so every state rule stays in this module. */
+export interface TmSnapshot {
+  onHand: OwnedItem[];
+  simulated: OwnedItem[];
+  profileToolLabels: string[];
+  planFor: (items: { name: string; partClass?: string; specs?: Record<string, unknown> }[]) => TmPlanView;
+}
+
+export function chatSnapshot(
+  items: TmItem[],
+  overrides: OwnershipMap,
+  profile: ConstraintsProfile,
+  now: string | Date,
+): TmSnapshot {
+  const owned = withOwnership(items, overrides);
+  return {
+    onHand: owned.filter((i) => i.ownership === "on_hand"),
+    simulated: owned.filter((i) => i.ownership === "simulated"),
+    profileToolLabels: profile.toolsOnHand.map(
+      (id) => TOOL_OPTIONS.find((t) => t.id === id)?.label ?? id,
+    ),
+    planFor: (plain) => planView(
+      plain.map((p) => ({
+        key: `chat:${p.name}`,
+        name: p.name,
+        qty: 1,
+        role: p.partClass === "materials" ? "material" as const : "buy" as const,
+        partClass: p.partClass,
+        specs: p.specs,
+        sourceLabel: "chat",
+      })),
+      items, overrides, profile, now,
+    ),
+  };
 }
 
 /* The headline specs a card shows, from recorded values only —

@@ -988,6 +988,16 @@ export function checkSafety(items: PlanItem[], profile: ConstraintsProfile): Che
 export type PlanPhase = "Buy" | "Print" | "Prep" | "Assemble" | "Wire" | "Program" | "Test";
 export const PHASE_ORDER: PlanPhase[] = ["Buy", "Print", "Prep", "Assemble", "Wire", "Program", "Test"];
 
+/* A tool or material a step needs, by the name the surfaces use
+ * (Forge Engine §11). `id` is the profile's tool id for a tool,
+ * or the material family for a material — the join key back to
+ * the catalogues, where a record (and maybe a price) lives. */
+export interface StepNeed {
+  name: string;
+  kind: "tool" | "material";
+  id?: string;
+}
+
 export interface PlanStep {
   id: string;
   phase: PlanPhase;
@@ -1002,6 +1012,26 @@ export interface PlanStep {
   checkpoint: string;
   advanced?: boolean;
   checkIds: string[];
+  /** §11 availability, computed from the profile the plan was
+   *  checked against: "now" when every tool and material the step
+   *  names is on hand in it, "future" when one or more are not —
+   *  and then `missing` names them. A simulated tool or material
+   *  never enters the profile (see lib/toolsMaterials.ts's
+   *  deriveProfile), so it can never make a step read "now". */
+  availability: "now" | "future";
+  missing: StepNeed[];
+}
+
+/* One line of the buy list the future steps roll up: a missing
+ * tool or material, with its catalogue price where a gathered
+ * record carries one — an estimate with its label (basis, fetch
+ * time, expiry), never an invented figure. Attached to a plan by
+ * lib/toolsMaterials.ts's withBuyList; absent when nobody has
+ * priced the future steps yet. */
+export interface BuyListEntry {
+  name: string;
+  kind: "tool" | "material";
+  price?: { amount: number; currency: string; label: string; expired: boolean };
 }
 
 export interface BuildPlan {
@@ -1011,7 +1041,8 @@ export interface BuildPlan {
   items: PlanItem[];
   steps: PlanStep[];
   checks: CheckResult[];
-  summary: { steps: number; blockers: number; warnings: number; notChecked: number; passes: number };
+  summary: { steps: number; blockers: number; warnings: number; notChecked: number; passes: number; futureSteps: number };
+  buyList?: BuyListEntry[];
 }
 
 const toolLabel = (id: string) => TOOL_OPTIONS.find((t) => t.id === id)?.label ?? id;
@@ -1026,14 +1057,14 @@ export function generateBuildPlan(input: {
   wiring?: Wiring | null;
 }): BuildPlan {
   const { title, items, profile, partsById } = input;
-  const steps: PlanStep[] = [];
+  const rawSteps: Omit<PlanStep, "availability" | "missing">[] = [];
   const prints = items.filter((i) => i.role === "print");
   const buys = items.filter((i) => i.role === "buy");
   const fil = chosenFilament(items, profile, partsById);
   const timeEst = printTimeEstimate(items, profile, partsById);
 
   if (buys.length) {
-    steps.push({
+    rawSteps.push({
       id: "buy", phase: "Buy", title: "Buy the recorded parts",
       items: buys.map((b) => `${b.qty} × ${b.name}`),
       tools: [], materials: [],
@@ -1047,7 +1078,7 @@ export function generateBuildPlan(input: {
   }
   for (const p of prints) {
     const range = timeEst?.perItem.get(p.key);
-    steps.push({
+    rawSteps.push({
       id: PRINT_STEP(p.key), phase: "Print",
       title: `Print: ${p.name}${p.qty > 1 ? ` × ${p.qty}` : ""}`,
       items: [`${p.qty} × ${p.name}`],
@@ -1064,7 +1095,7 @@ export function generateBuildPlan(input: {
       checkIds: [],
     });
   }
-  steps.push({
+  rawSteps.push({
     id: "prep", phase: "Prep",
     title: "Stage tools, parts and bench",
     items: items.filter((i) => i.role !== "prop").map((i) => i.name),
@@ -1094,7 +1125,7 @@ export function generateBuildPlan(input: {
     if (!g.group.length) continue;
     const minutes = Math.min(90, 15 + 10 * g.group.length);
     assemblyHours += minutes / 60;
-    steps.push({
+    rawSteps.push({
       id: g.id, phase: "Assemble", title: g.title,
       items: g.group.map((i) => `${i.qty} × ${i.name}`),
       tools: [toolLabel("hex_drivers"), toolLabel("screwdriver_set")],
@@ -1108,7 +1139,7 @@ export function generateBuildPlan(input: {
   const powerish = items.some((i) => ["power", "drivers", "actuators", "sbc"].includes(i.partClass ?? ""));
   if (powerish) {
     const solder = requiredTools(items).some((r) => r.tool === "soldering_iron");
-    steps.push({
+    rawSteps.push({
       id: "wire", phase: "Wire", title: "Wire power and signals",
       items: items.filter((i) => ["power", "drivers", "actuators", "sbc", "sensors"].includes(i.partClass ?? ""))
         .map((i) => i.name),
@@ -1125,7 +1156,7 @@ export function generateBuildPlan(input: {
     assemblyHours += 0.75;
   }
   if (items.some((i) => i.partClass === "sbc" || i.partClass === "actuators")) {
-    steps.push({
+    rawSteps.push({
       id: "program", phase: "Program", title: "Load firmware / software and configure",
       items: items.filter((i) => i.partClass === "sbc").map((i) => i.name),
       tools: [], materials: [],
@@ -1136,7 +1167,7 @@ export function generateBuildPlan(input: {
     });
     assemblyHours += 1;
   }
-  steps.push({
+  rawSteps.push({
     id: "test", phase: "Test", title: "First power and first drive",
     items: [],
     tools: [toolLabel("multimeter"), ...(profile.toolsOnHand.includes("bench_supply") ? [toolLabel("bench_supply")] : [])],
@@ -1160,19 +1191,58 @@ export function generateBuildPlan(input: {
     checkTime(items, profile, partsById, assemblyHours),
     checkSafety(items, profile),
   ];
-  const stepById = new Map(steps.map((s) => [s.id, s]));
+  const stepById = new Map(rawSteps.map((s) => [s.id, s]));
   for (const c of checks) {
     for (const sid of c.stepIds) {
       const s = stepById.get(sid);
       if (s && !s.checkIds.includes(c.id)) s.checkIds.push(c.id);
     }
     /* Prefix step ids ("assemble") also badge their sub-steps. */
-    for (const s of steps) {
+    for (const s of rawSteps) {
       if (c.stepIds.some((sid) => s.id === sid || s.id.startsWith(sid + ":")) && !s.checkIds.includes(c.id)) {
         s.checkIds.push(c.id);
       }
     }
   }
+  /* §11 availability: a step is doable NOW only when every tool
+   * and material it names is on hand in the profile it was
+   * checked against — the derived profile, in which simulated
+   * gear never appears. The Buy step is procurement itself (its
+   * tools list is empty and buying is how missing things stop
+   * being missing), so it is always "now"; its items' ownership
+   * is the BOM's have/need story, not this split. */
+  const toolNeeds = requiredTools(items);
+  const steps: PlanStep[] = rawSteps.map((s) => {
+    const missing: StepNeed[] = [];
+    const addMissing = (name: string, kind: StepNeed["kind"], id?: string) => {
+      if (!missing.some((m) => m.kind === kind && m.name === name)) missing.push({ name, kind, id });
+    };
+    if (s.phase !== "Buy") {
+      for (const req of toolNeeds) {
+        const applies = req.stepIds.some((sid) => s.id === sid || s.id.startsWith(sid + ":"));
+        if (applies && !profile.toolsOnHand.includes(req.tool)) {
+          addMissing(toolLabel(req.tool), "tool", req.tool);
+        }
+      }
+      for (const label of s.tools) {
+        const id = TOOL_OPTIONS.find((t) => t.label === label)?.id;
+        if (id && !profile.toolsOnHand.includes(id)) addMissing(label, "tool", id);
+      }
+      if (s.phase === "Print") {
+        for (const m of s.materials) {
+          if (!profile.materialsOnHand.some((x) => x.toUpperCase() === m.toUpperCase())) {
+            addMissing(m, "material", m.toUpperCase());
+          }
+        }
+        /* No rigid filament on hand at all (fil === null): the
+         * step's materials list is empty, but the need is real —
+         * name the catalogue's recorded structural pick, the same
+         * recommendation checkMaterialFit makes. */
+        if (!fil) addMissing("PETG", "material", "PETG");
+      }
+    }
+    return { ...s, availability: missing.length ? "future" as const : "now" as const, missing };
+  });
   const count = (st: CheckState) => checks.filter((c) => c.state === st).length;
   return {
     schema: "robotforge-build-plan/1",
@@ -1183,6 +1253,7 @@ export function generateBuildPlan(input: {
       warnings: count("warn"),
       notChecked: count("not_checked"),
       passes: count("pass"),
+      futureSteps: steps.filter((s) => s.availability === "future").length,
     },
   };
 }
@@ -1202,6 +1273,15 @@ export function planToMarkdown(plan: BuildPlan): string {
     "",
     `${s.steps} steps · ${s.blockers} blocker(s) · ${s.warnings} warning(s) · ` +
     `${s.notChecked} not checked · ${s.passes} passed`,
+    /* §11: while future steps exist the header says so, in so
+     * many words — a plan with steps gated on unowned tools or
+     * materials never reads as ready to build. */
+    ...(s.futureSteps > 0
+      ? [`${s.futureSteps} step(s) are FUTURE — they need tools or materials that are ` +
+         `not on hand (named on each step, and in the buy list). This plan is not ` +
+         `ready to build end-to-end until they are on hand.`]
+      : ["Tools and materials: every step's named tools and materials are on hand " +
+         "in the profile below."]),
     "",
     "Checks use only recorded catalogue/kit data and the constraints profile below. " +
     "Anything the data does not cover is marked NOT CHECKED — never passed silently. " +
@@ -1238,6 +1318,18 @@ export function planToMarkdown(plan: BuildPlan): string {
     }
     out.push("- Shipping, tax and stock are unknown — not included in any total.");
   }
+  /* The buy list: what the future steps are waiting on. A price
+   * appears only where a gathered catalogue record carries one,
+   * labeled as the estimate it is; the rest are named unpriced. */
+  if (plan.buyList && plan.buyList.length) {
+    out.push("", "## Buy list (for the future steps)", "");
+    for (const e of plan.buyList) {
+      out.push(`- ${e.name} (${e.kind})` + (e.price
+        ? ` — $${e.price.amount.toFixed(2)} (${e.price.label}${e.price.expired ? "; EXPIRED — treat as stale" : ""})`
+        : " — no price recorded"));
+    }
+    out.push("- Shipping, tax and stock are unknown — not included in any total.");
+  }
   const checkById = new Map(plan.checks.map((c) => [c.id, c]));
   for (const phase of PHASE_ORDER) {
     const phaseSteps = plan.steps.filter((st) => st.phase === phase);
@@ -1248,10 +1340,16 @@ export function planToMarkdown(plan: BuildPlan): string {
         .map((id) => checkById.get(id))
         .filter((c) => c && c.state !== "pass")
         .map((c) => `[${c!.title}: ${STATE_LABEL[c!.state]}]`);
+      if (st.availability === "future") {
+        badges.push(`[Future — needs: ${st.missing.map((m) => m.name).join(", ")}]`);
+      }
       out.push(`### ${st.title}${badges.length ? " " + badges.join(" ") : ""}`);
       if (st.items.length) out.push(`- Parts: ${st.items.join("; ")}`);
       if (st.tools.length) out.push(`- Tools: ${st.tools.join(", ")}`);
       if (st.materials.length) out.push(`- Materials: ${st.materials.join(", ")}`);
+      if (st.availability === "future") {
+        out.push(`- Future — needs (not on hand): ${st.missing.map((m) => `${m.name} (${m.kind})`).join(", ")}`);
+      }
       if (st.estMinutes) {
         out.push(`- Time: ~${st.estMinutes.min}–${st.estMinutes.max} min (${st.timeLabel ?? "estimate"})`);
       }
