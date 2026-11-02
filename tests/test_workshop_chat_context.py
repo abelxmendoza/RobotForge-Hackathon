@@ -18,6 +18,12 @@ Pins:
      sends ws_context on the live-answer path only and owns the
      Workshop chip branch, the Worker sanitizes + renders the
      snapshot, and wrench.ts carries no app import.
+  6. The chips have a render surface ON the Workshop: the bottom
+     ChatBar renders assistant.chips elsewhere but returns null on
+     /garage by design, so the docked ForgeThread (the Workshop's
+     actual chat surface) renders the row itself. PR #120 missed
+     this and the chips were invisible on their own page — the
+     live check caught what the source pins alone did not.
 """
 import re
 import shutil
@@ -32,6 +38,8 @@ LIB = WEB / "src" / "lib"
 
 GARAGE_TSX = (WEB / "src/components/garage/Garage.tsx").read_text()
 DOCK = (WEB / "src/components/chat/ChatDock.tsx").read_text()
+FORGE_THREAD = (WEB / "src/components/forge/ForgeThread.tsx").read_text()
+CHATBAR = (WEB / "src/components/chat/ChatBar.tsx").read_text()
 WRENCH = (WEB / "src/components/chat/wrench.ts").read_text()
 WORKER = (ROOT / "live" / "worker.js").read_text()
 
@@ -131,6 +139,20 @@ def test_chatdock_chips_follow_the_workshop_tab():
     # Every former contextChips call site goes through chipsFor now.
     assert "wrench.contextChips(pathname" not in DOCK.replace(
         "return wrench.contextChips(pathname", "")
+
+
+def test_the_docked_thread_renders_the_chips_on_garage():
+    # ChatBar is the only other renderer of assistant.chips, and it
+    # opts out of the Workshop by design — so without this row in the
+    # docked thread, the per-tab chips render nowhere on /garage.
+    assert '"/garage", "/garage/"' in CHATBAR
+    assert "assistant.chips.map" in FORGE_THREAD
+    assert ("docked && inputMode === 'chat' && assistant.chips.length > 0"
+            in FORGE_THREAD)
+    assert 'aria-label="Suggestions for the open Workshop tab"' in FORGE_THREAD
+    # A chip click asks the question through the same engine path the
+    # static suggestions use, and opens the conversation panel.
+    assert "assistant.ask(c)" in FORGE_THREAD
 
 
 def test_wrench_layer_stays_free_of_app_state():
