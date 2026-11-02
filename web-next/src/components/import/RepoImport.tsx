@@ -13,7 +13,7 @@ import Link from "next/link";
 import {
   blobUrl, buildImportedSdfBundle, buildSpecimen, commitUrl, filterVendored,
   MAX_TREE_ENTRIES,
-  gatherRequestFor, imageGate, parseRepoInput, physicsEntryFor,
+  gatherRequestFor, imageGate, parseRepoInput, parseRepoList, physicsEntryFor,
   pickFiles, rawUrl, slugifyRepo, validateHardwareItems,
   withCatalogMatches, GATHER_REQUESTS_KEY,
   type ImportSdfBundle, type RepoRef, type RepoSpecimen, type Snapshot,
@@ -21,8 +21,8 @@ import {
 import { REPO_IMPORT_EVENT } from "@/lib/repoLink";
 import { repoImportFixture, RECORDED_SNAPSHOT_LABEL } from "@/lib/repoImportFixture";
 import { parts as catalogParts, simReadyProps } from "@/lib/data";
-import { attachRepo, GARAGE_KEY, robotRepos, sameRepo, type GarageRobot } from "@/lib/garage";
-import { uid, useStore } from "@/lib/store";
+import { attachRepo, detachRepo, GARAGE_KEY, robotRepos, sameRepo, type GarageRobot } from "@/lib/garage";
+import { readStore, uid, useStore, writeStore } from "@/lib/store";
 import { useBuildList } from "@/lib/buildList";
 import { addToBuildList, buildPaletteItems } from "@/lib/palette";
 import { runPhysicsChecks, type PhysicsResult } from "@/lib/physicsEngine";
@@ -628,6 +628,34 @@ function SpecimenDetail({
 /* the page                                                            */
 /* ------------------------------------------------------------------ */
 
+type BatchRow = {
+  slug: string;
+  state: "waiting" | "reading" | "added" | "failed" | "removed";
+  msg?: string;
+  repoUrl?: string;
+};
+
+/* A new Garage robot for a repo, named after it. */
+function robotFromRepo(specimen: RepoSpecimen): GarageRobot {
+  const now = new Date().toISOString();
+  return {
+    id: uid("robot"),
+    name: specimen.name,
+    createdAt: now,
+    versions: [
+      {
+        id: uid("v"),
+        label: "Repo import",
+        note: `${specimen.provenance.repoUrl} @ ${specimen.provenance.commitSha.slice(0, 7)}`,
+        source: "repo",
+        createdAt: now,
+        spec: { name: specimen.name },
+      },
+    ],
+    repoImport: specimen,
+  };
+}
+
 export default function RepoImport() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -641,6 +669,15 @@ export default function RepoImport() {
   // Where "Save" puts the import: a new robot, or a robot you already
   // have (a robot can carry several repos: firmware, ROS, CAD…).
   const [target, setTarget] = useState<string>("new");
+  // The last save on this page, so a mistaken one can be undone:
+  // a robot this save created is removed, an updated repo goes back
+  // to the commit it had, and a newly added repo is taken off again.
+  const [undo, setUndo] = useState<{ robotId: string; repoUrl: string; created: boolean; prev: RepoSpecimen | null } | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  // Several repos pasted at once are read one after another and each
+  // is saved to the same robot as soon as it has been read.
+  const [batch, setBatch] = useState<BatchRow[] | null>(null);
+  const [batchRobotId, setBatchRobotId] = useState<string | null>(null);
   const demo = typeof window !== "undefined" && isDemoMode();
 
   // /import/?robot=<garage id>[&src=owner/repo] opens a saved specimen;
@@ -708,6 +745,9 @@ export default function RepoImport() {
     setError(null);
     setNote(null);
     setSavedId(null);
+    setUndo(null);
+    setConfirmRemove(false);
+    setBatch(null);
     try {
       const snap = await fetchSnapshot(ref);
       setBusy("Extracting the hardware story…");
@@ -762,6 +802,12 @@ export default function RepoImport() {
         return;
       }
       setSavedId(targetRobot.id);
+      setUndo({
+        robotId: targetRobot.id,
+        repoUrl: specimen.provenance.repoUrl,
+        created: false,
+        prev: robotRepos(targetRobot).find((x) => sameRepo(x.provenance.repoUrl, specimen.provenance.repoUrl)) ?? null,
+      });
       setNote(
         had
           ? `Updated ${specimen.provenance.owner}/${specimen.provenance.repo} on ${targetRobot.name} to this commit.`
@@ -769,57 +815,162 @@ export default function RepoImport() {
       );
       return;
     }
-    const id = uid("robot");
-    const robot: GarageRobot = {
-      id,
-      name: specimen.name,
-      createdAt: new Date().toISOString(),
-      versions: [
-        {
-          id: uid("v"),
-          label: "Repo import",
-          note: `${specimen.provenance.repoUrl} @ ${specimen.provenance.commitSha.slice(0, 7)}`,
-          source: "repo",
-          createdAt: new Date().toISOString(),
-          spec: { name: specimen.name },
-        },
-      ],
-      repoImport: specimen,
-    };
+    const robot = robotFromRepo(specimen);
     const failure = saveRobots([robot, ...robots]);
     if (failure) {
       setError(failure);
       return;
     }
-    setSavedId(id);
+    setSavedId(robot.id);
+    setUndo({ robotId: robot.id, repoUrl: specimen.provenance.repoUrl, created: true, prev: null });
     setNote("Saved to your Garage with the repo attached.");
   };
+
+  /* Undo the last save, or take a saved repo off its robot. */
+  const removeSaved = () => {
+    if (!specimen || !savedId) return;
+    const list = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const robot = list.find((r) => r.id === savedId);
+    const slug = `${specimen.provenance.owner}/${specimen.provenance.repo}`;
+    let next: GarageRobot[];
+    let msg: string;
+    if (undo && undo.robotId === savedId && undo.created) {
+      next = list.filter((r) => r.id !== savedId);
+      msg = `Undone. The robot this import created was removed, and ${slug} is no longer in your Garage.`;
+    } else if (undo && undo.robotId === savedId && undo.prev) {
+      next = list.map((r) => (r.id === savedId ? attachRepo(r, undo.prev!) : r));
+      msg = `Undone. ${slug} on ${robot?.name ?? "the robot"} is back at the commit it had before.`;
+    } else {
+      if (!undo && !confirmRemove) { setConfirmRemove(true); return; }
+      next = list.map((r) => (r.id === savedId ? detachRepo(r, specimen.provenance.repoUrl) : r));
+      msg = `Removed ${slug} from ${robot?.name ?? "the robot"}. The robot and its versions are unchanged.`;
+    }
+    const failure = writeStore(GARAGE_KEY, next);
+    if (failure) { setError(failure); return; }
+    setSavedId(null);
+    setUndo(null);
+    setConfirmRemove(false);
+    setLinkedId(null);
+    setNote(msg);
+  };
+
+  /* Drop the import on screen without saving anything. */
+  const discard = () => {
+    setSpecimen(null);
+    setSavedId(null);
+    setUndo(null);
+    setConfirmRemove(false);
+    setBatch(null);
+    setInput("");
+    setNote(null);
+    setError(null);
+  };
+
+  const runBatch = async (refs: RepoRef[]) => {
+    discard();
+    const rows: BatchRow[] = refs.map((r) => ({ slug: `${r.owner}/${r.repo}`, state: "waiting" }));
+    setBatch(rows);
+    setBatchRobotId(null);
+    const patch = (i: number, p: Partial<BatchRow>) =>
+      setBatch((b) => (b ? b.map((x, j) => (j === i ? { ...x, ...p } : x)) : b));
+    let robotId: string | null = targetRobot?.id ?? null;
+    for (let i = 0; i < refs.length; i++) {
+      setBusy(`Reading ${i + 1} of ${refs.length}: ${rows[i].slug}…`);
+      patch(i, { state: "reading" });
+      try {
+        const snap = await fetchSnapshot(refs[i]);
+        let built = withCatalogMatches(buildSpecimen(snap), catalogParts);
+        built = (await claudeHardwarePass(built, snap)).specimen;
+        // Read the Garage fresh each time: the list in this render is
+        // stale once the first repo of the batch has been saved.
+        const list = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        let next: GarageRobot[];
+        if (robotId && list.some((r) => r.id === robotId)) {
+          next = list.map((r) => (r.id === robotId ? attachRepo(r, built) : r));
+        } else {
+          const robot = robotFromRepo(built);
+          robotId = robot.id;
+          next = [robot, ...list];
+        }
+        const failure = writeStore(GARAGE_KEY, next);
+        if (failure) throw new Error(failure);
+        setBatchRobotId(robotId);
+        patch(i, {
+          state: "added",
+          repoUrl: built.provenance.repoUrl,
+          msg: `${built.parts.length} part${built.parts.length === 1 ? "" : "s"} · @ ${built.provenance.commitSha.slice(0, 7)}`,
+        });
+      } catch (e) {
+        patch(i, { state: "failed", msg: (e as Error).message });
+      }
+    }
+    setBusy(null);
+  };
+
+  const removeBatchRow = (i: number) => {
+    const row = batch?.[i];
+    if (!row?.repoUrl || !batchRobotId) return;
+    const list = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const failure = writeStore(
+      GARAGE_KEY,
+      list.map((r) => (r.id === batchRobotId ? detachRepo(r, row.repoUrl!) : r)),
+    );
+    if (failure) { setError(failure); return; }
+    setBatch((b) => (b ? b.map((x, j) => (j === i ? { ...x, state: "removed" } : x)) : b));
+  };
+  const batchRobot = batchRobotId ? robots.find((r) => r.id === batchRobotId) : undefined;
+
+  const repoCount = parseRepoList(input).refs.length;
 
   return (
     <div className="repo-import">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const ref = parseRepoInput(input);
-          if (!ref) {
+          const { refs, bad } = parseRepoList(input);
+          if (!refs.length) {
             setError("That does not look like a GitHub repo. Paste a URL like https://github.com/owner/repo, or just owner/repo.");
             return;
           }
-          void runImport(ref);
+          if (bad.length) {
+            setError(`Not a GitHub repo: ${bad.join(", ")}. Fix or remove ${bad.length === 1 ? "it" : "them"} and import again.`);
+            return;
+          }
+          if (refs.length === 1) void runImport(refs[0]);
+          else void runBatch(refs);
         }}
       >
         <label>
-          Public GitHub repo
-          <input
-            type="text"
+          Public GitHub repos
+          <textarea
+            rows={Math.min(6, Math.max(2, input.split("\n").length))}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="https://github.com/owner/robot-repo or owner/robot-repo"
+            onKeyDown={(e) => {
+              // Enter imports, Shift+Enter adds another line.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder={"https://github.com/owner/robot-firmware\nowner/robot-ros  (one per line for several)"}
             autoComplete="off"
+            spellCheck={false}
           />
         </label>
+        {robots.length > 0 && repoCount > 1 && !specimen && (
+          <label className="repo-batch-target">
+            Add them to{" "}
+            <select value={targetRobot ? target : "new"} onChange={(e) => setTarget(e.target.value)}>
+              <option value="new">A new robot</option>
+              {robots.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <button type="submit" className="btn btn-primary" disabled={Boolean(busy)}>
-          {busy || "Import the repo"}
+          {busy || (repoCount > 1 ? `Import ${repoCount} repos` : "Import the repo")}
         </button>
         {demo && (
           <button type="button" className="btn" onClick={loadFixture} disabled={Boolean(busy)}>
@@ -829,14 +980,60 @@ export default function RepoImport() {
       </form>
       <p className="faint">
         The import reads the repo in your browser — metadata, file tree, README, license,
-        bill of materials and the model file, pinned to the commit it read. Public repos
-        only in this version; uploading a repo as a .zip is a documented follow-up.
+        bill of materials and the model file, pinned to the commit it read. Paste several
+        links, one per line, to give one robot its firmware, ROS and CAD repos in one go.
+        Public repos only in this version; uploading a repo as a .zip is a documented follow-up.
       </p>
       {error && <p role="alert" className="g-error">{error}</p>}
       {note && <p className="faint" role="status">{note}</p>}
 
+      {batch && (
+        <section className="repo-batch" aria-label="Imported repos">
+          <h3>
+            {batchRobot
+              ? `${batch.filter((x) => x.state === "added").length} of ${batch.length} repos added to ${batchRobot.name}`
+              : busy ? "Importing…" : "Nothing was added"}
+          </h3>
+          <ul>
+            {batch.map((x, i) => (
+              <li key={x.slug} data-state={x.state}>
+                <strong>{x.slug}</strong>
+                <span className="faint g-small">
+                  {x.state === "waiting" ? "Waiting" : x.state === "reading" ? "Reading…" : x.state === "removed" ? "Removed" : x.state === "failed" ? `Failed: ${x.msg}` : x.msg}
+                </span>
+                {x.state === "added" && (
+                  <button type="button" className="btn btn-sm" onClick={() => removeBatchRow(i)}>Remove</button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {batchRobot && !busy && (
+            <p className="repo-batch-actions">
+              <Link className="btn btn-sm btn-primary" href={`/garage/#robot=${batchRobot.id}`}>Open {batchRobot.name} in the Workshop</Link>
+              <button type="button" className="btn btn-sm" onClick={discard}>Import more</button>
+            </p>
+          )}
+        </section>
+      )}
+
       {specimen && (
         <>
+          {savedId && (
+            <div className="repo-saved">
+              {confirmRemove ? (
+                <span className="g-remove-confirm" role="alert">
+                  Remove {specimen.provenance.owner}/{specimen.provenance.repo} from {robots.find((r) => r.id === savedId)?.name ?? "this robot"}?{" "}
+                  <button type="button" className="btn btn-sm g-remove-yes" onClick={removeSaved}>Yes, remove</button>
+                  <button type="button" className="btn btn-sm" onClick={() => setConfirmRemove(false)}>Cancel</button>
+                </span>
+              ) : (
+                <button type="button" className="btn btn-sm" onClick={removeSaved}>
+                  {undo ? "Undo this save" : `Remove from ${robots.find((r) => r.id === savedId)?.name ?? "this robot"}`}
+                </button>
+              )}
+              <button type="button" className="btn btn-sm" onClick={discard}>Import another repo</button>
+            </div>
+          )}
           {!savedId && (
             <div className="repo-save">
               {robots.length > 0 && (
@@ -856,6 +1053,7 @@ export default function RepoImport() {
               <button type="button" className="btn btn-primary" onClick={saveToGarage}>
                 {targetRobot ? `Add this repo to ${targetRobot.name}` : "Save to my Garage"}
               </button>
+              <button type="button" className="btn" onClick={discard}>Discard</button>
               <span className="faint">
                 {targetRobot
                   ? "A robot can carry several repos, such as its firmware, ROS packages and CAD. The robot's versions are not changed."

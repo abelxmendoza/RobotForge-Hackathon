@@ -1633,6 +1633,22 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .repo-import .repo-save{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s3) 0}
 .repo-import .repo-save select{margin-left:6px;max-width:100%}
 .repo-import .repo-save .faint{flex-basis:100%}
+.repo-import > form label:has(textarea){flex:1 1 100%}
+.repo-import textarea{width:100%;min-height:68px;padding:10px 12px;font:inherit;font-family:var(--mono,ui-monospace,monospace);font-size:var(--fs-sm);border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);resize:vertical}
+.repo-import textarea:focus{outline:none;border-color:var(--accent)}
+.repo-import > form label.repo-batch-target{flex:0 1 auto;flex-direction:row;align-items:center;align-self:center}
+.repo-import .repo-batch-target select{margin-left:6px;max-width:100%}
+.repo-import .repo-saved{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin:var(--s3) 0}
+.repo-batch{margin:var(--s3) 0;padding:var(--s3) var(--s4);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r)}
+.repo-batch h3{margin:0 0 var(--s2);font-size:var(--fs-sm)}
+.repo-batch ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.repo-batch li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.repo-batch li .btn{margin-left:auto}
+.repo-batch li[data-state="failed"] .faint{color:var(--danger,#c0392b)}
+.repo-batch li[data-state="removed"] strong{text-decoration:line-through;opacity:.6}
+.repo-batch-actions{display:flex;flex-wrap:wrap;gap:var(--s2);margin:var(--s3) 0 0}
+.g-repo-foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0}
+.g-repo-foot .faint{flex-basis:100%}
 
 /* Workshop Overview: the robot turning on a 3D stage (a model, not a photo) */
 .ws-turntable{margin:0 0 var(--s4);display:grid;gap:6px}

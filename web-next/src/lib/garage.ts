@@ -68,6 +68,11 @@ export function detachRepo(r: GarageRobot, repoUrl: string): GarageRobot {
   return withRepos(r, robotRepos(r).filter((x) => !sameRepo(x.provenance.repoUrl, repoUrl)));
 }
 
+/* Remove every repo from a robot. The robot and its versions stay. */
+export function clearRepos(r: GarageRobot): GarageRobot {
+  return withRepos(r, []);
+}
+
 function withRepos(r: GarageRobot, list: Specimen[]): GarageRobot {
   const { repoImport: _first, repos: _rest, ...base } = r;
   void _first; void _rest;

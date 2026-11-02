@@ -179,6 +179,25 @@ export function parseRepoInput(input: string): RepoRef | null {
   return null;
 }
 
+/* Several repos pasted at once: one per line, or separated by spaces
+ * or commas. Duplicates (GitHub names ignore case) are dropped, and
+ * anything that isn't a repo is reported back, not silently skipped. */
+export function parseRepoList(input: string): { refs: RepoRef[]; bad: string[] } {
+  const refs: RepoRef[] = [];
+  const bad: string[] = [];
+  const seen = new Set<string>();
+  for (const piece of (input || "").split(/[\s,]+/)) {
+    if (!piece) continue;
+    const ref = parseRepoInput(piece);
+    if (!ref) { bad.push(piece); continue; }
+    const key = `${ref.owner}/${ref.repo}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    refs.push(ref);
+  }
+  return { refs, bad };
+}
+
 export function repoUrl(ref: RepoRef): string {
   return `https://github.com/${ref.owner}/${ref.repo}`;
 }
