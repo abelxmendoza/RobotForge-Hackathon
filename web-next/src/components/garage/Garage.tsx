@@ -416,9 +416,9 @@ export default function Garage() {
    * #tab=<workshop tab> is Wrench's Tier-0 navigation landing here. */
   useEffect(() => {
     const check = (hash: string) => {
-      if (hash === '#assembly') setTab('build');
+      if (hash === '#assembly') { setTab('build'); setTwinOpen(false); setAdding(false); }
       const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history)$/);
-      if (t) setTab(t[1] as WorkTab);
+      if (t) { setTab(t[1] as WorkTab); setTwinOpen(false); setAdding(false); }
     };
     check(window.location.hash);
     const onHash = () => check(window.location.hash);
@@ -635,6 +635,24 @@ export default function Garage() {
     if (!label) setLabel(`Fit ${p.name}`);
   };
 
+  /* The Workshop tab bar belongs to the selected robot, not to whichever
+   * pane happens to be showing: it stays visible while the Omega1 twin
+   * viewer or the Add Robot panel replaces the robot detail, and picking
+   * a tab from there returns to that pane of the selected robot. */
+  const wsVerdict = verdictOf(draftLines);
+  const goTab = (t: WorkTab) => { setTab(t); setTwinOpen(false); setAdding(false); };
+  const tabBar = robot && draft ? (
+    <div className="ws-tabs" role="tablist" aria-label="Workshop">
+      {WORK_TABS.map((t) => (
+        <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => goTab(t.id)}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
+          {t.label}
+          {t.id === 'checks' && <span className={'ws-dotbadge ' + wsVerdict.cls} aria-label={wsVerdict.label} />}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   if (!ready) return <p className="muted">Loading your garage…</p>;
 
   return (
@@ -694,6 +712,7 @@ export default function Garage() {
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
         {lifecycleNotice && <p className="g-notice" role="status">{lifecycleNotice}</p>}
+        {(twinOpen || adding) && tabBar}
         {twinOpen && <Omega1Twin />}
         {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} />}
 
@@ -763,15 +782,7 @@ export default function Garage() {
               ))}
             </ol>
 
-            <div className="ws-tabs" role="tablist" aria-label="Workshop">
-              {WORK_TABS.map((t) => (
-                <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
-                  {t.label}
-                  {t.id === 'checks' && <span className={'ws-dotbadge ' + verdict.cls} aria-label={verdict.label} />}
-                </button>
-              ))}
-            </div>
+            {tabBar}
 
             {unsaved.length > 0 && (
               <div className="ws-savebar" role="region" aria-label="Unsaved changes">
