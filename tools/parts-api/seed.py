@@ -15,8 +15,8 @@ this tool builds the part records the Worker serves, from
 Record shape (stored in RF_LIVE_KV under `parts:<id>`, with the id
 list under `parts:index`) — field-aligned with the two parents:
 gather's `price_estimate` ({unit_price, currency, price_breaks,
-stock_wording, source_kind, supplier_url, fetched_at, expires_at,
-quote}) and buildPlan.ts's SourcedPrice ({amount <-> unit_price,
+stock_wording, basis, source_kind, supplier_url, fetched_at,
+expires_at, quote}) and buildPlan.ts's SourcedPrice ({amount <-> unit_price,
 url <-> supplier_url, snippet <-> quote, verification <-> state}).
 
 The catalogue's `image` field is an AI illustration. It is NEVER
@@ -113,6 +113,7 @@ def normalize_estimate(raw: dict) -> dict | None:
         "expires_at": raw.get("expires_at"),
         "quote": raw.get("quote") or raw.get("snippet"),
         "stock_wording": raw.get("stock_wording"),
+        "basis": raw.get("basis"),
     }
     return {k: v for k, v in est.items() if v is not None}
 

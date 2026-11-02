@@ -20,6 +20,7 @@ import { parts } from '@/lib/data';
 import type { Part } from '@/lib/types';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { INVENTORY_KEY, type InventoryPart } from '@/lib/inventory';
+import { OWNERSHIP_KEY } from '@/lib/toolsMaterials';
 import { assetPath } from '@/components/home/asset';
 import { DEMO_DATA_KEYS } from '@/lib/demoMode';
 
@@ -86,6 +87,13 @@ function demoInventory(): InventoryPart[] {
     simFromCatalog('gearmotor_12v', 'motor', 2),
     simFromCatalog('driver_tb6612fng', 'motor_driver', 1),
     simFromCatalog('lipo_4s_5200', 'battery', 1),
+    /* One nested example for the Columns view: the USB adapter board
+     * an RPLIDAR A1 kit comes with, mounted under the lidar. */
+    base({
+      id: 'demo-sample-lidar-usb', name: 'USB serial adapter board (demo sample)', category: 'cable',
+      reality: 'sim_only', quantity: 1, parent_id: 'demo-rplidar_a1', stock_location: 'Catalogue (virtual)',
+      notes: SAMPLE_NOTE,
+    }),
     /* Parts · real — one labeled demo sample, so the real-vs-sim
      * split shows. */
     base({
@@ -151,6 +159,13 @@ async function fetchSpec(file: string): Promise<GarageRobot['versions'][number][
 export async function seedDemoStores(): Promise<void> {
   resetDemoSandbox();
   writeIfAbsent(INVENTORY_KEY + '.demo', demoInventory());
+  /* Demo ownership state (§11): the demo sandbox shows the Prusa
+   * printer as on hand so both badges — and the derived build-plan
+   * profile — are visible in the Workshop's Tools & Materials tab.
+   * It is demo-twin state only; the catalogue itself records the
+   * printer as simulated, and the visitor's own flips are never
+   * touched. */
+  writeIfAbsent(OWNERSHIP_KEY + '.demo', { printer_prusa_mk4s: 'on_hand' });
   const robots: GarageRobot[] = [];
 
   const burgerSpec = await fetchSpec('turtlebot3-burger.json');

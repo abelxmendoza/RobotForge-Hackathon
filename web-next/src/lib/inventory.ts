@@ -35,6 +35,9 @@ export type InventorySection = 'parts' | 'tools';
 
 export interface InventoryPart {
   robot_id?: string | null;
+  /* The part this one is mounted on or inside (an encoder on its
+   * motor, a HAT on its Pi). Rules live in lib/partsTree.ts. */
+  parent_id?: string | null;
   stock_location?: string;
   notes?: string;
   last_counted_at?: string;
@@ -161,7 +164,7 @@ export function importedPart(raw: unknown): InventoryPart {
   const safe={...p};delete (safe as Record<string,unknown>).photo_full;
   const image=(v:unknown)=>typeof v==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(v)?v:null;
   const specs=Object.fromEntries(Object.entries(p.specs??{}).filter(([,v])=>typeof v==='string'||(typeof v==='number'&&Number.isFinite(v))));
-  return {...safe,id:p.id,name:p.name,category:p.category!,quantity:p.quantity!,specs,photo:image(p.photo),photo_asset_id:null,catalog_part_id:typeof p.catalog_part_id==='string'?p.catalog_part_id:null,read_from_label:Array.isArray(p.read_from_label)?p.read_from_label.filter(x=>typeof x==='string'):[],condition:['new','used','damaged','unknown'].includes(p.condition??'')?p.condition!:'unknown',confidence:'owner',status:p.status==='confirmed'?'confirmed':'needs_confirmation',question:typeof p.question==='string'?p.question:'',chat:Array.isArray(p.chat)?p.chat.filter(c=>c&&(c.role==='user'||c.role==='assistant')&&typeof c.text==='string'):[],createdAt:typeof p.createdAt==='string'?p.createdAt:new Date().toISOString(),source:p.source==='photo'?'photo':'manual',reality:p.reality==='sim_only'?'sim_only':'real',section:p.section==='tools'||p.section==='parts'?p.section:sectionForCategory(p.category!),robot_id:typeof p.robot_id==='string'?p.robot_id:null,stock_location:typeof p.stock_location==='string'?p.stock_location:'',notes:typeof p.notes==='string'?p.notes:''};
+  return {...safe,id:p.id,name:p.name,category:p.category!,quantity:p.quantity!,specs,photo:image(p.photo),photo_asset_id:null,catalog_part_id:typeof p.catalog_part_id==='string'?p.catalog_part_id:null,read_from_label:Array.isArray(p.read_from_label)?p.read_from_label.filter(x=>typeof x==='string'):[],condition:['new','used','damaged','unknown'].includes(p.condition??'')?p.condition!:'unknown',confidence:'owner',status:p.status==='confirmed'?'confirmed':'needs_confirmation',question:typeof p.question==='string'?p.question:'',chat:Array.isArray(p.chat)?p.chat.filter(c=>c&&(c.role==='user'||c.role==='assistant')&&typeof c.text==='string'):[],createdAt:typeof p.createdAt==='string'?p.createdAt:new Date().toISOString(),source:p.source==='photo'?'photo':'manual',reality:p.reality==='sim_only'?'sim_only':'real',section:p.section==='tools'||p.section==='parts'?p.section:sectionForCategory(p.category!),robot_id:typeof p.robot_id==='string'?p.robot_id:null,parent_id:typeof p.parent_id==='string'&&p.parent_id!==p.id?p.parent_id:null,stock_location:typeof p.stock_location==='string'?p.stock_location:'',notes:typeof p.notes==='string'?p.notes:''};
 }
 
 export type InventoryCommand = {kind:'list';robotName?:string}|{kind:'quantity';name:string;quantity:number}|{kind:'assign';name:string;robotName:string};

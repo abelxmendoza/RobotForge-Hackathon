@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .schema import RobotSpec, spec_is_estimated
+from .urdf import verify_urdf_clearance
 
 ERROR, WARN, INFO = "ERROR", "WARN", "INFO"
 
@@ -26,12 +27,14 @@ class Finding:
 VOLTAGE_HEURISTIC = "direct-supply heuristic: "
 
 
-def validate(spec: RobotSpec) -> list[Finding]:
+def validate(spec: RobotSpec, *, urdf_xml: str | None = None) -> list[Finding]:
     f: list[Finding] = []
 
-    # Ground geometry — only for robots that have wheels. A wheel
-    # cannot lift the chassis higher than its radius, and the declared
-    # ground clearance must be reachable by the wheel radius.
+    # Ground geometry — only for robots that have wheels. Assumes a
+    # conventional axle-mounted wheel-on-ground chassis configuration:
+    # a wheel cannot lift the chassis higher than its radius, and the
+    # generated collision geometry's chassis bottom above the wheel
+    # contact plane must match the declared ground clearance.
     if spec.wheel is not None:
         radius = spec.wheel.diameter_m / 2.0
         if spec.ground_clearance_m is not None and \
@@ -40,6 +43,12 @@ def validate(spec: RobotSpec) -> list[Finding]:
                              f"ground clearance {spec.ground_clearance_m:.3f} m exceeds "
                              f"wheel radius {radius:.3f} m — impossible without a "
                              f"lifted chassis design"))
+        elif spec.ground_clearance_m is not None:
+            try:
+                verify_urdf_clearance(spec, urdf_xml)
+            except ValueError as exc:
+                f.append(Finding(ERROR, "geometry.collision_clearance_mismatch",
+                                 str(exc)))
         if spec.wheel.diameter_m > spec.height_m:
             f.append(Finding(WARN, "geometry.wheel_vs_height",
                              f"wheel diameter {spec.wheel.diameter_m:.3f} m is larger "

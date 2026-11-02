@@ -19,15 +19,20 @@ import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
 import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveStatus';
-import type { LiveHealth } from '@/components/forge/model';
-import { downloadJSON, uid, useStore } from '@/lib/store';
-import { preparePhoto } from '@/lib/image';
+import type { LiveHealth, RobotSpec } from '@/components/forge/model';
+import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
+import { promptWrench } from '@/lib/wrenchPrompt';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
+import OverviewTurntable from './OverviewTurntable';
+import { OverviewMedia } from './PhotoSpin';
+import { removeScanFile } from '@/lib/scanStore';
+import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
+import ToolsMaterialsTab from './ToolsMaterialsTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
-  diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, setPath,
+  clearRepos, detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
@@ -47,7 +52,7 @@ function counts(lines: string[]) {
   };
 }
 
-type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'history';
+type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
 const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
@@ -56,6 +61,7 @@ const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'simulate', label: 'Simulate', icon: 'M3 17l5-5 4 3 8-9M14 6h6v6' },
   { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
   { id: 'bom', label: 'BOM', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
+  { id: 'tools', label: 'Tools & Materials', icon: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
 ];
 
@@ -107,20 +113,16 @@ const STATUS_CLASS: Record<string, string> = { PASS: 'pass', MARGINAL: 'marginal
 
 /* ------------------------------------------------------------------ */
 
-function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; health: LiveHealth | null | undefined; firstRobot: boolean }) {
+function AddRobot({ onAdd, firstRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean }) {
   /* Omega1 is the robot this Garage was built for: the first robot
    * in an empty Garage is named for it unless the owner changes it. */
   const [name, setName] = useState(firstRobot ? 'Omega1' : '');
-  const [mode, setMode] = useState<'photo' | 'file' | 'robodex' | 'paste'>('photo');
+  const [mode, setMode] = useState<'file' | 'robodex' | 'paste'>('robodex');
   const [paste, setPaste] = useState('');
   const [dex, setDex] = useState(dexRobots[0]?.spec_file ?? '');
   const [dexOpen, setDexOpen] = useState(false);
-  const [note, setNote] = useState('');
-  const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
-  const photoRef = useRef<HTMLInputElement>(null);
-  const photoLive = routeOn(health ?? null, 'photo');
 
   const finish = (spec: Spec, source: VersionSource, why: string) => {
     if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
@@ -142,21 +144,6 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
     }
   };
 
-  const fromPhoto = async (f: File | undefined) => {
-    if (!f) return;
-    setError('');
-    setBusy('Muse Spark is reading the photo');
-    try {
-      const { full } = await preparePhoto(f);
-      const r = await postJSON<{ draft: { spec: Spec; identity_guess: string } }>('/photo', { image_data_url: full, note });
-      finish(r.draft.spec, 'photo', `Photo draft (${r.draft.identity_guess}); every dimension is ESTIMATED until you measure it`);
-    } catch (e) {
-      setError('The photo draft failed: ' + (e as Error).message);
-    } finally {
-      setBusy('');
-    }
-  };
-
   const fromDex = async (file: string = dex) => {
     setError('');
     try {
@@ -173,30 +160,41 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
     <div className="garage-add">
       {firstRobot && <EmptyBench />}
       <h2>Bring a robot in</h2>
-      <p className="sub">Start with the robot as it is today.</p>
+      <p className="sub">Give Wrench whatever you have, in the chatbox at the bottom of the screen.</p>
+      <ul className="g-ways">
+        <li>
+          <button type="button" className="g-way" onClick={() => promptWrench({ mode: 'chat', text: 'https://github.com/' })}>
+            <Icon d={ICON.code} size={18} />
+            <span><strong>Paste its GitHub repo link</strong>
+              <small>Wrench imports the README, parts list, model files and pictures, then you save it here.</small></span>
+          </button>
+        </li>
+        <li>
+          <button type="button" className="g-way" onClick={() => promptWrench({ attach: true })}>
+            <Icon d={ICON.photo} size={18} />
+            <span><strong>Attach a photo or spec file</strong>
+              <small>Use the paperclip. From a photo, Muse Spark drafts a spec and every size stays ESTIMATED until you measure it.</small></span>
+          </button>
+        </li>
+        <li>
+          <button type="button" className="g-way" onClick={() => promptWrench({ mode: 'design', text: '' })}>
+            <Icon d={ICON.file} size={18} />
+            <span><strong>Describe it in plain words</strong>
+              <small>For example: &ldquo;4-wheel rover, 120 mm wheels, 12 V gearmotors, a Pi 4 and a 4S battery.&rdquo;</small></span>
+          </button>
+        </li>
+      </ul>
+      <details className="g-other-ways">
+        <summary>Other ways in: the Robodex, a spec file, or pasted JSON</summary>
       <label className="g-field">
         <span>Robot name</span>
         <input id="garage-new-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Leave empty to keep the spec's own name" />
       </label>
       <div className="g-tabs" role="tablist" aria-label="How to bring it in">
-        {([['photo', 'Photo', ICON.photo], ['file', 'Spec file', ICON.file], ['robodex', 'From the Robodex', ICON.grid], ['paste', 'Paste JSON', ICON.code]] as const).map(([id, label, icon]) => (
+        {([['robodex', 'From the Robodex', ICON.grid], ['file', 'Spec file', ICON.file], ['paste', 'Paste JSON', ICON.code]] as const).map(([id, label, icon]) => (
           <button key={id} type="button" className="chip g-addchip" role="tab" aria-pressed={mode === id} onClick={() => { setMode(id); if (id === 'robodex') setDexOpen(true); }}><Icon d={icon} size={16} />{label}</button>
         ))}
       </div>
-      {mode === 'photo' && (
-        <div className="g-pane">
-          <p className="muted">Take or pick a photo of the whole robot. Muse Spark drafts a spec from it. Every dimension is marked ESTIMATED until you edit it with a real measurement.</p>
-          <label className="g-field">
-            <span>Anything the photo can’t show (optional)</span>
-            <input id="garage-photo-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. 4S LiPo, 37 mm 12 V gearmotors, 120 mm wheels" />
-          </label>
-          <input ref={photoRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => fromPhoto(e.target.files?.[0])} />
-          <button type="button" className="btn btn-primary" disabled={!photoLive || Boolean(busy)} onClick={() => photoRef.current?.click()}>Take or choose a photo</button>
-          {!photoLive && health !== undefined && (
-            <p className="faint g-note">Photo drafts are off right now: <LiveOffReason h={health ?? null} route="photo" />. Use a spec file or start from the Robodex instead.</p>
-          )}
-        </div>
-      )}
       {mode === 'file' && (
         <div className="g-pane">
           <p className="muted">A RobotForge spec JSON, for example one written by <code>robotforge describe</code> or exported from My robots.</p>
@@ -226,7 +224,7 @@ function AddRobot({ onAdd, health, firstRobot }: { onAdd: (name: string, spec: S
           }}>Add robot</button>
         </div>
       )}
-      {busy && <LiveProgress what={busy} next="The draft lands in the editor, every dimension marked ESTIMATED" />}
+      </details>
       {error && <p className="g-error" role="alert">{error}</p>}
     </div>
   );
@@ -379,6 +377,8 @@ function drawingFor(...names: unknown[]): string | null {
   return null;
 }
 
+const ALL_REPOS = '*all*';
+
 export default function Garage() {
   const [robots, saveRobots, ready] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const [inventory] = useStore<InventoryPart[]>(INVENTORY_KEY, []);
@@ -401,13 +401,13 @@ export default function Garage() {
   const [saveError, setSaveError] = useState('');
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState<WorkTab>('overview');
-  const [benchWires, setBenchWires] = useState(false);
+  const [benchWires, setBenchWires] = useState(true);
   /* #assembly (Wrench's assembly proposals link there) opens Build.
    * #tab=<workshop tab> is Wrench's Tier-0 navigation landing here. */
   useEffect(() => {
     const check = (hash: string) => {
       if (hash === '#assembly') setTab('build');
-      const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|history)$/);
+      const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history)$/);
       if (t) setTab(t[1] as WorkTab);
     };
     check(window.location.hash);
@@ -464,6 +464,14 @@ export default function Garage() {
   }, [robot?.id]);
 
   const persist = (next: GarageRobot[]) => setSaveError(saveRobots(next) ?? '');
+  /* Photos and scans take a while to process: read the garage as it is
+   * now, so edits made meanwhile are kept, and skip a robot deleted
+   * while they were processing. */
+  const patchRobot = (id: string, fn: (r: GarageRobot) => GarageRobot): string | null => {
+    const now = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    if (!now.some((r) => r.id === id)) return 'That robot was removed before the upload finished.';
+    return saveRobots(now.map((r) => (r.id === id ? fn(r) : r))) ?? null;
+  };
 
   const addRobot = (name: string, spec: Spec, source: VersionSource, why: string) => {
     const r: GarageRobot = {
@@ -504,8 +512,20 @@ export default function Garage() {
     if (!robot) return;
     if (confirmRemove !== robot.id) { setConfirmRemove(robot.id); return; }
     persist(robots.filter((r) => r.id !== robot.id));
+    if (robot.scan) void removeScanFile(robot.id).catch(() => {});
     setConfirmRemove(null);
     setSelected(null);
+  };
+
+  /* Removing a repo also asks twice; the robot and its versions stay.
+   * ALL_REPOS stands for "Remove all". */
+  const [confirmDetach, setConfirmDetach] = useState<string | null>(null);
+  useEffect(() => { setConfirmDetach(null); }, [robot?.id]);
+  const detach = (repoUrl: string) => {
+    if (!robot) return;
+    if (confirmDetach !== repoUrl) { setConfirmDetach(repoUrl); return; }
+    persist(robots.map((r) => (r.id === robot.id ? (repoUrl === ALL_REPOS ? clearRepos(r) : detachRepo(r, repoUrl)) : r)));
+    setConfirmDetach(null);
   };
 
   const edit = (path: string, value: unknown) => setDraft((d: Spec) => setPath(d, path, value));
@@ -592,12 +612,13 @@ export default function Garage() {
               <button type="button" className="g-robot" aria-current={r.id === selected ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); }}>
                 <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
                 <span className="g-robot-text"><strong>{r.name}</strong>
-                {r.repoImport && <span className="fbadge live">From repo</span>}
+                {robotRepos(r).length > 0 && <span className="fbadge live">{robotRepos(r).length > 1 ? `${robotRepos(r).length} repos` : 'From repo'}</span>}
                 <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}{r.versions[r.versions.length - 1]?.planned ? ' · planned' : ''}</span></span>
               </button>
               {r.repoImport && (
                 <span className="g-robot-links faint">
                   <a href={r.repoImport.provenance.repoUrl} target="_blank" rel="noreferrer">{r.repoImport.provenance.owner}/{r.repoImport.provenance.repo}</a>
+                  {robotRepos(r).length > 1 && ` +${robotRepos(r).length - 1} more`}
                   {' · '}
                   <Link href={`/import/?robot=${r.id}`}>import details</Link>
                 </span>
@@ -612,7 +633,7 @@ export default function Garage() {
 
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
-        {(adding || robots.length === 0) && <AddRobot onAdd={addRobot} health={health} firstRobot={robots.length === 0} />}
+        {(adding || robots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={robots.length === 0} />}
 
         {!adding && robot && draft && (() => {
           const verdict = verdictOf(draftLines);
@@ -706,13 +727,33 @@ export default function Garage() {
               <section className="ws-pane" aria-label="Overview">
                 {(() => {
                   const art = drawingFor(draft?.name, robot.name, robot.id);
-                  return art ? (
+                  const drawing = art ? (
                     <figure className="ws-drawing">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={art} alt={`Drawing of a ${draft?.name || robot.name}`} />
                       <figcaption className="faint g-small">RobotForge illustration of this model, not a photo of your build.</figcaption>
                     </figure>
                   ) : null;
+                  return (
+                    <OverviewMedia
+                      key={robot.id}
+                      robotId={robot.id}
+                      spin={robot.spin}
+                      scan={robot.scan}
+                      name={robot.name}
+                      model={<OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
+                      onSave={(next) => patchRobot(robot.id, (r) => {
+                        if (next) return { ...r, spin: next };
+                        const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+                        return rest;
+                      })}
+                      onScanSave={(next) => patchRobot(robot.id, (r) => {
+                        if (next) return { ...r, scan: next };
+                        const { scan: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+                        return rest;
+                      })}
+                    />
+                  );
                 })()}
                 <div className="ws-tiles">
                   {tiles.map((t) => (
@@ -723,6 +764,76 @@ export default function Garage() {
                     </div>
                   ))}
                 </div>
+                <section className="g-repos" aria-label="Code repos">
+                  <h3>Code repos{robotRepos(robot).length > 0 && <span className="faint"> · {robotRepos(robot).length}</span>}</h3>
+                  {robotRepos(robot).length === 0 ? (
+                    <p className="faint g-small">No repos yet. Add the robot&apos;s firmware, ROS packages or CAD repo and RobotForge reads its parts and model files.</p>
+                  ) : (
+                    <ul>
+                      {robotRepos(robot).map((x) => {
+                        const slug = `${x.provenance.owner}/${x.provenance.repo}`;
+                        return (
+                          <li key={x.provenance.repoUrl} className="g-repo-card">
+                            {(() => {
+                              const pics = cardImagesOf(x);
+                              const hasImages = (x.images?.length ?? 0) > 0;
+                              return (
+                                <div className="g-repo-pics">
+                                  {pics.length ? (
+                                    <>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img className="g-repo-cover" src={pics[0].url} alt={pics[0].alt || `Image from ${slug}`} loading="lazy" referrerPolicy="no-referrer" />
+                                      {pics.length > 1 && (
+                                        <span className="g-repo-strip">
+                                          {pics.slice(1, 4).map((p) => (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img key={p.url} src={p.url} alt={p.alt || ''} loading="lazy" referrerPolicy="no-referrer" />
+                                          ))}
+                                          {pics.length > 4 && <span className="faint">+{pics.length - 4}</span>}
+                                        </span>
+                                      )}
+                                      <span className="g-repo-credit faint">Image via {slug} · {x.provenance.license.label}, not your build</span>
+                                    </>
+                                  ) : (
+                                    <Link className="g-repo-nopic faint g-small" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}#repo-images`}>
+                                      {hasImages ? `Choose card pictures (${x.images.length} in the repo)` : 'No pictures in this repo'}
+                                    </Link>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            <a href={x.provenance.repoUrl} target="_blank" rel="noreferrer"><strong>{slug}</strong></a>
+                            <span className="faint g-small"> @ {x.provenance.commitSha.slice(0, 7)} · {x.parts.length} part{x.parts.length === 1 ? '' : 's'}{x.model ? ` · ${x.model.format} model` : ''}</span>
+                            <span className="g-repo-actions">
+                              <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}`}>Details</Link>
+                              {cardImagesOf(x).length > 0 && <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}#repo-images`}>Pictures</Link>}
+                              {confirmDetach === x.provenance.repoUrl ? (
+                                <span className="g-remove-confirm" role="alert">
+                                  Remove {slug} from {robot.name}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(x.provenance.repoUrl)}>Yes, remove</button>
+                                  <button type="button" className="btn btn-sm" onClick={() => setConfirmDetach(null)}>Cancel</button>
+                                </span>
+                              ) : (
+                                <button type="button" className="btn btn-sm" onClick={() => detach(x.provenance.repoUrl)} aria-label={`Remove ${slug}`}>Remove</button>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <p className="g-repo-foot">
+                    <Link className="btn btn-sm" href={`/import/?attach=${encodeURIComponent(robot.id)}`}>+ Add {robotRepos(robot).length ? 'more repos' : 'repos'}</Link>
+                    {robotRepos(robot).length > 1 && (confirmDetach === ALL_REPOS ? (
+                      <span className="g-remove-confirm" role="alert">
+                        Remove all {robotRepos(robot).length} repos from {robot.name}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(ALL_REPOS)}>Yes, remove all</button>
+                        <button type="button" className="btn btn-sm" onClick={() => setConfirmDetach(null)}>Cancel</button>
+                      </span>
+                    ) : (
+                      <button type="button" className="btn btn-sm" onClick={() => detach(ALL_REPOS)}>Remove all</button>
+                    ))}
+                    <span className="faint g-small">Removing a repo keeps the robot, its specs and its versions.</span>
+                  </p>
+                </section>
                 <div className="ws-cards">
                   <button type="button" className={'ws-card ' + verdict.cls} onClick={() => setTab('checks')}>
                     <span className="ws-card-icon"><Icon d={ICON.checks} size={22} /></span>
@@ -762,7 +873,7 @@ export default function Garage() {
 
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
-                {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} /></> : (
+                {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} spec={draft as unknown as RobotSpec} /></> : (
                   <div className="ws-empty">
                     <svg viewBox="0 0 120 60" width="140" aria-hidden="true"><rect x="6" y="20" width="30" height="20" rx="4" fill="var(--surface-3)" /><rect x="84" y="8" width="30" height="18" rx="4" fill="var(--surface-3)" /><rect x="84" y="34" width="30" height="18" rx="4" fill="var(--surface-3)" /><path d="M36 30 C60 30 60 17 84 17" stroke="var(--marginal)" strokeWidth="2" fill="none" /><path d="M36 30 C60 30 60 43 84 43" stroke="var(--link)" strokeWidth="2" strokeDasharray="5 4" fill="none" /></svg>
                     <p><strong>No wiring recorded for this robot yet.</strong> Robodex robots such as Pathfinder and TurtleBot3 come with their harness. You can plan connections on the bench below.</p>
@@ -821,6 +932,10 @@ export default function Garage() {
 
             {tab === 'bom' && (
               <BomTab spec={draft} robotId={robot.id} robotName={draft.name || robot.name} inventory={inventory} />
+            )}
+
+            {tab === 'tools' && (
+              <ToolsMaterialsTab spec={draft} robotName={draft.name || robot.name} />
             )}
 
             {tab === 'history' && (

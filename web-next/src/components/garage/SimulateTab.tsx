@@ -305,8 +305,11 @@ function PhysicsScene({ kind, run, shape, slopeDeg, stepM, estimate }: { kind: '
   );
 }
 
-/* The Robodex entry this robot came from, matched by name. */
-function catalogMatch(spec: Spec): { slug: string; name: string; physics: boolean } | null {
+/* The Robodex entry this robot came from, matched by name.
+ * Exported for the Tools & Materials tab's print-fit check, which
+ * needs the same honest match (exact normalized name/slug, never
+ * a lookalike). */
+export function catalogMatch(spec: Spec): { slug: string; name: string; physics: boolean } | null {
   const norm = (s: unknown) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
   const n = norm(spec?.name);
   if (!n) return null;

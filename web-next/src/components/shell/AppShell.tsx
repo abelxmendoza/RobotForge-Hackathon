@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import RevealInit from "./RevealInit";
 import AccountControl from "./AccountControl";
+import AccountSave from "./AccountSave";
 import { DemoPill } from "./DemoBar";
 import DemoIdentity from "./DemoIdentity";
 import AppGate, { GateProvider, GatedChatBar } from "./AppGate";
@@ -93,6 +94,7 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
           </nav>
           <DemoIdentity />
           <DemoPill />
+          <AccountSave />
           <AccountControl />
           <a className="gh-link" href={REPO_URL}>GitHub</a>
         </header>

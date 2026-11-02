@@ -158,6 +158,10 @@ export interface RepoSpecimen {
   parts: SpecimenPart[];
   images: RepoImage[];
   imagesAttested: boolean;
+  /** Image URLs (from `images`) the user picked for this repo's card,
+   *  in order; the first is the cover. Shown only while imageGate
+   *  allows the repo's images to be displayed. */
+  cardImages?: string[];
   physics?: PhysicsSummary;
 }
 
@@ -177,6 +181,43 @@ export function parseRepoInput(input: string): RepoRef | null {
   const short = s.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
   if (short) return { owner: short[1], repo: short[2] };
   return null;
+}
+
+/* Several repos pasted at once: one per line, or separated by spaces
+ * or commas. Duplicates (GitHub names ignore case) are dropped, and
+ * anything that isn't a repo is reported back, not silently skipped. */
+export function parseRepoList(input: string): { refs: RepoRef[]; bad: string[] } {
+  const refs: RepoRef[] = [];
+  const bad: string[] = [];
+  const seen = new Set<string>();
+  for (const piece of (input || "").split(/[\s,]+/)) {
+    if (!piece) continue;
+    const ref = parseRepoInput(piece);
+    if (!ref) { bad.push(piece); continue; }
+    const key = `${ref.owner}/${ref.repo}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    refs.push(ref);
+  }
+  return { refs, bad };
+}
+
+/* The pictures for a repo's card: the user's picks that are still in
+ * the repo's image list, and nothing when the license gate says the
+ * images can only be linked. */
+export function cardImagesOf(
+  s: Pick<RepoSpecimen, "images" | "imagesAttested" | "cardImages" | "provenance">,
+): RepoImage[] {
+  if (!imageGate(s.provenance.license, s.imagesAttested).display) return [];
+  const byUrl = new Map(s.images.map((i) => [i.url, i]));
+  return (s.cardImages ?? []).map((u) => byUrl.get(u)).filter((x): x is RepoImage => Boolean(x));
+}
+
+/* Add or remove one picture from the card; `cover` moves it first. */
+export function toggleCardImage(picked: string[] | undefined, url: string, cover = false): string[] {
+  const list = (picked ?? []).filter((u) => u !== url);
+  if (cover) return [url, ...list];
+  return (picked ?? []).includes(url) ? list : [...list, url];
 }
 
 export function repoUrl(ref: RepoRef): string {

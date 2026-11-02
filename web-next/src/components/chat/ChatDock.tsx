@@ -23,7 +23,9 @@ import {
   type RobotData,
   type TemplateData,
 } from "./engine";
-import { gateReports, parts, robotSlug, robots, simReadyProps } from "@/lib/data";
+import { gateReports, parts, robotSlug, robots, simReadyProps, toolMaterialItems } from "@/lib/data";
+import { OWNERSHIP_KEY, chatSnapshot, type OwnershipMap } from "@/lib/toolsMaterials";
+import { DEFAULT_PROFILE, PROFILE_KEY, type ConstraintsProfile } from "@/lib/buildPlan";
 import {
   addToBuildList,
   buildConfirmationText,
@@ -94,6 +96,17 @@ function engineData() {
     reports: { runs: gateReports } as unknown as ReportsData,
     intents: intentsDoc as unknown as IntentsData,
     root: "",
+    /* §11 tools & materials: resolved at ANSWER time through the
+     * store layer (demo mode reads the ".demo" twins), so a flip
+     * in the Workshop's Tools & Materials tab is visible to the
+     * very next answer. All state rules live in
+     * lib/toolsMaterials.ts; the engine renders the snapshot. */
+    toolsMaterials: () => chatSnapshot(
+      toolMaterialItems,
+      readStore<OwnershipMap>(OWNERSHIP_KEY, {}),
+      readStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE),
+      new Date().toISOString(),
+    ),
   };
 }
 

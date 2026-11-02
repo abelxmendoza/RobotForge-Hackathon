@@ -58,7 +58,10 @@ shapes that already exist in the repo:
   shape `tools/gather/apply.py` writes into catalogue parts:
   `{unit_price, currency, price_breaks: [{qty, unit_price}],
   supplier, supplier_url, source_kind, state, fetched_at,
-  expires_at, quote, stock_wording}`. `source_kind` ∈
+  expires_at, quote, stock_wording, basis}`. `basis` (what
+  the price buys — e.g. "1.75mm / 1kg") is served only when
+  the catalogue record carries one; it is absent otherwise
+  and never invented. `source_kind` ∈
   `api | web_gathered | user_entered`; `state` ("verification") ∈
   `web_gathered | cross_checked | confirmed` (only the latter two
   may feed safety checks, §8). **Field mapping to

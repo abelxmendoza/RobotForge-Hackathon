@@ -26,6 +26,7 @@ These tests make both halves of that mistake a CI failure:
 
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 
@@ -113,7 +114,7 @@ def test_exported_links_resolve_when_export_present():
             value = m.group(1)
             if value.startswith(SKIP_PREFIXES):
                 continue
-            path = value.split("#")[0].split("?")[0]
+            path = unquote(value.split("#")[0].split("?")[0])
             if not path:
                 continue
             if base == "" and (path == PREFIX or path.startswith(PREFIX + "/")):

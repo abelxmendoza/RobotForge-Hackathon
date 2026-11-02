@@ -3,7 +3,6 @@
  * read each one, then confirm it in a short chat. A part counts as
  * yours-and-known only after you confirm it; confirmed batteries,
  * motors and wheels can be fitted to a robot in the Garage. */
-import { partArt } from '@/lib/partArt';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
@@ -13,9 +12,12 @@ import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { intakePartPhoto } from '@/lib/partIntake';
 import { readInventoryPhoto, saveInventoryPhoto } from '@/lib/inventoryPhotos';
 import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
+import { allowedParents, countUnder, removePart, setParent, setRobot } from '@/lib/partsTree';
+import PartsColumns from './PartsColumns';
+import { PartChips, PartThumb } from './PartBits';
 import { preparePhoto } from '@/lib/image';
 import {
-  importedPart, countedPart, matchesInventory, partReality, partSection, REALITY_LABEL, INVENTORY_KEY, mergeUpdate, offlinePartReply, PART_CATEGORIES, PART_SPEC_KEYS, SPEC_KEY_LABEL,
+  importedPart, countedPart, matchesInventory, partReality, partSection, INVENTORY_KEY, mergeUpdate, offlinePartReply, PART_CATEGORIES, PART_SPEC_KEYS, SPEC_KEY_LABEL,
   type ChatLine, type InventoryPart,
 } from '@/lib/inventory';
 
@@ -31,23 +33,20 @@ function blankPart(source: 'photo' | 'manual', photo: string | null): InventoryP
   };
 }
 
-function PartCard({ p, robotName, active, onOpen }: { robotName?:string; p: InventoryPart; active: boolean; onOpen: () => void }) {
+function PartCard({ p, robotName, inside, active, onOpen }: { robotName?:string; inside: number; p: InventoryPart; active: boolean; onOpen: () => void }) {
   return (
     <button type="button" className="inv-card" aria-pressed={active} onClick={onOpen}>
-      {p.photo ? <img src={p.photo} alt="" />
-        : partArt(p.name, p.category) ? <span className="part-art" title="Illustration of a typical part like this, not a photo of yours"><img src={partArt(p.name, p.category)!} alt="" loading="lazy" /></span>
-          : <span className="inv-noimg" aria-hidden="true">{label(p.category).slice(0, 1).toUpperCase()}</span>}
+      <span className="inv-card-pic"><PartThumb p={p} /><span className="inv-qty" aria-label={`quantity ${p.quantity}`}>×{p.quantity}</span></span>
       <span className="inv-card-body">
         <strong>{p.name}</strong>
-        <span className="faint">{label(p.category)} · ×{p.quantity} · {robotName||'Shared / unassigned'}</span>
-        <span className={'verdict ' + (partReality(p) === 'real' ? 'pass' : 'marginal')}>{REALITY_LABEL[partReality(p)]}</span>{' '}
-        <span className={'verdict ' + (p.status === 'confirmed' ? 'pass' : 'marginal')}>{p.status === 'confirmed' ? 'Confirmed' : 'Needs confirmation'}</span>
+        <span className="faint inv-card-meta">{label(p.category)}{robotName ? ` · ${robotName}` : ''}{inside ? ` · ${inside} inside` : ''}</span>
+        <PartChips p={p} />
       </span>
     </button>
   );
 }
 
-function PartDetail({ p, robots, health, onChange, onPatch, onDelete, onLive }: { robots: GarageRobot[]; p: InventoryPart; health: LiveHealth | null | undefined; onChange: (next: InventoryPart) => void; onPatch: (id: string, fn: (latest: InventoryPart) => InventoryPart) => void; onDelete: () => void; onLive: (err?: unknown) => void }) {
+function PartDetail({ p, all, robots, health, onChange, onPatch, onDelete, onLive, onRobot, onParent, onClose }: { robots: GarageRobot[]; p: InventoryPart; all: InventoryPart[]; health: LiveHealth | null | undefined; onChange: (next: InventoryPart) => void; onPatch: (id: string, fn: (latest: InventoryPart) => InventoryPart) => void; onDelete: () => void; onLive: (err?: unknown) => void; onRobot: (robotId: string | null) => void; onParent: (parentId: string | null) => void; onClose: () => void }) {
   const [photoOpen,setPhotoOpen]=useState(false);
   const [largePhoto,setLargePhoto]=useState<string|null>(null);
   const [photoError,setPhotoError]=useState('');
@@ -105,6 +104,10 @@ function PartDetail({ p, robots, health, onChange, onPatch, onDelete, onLive }: 
 
   return (
     <div className="inv-detail">
+      <div className="inv-drawer-bar">
+        <strong>{p.name}</strong>
+        <button type="button" className="btn btn-sm" onClick={onClose} aria-label="Close part details">Close</button>
+      </div>
       <div className="inv-detail-head">
         {p.photo && <img src={p.photo} alt={'Photo of ' + p.name} />}
         <div className="inv-detail-fields">
@@ -142,11 +145,12 @@ function PartDetail({ p, robots, health, onChange, onPatch, onDelete, onLive }: 
       </div>
 
       <div className="inv-row">
-        <label className="g-field"><span>For robot</span><select value={p.robot_id??''} onChange={e=>onChange({...p,robot_id:e.target.value||null})}><option value="">Shared / unassigned</option>{p.robot_id&&!robots.some(r=>r.id===p.robot_id)&&<option value={p.robot_id}>Previously linked robot (not in this browser)</option>}{robots.map(r=><option value={r.id} key={r.id}>{r.name}</option>)}</select></label>
+        <label className="g-field"><span>For robot</span><select value={p.robot_id??''} onChange={e=>onRobot(e.target.value||null)}><option value="">Shared / unassigned</option>{p.robot_id&&!robots.some(r=>r.id===p.robot_id)&&<option value={p.robot_id}>Previously linked robot (not in this browser)</option>}{robots.map(r=><option value={r.id} key={r.id}>{r.name}</option>)}</select></label>
+        <label className="g-field"><span>Part of</span><select value={p.parent_id && all.some(x=>x.id===p.parent_id) ? p.parent_id : ''} onChange={e=>onParent(e.target.value||null)}><option value="">Nothing (stands on its own)</option>{allowedParents(all,p.id).map(x=><option value={x.id} key={x.id}>{x.name}</option>)}</select></label>
         <label className="g-field"><span>Shelf / storage location</span><input value={p.stock_location??''} onChange={e=>onChange({...p,stock_location:e.target.value})} placeholder="e.g. Omega1 bin, shelf A"/></label>
         <label className="g-field"><span>Notes</span><input value={p.notes??''} onChange={e=>onChange({...p,notes:e.target.value})}/></label>
       </div>
-      <p className="faint">Robot assignment records intended ownership/use; it does not install a part in the 3D assembly or consume stock.</p>
+      <p className="faint">Robot assignment records intended ownership/use; it does not install a part in the 3D assembly or consume stock. A part mounted on another part moves with it to that part&apos;s robot.</p>
       <button type="button" className="btn btn-sm" onClick={()=>onChange(countedPart(p,p.quantity,new Date().toISOString()))}>Mark quantity counted now</button>
       {p.last_counted_at&&<p className="faint">Last counted: {new Date(p.last_counted_at).toLocaleString()}</p>}
       {p.photo&&<button type="button" className="btn btn-sm" onClick={async()=>{setPhotoOpen(v=>!v);if(!largePhoto&&p.photo_asset_id){try{setLargePhoto(await readInventoryPhoto(p.photo_asset_id));}catch{setPhotoError('Larger photo unavailable; showing the saved thumbnail.');}}}}>View saved photo</button>}
@@ -214,6 +218,17 @@ export default function Inventory() {
   const [exporting,setExporting]=useState(false);
   const [health, setHealth] = useState<LiveHealth | null | undefined>(undefined);
   const [openId, setOpenId] = useState<string | null>(null);
+  /* Grid or Columns, remembered in this browser only. */
+  const [view, setViewState] = useState<'grid' | 'columns'>('grid');
+  useEffect(() => { try { if (localStorage.getItem('rf.parts.view') === 'columns') setViewState('columns'); } catch { /* private window */ } }, []);
+  const setView = (v: 'grid' | 'columns') => { setViewState(v); try { localStorage.setItem('rf.parts.view', v); } catch { /* private window */ } };
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (!openId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenId(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openId]);
   const [filter, setFilter] = useState<'all' | 'needs_confirmation' | 'confirmed'>('all');
   const [queue, setQueue] = useState(0);
   const [error, setError] = useState('');
@@ -238,6 +253,16 @@ export default function Inventory() {
     return !failure;
   };
   const update = (p: InventoryPart) => commit(readStore<InventoryPart[]>(INVENTORY_KEY,[]).map((x) => (x.id === p.id ? p : x)));
+  const moveRobot = (id: string, robotId: string | null) => commit(setRobot(readStore<InventoryPart[]>(INVENTORY_KEY,[]), id, robotId));
+  const moveUnder = (id: string, parentId: string | null) => {
+    try { commit(setParent(readStore<InventoryPart[]>(INVENTORY_KEY,[]), id, parentId)); }
+    catch (e) { setError((e as Error).message); }
+  };
+  const deletePart = (id: string) => {
+    const { parts: next, promoted } = removePart(readStore<InventoryPart[]>(INVENTORY_KEY,[]), id);
+    if (commit(next)) setNotice(promoted ? `Removed. ${promoted} part${promoted === 1 ? ' that was' : 's that were'} inside it moved up one level.` : '');
+    setOpenId(null);
+  };
   const patch = (id: string, fn: (latest: InventoryPart) => InventoryPart) =>
     commit(readStore<InventoryPart[]>(INVENTORY_KEY,[]).map((x) => (x.id === id ? fn(x) : x)));
 
@@ -342,8 +367,18 @@ export default function Inventory() {
         <label className="g-field"><span>Category filter</span><select value={category} onChange={e=>setCategory(e.target.value)}><option value="all">All categories</option>{PART_CATEGORIES.map(c=><option value={c} key={c}>{label(c)}</option>)}</select></label>
         <label className="g-field"><span>Robot filter</span><select value={robotFilter} onChange={e=>setRobotFilter(e.target.value)}><option value="all">All robots</option><option value="unassigned">Shared / unassigned</option>{robots.map(r=><option value={r.id} key={r.id}>{r.name}</option>)}</select></label>
       </div>
-      <p className="faint">Showing {shown.length} inventory record(s). Quantity zero means out of stock.</p>
+      <div className="inv-viewbar">
+        <p className="faint">Showing {shown.length} inventory record(s). Quantity zero means out of stock.</p>
+        <div className="inv-viewswitch" role="group" aria-label="View">
+          <button type="button" className="chip" aria-pressed={view === 'grid'} onClick={() => setView('grid')}>Grid</button>
+          <button type="button" className="chip" aria-pressed={view === 'columns'} onClick={() => setView('columns')}>Columns</button>
+        </div>
+      </div>
+      {notice && <p className="faint" role="status">{notice}</p>}
       <div className="inv-layout">
+        {view === 'columns' && shown.length > 0 ? (
+          <PartsColumns all={parts} shown={shown} robots={robots} openId={openId} onOpen={setOpenId} />
+        ) : (
         <div>
           {shown.length === 0 && (
             <div className="inv-empty">
@@ -354,20 +389,28 @@ export default function Inventory() {
           {shownParts.length > 0 && (<>
             <h3 className="inv-section-title">Parts <span className="faint">({shownParts.length})</span></h3>
             <div className="inv-grid">
-              {shownParts.map((p) => <PartCard key={p.id} p={p} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
+              {shownParts.map((p) => <PartCard key={p.id} p={p} inside={countUnder(parts, p.id)} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
             </div>
           </>)}
           {shownTools.length > 0 && (<>
             <h3 className="inv-section-title">Tools <span className="faint">({shownTools.length})</span></h3>
             <div className="inv-grid">
-              {shownTools.map((p) => <PartCard key={p.id} p={p} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
+              {shownTools.map((p) => <PartCard key={p.id} p={p} inside={countUnder(parts, p.id)} robotName={robots.find(r=>r.id===p.robot_id)?.name} active={p.id === openId} onOpen={() => setOpenId(p.id)} />)}
             </div>
           </>)}
         </div>
-        {open && (
-          <PartDetail key={open.id} p={open} robots={robots} health={health} onChange={update} onPatch={patch} onDelete={() => { commit(readStore<InventoryPart[]>(INVENTORY_KEY,[]).filter((x) => x.id !== open.id)); setOpenId(null); }} onLive={onLive} />
         )}
       </div>
+      {open && (
+        <>
+          <div className="inv-drawer-scrim" aria-hidden="true" onClick={() => setOpenId(null)} />
+          <aside className="inv-drawer" role="dialog" aria-modal="true" aria-label={`Part details: ${open.name}`}>
+            <PartDetail key={open.id} p={open} all={parts} robots={robots} health={health} onChange={update} onPatch={patch}
+              onDelete={() => deletePart(open.id)} onLive={onLive}
+              onRobot={(rid) => moveRobot(open.id, rid)} onParent={(pid) => moveUnder(open.id, pid)} onClose={() => setOpenId(null)} />
+          </aside>
+        </>
+      )}
     </div>
   );
 }

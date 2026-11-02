@@ -33,6 +33,31 @@ assert.equal(shortestYaw(350,10,0.5),360);
 assert.equal(shortestYaw(10,350,0.5),0);
 assert.equal(shortestYaw(0,90,2),90);
 assert.equal(shortestYaw(360,-360,0.5),360);
+
+import {
+  recommendSmartPlacement,
+  evaluatePlacementIntelligence,
+  terminalWorldPoint,
+  mountingHoleWorldPoints,
+} from './spatial.ts';
+const spec={length_m:0.26,width_m:0.20,height_m:0.16,ground_clearance_m:0.03,mass_kg:1.8};
+const camRec=recommendSmartPlacement('realsense-d435-depth-cam',[],spec);
+assert.ok(camRec.positionM[0] > 0.05, 'depth camera placed near front perimeter');
+assert.equal(camRec.yawDeg, 0, 'depth camera oriented +X forward');
+const camInst={id:'cam1',componentId:'realsense-d435-depth-cam',positionM:camRec.positionM,yawDeg:camRec.yawDeg};
+const imuRec=recommendSmartPlacement('imu-bno055-9dof',[camInst],spec);
+assert.equal(imuRec.yawDeg, 0, 'IMU aligned with chassis +X');
+const imuInst={id:'imu1',componentId:'imu-bno055-9dof',positionM:imuRec.positionM,yawDeg:imuRec.yawDeg};
+assert.equal(envelopesOverlap(camInst,imuInst),false);
+const holes=mountingHoleWorldPoints(imuInst);
+assert.equal(holes.length, 4);
+const term0=terminalWorldPoint(camInst, 0);
+assert.equal(term0.length, 3);
+const report=evaluatePlacementIntelligence([camInst,imuInst],spec,[{id:'w1',from:'cam1',to:'imu1',status:'NOT_CHECKED'}]);
+assert.equal(report.com.status, 'balanced');
+assert.equal(report.diagnostics.length, 2);
+assert.ok(report.diagnostics.every(d=>d.placementStatus==='pass'&&d.mountingStatus==='pass'&&d.orientationStatus==='pass'));
+assert.ok(report.cableLengthsMm.w1 > 0);
 ''')
     result=subprocess.run([node,'--experimental-strip-types',str(tmp_path/'run.mjs')],capture_output=True,text=True)
     assert result.returncode==0,result.stdout+result.stderr

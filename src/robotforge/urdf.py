@@ -7,6 +7,8 @@ iteratively during the event window.
 """
 from __future__ import annotations
 
+import math
+import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 
 from .schema import RobotSpec
@@ -78,3 +80,139 @@ def generate_urdf(spec: RobotSpec) -> str:
         ]
     parts.append('</robot>')
     return "\n".join(parts) + "\n"
+
+
+def verify_urdf_clearance(
+    spec: RobotSpec,
+    urdf_xml: str | None = None,
+    *,
+    tol_m: float = 1e-4,
+) -> dict[str, float]:
+    """Cross-check wheel contact plane, chassis collision bottom, and declared
+    ground clearance in a generated URDF model (conventional wheel-on-ground
+    chassis configuration).
+
+    Returns a dict with ``wheel_contact_z``, ``chassis_bottom_z``, and
+    ``clearance_m`` (in ``base_link`` frame metres). Raises ``ValueError`` if
+    the collision geometry is missing or disagrees with ``spec.ground_clearance_m``.
+    """
+    if spec.wheel is None or spec.ground_clearance_m is None:
+        raise ValueError("verify_urdf_clearance requires a wheeled spec with ground_clearance_m")
+    xml_text = generate_urdf(spec) if urdf_xml is None else urdf_xml
+    root = ET.fromstring(xml_text)
+
+    base_box = root.find("./link[@name='base_link']/collision/geometry/box")
+    if base_box is None or not base_box.get("size"):
+        raise ValueError("base_link collision box missing in URDF")
+    box_dims = [float(v) for v in base_box.attrib["size"].split()]
+    if len(box_dims) != 3:
+        raise ValueError("base_link collision box size must have 3 dimensions")
+    chassis_bottom_z = -box_dims[2] / 2.0
+
+    wheel_radii: dict[str, float] = {}
+    for link in root.findall("./link"):
+        lname = link.get("name", "")
+        if lname.startswith("wheel_"):
+            cyl = link.find("./collision/geometry/cylinder")
+            if cyl is None or cyl.get("radius") is None:
+                raise ValueError(f"{lname} collision cylinder missing radius in URDF")
+            wheel_radii[lname] = float(cyl.attrib["radius"])
+
+    if not wheel_radii:
+        raise ValueError("no wheel collision links found in URDF")
+
+    contact_zs: list[float] = []
+    for joint in root.findall("./joint"):
+        child = joint.find("./child")
+        origin = joint.find("./origin")
+        cname = child.get("link", "") if child is not None else ""
+        if cname in wheel_radii:
+            if origin is None or not origin.get("xyz"):
+                raise ValueError(f"joint for {cname} missing origin xyz in URDF")
+            xyz = [float(v) for v in origin.attrib["xyz"].split()]
+            contact_zs.append(xyz[2] - wheel_radii[cname])
+
+    if len(contact_zs) != len(wheel_radii):
+        raise ValueError("wheel joint count does not match wheel collision link count in URDF")
+
+    wheel_contact_z = contact_zs[0]
+    for z in contact_zs[1:]:
+        if not math.isclose(z, wheel_contact_z, abs_tol=tol_m):
+            raise ValueError(
+                f"wheel contact planes are not coplanar: {z:.6f} m vs {wheel_contact_z:.6f} m"
+            )
+
+    clearance_m = chassis_bottom_z - wheel_contact_z
+    if not math.isclose(clearance_m, spec.ground_clearance_m, abs_tol=tol_m):
+        raise ValueError(
+            f"generated URDF collision clearance {clearance_m:.4f} m does not match "
+            f"declared ground_clearance_m {spec.ground_clearance_m:.4f} m"
+        )
+    return {
+        "wheel_contact_z": wheel_contact_z,
+        "chassis_bottom_z": chassis_bottom_z,
+        "clearance_m": clearance_m,
+    }
+
+
+def verify_sdf_clearance(
+    spec: RobotSpec,
+    sdf_xml: str,
+    *,
+    tol_m: float = 1e-4,
+) -> dict[str, float]:
+    """Cross-check wheel contact plane, chassis collision bottom, and declared
+    ground clearance in a generated Gazebo SDF model (world frame).
+    """
+    if spec.wheel is None or spec.ground_clearance_m is None:
+        raise ValueError("verify_sdf_clearance requires a wheeled spec with ground_clearance_m")
+    root = ET.fromstring(sdf_xml)
+    model = root.find("./model")
+    if model is None:
+        raise ValueError("SDF model element missing")
+
+    base_link = model.find("./link[@name='base_link']")
+    if base_link is None:
+        raise ValueError("base_link missing in SDF")
+    pose_el = base_link.find("./pose")
+    size_el = base_link.find("./collision/geometry/box/size")
+    if pose_el is None or not pose_el.text or size_el is None or not size_el.text:
+        raise ValueError("base_link pose or collision box size missing in SDF")
+    base_z = float(pose_el.text.split()[2])
+    box_h = float(size_el.text.split()[2])
+    chassis_bottom_z = base_z - box_h / 2.0
+
+    contact_zs: list[float] = []
+    for link in model.findall("./link"):
+        lname = link.get("name", "")
+        if lname.startswith("wheel_"):
+            wpose = link.find("./pose")
+            wrad = link.find("./collision/geometry/cylinder/radius")
+            if wpose is None or not wpose.text or wrad is None or not wrad.text:
+                raise ValueError(f"{lname} pose or collision cylinder radius missing in SDF")
+            wz = float(wpose.text.split()[2])
+            wr = float(wrad.text)
+            contact_zs.append(wz - wr)
+
+    if not contact_zs:
+        raise ValueError("no wheel collision links found in SDF")
+
+    wheel_contact_z = contact_zs[0]
+    for z in contact_zs[1:]:
+        if not math.isclose(z, wheel_contact_z, abs_tol=tol_m):
+            raise ValueError(
+                f"SDF wheel contact planes are not coplanar: {z:.6f} m vs {wheel_contact_z:.6f} m"
+            )
+
+    clearance_m = chassis_bottom_z - wheel_contact_z
+    if not math.isclose(clearance_m, spec.ground_clearance_m, abs_tol=tol_m):
+        raise ValueError(
+            f"generated SDF collision clearance {clearance_m:.4f} m does not match "
+            f"declared ground_clearance_m {spec.ground_clearance_m:.4f} m"
+        )
+    return {
+        "wheel_contact_z": wheel_contact_z,
+        "chassis_bottom_z": chassis_bottom_z,
+        "clearance_m": clearance_m,
+    }
+

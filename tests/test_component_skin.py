@@ -10,21 +10,23 @@ def test_visual_detail_stays_inside_envelopes(tmp_path):
     three=ROOT/'web-next/node_modules/three/build/three.module.js'
     if not node or not three.exists(): pytest.skip('Optional web dependencies unavailable')
     skin=ROOT/'web-next/src/components/kit/componentSkin.ts'
+    components=ROOT/'web-next/src/lib/components.ts'
     script=f"""
 import assert from 'node:assert/strict';
 import * as THREE from {json.dumps(str(three))};
 import {{addComponentSkin}} from {json.dumps(str(skin))};
-for(const [id,size] of [
- ['jetson-orin-nano-reference-devkit',[0.1,0.079,0.021]],
- ['converter-envelope',[0.045,0.025,0.015]],
- ['battery-envelope',[0.1,0.035,0.03]],
-]){{
+import {{COMPONENTS}} from {json.dumps(str(components))};
+assert.ok(COMPONENTS.length >= 12);
+for(const comp of COMPONENTS){{
+ const id=comp.id;
+ const size=comp.sizeM;
  const root=new THREE.Group();addComponentSkin(THREE,root,size,id);
  const bounds=new THREE.Box3().setFromObject(root);
  assert.ok(!bounds.isEmpty(),id);
+ assert.ok(root.children.length >= 4, id+' has multiple 3D hardware sub-meshes');
  for(const [i,axis] of ['x','y','z'].entries()){{
-  assert.ok(bounds.min[axis]>=-size[i]/2-1e-7,id+' minimum '+axis);
-  assert.ok(bounds.max[axis]<=size[i]/2+1e-7,id+' maximum '+axis);
+  assert.ok(bounds.min[axis]>=-size[i]/2-1e-7,id+' minimum '+axis+' ('+bounds.min[axis]+' < '+(-size[i]/2)+')');
+  assert.ok(bounds.max[axis]<=size[i]/2+1e-7,id+' maximum '+axis+' ('+bounds.max[axis]+' > '+(size[i]/2)+')');
  }}
  root.traverse(object=>{{object.geometry?.dispose();const m=object.material;if(Array.isArray(m))m.forEach(x=>x.dispose());else m?.dispose();}});
 }}

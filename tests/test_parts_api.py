@@ -95,6 +95,23 @@ def test_a_price_without_a_source_record_is_dropped():
         {"unit_price": 1.0, "supplier_url": "https://x.example/p"}) is None
 
 
+def test_normalize_estimate_carries_basis_only_when_recorded():
+    """Basis — what the unit price buys, in the source's own terms
+    ("1.75mm / 1kg", "1kg") — rides along when the source record
+    carries one and stays absent when it doesn't: the seed passes
+    the catalogue's word through, it never invents one."""
+    raw = {"unit_price": 19.99,
+           "supplier_url":
+               "https://shop.polymaker.com/products/polylite-pla",
+           "fetched_at": "2026-11-01T18:23:35Z",
+           "basis": "1.75mm / 1kg"}
+    est = seed.normalize_estimate(raw)
+    assert est["basis"] == "1.75mm / 1kg"
+    del raw["basis"]
+    est = seed.normalize_estimate(raw)
+    assert "basis" not in est
+
+
 def test_photo_is_never_the_catalogue_ai_image():
     catalog = _catalog()
     records = {r["id"]: r for r in _records()}
@@ -135,13 +152,16 @@ def test_cli_build_writes_the_records_file(tmp_path):
     assert "3 records (2 with estimates, 1 with photos)" in r.stdout
 
 
-def test_real_catalogue_seeds_fifty_records_one_priced():
+def test_real_catalogue_seeds_fifty_records_three_priced():
     """Against the real catalogue: every part seeds. Prices arrive
-    only through applied gather proposals — exactly one record is
-    priced so far: driver_tb6612fng, whose proposal
-    20261101T192346Z-224e7d Abel approved and applied as-is on
-    2026-11-01 (Pololu web-gathered estimate, 24 h TTL). Every other
-    record still seeds unpriced.
+    only through applied gather proposals — exactly three records
+    are priced so far, each from an Abel-approved apply on
+    2026-11-01: driver_tb6612fng (proposal
+    20261101T192346Z-224e7d, Pololu, applied as-is) and the two
+    Polymaker filaments pla_filament / petg_filament (materials run
+    20261101T182331Z-7a731d; manufacturer values over the
+    catalogue's generic densities). All are web-gathered estimates
+    with a 24 h TTL. Every other record still seeds unpriced.
     Photos mirror the catalogue exactly: a seeded record carries a
     photo only where the catalogue holds a verified photo record
     (the 9 web-gathered records of the photo slice), never from the
@@ -150,7 +170,8 @@ def test_real_catalogue_seeds_fifty_records_one_priced():
     records = seed.build_records(catalog, [], seeded_at="2026-11-01T10:00:00Z")
     assert len(records) == 50
     priced = {r["id"]: r["estimates"] for r in records if r["estimates"]}
-    assert set(priced) == {"driver_tb6612fng"}
+    assert set(priced) == {"driver_tb6612fng", "pla_filament",
+                           "petg_filament"}
     (est,) = priced["driver_tb6612fng"]
     assert est["unit_price"] == 4.95
     assert est["currency"] == "USD"
@@ -162,6 +183,32 @@ def test_real_catalogue_seeds_fifty_records_one_priced():
     assert est["state"] == "web_gathered"
     assert est["fetched_at"] == "2026-11-01T19:24:08Z"
     assert est["expires_at"] == "2026-11-02T19:24:08Z"
+    # The Pololu record carries no basis: the served estimate must
+    # not grow one.
+    assert "basis" not in est
+    filament_prices = {
+        "pla_filament": (19.99,
+                         "https://shop.polymaker.com/products/polylite-pla",
+                         "2026-11-01T18:23:35Z", "2026-11-02T18:23:35Z",
+                         "1.75mm / 1kg"),
+        "petg_filament": (18.99, "https://shop.polymaker.com/products/petg",
+                          "2026-11-01T18:23:54Z", "2026-11-02T18:23:54Z",
+                          "1kg"),
+    }
+    for part_id, (price, url, fetched, expires,
+                  basis) in filament_prices.items():
+        (est,) = priced[part_id]
+        assert est["unit_price"] == price, part_id
+        # Basis is served with the price, in the catalogue's terms.
+        assert est["basis"] == basis, part_id
+        assert est["currency"] == "USD", part_id
+        assert [(b["qty"], b["unit_price"])
+                for b in est["price_breaks"]] == [(1, price)], part_id
+        assert est["supplier_url"] == url, part_id
+        assert est["source_kind"] == "web_gathered", part_id
+        assert est["state"] == "web_gathered", part_id
+        assert est["fetched_at"] == fetched, part_id
+        assert est["expires_at"] == expires, part_id
     catalog_photo_ids = {p["id"] for p in catalog["parts"] if p.get("photo")}
     assert catalog_photo_ids, "the photo slice should have landed by now"
     for r in records:

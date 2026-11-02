@@ -1,5 +1,5 @@
 {
- "comment": "Gathered material records (Forge Engine §10): filament and sheet stock that does not live in catalog/parts.json. Every gathered value carries provenance_gathered (source URL, fetched-at, literal quote, state) and stays web_gathered until a human confirms it. Seeded by the gather pipeline's apply step; see tools/gather/.",
+ "comment": "Gathered material records (Forge Engine §10): filament and sheet stock that does not live in catalog/parts.json. Every gathered value carries provenance_gathered (source URL, fetched-at, literal quote, state) and stays web_gathered until a human confirms it. Seeded by the gather pipeline's apply step; see tools/gather/. Ownership (§11): each record carries ownership 'on_hand' | 'simulated'; absent or unrecorded means simulated — nothing is claimed owned without a record.",
  "materials": [
   {
    "id": "tpu_filament",
@@ -14,6 +14,7 @@
     "spool_weight_g": 750.0
    },
    "kind": "material",
+   "ownership": "simulated",
    "gather_history": [
     {
      "run_id": "20261101T182821Z-0d8bed",

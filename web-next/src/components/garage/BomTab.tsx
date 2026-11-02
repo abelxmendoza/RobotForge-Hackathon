@@ -28,7 +28,8 @@ import { partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { isWiring, role } from '@/lib/wiring';
 import type { Spec } from '@/lib/garage';
 import { partArt } from '@/lib/partArt';
-import { parts as catalogParts } from '@/lib/data';
+import { parts as catalogParts, toolMaterialItems } from '@/lib/data';
+import { OWNERSHIP_KEY, deriveProfile, type OwnershipMap } from '@/lib/toolsMaterials';
 import { verifiedPhoto } from '@/lib/partPhoto';
 import PartPhoto from '@/components/parts/PartPhoto';
 import { useStore } from '@/lib/store';
@@ -138,16 +139,26 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
 }) {
   /* The wizard's build-plan profile, through the store layer: in
    * demo mode this reads the profile's ".demo" twin, and no read
-   * here ever leaves the browser. */
-  const [profile, saveProfile] = useStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE);
+   * here ever leaves the browser. The profile the checks and
+   * prices read is the DERIVED one (§11): the stored profile plus
+   * whatever the tools/materials ownership state puts on hand —
+   * one source of truth, resolved in lib/toolsMaterials.ts.
+   * Prices pass through derivation untouched, and price writes go
+   * to the stored profile, never to the derived copy. */
+  const [storedProfile, saveProfile] = useStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE);
+  const [ownership] = useStore<OwnershipMap>(OWNERSHIP_KEY, {});
+  const profile = useMemo(
+    () => deriveProfile(storedProfile, toolMaterialItems, ownership),
+    [storedProfile, ownership],
+  );
   /* Record (or clear) the builder's own price for one line. It goes in
    * the same build-plan store, under the same key the row reads, so the
    * badge and the total pick it up and label it "your entered price". */
   const setPrice = (key: string, raw: string) => {
     const n = raw.trim() === '' ? null : Number(raw);
-    const prices = { ...profile.prices };
+    const prices = { ...storedProfile.prices };
     if (n === null || !Number.isFinite(n) || n < 0) delete prices[key]; else prices[key] = n;
-    saveProfile({ ...profile, prices });
+    saveProfile({ ...storedProfile, prices });
   };
   const rows: Row[] = useMemo(() => {
     const pool = inventory.filter((p) => partSection(p) === 'parts' && p.quantity > 0 && (!p.robot_id || p.robot_id === robotId));

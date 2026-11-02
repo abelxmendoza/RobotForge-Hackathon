@@ -1308,6 +1308,37 @@ await scenario('bom estimate validates its body and lines', async () => {
   assert.strictEqual(badQty.body.lines[0].status, 'error');
 });
 
+await scenario('account save keeps robots under the account', async () => {
+  const env = makeEnv();
+  const anon = await call(env, '/account/save', { method: 'POST', body: { data: { 'rf.garage.v1': [] } } });
+  assert.strictEqual(anon.status, 401);
+  const none = await call(env, '/account/data', { auth: true });
+  assert.strictEqual(none.status, 200);
+  assert.strictEqual(none.body.saved, false);
+  const garage = [{ id: 'r1', name: 'Omega1', versions: [] }];
+  const ok = await call(env, '/account/save', { method: 'POST', auth: true,
+    body: { data: { 'rf.garage.v1': garage, 'rf.inventory.v1': [], 'evil.key': 'x' } } });
+  assert.strictEqual(ok.status, 200, JSON.stringify(ok.body));
+  assert.ok(ok.body.savedAt);
+  const back = await call(env, '/account/data', { auth: true });
+  assert.strictEqual(back.body.saved, true);
+  assert.deepStrictEqual(back.body.data['rf.garage.v1'], garage);
+  assert.ok(!('evil.key' in back.body.data), 'unknown keys must be dropped');
+  const bad = await call(env, '/account/save', { method: 'POST', auth: true, body: { data: [] } });
+  assert.strictEqual(bad.status, 400);
+  const big = await call(env, '/account/save', { method: 'POST', auth: true,
+    body: { data: { 'rf.inventory.v1': 'x'.repeat(5 * 1024 * 1024 + 10) } } });
+  assert.strictEqual(big.status, 413);
+  // The daily cap: one KV write per save, at most 50 a day.
+  for (let i = 1; i < 50; i++) {
+    const r = await call(env, '/account/save', { method: 'POST', auth: true, body: { data: { 'rf.garage.v1': [] } } });
+    assert.strictEqual(r.status, 200, 'save ' + i);
+  }
+  const capped = await call(env, '/account/save', { method: 'POST', auth: true, body: { data: { 'rf.garage.v1': [] } } });
+  assert.strictEqual(capped.status, 429);
+  assert.strictEqual(capped.body.code, 'save_limit');
+});
+
 const failed = results.filter(r => r.startsWith('FAIL'));
 console.log(results.join('\n'));
 console.log(failed.length ? `\n${failed.length} scenario(s) failed` : '\nall scenarios passed');
