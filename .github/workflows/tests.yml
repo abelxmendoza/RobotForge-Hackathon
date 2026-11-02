@@ -29,6 +29,7 @@ jobs:
       - name: Install web-next packages
         run: npm ci --prefix web-next
       - name: Install package + test runner
-        run: pip install -e . pytest
+        # numpy: tools/realsense_scan.py (tests/test_realsense_scan.py); not a package dependency.
+        run: pip install -e . pytest numpy
       - name: Run the test suite
         run: python -m pytest tests/ -q
