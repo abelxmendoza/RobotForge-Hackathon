@@ -149,6 +149,40 @@ export interface IntentsData {
   [key: string]: unknown;
 }
 
+/* Tools & materials state (Forge Engine §11), handed to the
+ * engine as a provider: the caller (ChatDock) resolves the
+ * catalogue records, the owner's flips and the constraints
+ * profile through lib/toolsMaterials.ts at answer time and hands
+ * over plain finished data. The engine stays import-free and
+ * renders only what the snapshot holds — a simulated item is
+ * named as simulated here, never silently assumed owned. */
+export interface TmNeedData {
+  name: string;
+  kind: string;
+  id?: string;
+}
+export interface TmBuyData {
+  name: string;
+  kind: string;
+  price?: { amount: number; currency: string; label: string; expired: boolean };
+}
+export interface TmPlanData {
+  missing: TmNeedData[];
+  onHand: string[];
+  simulated: string[];
+  buyList: TmBuyData[];
+}
+export interface TmItemData {
+  name: string;
+  kind: string;
+}
+export interface TmSnapshotData {
+  onHand: TmItemData[];
+  simulated: TmItemData[];
+  profileToolLabels: string[];
+  planFor: (items: { name: string; partClass?: string; specs?: Record<string, unknown> }[]) => TmPlanData;
+}
+
 export interface EngineData {
   robots?: RobotData[];
   parts?: PartData[];
@@ -158,6 +192,7 @@ export interface EngineData {
   reports?: ReportsData | null;
   intents?: IntentsData | null;
   root?: string;
+  toolsMaterials?: () => TmSnapshotData | null;
 }
 
 export interface Hit {
@@ -196,6 +231,20 @@ interface Ctx {
   data: CtxData;
   root: string;
   noData: (route: string, label: string) => string;
+  tm: (() => TmSnapshotData | null) | null;
+}
+
+/* The tools/materials snapshot for this answer, or null when the
+ * deployment handed the engine none (older callers, the node
+ * tests): every §11 answer then abstains and the conversation
+ * behaves exactly as it did before the state existed. */
+function tmSnap(ctx: Ctx): TmSnapshotData | null {
+  if (!ctx.tm) return null;
+  try {
+    return ctx.tm();
+  } catch {
+    return null;
+  }
 }
 
 /* ---------------- helpers (ported 1:1) ---------------- */
@@ -1291,6 +1340,7 @@ function planAnswer(ctx: Ctx, kind: KindData): AnswerResult {
     esc(kind.reference) +
     "</span></p>";
   const hits: Hit[] = [kindHit(kind, ctx.root)];
+  let tmBlock = "";
   const tname = KIND_TEMPLATE[kind.id];
   const template = tname ? templateByName(ctx, tname) : null;
   if (template) {
@@ -1314,6 +1364,11 @@ function planAnswer(ctx: Ctx, kind: KindData): AnswerResult {
     if (KIND_TEMPLATE_NOTE[kind.id]) {
       out += "<p>" + esc(KIND_TEMPLATE_NOTE[kind.id]) + "</p>";
     }
+    tmBlock = tmPlanBlock(ctx, items.map((it) => ({
+      name: it.name,
+      partClass: it.part ? it.part.part_class : undefined,
+      specs: it.part ? it.part.specs : undefined,
+    })));
   } else if (kind.bom_hints && kind.bom_hints.length) {
     out +=
       "<p><strong>The build, at BOM level:</strong></p><ul>" +
@@ -1332,6 +1387,7 @@ function planAnswer(ctx: Ctx, kind: KindData): AnswerResult {
         .join(" · ") +
       "</p>";
   }
+  out += tmBlock;
   out +=
     '<p>Start from this kind in the <a href="' +
     esc(routePath(ctx.root, "app/forge/")) +
@@ -1450,11 +1506,106 @@ function haveNeedAnswer(ctx: Ctx, q: string, qt: string[], kind: KindData): Answ
     "naming ‘wheels’ covers the template’s wheel line, " +
     "whatever the specific wheel. Quantities are the " +
     "template’s.</span></p>";
+  out += tmPlanBlock(ctx, [...covered, ...missing].map((it) => ({
+    name: it.name,
+    partClass: it.part ? it.part.part_class : undefined,
+    specs: it.part ? it.part.specs : undefined,
+  })));
   const hits: Hit[] = [kindHit(kind, ctx.root)];
   missing.slice(0, 5).forEach((it) => {
     if (it.part) hits.push(partHit(it.part));
   });
   return { html: out, hits: hits };
+}
+
+/* The §11 block a build-plan answer carries: the same Doable now
+ * / Future — needs X split as the Workshop, in the same words,
+ * computed by lib/toolsMaterials.ts (the snapshot's planFor) —
+ * this function only renders it. A simulated item a need maps to
+ * is named as simulated — not owned; the buy list prices only
+ * where a gathered record carries one. Empty string when the
+ * deployment provided no snapshot or the build names no items. */
+function tmPlanBlock(
+  ctx: Ctx,
+  items: { name: string; partClass?: string; specs?: Record<string, unknown> }[],
+): string {
+  if (!items.length) return "";
+  const snap = tmSnap(ctx);
+  if (!snap) return "";
+  const view = snap.planFor(items);
+  if (!view.missing.length && !view.onHand.length) return "";
+  if (!view.missing.length) {
+    return (
+      "<p><strong>Tools &amp; materials — Doable now:</strong> every tool and " +
+      "material this build calls for is on hand in your records (" +
+      esc(view.onHand.join(", ")) + ").</p>"
+    );
+  }
+  const names = view.missing.map((m) => m.name).join(", ");
+  let out =
+    "<p><strong>Tools &amp; materials — Future — needs " + esc(names) + ":</strong> " +
+    "the rest of this plan is doable now, but those steps wait until " +
+    esc(names) + " are on hand.";
+  if (view.simulated.length) {
+    out +=
+      " Planned with simulated tools: " +
+      esc(view.simulated.join(", ")) +
+      " (simulated — not owned).";
+  }
+  out += "</p>";
+  if (view.buyList.length) {
+    const lines = view.buyList.map((e) =>
+      e.price
+        ? esc(e.name) + " — $" + e.price.amount.toFixed(2) + " (" + esc(e.price.label) +
+          (e.price.expired ? "; EXPIRED — treat as stale" : "") + ")"
+        : esc(e.name) + " — no price recorded");
+    out += "<p>Buy list for the future steps: " + lines.join("; ") + ".</p>";
+  }
+  return out;
+}
+
+/* "What tools do I have?" / "do I own a printer?" / "what's
+ * simulated?" — answered from the snapshot, in the two states.
+ * Fires only on explicit ownership phrasing, so planning and
+ * catalogue questions keep their existing routes. */
+function toolsMaterialsAnswer(ctx: Ctx, q: string, qt: string[], rawQt: string[] = qt): AnswerResult | null {
+  /* The trigger is tested against the RAW tokens as well as the
+   * typo-corrected ones: the corrector rewrites "printer" to
+   * "printed" (and can rewrite "own"), which would otherwise
+   * hide exactly the words this route exists for. */
+  const hasTmWord = ["tools", "tool", "materials", "material", "printer", "printers", "filament", "filaments"]
+    .some((w) => qt.indexOf(w) !== -1 || rawQt.indexOf(w) !== -1);
+  if (!hasTmWord) return null;
+  /* Ownership phrasing only — deliberately NOT "what tools do I
+   * need" or "do I need": those are planning questions and keep
+   * their existing route. */
+  const asksOwnership =
+    phraseIn(qt, "what tools do i have") || phraseIn(rawQt, "what tools do i have") ||
+    phraseIn(qt, "what materials do i have") || phraseIn(rawQt, "what materials do i have") ||
+    phraseIn(qt, "do i own") || phraseIn(rawQt, "do i own") ||
+    phraseIn(qt, "do i have") || phraseIn(rawQt, "do i have") ||
+    phraseIn(qt, "my tools") || phraseIn(rawQt, "my tools") ||
+    phraseIn(qt, "my materials") || phraseIn(rawQt, "my materials") ||
+    phraseIn(qt, "on hand") || phraseIn(rawQt, "on hand") ||
+    qt.indexOf("simulated") !== -1 || rawQt.indexOf("simulated") !== -1 ||
+    qt.indexOf("owned") !== -1 || rawQt.indexOf("owned") !== -1;
+  if (!asksOwnership) return null;
+  const snap = tmSnap(ctx);
+  if (!snap) return null;
+  let out = "<p><strong>Your tools &amp; materials, by state:</strong></p>";
+  const onHandNames = [
+    ...snap.onHand.map((i) => i.name),
+    ...snap.profileToolLabels,
+  ];
+  out += "<p><strong>On hand:</strong> " +
+    (onHandNames.length ? esc(onHandNames.join(", ")) : "nothing recorded") + ".</p>";
+  out += "<p><strong>Simulated — not owned:</strong> " +
+    (snap.simulated.length
+      ? esc(snap.simulated.map((i) => i.name).join(", ")) +
+        ". You can design against these freely — the app holds their real recorded specs — " +
+        "but a build step that needs one is a future step until it is on hand."
+      : "nothing — every catalogue tool and material is on hand.") + "</p>";
+  return { html: out, hits: [] };
 }
 
 const BUILD_VERBS = ["build", "building", "plan", "planning", "assemble", "assembling"];
@@ -2085,6 +2236,7 @@ export function createEngine(data: EngineData): Engine {
       reports: data.reports || null,
     },
     root: root,
+    tm: data.toolsMaterials ?? null,
     noData: function (route: string, label: string) {
       return (
         "<p>I couldn&rsquo;t load the recorded catalogue just now, so I can&rsquo;t " +
@@ -2185,6 +2337,12 @@ export function createEngine(data: EngineData): Engine {
         hits: (tied.length > 1 ? tied : near).map((h) => partHit(h.part)),
       };
     }
+
+    /* 2.1 tools & materials ownership (§11): "what tools do I
+     * have", "do I own a printer" — answered from the resolved
+     * two-state snapshot before planning routes claim the words. */
+    const tmAnswer = toolsMaterialsAnswer(ctx, q, qt, rawQt);
+    if (tmAnswer) return tmAnswer;
 
     /* 2.2 build planning: kinds + templates + have-vs-need.
      * "What do I need to build..." plans a build here instead
