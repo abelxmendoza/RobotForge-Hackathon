@@ -25,11 +25,13 @@ import { preparePhoto } from '@/lib/image';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import BomTab from './BomTab';
+import ToolsMaterialsTab from './ToolsMaterialsTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
   diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
+import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 
 const now = () => new Date().toISOString();
@@ -47,7 +49,7 @@ function counts(lines: string[]) {
   };
 }
 
-type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'history';
+type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
 const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
@@ -56,6 +58,7 @@ const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'simulate', label: 'Simulate', icon: 'M3 17l5-5 4 3 8-9M14 6h6v6' },
   { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
   { id: 'bom', label: 'BOM', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
+  { id: 'tools', label: 'Tools & Materials', icon: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
 ];
 
@@ -407,7 +410,7 @@ export default function Garage() {
   useEffect(() => {
     const check = (hash: string) => {
       if (hash === '#assembly') setTab('build');
-      const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|history)$/);
+      const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history)$/);
       if (t) setTab(t[1] as WorkTab);
     };
     check(window.location.hash);
@@ -473,6 +476,17 @@ export default function Garage() {
     persist([...robots, r]);
     setSelected(r.id);
     setAdding(false);
+  };
+
+  /* Save a copy: the save-as-new half of the chat's save choice,
+   * as a button — a separate entry carrying this robot's versions
+   * and provenance, selected so the user sees it land. The
+   * original is untouched. */
+  const saveCopy = () => {
+    if (!robot) return;
+    const copy = copyAsNew(robot, uniqueCopyName(robot.name, robots), now(), uid('robot'));
+    persist([copy, ...robots]);
+    setSelected(copy.id);
   };
 
   const saveVersion = (source: VersionSource) => {
@@ -656,6 +670,7 @@ export default function Garage() {
                 <ModeBanner compact mode={lm.mode} reason={lm.reason} />
               </div>
               <div className="g-head-actions">
+                <button type="button" className="btn btn-sm" onClick={saveCopy} title="Save a separate copy of this robot in your Garage — versions and provenance carried over; the original is unchanged">Save a copy</button>
                 <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
                 {confirmRemove === robot.id ? (
                   <span className="g-remove-confirm" role="alert">
@@ -821,6 +836,10 @@ export default function Garage() {
 
             {tab === 'bom' && (
               <BomTab spec={draft} robotId={robot.id} robotName={draft.name || robot.name} inventory={inventory} />
+            )}
+
+            {tab === 'tools' && (
+              <ToolsMaterialsTab spec={draft} robotName={draft.name || robot.name} />
             )}
 
             {tab === 'history' && (

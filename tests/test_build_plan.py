@@ -35,14 +35,23 @@ def test_build_plan_engine_is_deterministic_and_offline():
         assert banned not in engine, banned
 
 
-def test_profile_gets_a_demo_twin_and_chat_is_untouched():
+def test_profile_gets_a_demo_twin_and_chat_reads_state_offline():
     demo = (LIB / "demoMode.ts").read_text()
     assert "'rf.buildplan.v1'" in demo
     engine = (LIB / "buildPlan.ts").read_text()
     assert 'PROFILE_KEY = "rf.buildplan.v1"' in engine
+    # §11 Phase 4 supersedes this slice's original "chat is
+    # untouched" rule (workshop-chat-tools plan, approved 2026-11-01):
+    # the chat now READS the profile + ownership state — through
+    # the recorded-data provider in ChatDock, with every state rule
+    # in lib/toolsMaterials.ts. The discipline that replaces the
+    # old rule: the chat ENGINE stays import-free and offline, and
+    # ChatDock wires only the snapshot provider, never plan state.
     dock = (WEB / "src/components/chat/ChatDock.tsx").read_text()
-    assert "buildPlan" not in dock
-    assert "BuildPlan" not in dock
+    assert "chatSnapshot" in dock and "OWNERSHIP_KEY" in dock
+    chat_engine = (WEB / "src/components/chat/engine.ts").read_text()
+    for banned in ("postJSON", "liveHealth", "fetch(", 'from "../../lib'):
+        assert banned not in chat_engine, banned
 
 
 # ---------------------------------------------------------------- node units

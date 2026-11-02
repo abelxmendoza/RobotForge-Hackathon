@@ -23,7 +23,9 @@ import {
   type RobotData,
   type TemplateData,
 } from "./engine";
-import { gateReports, parts, robotSlug, robots, simReadyProps } from "@/lib/data";
+import { gateReports, parts, robotSlug, robots, simReadyProps, toolMaterialItems } from "@/lib/data";
+import { OWNERSHIP_KEY, chatSnapshot, type OwnershipMap } from "@/lib/toolsMaterials";
+import { DEFAULT_PROFILE, PROFILE_KEY, type ConstraintsProfile } from "@/lib/buildPlan";
 import {
   addToBuildList,
   buildConfirmationText,
@@ -58,6 +60,7 @@ import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from 
 import { readStore, writeStore, uid } from '@/lib/store';
 import { REPO_IMPORT_EVENT, repoLinkIn } from '@/lib/repoLink';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
+import { appendFreshBaseline, buildDexEntry, copyAsNew, parseSaveChoice, parseSaveCommand, planSave, recordAddedPart, resolveCataloguePart, resolveSaveTarget, uniqueCopyName, type DexRobotRef } from '@/lib/saveRobot';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
 import { isDemoMode, useDemoMode } from "@/lib/demoMode";
@@ -94,6 +97,17 @@ function engineData() {
     reports: { runs: gateReports } as unknown as ReportsData,
     intents: intentsDoc as unknown as IntentsData,
     root: "",
+    /* §11 tools & materials: resolved at ANSWER time through the
+     * store layer (demo mode reads the ".demo" twins), so a flip
+     * in the Workshop's Tools & Materials tab is visible to the
+     * very next answer. All state rules live in
+     * lib/toolsMaterials.ts; the engine renders the snapshot. */
+    toolsMaterials: () => chatSnapshot(
+      toolMaterialItems,
+      readStore<OwnershipMap>(OWNERSHIP_KEY, {}),
+      readStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE),
+      new Date().toISOString(),
+    ),
   };
 }
 
@@ -385,6 +399,160 @@ export function useForgeAssistant() {
     [dispatchFocusPart, filterPartsHere, noteBubble, onPartsPage]
   );
 
+  /* ---------------- save a robot (addendum, 2026-11-01) ---------------- */
+
+  /* A pending collision choice: a Robodex robot whose name a
+   * saved robot already holds. The next short reply (update /
+   * save as new / cancel) completes it; any other message
+   * retires the question and falls through to the normal paths.
+   * All resolution and record construction is lib/saveRobot.ts;
+   * this layer only fetches recorded specs and writes the store,
+   * and never announces a save before the write confirms. */
+  const pendingSave = useRef<{ robot: DexRobotRef; existingId: string } | null>(null);
+
+  const fetchDexSpec = (robot: DexRobotRef): Promise<Spec> =>
+    fetch(assetPath(robot.specFile!)).then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json() as Promise<Spec>;
+    });
+
+  const saveDexEntry = (robot: DexRobotRef) => {
+    if (!robot.specFile) {
+      noteBubble(`“${robot.name}” has no recorded spec file in the Robodex, so there is nothing I can save faithfully. Nothing was saved.`);
+      return;
+    }
+    fetchDexSpec(robot)
+      .then((spec) => {
+        const nowIso = new Date().toISOString();
+        const entry = buildDexEntry(robot, spec, nowIso, { robot: uid("robot"), version: uid("v") });
+        const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        const error = writeStore(GARAGE_KEY, [...saved, entry]);
+        if (error) throw new Error(error);
+        noteBubble(`Saved “${entry.name}” to your Garage: a Baseline version from its recorded Robodex spec (${robot.specFile}). It is in My robots now — edits there save as new versions, and the catalogue record itself is unchanged.`);
+      })
+      .catch((e: Error) => noteBubble(`I couldn't save “${robot.name}” (${e.message}). Nothing was saved.`));
+  };
+
+  const runSaveCommand = (q: string): boolean => {
+    if (pendingSave.current) {
+      const choice = parseSaveChoice(q);
+      if (choice) {
+        const pending = pendingSave.current;
+        pendingSave.current = null;
+        if (choice === "cancel") { noteBubble("Cancelled. Nothing was saved or changed."); return true; }
+        const savedNow = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        const existing = savedNow.find((r) => r.id === pending.existingId);
+        if (!existing) { noteBubble("That saved robot is no longer there, so I stopped. Nothing changed."); return true; }
+        if (choice === "new") {
+          const copy = copyAsNew(existing, uniqueCopyName(existing.name, savedNow), new Date().toISOString(), uid("robot"));
+          const error = writeStore(GARAGE_KEY, [...savedNow, copy]);
+          if (error) { noteBubble(`I couldn't save the copy (${error}). Nothing changed.`); return true; }
+          noteBubble(`Saved a new robot “${copy.name}”, copied from your saved “${existing.name}” — its ${existing.versions.length} version${existing.versions.length === 1 ? "" : "s"} carried over, provenance notes included. The original is unchanged.`);
+          return true;
+        }
+        if (!pending.robot.specFile) {
+          noteBubble(`“${pending.robot.name}” has no recorded spec file in the Robodex, so I can't refresh its Baseline. Nothing changed.`);
+          return true;
+        }
+        fetchDexSpec(pending.robot)
+          .then((spec) => {
+            const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+            const target = current.find((r) => r.id === pending.existingId);
+            if (!target) { noteBubble("That saved robot is no longer there, so I stopped. Nothing changed."); return; }
+            const updated = appendFreshBaseline(target, spec, new Date().toISOString(), uid("v"));
+            const error = writeStore(GARAGE_KEY, current.map((r) => (r.id === target.id ? updated : r)));
+            if (error) throw new Error(error);
+            noteBubble(`Updated “${target.name}”: appended a fresh Baseline version from the recorded Robodex spec — now ${updated.versions.length} versions. Earlier versions are unchanged.`);
+          })
+          .catch((e: Error) => noteBubble(`I couldn't update “${existing.name}” (${e.message}). Nothing changed.`));
+        return true;
+      }
+      pendingSave.current = null;
+    }
+    const req = parseSaveCommand(q);
+    if (!req) return false;
+    const saved = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    /* Page context: a Robodex page names its robot in the route;
+     * the Garage names its selected robot in the hash. */
+    let pageName: string | undefined;
+    const pm = (pathname || "").match(/^\/robots\/([^/]+)\/?$/);
+    if (pm) pageName = robots.find((r) => robotSlug(r) === pm[1])?.name;
+    if (!pageName && (pathname || "").startsWith("/garage")) {
+      const h = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)$/);
+      if (h) pageName = saved.find((r) => r.id === h[1])?.name;
+    }
+    const target = resolveSaveTarget(req, {
+      dex: robots.map((r) => ({ name: r.name, slug: robotSlug(r), specFile: r.spec_file })),
+      saved,
+      pageName,
+      memoryName: memoryRef.current.robotName,
+    });
+    if (target.status === "ambiguous") {
+      noteBubble(`I don't want to guess which robot you mean — ${target.candidates.map((c) => "“" + c + "”").join(" and ")} are both in play. Say save "<name>" with the one you want, and I'll do exactly that.`);
+      return true;
+    }
+    if (target.status === "none") {
+      noteBubble(target.reason === "no-import"
+        ? "I don't see a saved import to save — an import lands in your Garage when you press “Save to my Garage” on the import page, and I can only see it from there. Import a repo there (or paste its link here) first."
+        : target.reason === "unknown-name"
+          ? `I don't have a robot called “${target.nameText}” in the Robodex or your Garage, so nothing was saved. “list my robots” shows your saved robots.`
+          : "Which robot should I save? I'm not looking at one and we haven't discussed one yet — name it, like save \"TurtleBot3 Burger\", and I'll save exactly that one.");
+      return true;
+    }
+    if (req.kind === "add-and-save") {
+      const resolvedPart = resolveCataloguePart(req.partText, parts.map((p) => ({ id: p.id, name: p.name, partClass: p.part_class })));
+      if (resolvedPart.status !== "unique") {
+        noteBubble(resolvedPart.status === "ambiguous"
+          ? `“${req.partText}” matches more than one catalogue part (${resolvedPart.candidates.join(", ")}), so I saved nothing. Name the exact part and I'll record that one.`
+          : `I can't find “${req.partText}” in the parts catalogue, so I saved nothing — I only record parts the catalogue actually holds.`);
+        return true;
+      }
+      const part = resolvedPart.part;
+      const finish = (robot: GarageRobot, wasCreated: boolean) => {
+        const { robot: updated, already } = recordAddedPart(robot, part, new Date().toISOString(), uid("v"));
+        const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+        const next = wasCreated ? [...current, updated] : current.map((r) => (r.id === updated.id ? updated : r));
+        const error = writeStore(GARAGE_KEY, next);
+        if (error) { noteBubble(`I couldn't save (${error}). Nothing was saved.`); return; }
+        noteBubble(already
+          ? `“${part.name}” is already recorded on your saved “${updated.name}”, so I left it as is — no duplicate version.`
+          : `Saved. “${updated.name}” ${wasCreated ? "is now in your Garage with its recorded Robodex Baseline, and it " : ""}gained a PLANNED version recording the ${part.name} (parts catalogue: ${part.id}) as an addition to fit — planned, not built: recorded from the catalogue, not measured or installed.`);
+      };
+      if (target.status === "saved" || target.status === "import") { finish(target.robot, false); return true; }
+      const dexRobot = target.robot;
+      if (!dexRobot.specFile) {
+        noteBubble(`“${dexRobot.name}” has no recorded spec file in the Robodex, so I can't save it faithfully. Nothing was saved.`);
+        return true;
+      }
+      fetchDexSpec(dexRobot)
+        .then((spec) => {
+          const entry = buildDexEntry(dexRobot, spec, new Date().toISOString(), { robot: uid("robot"), version: uid("v") });
+          finish(entry, true);
+        })
+        .catch((e: Error) => noteBubble(`I couldn't load the recorded spec for “${dexRobot.name}” (${e.message}), so nothing was saved.`));
+      return true;
+    }
+    const plan = planSave(target, saved);
+    if (!plan) {
+      noteBubble("I couldn't resolve that save unambiguously, so nothing was saved. Name the robot exactly and I'll do it.");
+      return true;
+    }
+    if (plan.action === "already-saved") {
+      const r = plan.robot;
+      noteBubble(plan.viaImport
+        ? `“${r.name}” is already in your Garage — it's the robot you imported from ${r.repoImport!.provenance.repoUrl} @ ${r.repoImport!.provenance.commitSha.slice(0, 7)}, saved with its specimen record and provenance. Nothing changed.`
+        : `“${r.name}” is already in your Garage (${r.versions.length} version${r.versions.length === 1 ? "" : "s"}, latest “${r.versions.at(-1)?.label}”). Nothing changed — edits to it save as new versions.`);
+      return true;
+    }
+    if (plan.action === "choice") {
+      pendingSave.current = { robot: plan.robot, existingId: plan.existing.id };
+      noteBubble(`You already have a saved robot called “${plan.existing.name}” (${plan.existing.versions.length} version${plan.existing.versions.length === 1 ? "" : "s"}). I won't overwrite it silently. Reply “update” to append a fresh Baseline version from the recorded Robodex spec (history kept), “save as new” to save a separate “${plan.existing.name} copy”, or “cancel”.`);
+      return true;
+    }
+    saveDexEntry(plan.robot);
+    return true;
+  };
+
   /* ---------------- commands ---------------- */
 
   /* Run the built-in command grammars (inventory, assembly, spec edits).
@@ -393,6 +561,7 @@ export function useForgeAssistant() {
    * so a model proposal gets exactly the validation a typed command gets,
    * and nothing applies until the user taps Apply on the preview. */
   const runCommands = (q: string): boolean => {
+      if (runSaveCommand(q)) return true;
       const stockCommand=parseInventoryCommand(q);
       if(stockCommand){
         try{
@@ -846,6 +1015,7 @@ export function useForgeAssistant() {
    * any pending proposal. Saved robots and inventory are untouched. */
   const resetConversation = useCallback(() => {
     setMessages([]);
+    pendingSave.current = null;
     setProposal(null);
     setAssemblyProposal(null);
     setInventoryProposal(null);
