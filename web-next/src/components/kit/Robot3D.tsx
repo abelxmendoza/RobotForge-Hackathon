@@ -12,12 +12,12 @@ import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
 import type { ComponentInstance, Connection } from '@/lib/assembly';
 import { addComponentSkin } from './componentSkin';
-import { snapPlacement, shortestYaw } from '@/lib/spatial';
+import { snapPlacement, shortestYaw, terminalWorldPoint, evaluatePlacementIntelligence } from '@/lib/spatial';
 import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
 import { swayAt } from '@/lib/stageAnimation';
 import type { RobotSpec } from '../forge/model';
-import { taBuildParts, taGeom3d } from './takeapart';
+import { taBuildParts, taGeom3d, elecBad, elecDepths } from './takeapart';
 
 /* Living Build Stage (Layer 0) for this viewer, computed by the
  * parent from recorded data (lib/stageAnimation's capability map):
@@ -85,6 +85,8 @@ export default function Robot3D({
   fov, comparison, replay = 1, playing = false, onMove, onPlaybackEnd,
   teardown,
   autoRotate = false,
+  showSpecWiring = false,
+  showComMarker = true,
 }: {
   spec: RobotSpec;
   life?: RobotLife;
@@ -109,9 +111,11 @@ export default function Robot3D({
   /* Slow turntable spin; pauses while you drag a part or the user
    * prefers reduced motion. */
   autoRotate?: boolean;
+  showSpecWiring?: boolean;
+  showComMarker?: boolean;
 }) {
-  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate});
-  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate};
+  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker});
+  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker};
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -338,14 +342,62 @@ export default function Robot3D({
           if(current){
             const part=componentById(current.componentId)!;
             const tray=new THREE.Group();
-            const material=new THREE.MeshBasicMaterial({color:0x5eead4,wireframe:true,transparent:true,opacity:0.5});
-            const plate=new THREE.Mesh(new THREE.BoxGeometry(part.sizeM[0]+0.008,part.sizeM[1]+0.008,0.003),material);
-            plate.position.z=-part.sizeM[2]/2-0.005;tray.add(plate);
-            for(const x of [-1,1])for(const y of [-1,1]){
-              const support=new THREE.Mesh(new THREE.CylinderGeometry(0.002,0.002,0.01,8),material);
-              support.rotation.x=Math.PI/2;support.position.set(x*(part.sizeM[0]/2+0.002),y*(part.sizeM[1]/2+0.002),-part.sizeM[2]/2);
-              tray.add(support);
+            const standoffMat=new THREE.MeshStandardMaterial({color:0xd4af37,metalness:0.8,roughness:0.25});
+            const trayMat=new THREE.MeshBasicMaterial({color:0x5eead4,wireframe:true,transparent:true,opacity:0.45});
+            const standoffH=Math.max(0.004,(part.mounting.standoffHeightMm||5)/1000);
+            const plate=new THREE.Mesh(new THREE.BoxGeometry(part.sizeM[0]+0.006,part.sizeM[1]+0.006,0.002),trayMat);
+            plate.position.z=-part.sizeM[2]/2-standoffH;tray.add(plate);
+            if(part.mounting.holePatternMm.length>0){
+              const holeR=Math.max(0.0014,(part.mounting.holeDiameterMm||2.7)/2000);
+              for(const [hxMm,hyMm] of part.mounting.holePatternMm){
+                const post=new THREE.Mesh(new THREE.CylinderGeometry(holeR*1.2,holeR*1.2,standoffH,12),standoffMat);
+                post.rotation.x=Math.PI/2;
+                post.position.set(hxMm/1000,hyMm/1000,-part.sizeM[2]/2-standoffH/2);
+                tray.add(post);
+              }
+            }else if(part.mounting.kind==='velcro-strap'){
+              const strapMat=new THREE.MeshStandardMaterial({color:0x38bdf8,roughness:0.6,metalness:0.2});
+              for(const sx of [-0.28,0.28]){
+                const band=new THREE.Mesh(new THREE.BoxGeometry(part.sizeM[0]*0.1,part.sizeM[1]+0.006,part.sizeM[2]+0.004),strapMat);
+                band.position.set(sx*part.sizeM[0],0,-0.001);
+                tray.add(band);
+              }
+            }else{
+              for(const x of [-1,1])for(const y of [-1,1]){
+                const support=new THREE.Mesh(new THREE.CylinderGeometry(0.002,0.002,standoffH,8),trayMat);
+                support.rotation.x=Math.PI/2;support.position.set(x*(part.sizeM[0]/2+0.001),y*(part.sizeM[1]/2+0.001),-part.sizeM[2]/2-standoffH/2);
+                tray.add(support);
+              }
             }
+            // Orientation +X forward vector arrow on tray/selection
+            const arrowGroup=new THREE.Group();
+            const arrowColor=part.category==='sensor'?0x38bdf8:part.category==='power'?0xf59e0b:0x34d399;
+            const arrowMat=new THREE.MeshBasicMaterial({color:arrowColor});
+            const shaftLen=Math.max(0.014,part.sizeM[0]*0.32);
+            const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.0012,0.0012,shaftLen,10),arrowMat);
+            shaft.rotation.z=-Math.PI/2;
+            shaft.position.set(part.sizeM[0]/2+shaftLen*0.35,0,part.sizeM[2]*0.2);
+            const tip=new THREE.Mesh(new THREE.ConeGeometry(0.0032,0.007,12),arrowMat);
+            tip.rotation.z=-Math.PI/2;
+            tip.position.set(part.sizeM[0]/2+shaftLen*0.7+0.002,0,part.sizeM[2]*0.2);
+            arrowGroup.add(shaft);arrowGroup.add(tip);
+            // Terminal pin markers on the part
+            for(const term of part.terminals){
+              const isPwr=term.kind==='power';
+              const pin=new THREE.Mesh(
+                new THREE.SphereGeometry(0.0022,10,8),
+                new THREE.MeshBasicMaterial({color:isPwr?0xf59e0b:0x38bdf8}),
+              );
+              pin.position.set(
+                term.localOffsetRatio[0]*part.sizeM[0],
+                term.localOffsetRatio[1]*part.sizeM[1],
+                term.localOffsetRatio[2]*part.sizeM[2]+0.0015,
+              );
+              arrowGroup.add(pin);
+            }
+            arrowGroup.position.set(...current.positionM);arrowGroup.rotation.z=current.yawDeg*Math.PI/180;
+            g.add(arrowGroup);g.userData.arrowGroup=arrowGroup;
+
             tray.position.set(...current.positionM);tray.rotation.z=current.yawDeg*Math.PI/180;
             tray.visible=false;g.add(tray);g.userData.tray=tray;
             const haloRadius=Math.hypot(part.sizeM[0],part.sizeM[1])*0.56;
@@ -357,12 +409,126 @@ export default function Robot3D({
           groups.push(g);
         });
 
+        // 3D Center-of-Mass (CoM) marker on deck
+        const comGroup=new THREE.Group();
+        const deckZ=Number(spec.ground_clearance_m??0)+0.0045;
+        if((instances?.length??0)>0){
+          const report=evaluatePlacementIntelligence(instances??[],{
+            length_m:spec.length_m,width_m:spec.width_m,height_m:spec.height_m,
+            ground_clearance_m:spec.ground_clearance_m,mass_kg:spec.mass_kg,
+          });
+          const comColor=report.com.status==='balanced'?0x34d399:report.com.status==='offset'?0xf59e0b:0xef4444;
+          const comMat=new THREE.MeshBasicMaterial({color:comColor,transparent:true,opacity:0.85,side:THREE.DoubleSide,depthWrite:false});
+          const ring=new THREE.Mesh(new THREE.RingGeometry(0.009,0.012,48),comMat);
+          ring.position.set(report.com.xM,report.com.yM,deckZ);
+          const core=new THREE.Mesh(new THREE.SphereGeometry(0.004,14,10),new THREE.MeshBasicMaterial({color:comColor}));
+          core.position.set(report.com.xM,report.com.yM,deckZ+0.003);
+          const needle=new THREE.Mesh(new THREE.CylinderGeometry(0.001,0.001,0.035,8),comMat);
+          needle.rotation.x=Math.PI/2;
+          needle.position.set(report.com.xM,report.com.yM,deckZ+0.018);
+          comGroup.add(ring);comGroup.add(core);comGroup.add(needle);
+        }
+        scene.add(comGroup);
+
+        // 3D Spec Wiring Harness (renders spec.wiring nodes + power/data cables in 3D space)
+        const specWiringGroup=new THREE.Group();
+        const specWirePulses:{pulse:THREE_NS.Mesh;curve:THREE_NS.CatmullRomCurve3;index:number}[]=[];
+        if(spec.wiring&&Array.isArray(spec.wiring.nodes)&&Array.isArray(spec.wiring.connections)){
+          const w=spec.wiring;
+          const badSet=elecBad(w);
+          const depths=elecDepths(w);
+          const nodeAnchor:Record<string,[number,number,number]>={};
+          const deckNodes=w.nodes.filter(n=>n.deck);
+          const skinMap:Record<string,string>={
+            battery:'battery-envelope',
+            regulator:'converter-envelope',
+            pdb:'converter-envelope',
+            driver:'driver-l298n-module',
+            esc:'driver-l298n-module',
+            nano:'jetson-orin-nano-reference-devkit',
+            controller:'raspberry-pi-5-sbc',
+            opencr:'raspberry-pi-5-sbc',
+            fc:'imu-bno055-9dof',
+          };
+          // Match kit parts first
+          for(const n of w.nodes){
+            const kitId=n.kit||(n.id==='motors'?'mount':n.id);
+            const matchedUnit=units.find(u=>u.part===kitId||
+              (n.id==='motors'&&(u.part==='mount'||u.part==='rotor'||u.part==='leg'||u.part==='link')));
+            if(matchedUnit&&matchedUnit.meshes[0]){
+              const c=matchedUnit.meshes[0].center;
+              nodeAnchor[n.id]=[c[0],c[1],c[2]+0.008];
+            }
+          }
+          // Place deck nodes along the deck surface with 3D PCB skins if not already anchored
+          deckNodes.forEach((n,idx)=>{
+            if(nodeAnchor[n.id])return;
+            const d=Number.isFinite(depths[n.id])?depths[n.id]:idx;
+            const maxD=Math.max(1,...Object.values(depths).filter(Number.isFinite));
+            const x=(d/maxD-0.5)*spec.length_m*0.58;
+            const y=(idx%2===0?1:-1)*spec.width_m*0.22;
+            const skinId=skinMap[n.id]||'converter-envelope';
+            const partDef=componentById(skinId);
+            const boxSize:[number,number,number]=partDef?[partDef.sizeM[0]*0.55,partDef.sizeM[1]*0.55,partDef.sizeM[2]*0.55]:[0.036,0.026,0.012];
+            const z=deckZ+boxSize[2]/2+0.002;
+            nodeAnchor[n.id]=[x,y,z];
+            const modMesh=new THREE.Mesh(
+              new THREE.BoxGeometry(...boxSize),
+              new THREE.MeshStandardMaterial({color:0x134e4a,transparent:true,opacity:0.22,roughness:0.4}),
+            );
+            modMesh.position.set(x,y,z);
+            addComponentSkin(THREE,modMesh,boxSize,skinId);
+            specWiringGroup.add(modMesh);
+          });
+          // Fallback for any remaining unanchored node
+          w.nodes.forEach((n,idx)=>{
+            if(!nodeAnchor[n.id]){
+              nodeAnchor[n.id]=[(idx/(Math.max(1,w.nodes.length-1))-0.5)*spec.length_m*0.5,0,deckZ+0.02];
+            }
+          });
+          w.connections.forEach((c,idx)=>{
+            const a=nodeAnchor[c.from];
+            const b=nodeAnchor[c.to];
+            if(!a||!b)return;
+            const isBad=badSet.has(idx);
+            const isPwr=c.kind==='power';
+            const colorHex=isBad?0xef4444:isPwr?0xf59e0b:0x38bdf8;
+            const emissiveHex=isBad?0x7f1d1d:isPwr?0x78350f:0x0c4a6e;
+            const curve=new THREE.CatmullRomCurve3(
+              cableControlPoints(a,b,idx%4).map(p=>new THREE.Vector3(...p)),
+            );
+            const tube=new THREE.Mesh(
+              new THREE.TubeGeometry(curve,28,isPwr?0.0021:0.0014,8,false),
+              new THREE.MeshStandardMaterial({color:colorHex,emissive:emissiveHex,emissiveIntensity:0.45,roughness:0.4}),
+            );
+            specWiringGroup.add(tube);
+            for(const pt of [a,b]){
+              const boot=new THREE.Mesh(
+                new THREE.SphereGeometry(0.0028,10,8),
+                new THREE.MeshBasicMaterial({color:colorHex}),
+              );
+              boot.position.set(...pt);
+              specWiringGroup.add(boot);
+            }
+            const pulse=new THREE.Mesh(
+              new THREE.SphereGeometry(isPwr?0.0032:0.0024,10,8),
+              new THREE.MeshBasicMaterial({color:isBad?0xff6b6b:isPwr?0xfde047:0x7dd3fc}),
+            );
+            specWiringGroup.add(pulse);
+            specWirePulses.push({pulse,curve,index:idx});
+          });
+        }
+        specWiringGroup.visible=Boolean(motionRef.current.showSpecWiring);
+        scene.add(specWiringGroup);
+
         const cables: {curve: THREE_NS.CatmullRomCurve3; mesh: THREE_NS.Mesh; pulse: THREE_NS.Mesh; anchors: THREE_NS.Mesh[]; a: ComponentInstance; b: ComponentInstance; index:number; last:string}[] = [];
         for (const [index,connection] of (connections ?? []).entries()) {
           const a = instances?.find(c => c.id === connection.from);
           const b = instances?.find(c => c.id === connection.to);
           if (!a || !b) continue;
-          const curve=new THREE.CatmullRomCurve3(cableControlPoints(a.positionM,b.positionM,index).map(p=>new THREE.Vector3(...p)));
+          const termA = terminalWorldPoint(a, index % 2);
+          const termB = terminalWorldPoint(b, (index + 1) % 2);
+          const curve=new THREE.CatmullRomCurve3(cableControlPoints(termA,termB,index).map(p=>new THREE.Vector3(...p)));
           const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,32,0.0016,8,false),new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0x805000,emissiveIntensity:0.3,roughness:0.5}));
           mesh.userData.part=connection.id;
           scene.add(mesh); pickMeshes.push(mesh);
@@ -647,9 +813,10 @@ export default function Robot3D({
               const yaw=shortestYaw(old.yawDeg,current.yawDeg,progress)*Math.PI/180;
               for(const child of g.children)if(child instanceof THREE.Mesh)child.rotation.z=yaw;
               (g.userData.tray as THREE_NS.Group).rotation.z=yaw;
+              if(g.userData.arrowGroup)(g.userData.arrowGroup as THREE_NS.Group).rotation.z=yaw;
             }
             g.visible=!current || (instances?.some(c=>c.id===current.id)?(old?true:progress>0.001):progress<0.999);
-            if(g.userData.tray)(g.userData.tray as THREE_NS.Group).visible=settings.ghostMount&&g.userData.part===st.selected;
+            if(g.userData.tray)(g.userData.tray as THREE_NS.Group).visible=settings.ghostMount||g.userData.part===st.selected;
             const halo=g.userData.halo as THREE_NS.Mesh|undefined;
             if(halo){halo.visible=g.userData.part===st.selected;(halo.material as THREE_NS.MeshBasicMaterial).opacity=effects?0.55+Math.sin(clock.elapsedTime*2.5)*0.12:0.6;}
             const td=settings.teardown;
@@ -727,13 +894,22 @@ export default function Robot3D({
             const radius=Math.tan(settings.fov.angleDeg*Math.PI/360)*settings.fov.rangeM;
             fovMesh.scale.set(radius,settings.fov.rangeM,radius);
           }
+          comGroup.visible=Boolean(settings.showComMarker&&(instances?.length??0)>0);
+          specWiringGroup.visible=Boolean(settings.showSpecWiring);
+          if(settings.showSpecWiring){
+            for(const item of specWirePulses){
+              item.pulse.visible=effects;
+              if(effects) item.pulse.position.copy(item.curve.getPoint(animationPhase(clock.elapsedTime,item.index)));
+            }
+          }
           for(const cable of cables){
             const offset=(id:string)=>groups.find(g=>g.userData.part===id)?.position ?? new THREE.Vector3();
-            const a=new THREE.Vector3(...cable.a.positionM).add(offset(cable.a.id));
-            const b=new THREE.Vector3(...cable.b.positionM).add(offset(cable.b.id));
-            // Visual anchor proxies at envelope tops, not documented connector locations.
-            a.z+=(componentById(cable.a.componentId)?.sizeM[2]??0)/2+0.002;
-            b.z+=(componentById(cable.b.componentId)?.sizeM[2]??0)/2+0.002;
+            const termA=terminalWorldPoint(cable.a,cable.index%2);
+            const termB=terminalWorldPoint(cable.b,(cable.index+1)%2);
+            const a=new THREE.Vector3(...termA).add(offset(cable.a.id));
+            const b=new THREE.Vector3(...termB).add(offset(cable.b.id));
+            a.z+=0.002;
+            b.z+=0.002;
             cable.anchors[0].position.copy(a);cable.anchors[1].position.copy(b);
             const material=cable.mesh.material as THREE_NS.MeshStandardMaterial;
             material.emissiveIntensity=st.selected===cable.mesh.userData.part?0.9:0.3;
