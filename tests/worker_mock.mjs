@@ -317,6 +317,51 @@ await scenario('chat happy path returns the answer', async () => {
   assert.strictEqual(r.body.answer, 'A concise live answer.');
 });
 
+await scenario('chat with a Workshop snapshot grounds the model in that robot', async () => {
+  basetenMode = 'chat';
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv(), '/chat', {
+    method: 'POST', auth: true,
+    body: {
+      message: 'Why is it failing?',
+      ws_context: {
+        robot: 'Testbot', version: 'v2 — Baseline', tab: 'Checks',
+        spec: ['Body · Drivetrain: differential', 'Battery · Voltage: 11.1 V'],
+        checks: { verdict: 'Checks fail', lines: ['FAIL motor voltage 7.4 V is below battery 11.1 V'] },
+        inventory: ['TB6612FNG driver'],
+      },
+    },
+  });
+  assert.strictEqual(r.status, 200);
+  assert.strictEqual(r.body.answer, 'A concise live answer.');
+  assert.ok(!('command' in r.body), 'snapshot mode never returns a command');
+  const sent = JSON.parse(upstreamCalls[before].opts.body);
+  assert.ok(sent.messages[0].content.includes('Answer about THAT robot'),
+    'system prompt carries the snapshot instructions');
+  assert.ok(sent.messages[1].content.includes('Workshop snapshot:'),
+    'user message carries the snapshot block');
+  assert.ok(sent.messages[1].content.includes('Testbot'), 'snapshot names the robot');
+  assert.ok(sent.messages[1].content.includes('FAIL motor voltage 7.4 V'),
+    'snapshot carries the actual check lines');
+  assert.ok(sent.messages[1].content.includes('TB6612FNG driver'),
+    'snapshot carries the shelf list');
+  assert.ok(sent.messages[1].content.includes('Question: Why is it failing?'),
+    'the question rides after the snapshot');
+});
+
+await scenario('a malformed Workshop snapshot falls back to plain chat', async () => {
+  basetenMode = 'chat';
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv(), '/chat', {
+    method: 'POST', auth: true,
+    body: { message: 'hello', ws_context: { robot: 42, spec: 'not-a-list' } },
+  });
+  assert.strictEqual(r.status, 200);
+  const sent = JSON.parse(upstreamCalls[before].opts.body);
+  assert.strictEqual(sent.messages[1].content, 'hello',
+    'no snapshot block reaches the model');
+});
+
 await scenario('client cannot override the model settings', async () => {
   basetenMode = 'chat';
   const before = upstreamCalls.length;

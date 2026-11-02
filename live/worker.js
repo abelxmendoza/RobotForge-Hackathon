@@ -13,6 +13,9 @@
  *                     with { op_context }  => { answer, command, model }
  *                     (Tier-1 operator translation; the client validates
  *                     and applies the command, never the worker)
+ *                     with { ws_context }  => { answer, model }
+ *                     (Workshop snapshot of the robot on screen; the
+ *                     plain answer is grounded in it, nothing applied)
  *   POST /list     -> { text }             => { import, model_generated, model }
  *   POST /photo    -> { image_data_url, mode? }   => { draft, ... }
  *                     mode "photo" (default): ESTIMATED robot-photo
@@ -757,6 +760,52 @@ function sanitizeOpContext(raw) {
   return ctx.robots.length || ctx.inventory.length ? ctx : null;
 }
 
+/* Workshop-grounded answers for /chat: when the client sends ws_context
+ * (the Workshop's published snapshot of the robot on screen — spec
+ * summary, the current draft's engineering-check lines, the shelf
+ * inventory), the plain-answer path answers about THAT robot. The
+ * snapshot is rendered to text here from capped fields, never trusted
+ * as prose. The mode changes nothing else: no commands, no state — and
+ * the recorded answers still win client-side before this route is
+ * ever called. */
+const WS_CONTEXT_INSTRUCTIONS = `
+
+The user message carries a Workshop snapshot: the robot the user is looking at in the RobotForge Workshop right now, the tab they have open, its current draft spec, the engineering-check lines for that draft, and the parts on their shelf. Answer about THAT robot: use its name, quote its actual check lines when explaining a failure, and check the shelf list before saying a part still needs buying. The snapshot is the current draft, which may differ from the last saved version. If the answer depends on something the snapshot does not show, say so plainly instead of guessing. Never claim you changed, saved or applied anything — on this path you only advise.`;
+
+function sanitizeWsContext(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const str = (v, len) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, len) : '');
+  const list = (v, cap, len) => Array.isArray(v)
+    ? v.filter((x) => typeof x === 'string' && x.trim()).slice(0, cap).map((x) => x.slice(0, len))
+    : [];
+  const checks = raw.checks && typeof raw.checks === 'object' && !Array.isArray(raw.checks)
+    ? raw.checks : {};
+  const ctx = {
+    robot: str(raw.robot, 120),
+    version: str(raw.version, 80),
+    tab: str(raw.tab, 40),
+    spec: list(raw.spec, 40, 160),
+    checksVerdict: str(checks.verdict, 80),
+    checkLines: list(checks.lines, 40, 200),
+    inventory: list(raw.inventory, 80, 120),
+  };
+  return ctx.robot ? ctx : null;
+}
+
+function renderWsContext(ctx) {
+  const out = ['Robot: ' + ctx.robot + (ctx.version ? ' (' + ctx.version + ')' : '')];
+  if (ctx.tab) out.push('Open tab: ' + ctx.tab);
+  if (ctx.spec.length) out.push('Spec:\n' + ctx.spec.map((l) => '- ' + l).join('\n'));
+  if (ctx.checksVerdict || ctx.checkLines.length) {
+    out.push('Engineering checks' + (ctx.checksVerdict ? ': ' + ctx.checksVerdict : '') +
+      (ctx.checkLines.length ? '\n' + ctx.checkLines.map((l) => '- ' + l).join('\n') : ''));
+  }
+  out.push(ctx.inventory.length
+    ? 'On the user\'s shelf: ' + ctx.inventory.join(', ')
+    : 'On the user\'s shelf: nothing recorded.');
+  return out.join('\n');
+}
+
 /* Parse a Tier-1 model reply: a JSON object with a string answer and a
  * string-or-null command. Anything else returns null and the caller
  * falls back to treating the reply as a plain answer. */
@@ -791,12 +840,16 @@ async function handleChat(request, env) {
   const gate = await gateBudget(env, request);
   if (gate) return gate;
   const opContext = sanitizeOpContext(data && data.op_context);
+  const wsContext = opContext ? null : sanitizeWsContext(data && data.ws_context);
   let content;
   let model = MODEL;
   try {
     ({ content, model } = await callModel(env, opContext ? [
       { role: 'system', content: OP_SYSTEM_PROMPT },
       { role: 'user', content: 'Context: ' + JSON.stringify(opContext) + '\nRequest: ' + message },
+    ] : wsContext ? [
+      { role: 'system', content: CHAT_SYSTEM_PROMPT + WS_CONTEXT_INSTRUCTIONS },
+      { role: 'user', content: 'Workshop snapshot:\n' + renderWsContext(wsContext) + '\n\nQuestion: ' + message },
     ] : [
       { role: 'system', content: CHAT_SYSTEM_PROMPT },
       { role: 'user', content: message },
