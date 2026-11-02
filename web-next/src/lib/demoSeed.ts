@@ -87,6 +87,13 @@ function demoInventory(): InventoryPart[] {
     simFromCatalog('gearmotor_12v', 'motor', 2),
     simFromCatalog('driver_tb6612fng', 'motor_driver', 1),
     simFromCatalog('lipo_4s_5200', 'battery', 1),
+    /* One nested example for the Columns view: the USB adapter board
+     * an RPLIDAR A1 kit comes with, mounted under the lidar. */
+    base({
+      id: 'demo-sample-lidar-usb', name: 'USB serial adapter board (demo sample)', category: 'cable',
+      reality: 'sim_only', quantity: 1, parent_id: 'demo-rplidar_a1', stock_location: 'Catalogue (virtual)',
+      notes: SAMPLE_NOTE,
+    }),
     /* Parts · real — one labeled demo sample, so the real-vs-sim
      * split shows. */
     base({
