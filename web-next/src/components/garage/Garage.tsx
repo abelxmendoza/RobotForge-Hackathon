@@ -31,6 +31,7 @@ import {
   diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
+import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 
 const now = () => new Date().toISOString();
@@ -477,6 +478,17 @@ export default function Garage() {
     setAdding(false);
   };
 
+  /* Save a copy: the save-as-new half of the chat's save choice,
+   * as a button — a separate entry carrying this robot's versions
+   * and provenance, selected so the user sees it land. The
+   * original is untouched. */
+  const saveCopy = () => {
+    if (!robot) return;
+    const copy = copyAsNew(robot, uniqueCopyName(robot.name, robots), now(), uid('robot'));
+    persist([copy, ...robots]);
+    setSelected(copy.id);
+  };
+
   const saveVersion = (source: VersionSource) => {
     if (!robot || !draft) return;
     const v: RobotVersion = {
@@ -658,6 +670,7 @@ export default function Garage() {
                 <ModeBanner compact mode={lm.mode} reason={lm.reason} />
               </div>
               <div className="g-head-actions">
+                <button type="button" className="btn btn-sm" onClick={saveCopy} title="Save a separate copy of this robot in your Garage — versions and provenance carried over; the original is unchanged">Save a copy</button>
                 <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
                 {confirmRemove === robot.id ? (
                   <span className="g-remove-confirm" role="alert">
