@@ -24,6 +24,7 @@ import { downloadJSON, uid, useStore } from '@/lib/store';
 import { promptWrench } from '@/lib/wrenchPrompt';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
+import OverviewTurntable from './OverviewTurntable';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
@@ -711,13 +712,14 @@ export default function Garage() {
               <section className="ws-pane" aria-label="Overview">
                 {(() => {
                   const art = drawingFor(draft?.name, robot.name, robot.id);
-                  return art ? (
+                  const drawing = art ? (
                     <figure className="ws-drawing">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={art} alt={`Drawing of a ${draft?.name || robot.name}`} />
                       <figcaption className="faint g-small">RobotForge illustration of this model, not a photo of your build.</figcaption>
                     </figure>
                   ) : null;
+                  return <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />;
                 })()}
                 <div className="ws-tiles">
                   {tiles.map((t) => (

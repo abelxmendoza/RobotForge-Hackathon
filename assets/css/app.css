@@ -1633,3 +1633,10 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .repo-import .repo-save{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s3) 0}
 .repo-import .repo-save select{margin-left:6px;max-width:100%}
 .repo-import .repo-save .faint{flex-basis:100%}
+
+/* Workshop Overview: the robot turning on a 3D stage (a model, not a photo) */
+.ws-turntable{margin:0 0 var(--s4);display:grid;gap:6px}
+.ws-turntable-stage{position:relative;height:clamp(260px,42vw,420px);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:#081321}
+.ws-turntable-stage > div,.ws-turntable-stage canvas{width:100%;height:100%;display:block}
+.ws-turntable-toggle{position:absolute;right:10px;bottom:10px;z-index:2}
+.ws-turntable-wait{display:grid;place-items:center;height:100%;margin:0}
