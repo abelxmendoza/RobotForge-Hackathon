@@ -21,7 +21,7 @@ import {
 import { REPO_IMPORT_EVENT } from "@/lib/repoLink";
 import { repoImportFixture, RECORDED_SNAPSHOT_LABEL } from "@/lib/repoImportFixture";
 import { parts as catalogParts, simReadyProps } from "@/lib/data";
-import { GARAGE_KEY, type GarageRobot } from "@/lib/garage";
+import { attachRepo, GARAGE_KEY, robotRepos, sameRepo, type GarageRobot } from "@/lib/garage";
 import { uid, useStore } from "@/lib/store";
 import { useBuildList } from "@/lib/buildList";
 import { addToBuildList, buildPaletteItems } from "@/lib/palette";
@@ -616,7 +616,7 @@ function SpecimenDetail({
         {savedId && (
           <p className="faint">
             Saved in your Garage — open it any time from the Workshop list, or{" "}
-            <Link href={`/import/?robot=${savedId}`}>link straight here</Link>.
+            <Link href={`/import/?robot=${savedId}&src=${specimen.provenance.owner}/${specimen.provenance.repo}`}>link straight here</Link>.
           </p>
         )}
       </section>
@@ -637,12 +637,21 @@ export default function RepoImport() {
   const [robots, saveRobots] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [linkedId, setLinkedId] = useState<string | null>(null);
+  const [linkedSrc, setLinkedSrc] = useState<string | null>(null);
+  // Where "Save" puts the import: a new robot, or a robot you already
+  // have (a robot can carry several repos: firmware, ROS, CAD…).
+  const [target, setTarget] = useState<string>("new");
   const demo = typeof window !== "undefined" && isDemoMode();
 
-  // /import/?robot=<garage id> opens a saved specimen.
+  // /import/?robot=<garage id>[&src=owner/repo] opens a saved specimen;
+  // /import/?attach=<garage id> preselects that robot for the next save.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("robot");
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("robot");
     if (id) setLinkedId(id);
+    setLinkedSrc(q.get("src"));
+    const attach = q.get("attach");
+    if (attach) setTarget(attach);
   }, []);
   // /import/?repo=<owner/repo> comes from Wrench: a repo link pasted
   // into the chat composer fills the form and starts the import.
@@ -672,17 +681,24 @@ export default function RepoImport() {
   }, [autoRepo]);
   const linkedRobot = linkedId ? robots.find((r) => r.id === linkedId) : undefined;
   useEffect(() => {
-    if (linkedRobot?.repoImport && !specimen) {
-      setSpecimen(linkedRobot.repoImport);
+    const repos = robotRepos(linkedRobot);
+    if (linkedRobot && repos.length && !specimen) {
+      const src = linkedSrc?.toLowerCase();
+      const pick = repos.find(
+        (x) => `${x.provenance.owner}/${x.provenance.repo}`.toLowerCase() === src,
+      ) ?? repos[0];
+      setSpecimen(pick);
       setSavedId(linkedRobot.id);
     }
-  }, [linkedRobot, specimen]);
+  }, [linkedRobot, linkedSrc, specimen]);
+  // An unknown ?attach= id (robot removed, other browser) falls back to "new".
+  const targetRobot = target === "new" ? undefined : robots.find((r) => r.id === target);
 
   const persistSpecimen = (next: RepoSpecimen) => {
     setSpecimen(next);
     if (savedId) {
       saveRobots(
-        robots.map((r) => (r.id === savedId ? { ...r, repoImport: next } : r)),
+        robots.map((r) => (r.id === savedId ? attachRepo(r, next) : r)),
       );
     }
   };
@@ -724,15 +740,33 @@ export default function RepoImport() {
 
   const saveToGarage = () => {
     if (!specimen) return;
-    const existing = robots.find(
-      (r) =>
-        r.repoImport?.provenance.repoUrl === specimen.provenance.repoUrl &&
-        r.repoImport?.provenance.commitSha === specimen.provenance.commitSha,
-    );
-    if (existing) {
+    const sameRecord = (x: RepoSpecimen) =>
+      sameRepo(x.provenance.repoUrl, specimen.provenance.repoUrl) &&
+      x.provenance.commitSha === specimen.provenance.commitSha;
+    const existing = robots.find((r) => robotRepos(r).some(sameRecord));
+    if (existing && (!targetRobot || existing.id === targetRobot.id)) {
       setSavedId(existing.id);
-      setNote("That repo at that commit is already in your Garage — this is the same record.");
-      setSpecimen(existing.repoImport!);
+      setNote(`That repo at that commit is already on ${existing.name} — this is the same record.`);
+      setSpecimen(robotRepos(existing).find(sameRecord)!);
+      return;
+    }
+    if (targetRobot) {
+      const had = robotRepos(targetRobot).some(
+        (x) => sameRepo(x.provenance.repoUrl, specimen.provenance.repoUrl),
+      );
+      const failure = saveRobots(
+        robots.map((r) => (r.id === targetRobot.id ? attachRepo(r, specimen) : r)),
+      );
+      if (failure) {
+        setError(failure);
+        return;
+      }
+      setSavedId(targetRobot.id);
+      setNote(
+        had
+          ? `Updated ${specimen.provenance.owner}/${specimen.provenance.repo} on ${targetRobot.name} to this commit.`
+          : `Added to ${targetRobot.name}. It now has ${robotRepos(targetRobot).length + 1} repos.`,
+      );
       return;
     }
     const id = uid("robot");
@@ -804,15 +838,30 @@ export default function RepoImport() {
       {specimen && (
         <>
           {!savedId && (
-            <p>
+            <div className="repo-save">
+              {robots.length > 0 && (
+                <label>
+                  Save to{" "}
+                  <select value={targetRobot ? target : "new"} onChange={(e) => setTarget(e.target.value)}>
+                    <option value="new">A new robot</option>
+                    {robots.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                        {robotRepos(r).length ? ` (${robotRepos(r).length} repo${robotRepos(r).length === 1 ? "" : "s"})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <button type="button" className="btn btn-primary" onClick={saveToGarage}>
-                Save to my Garage
-              </button>{" "}
+                {targetRobot ? `Add this repo to ${targetRobot.name}` : "Save to my Garage"}
+              </button>
               <span className="faint">
-                The specimen record — provenance, hardware, parts, images — is saved with
-                the robot.
+                {targetRobot
+                  ? "A robot can carry several repos, such as its firmware, ROS packages and CAD. The robot's versions are not changed."
+                  : "The specimen record — provenance, hardware, parts, images — is saved with the robot."}
               </span>
-            </p>
+            </div>
           )}
           <SpecimenDetail specimen={specimen} onChange={persistSpecimen} savedId={savedId} />
         </>
