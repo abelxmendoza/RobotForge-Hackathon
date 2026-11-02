@@ -59,6 +59,8 @@ def test_overview_uses_photo_spin() -> None:
     assert "<OverviewMedia" in garage and "spin={robot.spin}" in garage
     # The 3D turntable is still there as the other view.
     assert "<OverviewTurntable" in garage
+    # Saving reads the garage as it is when the photos finish, not a stale copy.
+    assert "readStore<GarageRobot[]>(GARAGE_KEY, [])" in garage
     assert "spin?: import('./photoSpin').PhotoSpin" in (WEB / "lib" / "garage.ts").read_text()
 
 
@@ -66,6 +68,8 @@ def test_spin_ui_is_honest_and_accessible() -> None:
     ui = (WEB / "components" / "garage" / "PhotoSpin.tsx").read_text()
     # Labelled as the user's own photos, not a render.
     assert "Your own photos of" in ui
+    # A replacement spin starts at frame 1, never past the end.
+    assert "<PhotoSpinViewer key={spin.addedAt}" in ui
     # Drag, keyboard and a slider all turn it; motion can be paused.
     for needle in ("setPointerCapture", "ArrowLeft", 'type="range"', "aria-pressed", "prefers-reduced-motion"):
         assert needle in ui, needle

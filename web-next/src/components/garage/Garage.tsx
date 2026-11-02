@@ -20,7 +20,7 @@ import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
 import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveStatus';
 import type { LiveHealth, RobotSpec } from '@/components/forge/model';
-import { downloadJSON, uid, useStore } from '@/lib/store';
+import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
 import { promptWrench } from '@/lib/wrenchPrompt';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
@@ -730,12 +730,20 @@ export default function Garage() {
                       spin={robot.spin}
                       name={robot.name}
                       model={<OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
-                      onSave={(next) => saveRobots(robots.map((r) => {
-                        if (r.id !== robot.id) return r;
-                        if (next) return { ...r, spin: next };
-                        const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
-                        return rest;
-                      })) ?? null}
+                      onSave={(next) => {
+                        // Photos take a while to shrink: read the garage as it is
+                        // now, so edits made meanwhile are kept, and skip a robot
+                        // deleted while they were processing.
+                        const id = robot.id;
+                        const now = readStore<GarageRobot[]>(GARAGE_KEY, []);
+                        if (!now.some((r) => r.id === id)) return 'That robot was removed before the photos finished.';
+                        return saveRobots(now.map((r) => {
+                          if (r.id !== id) return r;
+                          if (next) return { ...r, spin: next };
+                          const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+                          return rest;
+                        })) ?? null;
+                      }}
                     />
                   );
                 })()}

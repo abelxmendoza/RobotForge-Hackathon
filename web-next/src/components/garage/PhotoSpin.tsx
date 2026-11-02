@@ -188,7 +188,7 @@ export function OverviewMedia({ spin, name, model, onSave }: {
       )}
       {showPhotos && spin ? (
         <figure className="ps-figure">
-          <PhotoSpinViewer spin={spin} name={name} />
+          <PhotoSpinViewer key={spin.addedAt} spin={spin} name={name} />
           <figcaption className="faint g-small">
             Your own photos of {name} ({spin.frames.length} {spin.source === 'video' ? 'frames from a video' : 'photos'}).
           </figcaption>
