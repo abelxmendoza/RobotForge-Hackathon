@@ -25,6 +25,7 @@ import { promptWrench } from '@/lib/wrenchPrompt';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
+import { OverviewMedia } from './PhotoSpin';
 import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
@@ -723,7 +724,20 @@ export default function Garage() {
                       <figcaption className="faint g-small">RobotForge illustration of this model, not a photo of your build.</figcaption>
                     </figure>
                   ) : null;
-                  return <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />;
+                  return (
+                    <OverviewMedia
+                      key={robot.id}
+                      spin={robot.spin}
+                      name={robot.name}
+                      model={<OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
+                      onSave={(next) => saveRobots(robots.map((r) => {
+                        if (r.id !== robot.id) return r;
+                        if (next) return { ...r, spin: next };
+                        const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
+                        return rest;
+                      })) ?? null}
+                    />
+                  );
                 })()}
                 <div className="ws-tiles">
                   {tiles.map((t) => (

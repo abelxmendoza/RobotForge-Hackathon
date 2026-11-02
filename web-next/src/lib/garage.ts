@@ -36,6 +36,9 @@ export interface GarageRobot {
    * repoImport stays the first one so older saved robots keep working;
    * read them all through robotRepos(). */
   repos?: import('./repoImport').RepoSpecimen[];
+  /* Real photos taken around the robot, played as a drag-to-turn view
+   * on the Overview (lib/photoSpin.ts). */
+  spin?: import('./photoSpin').PhotoSpin;
 }
 
 type Specimen = import('./repoImport').RepoSpecimen;

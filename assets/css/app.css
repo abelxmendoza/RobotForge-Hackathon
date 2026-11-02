@@ -1731,3 +1731,22 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .pc-col.pc-focus{display:flex}
   .inv-drawer{width:100vw;border-left:0}
 }
+
+/* Photo spin: real photos of the robot, drag to turn (Workshop Overview). */
+.ps-overview{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.ps-switch{display:inline-flex;gap:4px;align-self:flex-start}
+.ps-switch .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ps-figure{margin:0}
+.ps-figure figcaption{margin-top:6px}
+.ps-view{display:flex;flex-direction:column;gap:8px}
+.ps-stage{position:relative;aspect-ratio:4/3;max-height:460px;width:100%;border-radius:var(--r);overflow:hidden;background:var(--surface);border:1px solid var(--border);cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.ps-stage:active{cursor:grabbing}
+.ps-stage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ps-stage img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.ps-hint{position:absolute;right:10px;bottom:8px;font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff}
+.ps-bar{display:flex;align-items:center;gap:10px}
+.ps-bar input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.ps-details summary{cursor:pointer;font-size:14px}
+.ps-edit{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.ps-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+@media (prefers-reduced-motion: reduce){.ps-hint{display:none}}
