@@ -54,6 +54,7 @@ import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
 import InventoryProposal from './InventoryProposal';
 import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,type InventoryOperation} from '@/lib/inventory';
+import { buildWsContext, readWorkshopContext, workshopTabChips, WORKSHOP_CONTEXT_EVENT } from "@/lib/workshopContext";
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from '@/lib/garage';
@@ -167,12 +168,43 @@ export function useForgeAssistant() {
   const pathname = usePathname();
   const engine = useMemo(buildEngine, []);
   const wrench = useMemo(buildWrench, []);
+  /* On the Workshop, the suggestion chips follow the robot on screen
+   * and its open tab (lib/workshopContext) instead of the recorded
+   * engine's page defaults — the questions they ask ride out with
+   * that snapshot attached (see liveChat). The wrench layer itself
+   * stays free of app state: it is compiled standalone by its eval
+   * harness, so the Workshop branch lives here, not in contextChips. */
+  const chipsFor = (mem: TurnMemory): string[] => {
+    if ((pathname || "").startsWith("/garage")) {
+      const ws = readWorkshopContext();
+      if (ws) return workshopTabChips(ws);
+    }
+    return wrench.contextChips(pathname || "", mem);
+  };
   const memoryRef = useRef<TurnMemory>(carry.memory);
   useEffect(() => () => { carry.memory = memoryRef.current; }, []);
 
+  /* Garage republishes its snapshot on every change; only a robot or
+   * tab switch refreshes the chips, so editing a spec field does not
+   * churn the suggestion row under a half-typed question. */
+  const wsChipKey = useRef("");
+  useEffect(() => {
+    const onWs = () => {
+      if (!(pathname || "").startsWith("/garage")) return;
+      const ws = readWorkshopContext();
+      const key = ws ? ws.robotName + "|" + ws.tab : "";
+      if (key === wsChipKey.current) return;
+      wsChipKey.current = key;
+      setChipsState(chipsFor(memoryRef.current));
+    };
+    window.addEventListener(WORKSHOP_CONTEXT_EVENT, onWs);
+    return () => window.removeEventListener(WORKSHOP_CONTEXT_EVENT, onWs);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, wrench]);
+
   const [messages, setMessages] = useState<Msg[]>(() => carry.messages);
   const [chips, setChipsState] = useState<string[]>(
-    () => carry.chips ?? wrench.contextChips(pathname || "", carry.memory)
+    () => carry.chips ?? chipsFor(carry.memory)
   );
   const [subText, setSubText] = useState(SUB_RECORDED);
   /* Demo mode: the subtitle says so, and every live path below
@@ -243,7 +275,7 @@ export function useForgeAssistant() {
       demoThreadRef.current = snapshot;
       memoryRef.current = mem;
       setMessages(seeded);
-      setChips(wrench.contextChips(pathname || "", mem));
+      setChips(chipsFor(mem));
     } else if (demoThreadRef.current) {
       const snapshot = demoThreadRef.current;
       demoThreadRef.current = null;
@@ -290,8 +322,13 @@ export function useForgeAssistant() {
     );
 
   const liveChat = useCallback(
-    (q: string): Promise<string> =>
-      fetch(liveBase() + "/chat", {
+    (q: string): Promise<string> => {
+      /* On the Workshop, the question carries the published snapshot
+       * of the robot on screen (see lib/workshopContext), so the live
+       * answer is about that robot. Anywhere else the snapshot is
+       * empty and the call is exactly what it was before. */
+      const ws = readWorkshopContext();
+      return fetch(liveBase() + "/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -302,7 +339,17 @@ export function useForgeAssistant() {
             ? { Authorization: "Bearer " + sessionToken() }
             : {}),
         },
-        body: JSON.stringify({ message: q }),
+        body: JSON.stringify({
+          message: q,
+          ...(ws
+            ? {
+                ws_context: buildWsContext(
+                  ws,
+                  readStore<InventoryPart[]>(INVENTORY_KEY, []).map((p) => p.name)
+                ),
+              }
+            : {}),
+        }),
       }).then((r) =>
         r
           .json()
@@ -321,7 +368,8 @@ export function useForgeAssistant() {
             }
             return body.answer;
           })
-      ),
+      );
+    },
     [liveBase]
   );
 
@@ -848,7 +896,7 @@ export function useForgeAssistant() {
         setChips(
           ans.chips && ans.chips.length
             ? ans.chips
-            : wrench.contextChips(pathname || "", memoryRef.current)
+            : chipsFor(memoryRef.current)
         );
         autoAction(q, ans);
       };
@@ -1032,7 +1080,7 @@ export function useForgeAssistant() {
     carry.inventoryProposal = null;
     carry.assemblyProposal = null;
     carry.memory = {};
-    setChipsState(wrench.contextChips(pathname || "", {}));
+    setChipsState(chipsFor({}));
   }, [pathname, wrench]);
 
   return {ask,messages,chips,onHitClick,subText,resetConversation,actions: <div className="main-chat-actions">

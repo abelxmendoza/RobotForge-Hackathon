@@ -22,6 +22,7 @@ import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveSt
 import type { LiveHealth, RobotSpec } from '@/components/forge/model';
 import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
 import { promptWrench } from '@/lib/wrenchPrompt';
+import { publishWorkshopContext, summarizeSpec } from '@/lib/workshopContext';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
@@ -652,6 +653,28 @@ export default function Garage() {
       ))}
     </div>
   ) : null;
+
+  /* Publish the live Workshop picture for Wrench: the chat reads this
+   * snapshot when a question goes to the live model, so its answers are
+   * about the robot on screen (see lib/workshopContext). Cleared on
+   * unmount, so a stale robot never follows the user to another page. */
+  useEffect(() => {
+    if (robot && draft) {
+      const bi = base ? robot.versions.findIndex((v) => v.id === base.id) : -1;
+      publishWorkshopContext({
+        robotName: draft.name || robot.name,
+        versionLabel: base ? `v${bi + 1} — ${base.label}` : '',
+        tab,
+        tabLabel: WORK_TABS.find((t) => t.id === tab)?.label ?? tab,
+        specLines: summarizeSpec(draft),
+        checksVerdict: wsVerdict.label,
+        checkLines: draftLines,
+      });
+    } else {
+      publishWorkshopContext(null);
+    }
+    return () => publishWorkshopContext(null);
+  }, [robot, draft, base, tab, draftLines, wsVerdict.label]);
 
   if (!ready) return <p className="muted">Loading your garage…</p>;
 

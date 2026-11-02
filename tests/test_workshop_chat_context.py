@@ -1,0 +1,165 @@
+"""Workshop chat context (2026-11-02): the Workshop publishes a snapshot
+of the robot on screen (lib/workshopContext), the chat sends it with a
+question to the live model (ChatDock liveChat -> ws_context), the Worker
+grounds its plain answer in it (live/worker.js), and the Workshop's
+starter chips follow the open tab (ChatDock chipsFor — the wrench turn
+layer itself stays free of app state for its standalone eval harness).
+
+Pins:
+  1. summarizeSpec renders the Specs tab's own units (field scale
+     applied), skips empty fields and the name, and never invents.
+  2. buildWsContext carries robot / version / tab / spec / checks /
+     inventory in the wire shape the Worker's sanitizer reads.
+  3. publish/read is a plain roundtrip and clearing really clears.
+  4. Every tab has chips; an unknown tab falls back to the checks set;
+     no chip starts with an operation verb (the chat routes those to
+     the command translator, and these chips are questions).
+  5. The wiring exists in the sources: Garage publishes, ChatDock
+     sends ws_context on the live-answer path only and owns the
+     Workshop chip branch, the Worker sanitizes + renders the
+     snapshot, and wrench.ts carries no app import.
+"""
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+WEB = ROOT / "web-next"
+LIB = WEB / "src" / "lib"
+
+GARAGE_TSX = (WEB / "src/components/garage/Garage.tsx").read_text()
+DOCK = (WEB / "src/components/chat/ChatDock.tsx").read_text()
+WRENCH = (WEB / "src/components/chat/wrench.ts").read_text()
+WORKER = (ROOT / "live" / "worker.js").read_text()
+
+OP_VERBS = ("add", "remove", "delete", "move", "place", "mount",
+            "connect", "wire", "disconnect", "generate", "export", "run",
+            "save", "set", "undo", "make", "change", "increase",
+            "decrease", "bigger", "smaller", "heavier", "lighter")
+
+
+def test_snapshot_lib_behaviour(tmp_path):
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node is unavailable")
+    (tmp_path / "garage.ts").write_text((LIB / "garage.ts").read_text())
+    (tmp_path / "workshopContext.ts").write_text(
+        (LIB / "workshopContext.ts").read_text()
+        .replace("from './garage'", "from './garage.ts'"))
+    (tmp_path / "package.json").write_text('{"type":"module"}')
+    script = """
+import assert from 'node:assert/strict';
+import { summarizeSpec, buildWsContext, publishWorkshopContext,
+         readWorkshopContext, workshopTabChips } from './workshopContext.ts';
+
+const spec = {
+  name: 'Testbot', drivetrain: 'differential',
+  wheel: { diameter_m: 0.066, count: 2 },
+  motor: { voltage_v: 11.1, count: 2 },
+  battery: { chemistry: 'lipo', voltage_v: 11.1, capacity_mah: 1800 },
+  mass_kg: 1.4,
+};
+const lines = summarizeSpec(spec);
+assert.ok(lines.includes('Wheels · Diameter: 66 mm'), lines.join(' | '));
+assert.ok(lines.includes('Battery · Capacity: 1800 mAh'), lines.join(' | '));
+assert.ok(lines.includes('Body · Drivetrain: differential'), lines.join(' | '));
+assert.ok(!lines.some((l) => l.includes('Name:')), 'the name is not a spec line');
+assert.ok(!lines.some((l) => l.includes('Height')), 'empty fields are skipped');
+assert.deepEqual(summarizeSpec({}), []);
+assert.deepEqual(summarizeSpec(null), []);
+
+const ctx = { robotName: 'Testbot', versionLabel: 'v2 — Baseline',
+              tab: 'checks', tabLabel: 'Checks', specLines: lines,
+              checksVerdict: 'Checks fail', checkLines: ['FAIL x'] };
+publishWorkshopContext(ctx);
+assert.equal(readWorkshopContext().robotName, 'Testbot');
+const body = buildWsContext(ctx, ['TB6612FNG driver']);
+assert.equal(body.robot, 'Testbot');
+assert.equal(body.tab, 'Checks');
+assert.deepEqual(body.checks, { verdict: 'Checks fail', lines: ['FAIL x'] });
+assert.deepEqual(body.inventory, ['TB6612FNG driver']);
+publishWorkshopContext(null);
+assert.equal(readWorkshopContext(), null);
+
+const OP_VERBS = ['add', 'remove', 'delete', 'move', 'place', 'mount',
+  'connect', 'wire', 'disconnect', 'generate', 'export', 'run', 'save',
+  'set', 'undo', 'make', 'change', 'increase', 'decrease', 'bigger',
+  'smaller', 'heavier', 'lighter'];
+for (const tab of ['overview', 'build', 'wiring', 'specs', 'simulate',
+                   'checks', 'bom', 'tools', 'history']) {
+  const chips = workshopTabChips({ ...ctx, tab });
+  assert.equal(chips.length, 3, tab);
+  for (const chip of chips) {
+    const first = chip.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '');
+    assert.ok(!OP_VERBS.includes(first), tab + ' chip starts with an op verb: ' + chip);
+  }
+}
+assert.deepEqual(workshopTabChips({ ...ctx, tab: 'nope' }),
+                 workshopTabChips({ ...ctx, tab: 'checks' }));
+console.log('workshop context checks passed');
+"""
+    (tmp_path / "run.mjs").write_text(script)
+    result = subprocess.run(
+        [node, "--experimental-strip-types", str(tmp_path / "run.mjs")],
+        capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_garage_publishes_and_clears_the_snapshot():
+    assert "publishWorkshopContext({" in GARAGE_TSX
+    assert "summarizeSpec(draft)" in GARAGE_TSX
+    assert "checkLines: draftLines" in GARAGE_TSX
+    assert "return () => publishWorkshopContext(null);" in GARAGE_TSX
+
+
+def test_chatdock_sends_ws_context_on_the_live_answer_path():
+    assert "readWorkshopContext()" in DOCK
+    assert "ws_context: buildWsContext(" in DOCK
+    # The operations translator keeps its own context; the snapshot is
+    # attached in liveChat (the answer path), not in proposeViaLive.
+    propose = DOCK[DOCK.index("const proposeViaLive"):DOCK.index("const settle", DOCK.index("const proposeViaLive"))]
+    assert "ws_context" not in propose
+
+
+def test_chatdock_chips_follow_the_workshop_tab():
+    assert "const chipsFor = (mem: TurnMemory): string[]" in DOCK
+    assert "workshopTabChips(ws)" in DOCK
+    assert "WORKSHOP_CONTEXT_EVENT" in DOCK
+    # Every former contextChips call site goes through chipsFor now.
+    assert "wrench.contextChips(pathname" not in DOCK.replace(
+        "return wrench.contextChips(pathname", "")
+
+
+def test_wrench_layer_stays_free_of_app_state():
+    # engine.ts + wrench.ts are compiled standalone by the tier eval
+    # harness (tsc CLI, no path aliases); an app import there breaks
+    # every eval test at compile time. The Workshop chip branch lives
+    # in ChatDock for exactly this reason — pin it.
+    assert "workshopContext" not in WRENCH
+
+
+def test_worker_sanitizes_and_renders_the_snapshot():
+    assert "function sanitizeWsContext(raw)" in WORKER
+    assert "function renderWsContext(ctx)" in WORKER
+    assert "WS_CONTEXT_INSTRUCTIONS" in WORKER
+    assert "Answer about THAT robot" in WORKER
+    assert "sanitizeWsContext(data && data.ws_context)" in WORKER
+    # Operator mode wins when both arrive: the snapshot is answer-only.
+    assert "opContext ? null : sanitizeWsContext" in WORKER
+    # The snapshot is rendered from capped fields, never echoed raw.
+    render = WORKER[WORKER.index("function renderWsContext"):]
+    render = render[:render.index("\n}\n")]
+    assert "JSON.stringify(raw" not in render
+
+
+def test_no_chip_copy_starts_with_an_operation_verb():
+    src = (LIB / "workshopContext.ts").read_text()
+    chips = re.findall(r"'([A-Z][^']{10,})'", src)
+    asked = [c for c in chips if c.endswith("?") or " " in c]
+    assert len(asked) >= 20, "expected the full tab chip table"
+    for chip in asked:
+        first = re.sub(r"[^A-Za-z]", "", chip.split(" ")[0]).lower()
+        assert first not in OP_VERBS, chip
