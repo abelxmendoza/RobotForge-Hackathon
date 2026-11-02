@@ -356,7 +356,8 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     const onPrompt = (e: Event) => {
       const p = ((e as CustomEvent).detail || {}) as WrenchPrompt;
       if (p.mode) setInputMode(p.mode);
-      if (typeof p.text === 'string') setText(p.text);
+      // A text-based intake replaces any file still waiting to be sent.
+      if (typeof p.text === 'string') { setText(p.text); setAttach(null); }
       if (p.attach) { fileRefs.any.current?.click(); return; }
       requestAnimationFrame(() => {
         const ta = inputRef.current;

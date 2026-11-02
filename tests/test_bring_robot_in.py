@@ -29,3 +29,7 @@ def test_composer_listens_and_repo_links_win_over_design_mode():
     assert 'WRENCH_PROMPT_EVENT = "rf-wrench-prompt"' in PROMPT
     assert "window.addEventListener(WRENCH_PROMPT_EVENT, onPrompt)" in THREAD
     assert "inputMode==='design' && !repoLinkIn(value)" in THREAD
+
+
+def test_text_intake_drops_a_pending_attachment():
+    assert "if (typeof p.text === 'string') { setText(p.text); setAttach(null); }" in THREAD
