@@ -28,7 +28,7 @@ import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
-  diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, setPath,
+  detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
@@ -502,6 +502,16 @@ export default function Garage() {
     setSelected(null);
   };
 
+  /* Detaching a repo also asks twice; the robot and its versions stay. */
+  const [confirmDetach, setConfirmDetach] = useState<string | null>(null);
+  useEffect(() => { setConfirmDetach(null); }, [robot?.id]);
+  const detach = (repoUrl: string) => {
+    if (!robot) return;
+    if (confirmDetach !== repoUrl) { setConfirmDetach(repoUrl); return; }
+    persist(robots.map((r) => (r.id === robot.id ? detachRepo(r, repoUrl) : r)));
+    setConfirmDetach(null);
+  };
+
   const edit = (path: string, value: unknown) => setDraft((d: Spec) => setPath(d, path, value));
   /* A finished loop result belongs to the draft it started from; once
    * the draft changes, "Use these changes" would overwrite newer edits,
@@ -586,12 +596,13 @@ export default function Garage() {
               <button type="button" className="g-robot" aria-current={r.id === selected ? 'true' : undefined} onClick={() => { setSelected(r.id); setAdding(false); }}>
                 <RobotAvatar names={[r.name, String(r.versions[0]?.spec?.name ?? '')]} size={36} />
                 <span className="g-robot-text"><strong>{r.name}</strong>
-                {r.repoImport && <span className="fbadge live">From repo</span>}
+                {robotRepos(r).length > 0 && <span className="fbadge live">{robotRepos(r).length > 1 ? `${robotRepos(r).length} repos` : 'From repo'}</span>}
                 <span className="faint">{r.versions.length} version{r.versions.length === 1 ? '' : 's'}{r.versions[r.versions.length - 1]?.planned ? ' · planned' : ''}</span></span>
               </button>
               {r.repoImport && (
                 <span className="g-robot-links faint">
                   <a href={r.repoImport.provenance.repoUrl} target="_blank" rel="noreferrer">{r.repoImport.provenance.owner}/{r.repoImport.provenance.repo}</a>
+                  {robotRepos(r).length > 1 && ` +${robotRepos(r).length - 1} more`}
                   {' · '}
                   <Link href={`/import/?robot=${r.id}`}>import details</Link>
                 </span>
@@ -750,6 +761,36 @@ export default function Garage() {
                     <i className="est-dot" aria-hidden="true" /> {estimated.size} number{estimated.size === 1 ? ' is' : 's are'} guessed from the photo. <span>Measure in Specs →</span>
                   </button>
                 )}
+                <section className="g-repos" aria-label="Code repos">
+                  <h3>Code repos</h3>
+                  {robotRepos(robot).length === 0 ? (
+                    <p className="faint g-small">No repos yet. Add the robot&apos;s firmware, ROS packages or CAD repo and RobotForge reads its parts and model files.</p>
+                  ) : (
+                    <ul>
+                      {robotRepos(robot).map((x) => {
+                        const slug = `${x.provenance.owner}/${x.provenance.repo}`;
+                        return (
+                          <li key={x.provenance.repoUrl}>
+                            <a href={x.provenance.repoUrl} target="_blank" rel="noreferrer"><strong>{slug}</strong></a>
+                            <span className="faint g-small"> @ {x.provenance.commitSha.slice(0, 7)} · {x.parts.length} part{x.parts.length === 1 ? '' : 's'}{x.model ? ` · ${x.model.format} model` : ''}</span>
+                            <span className="g-repo-actions">
+                              <Link className="btn btn-sm" href={`/import/?robot=${encodeURIComponent(robot.id)}&src=${slug}`}>Details</Link>
+                              {confirmDetach === x.provenance.repoUrl ? (
+                                <span className="g-remove-confirm" role="alert">
+                                  Detach {slug}? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => detach(x.provenance.repoUrl)}>Yes, detach</button>
+                                  <button type="button" className="btn btn-sm" onClick={() => setConfirmDetach(null)}>Cancel</button>
+                                </span>
+                              ) : (
+                                <button type="button" className="btn btn-sm" onClick={() => detach(x.provenance.repoUrl)}>Detach</button>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <Link className="btn btn-sm" href={`/import/?attach=${encodeURIComponent(robot.id)}`}>+ Add {robotRepos(robot).length ? 'another' : 'a'} repo</Link>
+                </section>
                 <p><Link className="btn btn-sm" href={'/inventory/?robot=' + encodeURIComponent(robot.id)}>Photos & parts for {robot.name}</Link> </p>
               </section>
             )}

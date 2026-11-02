@@ -1623,3 +1623,13 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .g-other-ways > summary{cursor:pointer;color:var(--text-muted);font-size:var(--fs-sm)}
 .g-other-ways[open] > summary{margin-bottom:var(--s3)}
 .g-other-ways > .g-field,.g-other-ways > .g-tabs,.g-other-ways > .g-pane{margin-top:var(--s3)}
+
+/* A robot's code repos (several per robot) on the Workshop Overview */
+.g-repos{margin:var(--s4) 0;padding:var(--s3) var(--s4);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r)}
+.g-repos h3{margin:0 0 var(--s2);font-size:var(--fs-sm)}
+.g-repos ul{list-style:none;margin:0 0 var(--s3);padding:0;display:grid;gap:var(--s2)}
+.g-repos li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.g-repo-actions{display:inline-flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.repo-import .repo-save{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s3) 0}
+.repo-import .repo-save select{margin-left:6px;max-width:100%}
+.repo-import .repo-save .faint{flex-basis:100%}
