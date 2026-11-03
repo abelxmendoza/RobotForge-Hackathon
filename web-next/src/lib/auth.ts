@@ -30,6 +30,21 @@ const KEY = "rf.auth.v1";
  * the gate panel itself — locks or unlocks the app at once. */
 export const AUTH_EVENT = "rf-auth-change";
 
+/* Fired on window when some surface (the demo bar, the demo pill)
+ * asks the account control to open its sign-in card. The account
+ * control owns the only sign-in surface (components/shell/
+ * AccountControl.tsx); this event is how the demo chrome reaches
+ * it without a second form. */
+export const SIGNIN_EVENT = "rf-open-signin";
+
+export function requestSignIn(): void {
+  try {
+    window.dispatchEvent(new CustomEvent(SIGNIN_EVENT));
+  } catch {
+    /* no window (SSR): nothing to ask */
+  }
+}
+
 export function loadSession(): AuthSession | null {
   try {
     const raw = window.localStorage.getItem(KEY);
@@ -105,12 +120,18 @@ const NO_PROVIDERS: AuthConfig = {
   providers: { meta: false, github: false, google: false },
 };
 
-export async function authConfig(): Promise<AuthConfig> {
+export async function authConfig(
+  opts?: { explicit?: boolean },
+): Promise<AuthConfig> {
   /* Demo mode makes no Worker calls on its own (see demoMode.ts).
-   * This config probe is automatic, so it is skipped in the demo;
-   * an explicit sign-in/register from the account panel is the
-   * visitor's own action — the demo's exit ramp — and still works. */
-  if (isDemoMode()) return NO_PROVIDERS;
+   * The automatic/background callers of this probe stay skipped
+   * in the demo. But the sign-in card is only ever rendered by an
+   * explicit visitor action — opening the card from inside the
+   * demo IS the demo's exit ramp — so the card passes
+   * { explicit: true } and gets the real provider list: without
+   * it, a visitor who opened sign-in from the demo saw no Meta /
+   * Google buttons at all and "the logins were gone". */
+  if (isDemoMode() && !opts?.explicit) return NO_PROVIDERS;
   try {
     const r = await fetch(liveBase + "/auth/config", { cache: "no-cache" });
     if (!r.ok) return NO_PROVIDERS;
