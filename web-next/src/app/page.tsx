@@ -24,8 +24,6 @@ import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/L
  * (Burger's 2026-10-28 Torque-VM run, Pathfinder, Andino).
  */
 
-import DemoVideoCard from "@/components/home/DemoVideoCard";
-
 export const metadata: Metadata = {
   // Absolute: the vanilla landing's <title>, bypassing the layout's
   // "%s · RobotForge" template.
@@ -139,7 +137,6 @@ export default function HomePage() {
               carry real, credited photos.
             </figcaption>
           </figure>
-          <DemoVideoCard />
         </div>
       </section>
 

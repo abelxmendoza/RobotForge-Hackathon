@@ -151,3 +151,14 @@ def test_next_landing_final_cta_has_no_dense_demo_screenshot():
     assert "Open the app" in page
     assert 'assets/img/demo-shot.jpg' not in page
     assert "The one-click demo, mid-run." not in page
+
+
+def test_next_landing_shows_exactly_one_video():
+    page = (REPO / "web-next/src/app/page.tsx").read_text()
+    # Abel, 2026-11-02: the hero's DemoVideoCard poster (a still with a
+    # play overlay that only scrolled to the trailer) read as a second
+    # video stacked above the real trailer player — confusing. The
+    # landing keeps exactly one video: the playable trailer in #trailer.
+    assert "DemoVideoCard" not in page
+    assert page.count("<video") == 1
+    assert 'id="trailer"' in page
