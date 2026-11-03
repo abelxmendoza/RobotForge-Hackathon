@@ -541,35 +541,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============ FINAL CTA ============ */}
-      <section className="band cta-band">
-        <div className="wrap">
-          <h2>See a broken robot get fixed in one click.</h2>
-          <p>
-            Watch a broken spec get caught, fixed and re-tested — the
-            whole loop in one run.
-          </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--s3)",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <RunDemoLink className="btn btn-primary" style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}>
-              Run the demo →
-            </RunDemoLink>
-            <Link
-              className="btn"
-              href="/garage/"
-              style={{ padding: "14px 22px", fontSize: "var(--fs-md)" }}
-            >
-              Open the app →
-            </Link>
-          </div>
-        </div>
-      </section>
     </main>
     <LandingFooter />
     <LandingChrome />
