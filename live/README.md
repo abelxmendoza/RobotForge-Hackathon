@@ -1,5 +1,12 @@
 # RobotForge live endpoint — deploy runbook
 
+> **⚠ Read before any wrangler command.** Run wrangler **only from this
+> `live/` folder**, and only when the owner asked for it. On 2026-11-03,
+> `wrangler deploy` runs from the wrong folder replaced `robotforge-live`
+> with an empty auto-generated Worker and its secrets were lost from the
+> live version. Rules and the rollback steps are in the repo's
+> [`AGENTS.md`](../AGENTS.md#cloudflare-worker-live-deploy-rules).
+
 The RobotForge site is a static Next.js export deployed on Vercel and cannot
 hold an API key. This folder is the one server-side piece: a single-file
 Cloudflare Worker (`worker.js`) that proxies the site's live calls
