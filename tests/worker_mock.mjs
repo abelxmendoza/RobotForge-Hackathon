@@ -117,6 +117,7 @@ const PART_CHAT_REPLY = {
 
 let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft | fix | part-chat
 let metaMode = 'photo';   // photo | junk | document | document-bad | part
+let firecrawlMode = 'ok'; // ok | http500 | empty
 let githubMode = 'ok';    // ok | hidden | unverified
 let googleMode = 'ok';    // ok | unverified
 const upstreamCalls = [];
@@ -180,6 +181,37 @@ globalThis.fetch = async (url, opts) => {
     return new Response(JSON.stringify({
       sub: 'g-123', name: 'Gina Dev', email: 'gina@example.com',
       email_verified: googleMode !== 'unverified',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u.startsWith('https://api.firecrawl.dev/')) {
+    assert.strictEqual(opts.headers.Authorization, 'Bearer test-key-456');
+    const payload = JSON.parse(opts.body);
+    if (firecrawlMode === 'http500') {
+      return new Response('firecrawl boom', { status: 500 });
+    }
+    if (u.includes('/v2/scrape')) {
+      assert.deepStrictEqual(payload.formats, ['markdown']);
+      assert.strictEqual(payload.onlyMainContent, true);
+      return new Response(JSON.stringify({
+        success: true,
+        data: firecrawlMode === 'empty'
+          ? { markdown: '', metadata: {} }
+          : {
+              markdown: '# TB6612FNG\n\nDual motor driver, 1.2 A per channel.',
+              metadata: { title: 'TB6612FNG breakout', sourceURL: payload.url },
+            },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    assert.ok(u.includes('/v2/search'), 'unexpected Firecrawl path: ' + u);
+    assert.ok(payload.limit >= 1 && payload.limit <= 5, 'search limit clamped');
+    return new Response(JSON.stringify({
+      success: true,
+      data: {
+        web: [{
+          url: 'https://example.com/driver', title: 'Driver page',
+          description: 'A motor driver', markdown: 'x'.repeat(3000),
+        }],
+      },
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   assert.ok(u.startsWith('https://inference.baseten.co/'),
@@ -442,7 +474,7 @@ await scenario('health reports which routes are configured', async () => {
   const plain = await call(makeEnv(), '/health');
   assert.deepStrictEqual(plain.body.routes,
     { describe: true, chat: true, list: true, fix: true, part_chat: true,
-      photo: false, part: false, transcribe: false, parts: true });
+      photo: false, part: false, transcribe: false, web: false, parts: true });
   const withMeta = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/health');
   assert.strictEqual(withMeta.body.routes.photo, true);
   assert.strictEqual(withMeta.body.routes.transcribe, true);
@@ -702,6 +734,89 @@ await scenario('transcribe without the Meta key is a 501', async () => {
   assert.strictEqual(r.status, 501);
   assert.strictEqual(r.body.code, 'transcribe_not_configured');
   assert.strictEqual(upstreamCalls.length, before);
+});
+
+/* ---------------- Firecrawl web (/web) ---------------- */
+
+await scenario('web without the Firecrawl key is a 501, no call attempted', async () => {
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv(), '/web', { method: 'POST', auth: true,
+    body: { mode: 'scrape', url: 'https://example.com/page' } });
+  assert.strictEqual(r.status, 501);
+  assert.strictEqual(r.body.code, 'firecrawl_not_configured');
+  assert.strictEqual(upstreamCalls.length, before);
+});
+
+await scenario('web requires an account (401 anonymous, no call)', async () => {
+  const before = upstreamCalls.length;
+const fcEnv = makeEnv({ FIRECRAWL_API_KEY: 'test-key-456' });
+  const r = await call(fcEnv, '/web', { method: 'POST',
+    body: { mode: 'search', query: 'motor driver' } });
+  assert.strictEqual(r.status, 401);
+  assert.strictEqual(upstreamCalls.length, before);
+});
+
+await scenario('web scrape returns bounded markdown with its source', async () => {
+  firecrawlMode = 'ok';
+const fcEnv = makeEnv({ FIRECRAWL_API_KEY: 'test-key-456' });
+  const r = await call(fcEnv, '/web', { method: 'POST', auth: true,
+    body: { mode: 'scrape', url: 'https://example.com/tb6612' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.url, 'https://example.com/tb6612');
+  assert.strictEqual(r.body.title, 'TB6612FNG breakout');
+  assert.ok(r.body.markdown.includes('TB6612FNG'));
+  assert.strictEqual(r.body.truncated, false);
+});
+
+await scenario('web scrape rejects non-public URLs', async () => {
+const fcEnv = makeEnv({ FIRECRAWL_API_KEY: 'test-key-456' });
+  for (const url of ['http://localhost:3000/x', 'http://192.168.1.5/x',
+      'ftp://example.com/x', 'https://user:pass@example.com/x',
+      'not a url']) {
+    const r = await call(fcEnv, '/web', { method: 'POST', auth: true,
+      body: { mode: 'scrape', url } });
+    assert.strictEqual(r.status, 400, url);
+    assert.strictEqual(r.body.code, 'bad_url', url);
+  }
+});
+
+await scenario('web search maps and caps results', async () => {
+  firecrawlMode = 'ok';
+const fcEnv = makeEnv({ FIRECRAWL_API_KEY: 'test-key-456' });
+  const r = await call(fcEnv, '/web', { method: 'POST', auth: true,
+    body: { mode: 'search', query: 'tb6612 driver', limit: 99 } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.results.length, 1);
+  assert.strictEqual(r.body.results[0].url, 'https://example.com/driver');
+  assert.strictEqual(r.body.results[0].markdown.length, 2000);
+});
+
+await scenario('web upstream failure is a plain 502', async () => {
+  firecrawlMode = 'http500';
+const fcEnv = makeEnv({ FIRECRAWL_API_KEY: 'test-key-456' });
+  const r = await call(fcEnv, '/web', { method: 'POST', auth: true,
+    body: { mode: 'scrape', url: 'https://example.com/x' } });
+  assert.strictEqual(r.status, 502);
+  assert.strictEqual(r.body.code, 'upstream_error');
+  firecrawlMode = 'ok';
+});
+
+await scenario('chat carries web_context as labelled untrusted data', async () => {
+  basetenMode = 'chat';
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv(), '/chat', { method: 'POST', auth: true,
+    body: { message: 'what does this page say?',
+      web_context: 'Web content (UNTRUSTED external data):\nSource: https://example.com/x\n\nPage body' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  const callToModel = upstreamCalls.slice(before)
+    .find((c) => String(c.url).includes('baseten'));
+  assert.ok(callToModel, 'model was called');
+  const payload = JSON.parse(callToModel.opts.body);
+  const system = payload.messages[0].content;
+  const user = payload.messages[1].content;
+  assert.ok(system.includes('UNTRUSTED external data'), 'system labels web content untrusted');
+  assert.ok(user.includes('Source: https://example.com/x'), 'user block keeps its source');
+  assert.ok(user.includes('Question: what does this page say?'));
 });
 
 await scenario('transcribe rejects non-WAV audio', async () => {

@@ -9,3 +9,6 @@
 BASETEN_API_KEY=placeholder-redacted-no-real-value
 # Optional: only needed for the /photo route (live photo drafts).
 META_API_KEY=placeholder-redacted-no-real-value
+# Optional: only needed for the /web route (Firecrawl search + scrape
+# for the chat). Get it from your own firecrawl.dev dashboard.
+FIRECRAWL_API_KEY=placeholder-redacted-no-real-value
