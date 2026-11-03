@@ -55,3 +55,10 @@ export function effectiveSource(robot: Robot): RobotSource {
 export function sourceBadge(robot: Robot): string {
   return ROBOT_SOURCE_META[effectiveSource(robot)].badge;
 }
+
+/* Filing overrides (lib/dexOverrides.ts — Wrench chat can move a
+ * robot between Robodex tabs) are consulted BEFORE the automatic
+ * rules above: DexSources resolves each robot's tab override-first
+ * and hands the card its filed source (RobotCard's sourceOverride
+ * prop), which falls back to effectiveSource() when no override
+ * exists — so the badge and the tab can never disagree. */

@@ -1,24 +1,51 @@
 "use client";
-/* The Robodex split by how each robot is known (Abel, 2026-11-01).
- * The source sets how far to trust a robot's numbers:
+/* The Robodex split by how each robot is known (Abel, 2026-11-01;
+ * folded into ONE Robodex, 2026-11-03). The source sets how far to
+ * trust a robot's numbers:
  *   My robots   — robots you own, from the Workshop (this browser)
  *   Sighted     — seen in person: a sighting with a place recorded
  *   From photos — known only from a picture: a sighting with no place
  *   Researched  — published specs, URDFs and datasheets (the catalog)
- * Sightings come from catalog/families.json plus the ones saved in this
- * browser from a Forge photo run. Nothing is invented: a sighting is
- * "in person" only when its record names where it was seen. */
+ *
+ * There is no separate families/sightings section any more: family
+ * and variant grouping IS how sightings are presented inside the
+ * Sighted and From photos tabs (SightingsGroups below), and the
+ * browser-saved sightings from Forge photo runs land in those same
+ * grids. Filing is automatic first — garage membership, a
+ * sighting's recorded place, the photo-draft rule — and the
+ * owner's overrides (lib/dexOverrides.ts, set through Wrench chat)
+ * are consulted before every automatic rule.
+ *
+ * My robots parity (Abel, 2026-11-03): this tab reads the SAME
+ * Garage store the Workshop reads, through the same reactive
+ * useStore, with the same archived-records filter and the same
+ * built-in Omega1 specimen the Workshop's list carries — so the
+ * two lists can never drift apart. */
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { families } from "@/lib/data";
+import { families, robots } from "@/lib/data";
 import { isPhotoDraft } from "@/lib/robotSource";
-import { loadSightings } from "@/lib/grouping";
-import { GARAGE_KEY, SOURCE_LABEL, type GarageRobot } from "@/lib/garage";
-import { readStore } from "@/lib/store";
+import { describeSignature, loadSightings } from "@/lib/grouping";
+import type { DexSignature } from "@/lib/types";
+import { GARAGE_KEY, SOURCE_LABEL, type GarageRobot, type Spec } from "@/lib/garage";
+import { activeRecords } from "@/lib/lifecycle";
+import { readStore, uid, useStore, writeStore } from "@/lib/store";
+import {
+  DEX_OVERRIDES_KEY,
+  dexKey,
+  dexTabToRobotSource,
+  garageKey,
+  sightingKey,
+  type DexOverrides,
+  type DexTab,
+} from "@/lib/dexOverrides";
+import { buildDexEntry } from "@/lib/saveRobot";
+import { buildOmega1SeedEntry, OMEGA1_ROBOT_ID } from "@/lib/omega1Garage";
 import { assetPath } from "@/components/home/asset";
 import RobotAvatar from "@/components/garage/RobotAvatar";
+import type { Robot } from "@/lib/types";
 
-export type DexSource = "mine" | "sighted" | "photos" | "researched";
+export type DexSource = DexTab;
 
 export const DEX_SOURCES: { id: DexSource; label: string; badge: string; trust: string; blurb: string }[] = [
   { id: "mine", label: "My robots", badge: "MINE", trust: "YOUR DATA", blurb: "Robots you own, from your Workshop. Guessed numbers keep their amber dot until you measure them." },
@@ -27,32 +54,119 @@ export const DEX_SOURCES: { id: DexSource; label: string; badge: string; trust: 
   { id: "researched", label: "Researched", badge: "RESEARCHED", trust: "DOCUMENT-READ", blurb: "Built from published specs, URDFs and datasheets. Gate badges come from recorded runs." },
 ];
 
-export interface DexSighting { id: string; identity: string; family: string; variant: string; photo: string | null; spottedAt: string | null; where: string | null; dossier: string | null; local: boolean }
+/* A sighting as the tabs present it: its family + variant grouping
+ * travels with it (the grouping replaced the old families fold),
+ * along with the variant signature and the dossier's draft spec
+ * when the sighting carries one (the spec a bring-into-Workshop
+ * can faithfully save — never an invented one). */
+export interface DexSighting {
+  id: string;
+  identity: string;
+  family: string;
+  variant: string;
+  signature: DexSignature | null;
+  photo: string | null;
+  spottedAt: string | null;
+  where: string | null;
+  dossier: string | null;
+  draftSpec: Spec | null;
+  local: boolean;
+}
 
-export function useDexSources() {
-  const [mine, setMine] = useState<GarageRobot[] | null>(null);
-  const [sightings, setSightings] = useState<DexSighting[]>(() => catalogSightings());
-  useEffect(() => {
-    setMine(readStore<GarageRobot[]>(GARAGE_KEY, []));
-    const local: DexSighting[] = loadSightings().map((e) => ({
-      id: "local-" + e.sighting.id, identity: e.sighting.identity, family: e.grouping.familyName, variant: e.grouping.variantLabel,
-      photo: null, spottedAt: e.sighting.spotted_at || null, where: e.sighting.where || null, dossier: null, local: true,
-    }));
-    setSightings([...catalogSightings(), ...local]);
-  }, []);
-  return {
-    mine,
-    sighted: sightings.filter((s) => s.where),
-    photos: sightings.filter((s) => !s.where),
-  };
+function draftSpecOf(dossier: unknown): Spec | null {
+  if (!dossier || typeof dossier !== "object") return null;
+  const spec = (dossier as { draft_spec?: unknown }).draft_spec;
+  return spec && typeof spec === "object" && !Array.isArray(spec)
+    ? (spec as Spec)
+    : null;
 }
 
 function catalogSightings(): DexSighting[] {
   return families.flatMap((f) => f.variants.flatMap((v) => v.sightings.map((s) => ({
     id: s.id, identity: s.identity, family: f.name, variant: v.label,
+    signature: v.signature ?? null,
     photo: s.photo ? String(s.photo) : null, spottedAt: s.spotted_at ? String(s.spotted_at) : null,
-    where: s.where ? String(s.where) : null, dossier: typeof s.dossier === "string" ? s.dossier : null, local: false,
+    where: s.where ? String(s.where) : null, dossier: typeof s.dossier === "string" ? s.dossier : null,
+    draftSpec: draftSpecOf(s.dossier), local: false,
   }))));
+}
+
+/* Every sighting the Robodex knows, catalog + browser-saved —
+ * the same list Wrench chat resolves filing commands against, so
+ * a name means the same robot in chat and on this page. */
+export function allDexSightings(): DexSighting[] {
+  return [...catalogSightings(), ...localSightings()];
+}
+
+function localSightings(): DexSighting[] {
+  return loadSightings().map((e) => ({
+    id: "local-" + e.sighting.id, identity: e.sighting.identity, family: e.grouping.familyName, variant: e.grouping.variantLabel,
+    signature: null,
+    photo: null, spottedAt: e.sighting.spotted_at || null, where: e.sighting.where || null, dossier: null,
+    draftSpec: draftSpecOf(e.sighting.dossier), local: true,
+  }));
+}
+
+/* Owner notes for sightings whose record alone doesn't say whose
+ * robot it is. spot-cpp is Cal Poly Pomona IRLab's robotics club
+ * Spot — Abel photographed it there; it is not his robot, and the
+ * card says so wherever it appears. */
+const SIGHTING_OWNER_NOTES: Record<string, string> = {
+  "spot-cpp": "Cal Poly Pomona IRLab's robotics club robot — spotted there in person. Not your robot.",
+};
+
+export interface DexModel {
+  /* The Workshop's list, exactly: active Garage records read
+   * reactively, or null until the store has been read. */
+  mine: GarageRobot[] | null;
+  /* True while the built-in Omega1 specimen belongs in My robots:
+   * Workshop shows it until a stored 'omega1' exists. */
+  showOmegaSpecimen: boolean;
+  sightings: DexSighting[];
+  overrides: DexOverrides;
+  /* Resolved filings — overrides first, automatic rules second. */
+  catalogTab: (robot: Robot) => DexTab;
+  sightingTab: (s: DexSighting) => DexTab;
+  garageTab: (r: GarageRobot) => DexTab;
+  catalogByTab: Record<DexTab, Robot[]>;
+  sightingsByTab: Record<DexTab, DexSighting[]>;
+  garageByTab: Record<DexTab, GarageRobot[]>;
+}
+
+export function useDexSources(): DexModel {
+  const [garageRaw, , garageReady] = useStore<GarageRobot[]>(GARAGE_KEY, []);
+  const [overrides] = useStore<DexOverrides>(DEX_OVERRIDES_KEY, {});
+  /* Catalog sightings are static data; the browser-saved ones live
+   * in localStorage, so they join after mount (the same pattern
+   * this hook always used — first paint matches the static export). */
+  const [sightings, setSightings] = useState<DexSighting[]>(() => catalogSightings());
+  useEffect(() => {
+    setSightings(allDexSightings());
+  }, []);
+
+  const stored = garageRaw ?? [];
+  const mine = garageReady ? activeRecords(stored) : null;
+  const showOmegaSpecimen = !stored.some((r) => r.id === OMEGA1_ROBOT_ID);
+
+  const catalogTab = (robot: Robot): DexTab =>
+    overrides[dexKey(robot)] ?? (isPhotoDraft(robot) ? "photos" : "researched");
+  const sightingTab = (s: DexSighting): DexTab =>
+    overrides[sightingKey(s.id)] ?? (s.where ? "sighted" : "photos");
+  const garageTab = (r: GarageRobot): DexTab =>
+    overrides[garageKey(r.id)] ?? "mine";
+
+  const catalogByTab: Record<DexTab, Robot[]> = { mine: [], sighted: [], photos: [], researched: [] };
+  for (const r of robots) catalogByTab[catalogTab(r)].push(r);
+  const sightingsByTab: Record<DexTab, DexSighting[]> = { mine: [], sighted: [], photos: [], researched: [] };
+  for (const s of sightings) sightingsByTab[sightingTab(s)].push(s);
+  const garageByTab: Record<DexTab, GarageRobot[]> = { mine: [], sighted: [], photos: [], researched: [] };
+  for (const r of mine ?? []) garageByTab[garageTab(r)].push(r);
+
+  return {
+    mine, showOmegaSpecimen, sightings, overrides,
+    catalogTab, sightingTab, garageTab,
+    catalogByTab, sightingsByTab, garageByTab,
+  };
 }
 
 /* The photo-draft rule lives in lib/robotSource (isPhotoDraft,
@@ -67,34 +181,171 @@ export function SourceBadge({ source }: { source: DexSource }) {
   return <span className={"dex-src src-" + source} title={`${s.label}: numbers are ${s.trust}`}>{s.badge}<span className="dex-trust">{s.trust}</span></span>;
 }
 
-export function MyRobotsGrid({ mine }: { mine: GarageRobot[] | null }) {
+/* ---- bring into the Workshop ------------------------------------
+ * One action, on every Robodex card: catalog robots save their
+ * recorded Robodex spec, sightings save the draft spec their
+ * dossier recorded — both through the SAME construction the chat
+ * save flow uses (lib/saveRobot buildDexEntry for catalog robots;
+ * the same Baseline-entry shape for sightings, with photo
+ * provenance). A robot with no recorded spec gets no invented
+ * entry: the card says so and points at the Workshop's photo/spec
+ * import instead. Repeat taps never duplicate: a Garage entry
+ * with the robot's name already there is "in your Workshop". */
+export function BringIntoWorkshop({ name, specFile, draftSpec }: {
+  name: string;
+  specFile?: string | null;
+  draftSpec?: Spec | null;
+}) {
+  const [garage] = useStore<GarageRobot[]>(GARAGE_KEY, []);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const existing = (garage ?? []).find(
+    (r) => r.name.toLowerCase() === name.toLowerCase(),
+  );
+  if (existing) {
+    return (
+      <span className="dex-bring">
+        <Link className="btn btn-sm" href="/garage/">In your Workshop ✓</Link>
+      </span>
+    );
+  }
+  if (!specFile && !draftSpec) {
+    return (
+      <span className="dex-bring">
+        <span className="faint dex-local">No recorded spec to bring in — </span>
+        <Link className="btn btn-sm" href="/garage/">Import a photo or spec in the Workshop</Link>
+      </span>
+    );
+  }
+  const bring = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      let entry: GarageRobot;
+      const nowIso = new Date().toISOString();
+      if (specFile) {
+        const r = await fetch(assetPath(specFile));
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const spec = (await r.json()) as Spec;
+        entry = buildDexEntry(
+          { name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), specFile },
+          spec, nowIso, { robot: uid("robot"), version: uid("v") },
+        );
+      } else {
+        entry = {
+          id: uid("robot"),
+          name,
+          createdAt: nowIso,
+          versions: [{
+            id: uid("v"),
+            label: "Baseline",
+            note: `Started from the Robodex sighting of ${name} — its recorded photo-draft spec, unchanged. Photo-estimated: sizes came from a photograph, not measurements.`,
+            source: "photo",
+            createdAt: nowIso,
+            spec: JSON.parse(JSON.stringify(draftSpec)) as Spec,
+          }],
+        };
+      }
+      const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+      if (current.some((x) => x.name.toLowerCase() === name.toLowerCase())) {
+        setNote("Already in your Workshop.");
+        return;
+      }
+      const error = writeStore(GARAGE_KEY, [...current, entry]);
+      if (error) throw new Error(error);
+      setNote("Brought into your Workshop — find it under My robots.");
+    } catch (e) {
+      setNote(`Couldn't bring it in (${(e as Error).message}). Nothing was saved.`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="dex-bring">
+      <button type="button" className="btn btn-sm" onClick={bring} disabled={busy}>
+        {busy ? "Bringing in…" : "Bring into Workshop"}
+      </button>
+      {note && <span className="faint dex-local" role="status">{note}</span>}
+    </span>
+  );
+}
+
+/* A Workshop robot as a Robodex card — used for My robots and for
+ * Workshop robots the owner filed under another tab. */
+export function GarageRobotCard({ robot, filedAs }: { robot: GarageRobot; filedAs: DexTab }) {
+  const latest = robot.versions[robot.versions.length - 1];
+  return (
+    <Link className="robot-card dex-mine" href="/garage/">
+      <div className="ph dex-ph"><RobotAvatar names={[robot.name, String(latest?.spec?.name ?? "")]} size={96} /></div>
+      <div className="body">
+        <h3>{robot.name}</h3>
+        <span className="cls">{robot.versions.length} version{robot.versions.length === 1 ? "" : "s"} · {latest ? SOURCE_LABEL[latest.source] : ""}</span>
+        <SourceBadge source={filedAs} />
+      </div>
+    </Link>
+  );
+}
+
+export function MyRobotsGrid({ mine, showSpecimen }: { mine: GarageRobot[] | null; showSpecimen: boolean }) {
+  const [, setTick] = useState(0);
   if (mine === null) return <p className="faint">Checking your Workshop…</p>;
-  if (!mine.length) return (
+  if (!mine.length && !showSpecimen) return (
     <div className="dex-empty">
       <p><strong>No robots of your own yet.</strong> Bring one into the Workshop from a photo, a spec file or the Robodex.</p>
       <Link className="btn btn-primary btn-sm" href="/garage/">Open the Workshop</Link>
     </div>
   );
+  const adoptSpecimen = () => {
+    const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    if (current.some((r) => r.id === OMEGA1_ROBOT_ID)) return;
+    const error = writeStore(GARAGE_KEY, [...current, buildOmega1SeedEntry(new Date().toISOString(), uid("v"))]);
+    if (!error) setTick((t) => t + 1);
+  };
   return (
     <div className="robot-grid dex-src-grid">
-      {mine.map((r) => {
-        const latest = r.versions[r.versions.length - 1];
-        return (
-          <Link key={r.id} className="robot-card dex-mine" href="/garage/">
-            <div className="ph dex-ph"><RobotAvatar names={[r.name, String(latest?.spec?.name ?? "")]} size={96} /></div>
-            <div className="body">
-              <h3>{r.name}</h3>
-              <span className="cls">{r.versions.length} version{r.versions.length === 1 ? "" : "s"} · {latest ? SOURCE_LABEL[latest.source] : ""}</span>
-              <SourceBadge source="mine" />
-            </div>
-          </Link>
-        );
-      })}
+      {mine.map((r) => <GarageRobotCard key={r.id} robot={r} filedAs="mine" />)}
+      {showSpecimen && (
+        <article className="robot-card dex-mine">
+          <div className="ph dex-ph"><RobotAvatar names={["Omega1"]} size={96} /></div>
+          <div className="body">
+            <h3>Omega1</h3>
+            <span className="cls">Built-in specimen · Digital twin</span>
+            <span className="faint dex-local">ProjectSim reconstruction · estimated — the same specimen the Workshop lists.</span>
+            <span className="dex-bring">
+              <Link className="btn btn-sm" href="/garage/">Open in the Workshop</Link>{" "}
+              <button type="button" className="btn btn-sm" onClick={adoptSpecimen}>Adopt as my robot</button>
+            </span>
+          </div>
+        </article>
+      )}
     </div>
   );
 }
 
-export function SightingsGrid({ items, source, hasOther = false }: { items: DexSighting[]; source: "sighted" | "photos"; hasOther?: boolean }) {
+/* Workshop robots filed under a non-My-robots tab (owner override
+ * via Wrench): they stay in the Workshop; only their Robodex
+ * filing changed, and the cards still open the Workshop. */
+export function FiledGarageGrid({ robots: filed, tab }: { robots: GarageRobot[]; tab: DexTab }) {
+  if (!filed.length) return null;
+  return (
+    <>
+      <h3 className="dex-filed-head">Filed here from your Workshop</h3>
+      <div className="robot-grid dex-src-grid">
+        {filed.map((r) => <GarageRobotCard key={r.id} robot={r} filedAs={tab} />)}
+      </div>
+    </>
+  );
+}
+
+/* Sightings presented the way the old families fold grouped them —
+ * by family, then by variant, with the variant's signature in
+ * plain words — but inside the source tabs where sightings live.
+ * Catalog and browser-saved sightings share these grids. */
+export function SightingsGroups({ items, source, hasOther = false }: {
+  items: DexSighting[];
+  source: "sighted" | "photos";
+  hasOther?: boolean;
+}) {
   if (!items.length && hasOther) return null;
   if (!items.length) return (
     <div className="dex-empty">
@@ -103,25 +354,59 @@ export function SightingsGrid({ items, source, hasOther = false }: { items: DexS
       <Link className="btn btn-sm" href="/garage/">Open the Workshop</Link>
     </div>
   );
+  const familiesInOrder: string[] = [];
+  const byFamily = new Map<string, Map<string, DexSighting[]>>();
+  for (const s of items) {
+    if (!byFamily.has(s.family)) { byFamily.set(s.family, new Map()); familiesInOrder.push(s.family); }
+    const byVariant = byFamily.get(s.family)!;
+    byVariant.set(s.variant, [...(byVariant.get(s.variant) ?? []), s]);
+  }
   return (
-    <div className="robot-grid dex-src-grid">
-      {items.map((s) => (
-        <article key={s.id} className="robot-card dex-sighting">
-          <div className="ph">
-            {s.photo
-              /* eslint-disable-next-line @next/next/no-img-element */
-              ? <img src={assetPath(s.photo)} alt={`Photo of ${s.identity}`} loading="lazy" />
-              : <div className="dex-ph"><RobotAvatar names={[s.identity]} size={96} /></div>}
-          </div>
-          <div className="body">
-            <h3>{s.identity}</h3>
-            <span className="cls">{s.variant !== s.identity ? s.variant : s.family}</span>
-            {(s.where || s.spottedAt) && <span className="dex-where">{[s.where, s.spottedAt].filter(Boolean).join(" · ")}</span>}
-            <SourceBadge source={source} />
-            {s.local && <span className="faint dex-local">Saved in this browser</span>}
-          </div>
-        </article>
-      ))}
-    </div>
+    <>
+      {familiesInOrder.map((familyName) => {
+        const byVariant = byFamily.get(familyName)!;
+        return (
+          <section key={familyName} className="dex-family" aria-label={`${familyName} sightings`}>
+            <h3 className="dex-family-name">{familyName}</h3>
+            {[...byVariant.entries()].map(([variantLabel, entries]) => (
+              <div key={variantLabel} className="dex-variant">
+                <h4 className="dex-variant-name">{variantLabel}</h4>
+                {entries[0]?.signature && (
+                  <p className="faint dex-sig">{describeSignature(entries[0].signature)}</p>
+                )}
+                <div className="robot-grid dex-src-grid">
+                  {entries.map((s) => (
+                    <article key={s.id} className="robot-card dex-sighting">
+                      <div className="ph">
+                        {s.photo
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          ? <img src={assetPath(s.photo)} alt={`Photo of ${s.identity}`} loading="lazy" />
+                          : <div className="dex-ph"><RobotAvatar names={[s.identity]} size={96} /></div>}
+                      </div>
+                      <div className="body">
+                        <h3>{s.identity}</h3>
+                        <span className="cls">{s.variant !== s.identity ? s.variant : s.family}</span>
+                        {(s.where || s.spottedAt) && <span className="dex-where">{[s.where, s.spottedAt].filter(Boolean).join(" · ")}</span>}
+                        {SIGHTING_OWNER_NOTES[s.id] && <span className="dex-where">{SIGHTING_OWNER_NOTES[s.id]}</span>}
+                        <SourceBadge source={source} />
+                        {s.local && <span className="faint dex-local">Saved in this browser</span>}
+                        <BringIntoWorkshop name={s.identity} draftSpec={s.draftSpec} />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        );
+      })}
+    </>
   );
+}
+
+/* The catalog-robot override for a card in RobotsIndex: RobotCard
+ * badges read it so badge and tab always agree. */
+export function catalogBadgeOverride(overrides: DexOverrides, robot: Robot) {
+  const tab = overrides[dexKey(robot)];
+  return tab ? dexTabToRobotSource(tab) : null;
 }

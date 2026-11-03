@@ -30,6 +30,7 @@ export const DEMO_DATA_KEYS: ReadonlySet<string> = new Set([
   'rf.ownership.v1',
   'rf.webparts.v1',
   'robotforge.dex.sightings.v1',
+  'rf.dex.overrides.v1',
 ]);
 
 export function isDemoMode(): boolean {
