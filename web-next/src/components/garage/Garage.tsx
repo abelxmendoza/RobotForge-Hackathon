@@ -33,6 +33,7 @@ import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import Omega1Twin from './Omega1Twin';
+import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, TWIN_LABEL } from '@/lib/omega1Twin';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
   clearRepos, detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
@@ -575,6 +576,11 @@ export default function Garage() {
    * while it is open. */
   const [twinOpen, setTwinOpen] = useState(false);
   const [tab, setTab] = useState<WorkTab>('overview');
+  /* While the twin is open, the SAME tab bar controls Omega1 instead
+   * of the selected stored robot — its own tab state, so switching
+   * Omega1 panes never closes the twin or touches the stored robot.
+   * Entering the twin always starts it at Overview. */
+  const [omegaTab, setOmegaTab] = useState<WorkTab>('overview');
   const [benchWires, setBenchWires] = useState(true);
   /* #assembly (Wrench's assembly proposals link there) opens Build.
    * #tab=<workshop tab> is Wrench's Tier-0 navigation landing here. */
@@ -837,30 +843,59 @@ export default function Garage() {
     if (!label) setLabel(`Fit ${p.name}`);
   };
 
-  /* The Workshop tab bar belongs to the selected robot, not to whichever
-   * pane happens to be showing: it stays visible while the Omega1 twin
-   * viewer or the Add Robot panel replaces the robot detail, and picking
-   * a tab from there returns to that pane of the selected robot. */
+  /* ONE Workshop tab bar, rendered unconditionally at the top of the
+   * Workshop in every state — it is the Workshop's menu, not a part of
+   * any one robot's detail view. It controls whichever robot is in
+   * front of the user:
+   *  - Omega1 twin open: the bar drives Omega1's own panes (omegaTab)
+   *    and never closes the twin or touches the stored robot; the
+   *    Checks dot shows Omega1's own state (not gated), never a
+   *    stored robot's verdict.
+   *  - Stored robot selected: picking a tab returns to that pane of
+   *    the robot (closing the twin / Add panel), as before.
+   *  - Nothing selected and no twin: the bar is present but disabled —
+   *    presence without fake function. */
   const wsVerdict = verdictOf(draftLines);
-  const goTab = (t: WorkTab) => { setTab(t); setTwinOpen(false); setAdding(false); };
-  const tabBar = robot && draft ? (
+  const barTab = twinOpen ? omegaTab : tab;
+  const barDisabled = !twinOpen && !(robot && draft);
+  const goTab = (t: WorkTab) => {
+    if (twinOpen) { setOmegaTab(t); return; }
+    setTab(t); setTwinOpen(false); setAdding(false);
+  };
+  const tabBar = (
     <div className="ws-tabs" role="tablist" aria-label="Workshop">
       {WORK_TABS.map((t) => (
-        <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => goTab(t.id)}>
+        <button key={t.id} type="button" role="tab" aria-selected={barTab === t.id} disabled={barDisabled} aria-disabled={barDisabled} onClick={() => goTab(t.id)}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
           {t.label}
-          {t.id === 'checks' && <span className={'ws-dotbadge ' + wsVerdict.cls} aria-label={wsVerdict.label} />}
+          {t.id === 'checks' && (twinOpen
+            ? <span className="ws-dotbadge norun" aria-label="Omega1 is not gated" />
+            : <span className={'ws-dotbadge ' + wsVerdict.cls} aria-label={wsVerdict.label} />)}
         </button>
       ))}
     </div>
-  ) : null;
+  );
 
   /* Publish the live Workshop picture for Wrench: the chat reads this
    * snapshot when a question goes to the live model, so its answers are
    * about the robot on screen (see lib/workshopContext). Cleared on
    * unmount, so a stale robot never follows the user to another page. */
   useEffect(() => {
-    if (robot && draft) {
+    if (twinOpen) {
+      /* Omega1's snapshot comes from its own records only: the facts
+       * list stands in for spec lines, the Checks pane lines for check
+       * lines, and the verdict names its real state — not gated —
+       * never a stored robot's verdict. */
+      publishWorkshopContext({
+        robotName: 'Omega1',
+        versionLabel: TWIN_LABEL,
+        tab: omegaTab,
+        tabLabel: WORK_TABS.find((t) => t.id === omegaTab)?.label ?? omegaTab,
+        specLines: OMEGA1_FACTS.map((f) => `${f.label}: ${f.value}`),
+        checksVerdict: 'Not gated',
+        checkLines: OMEGA1_CHECK_LINES,
+      });
+    } else if (robot && draft) {
       const bi = base ? robot.versions.findIndex((v) => v.id === base.id) : -1;
       publishWorkshopContext({
         robotName: draft.name || robot.name,
@@ -875,7 +910,7 @@ export default function Garage() {
       publishWorkshopContext(null);
     }
     return () => publishWorkshopContext(null);
-  }, [robot, draft, base, tab, draftLines, wsVerdict.label]);
+  }, [twinOpen, omegaTab, robot, draft, base, tab, draftLines, wsVerdict.label]);
 
   /* One-tap Fix from a grounded chat answer (lib/workshopContext):
    * the chat's "Fix this" button on a FAIL-grounded answer asks for
@@ -923,7 +958,7 @@ export default function Garage() {
           ))}
         </ul>
         <p className="faint g-small" style={{ marginTop: 14 }}>Built-in specimen</p>
-        <button type="button" className="g-robot" aria-current={twinOpen ? 'true' : undefined} onClick={() => { setTwinOpen(true); setAdding(false); }}>
+        <button type="button" className="g-robot" aria-current={twinOpen ? 'true' : undefined} onClick={() => { setTwinOpen(true); setAdding(false); setOmegaTab('overview'); }}>
           <RobotAvatar names={['Omega1']} size={36} />
           <span className="g-robot-text"><strong>Omega1</strong>
           <span className="fbadge live">Digital twin</span>
@@ -953,8 +988,8 @@ export default function Garage() {
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
         {lifecycleNotice && <p className="g-notice" role="status">{lifecycleNotice}</p>}
-        {(twinOpen || adding) && tabBar}
-        {twinOpen && <Omega1Twin />}
+        {tabBar}
+        {twinOpen && <Omega1Twin tab={omegaTab} />}
         {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} />}
 
         {!twinOpen && !adding && robot && draft && (() => {
@@ -1022,8 +1057,6 @@ export default function Garage() {
                 </li>
               ))}
             </ol>
-
-            {tabBar}
 
             {unsaved.length > 0 && (
               <div className="ws-savebar" role="region" aria-label="Unsaved changes">
