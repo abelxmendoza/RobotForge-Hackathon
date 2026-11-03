@@ -51,6 +51,19 @@ def test_create_panel_has_the_three_actions():
     assert "Generate a robot" in CREATE
     assert "Acceptance tests" in CREATE
     assert "Apply as new version" in CREATE
+    # The complete form Abel named — heading, explanatory copy, Brief,
+    # Type, Size, Sensors, every sensor checkbox, and the button —
+    # now lives in this composer component.
+    for marker in (
+        "Describe it and the Forge Engine picks real catalogue parts, places them, "
+        "plans the wiring and prints, and checks its own work",
+        "<span>Brief</span>", 'aria-label="Robot brief"',
+        "<span>Type</span>", 'aria-label="Robot type"',
+        "<span>Size</span>", 'aria-label="Robot size"',
+        "<legend>Sensors</legend>",
+        "onClick={doGenerate}>Generate robot</button>",
+    ):
+        assert marker in CREATE, marker
     # The Garage panel's exact option sets, carried over unchanged.
     for marker in ("From the brief", "Differential rover", "Mecanum rover",
                    "Robotic arm", "Multirotor", "Compact", "Standard", "Large",
@@ -158,6 +171,20 @@ def test_open_in_workshop_routing():
 def test_garage_panel_removed_hint_and_keeps():
     assert "GeneratePanel" not in GARAGE
     assert "Generate a robot" not in GARAGE
+    # None of the standalone panel's form may remain in Garage: no
+    # Brief/Type/Size/Sensors controls, no sensor checkbox set, no
+    # Generate robot button, and no generation calls in this file.
+    for marker in (
+        "<span>Brief</span>", 'aria-label="Robot brief"',
+        "<span>Type</span>", 'aria-label="Robot type"',
+        "<span>Size</span>", 'aria-label="Robot size"',
+        "<legend>Sensors</legend>",
+        "[['lidar', 'Lidar'], ['camera', 'Camera'], ['depth_camera', 'Depth camera'], "
+        "['imu', 'IMU'], ['ultrasonic', 'Ultrasonic']]",
+        "onClick={doGenerate}>Generate robot</button>",
+        "addGenerated", "generateRobot(", "parseBrief(",
+    ):
+        assert marker not in GARAGE, marker
     # The slim hint where the panel sat, pointing at the composer.
     assert "press <strong>Create</strong> in the chat to generate a robot, tests, or a modification" in GARAGE
     # Kept: the Modify box (the Checks/Fix flow's home), the Forge
