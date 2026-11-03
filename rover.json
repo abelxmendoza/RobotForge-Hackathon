@@ -1,0 +1,46 @@
+{
+  "name": "pathfinder",
+  "description": "a four-wheel rover, 30 cm long, with a front ultrasonic sensor",
+  "drivetrain": "skid_steer",
+  "length_m": 0.42,
+  "width_m": 0.31,
+  "height_m": 0.18,
+  "mass_kg": 3.4,
+  "motor": {
+    "kind": "dc_gearmotor",
+    "voltage_v": 12.0,
+    "count": 4,
+    "stall_torque_nm": 0.8
+  },
+  "battery": {
+    "chemistry": "lipo",
+    "voltage_v": 14.8,
+    "capacity_mah": 5200
+  },
+  "sensors": [
+    {
+      "kind": "ultrasonic",
+      "position": "front",
+      "range_m": 3.0
+    },
+    {
+      "kind": "imu",
+      "position": "center",
+      "range_m": null
+    }
+  ],
+  "component_mass_kg": {
+    "chassis": 1.1,
+    "motors": 0.8,
+    "battery": 0.6,
+    "electronics": 0.4,
+    "wheels": 0.5
+  },
+  "ground_clearance_m": 0.035,
+  "wheel": {
+    "diameter_m": 0.1,
+    "width_m": 0.032,
+    "count": 4,
+    "driven": true
+  }
+}
