@@ -989,6 +989,8 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .ws-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:var(--s4);overflow-x:auto;scrollbar-width:none}
 .ws-tabs button{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-muted);font:600 var(--fs-sm)/1.2 var(--font);cursor:pointer;white-space:nowrap;position:relative}
 .ws-tabs button:hover{color:var(--text)}
+.ws-tabs button:disabled{opacity:.45;cursor:default}
+.ws-tabs button:disabled:hover{color:var(--text-muted)}
 .ws-tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
 .ws-tabs button[aria-selected="true"] svg{color:var(--accent)}
 .ws-dotbadge{width:8px;height:8px;border-radius:50%;background:var(--norun)}

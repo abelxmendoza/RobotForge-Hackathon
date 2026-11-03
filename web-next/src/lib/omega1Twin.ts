@@ -185,3 +185,18 @@ export const OMEGA1_FACTS: { label: string; value: string }[] = [
 
 export const TWIN_NOT_GENERATED =
   'Not generated: the motor-driver / expansion board visible under the chassis in the photo. No RobotForge record names it, so it was skipped rather than guessed.';
+
+/* The Omega1 Checks pane lines, in the Workshop's "[SEVERITY] check:
+ * message" shape, derived ONLY from the records above (OMEGA1_FACTS and
+ * the template blocks the subjects cite). What the records do not state
+ * is NOT_CHECKED with the gap named — and there is deliberately no
+ * overall verdict line: no gate has ever run on Omega1, so nothing
+ * here claims one. Shared by the Checks pane and the chat snapshot
+ * Garage publishes while the twin is open, so the two never drift. */
+export const OMEGA1_CHECK_LINES: string[] = [
+  '[PASS] control: manual remote control is the recorded control mode',
+  '[PASS] power: 2× 18650 cells in series — 7.4 V nominal is recorded',
+  '[PASS] sensors: HC-SR04 ultrasonic + camera, both front, are recorded',
+  '[NOT_CHECKED] motor-driver board: no RobotForge record names it',
+  '[NOT_CHECKED] measured spec fields: not loaded in the Workshop — they live in docs/omega1/MEASURE.md',
+];
