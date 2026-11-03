@@ -15,7 +15,7 @@ import WiringView from '@/components/wiring/WiringView';
 const WiringBench3D = dynamic(() => import('@/components/wiring/WiringBench3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D bench…</p> });
 import { isWiring } from '@/lib/wiring';
 import { parts as catalogParts, robots as dexRobots } from '@/lib/data';
-import { applyModification, generateRobot, parseBrief, type ArchetypeId, type ForgeSize } from '@/lib/forgeEngine';
+import { applyModification } from '@/lib/forgeEngine';
 import { forgeTestTally, generateForgeTests, type ForgeTest } from '@/lib/forgeTests';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -384,64 +384,10 @@ function drawingFor(...names: unknown[]): string | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* Forge Engine v1 (lib/forgeEngine): generate a robot from a brief,  */
-/* render the generated plan inside the existing Workshop tabs, and   */
-/* apply a modification as a NEW version. Generated = planned.        */
-
-function GeneratePanel({ onGenerate }: { onGenerate: (spec: Spec) => void }) {
-  const [prompt, setPrompt] = useState('');
-  const [archetype, setArchetype] = useState<'auto' | ArchetypeId>('auto');
-  const [size, setSize] = useState<ForgeSize>('standard');
-  const [sensors, setSensors] = useState<string[]>([]);
-  const [error, setError] = useState('');
-  const toggleSensor = (s: string) => setSensors((x) => (x.includes(s) ? x.filter((y) => y !== s) : [...x, s]));
-  const go = () => {
-    const brief = parseBrief(prompt, {
-      ...(archetype !== 'auto' ? { archetype } : {}),
-      size,
-      ...(sensors.length ? { sensors } : {}),
-    });
-    const spec = generateRobot(brief, catalogParts);
-    if (!spec?.forge?.bom?.length) { setError('The engine could not ground that brief in catalogue parts — nothing was generated.'); return; }
-    setError('');
-    onGenerate(spec);
-  };
-  return (
-    <section className="forge-gen" aria-label="Generate a robot">
-      <h3>Generate a robot</h3>
-      <p className="faint g-small">Describe it and the Forge Engine picks real catalogue parts, places them, plans the wiring and prints, and checks its own work. The result is a <strong>planned</strong> robot — not built yet.</p>
-      <label className="g-field"><span>Brief</span>
-        <input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="e.g. a rover with lidar and a camera for the hallway" aria-label="Robot brief" />
-      </label>
-      <div className="forge-gen-row">
-        <label className="g-field"><span>Type</span>
-          <select value={archetype} onChange={(e) => setArchetype(e.target.value as 'auto' | ArchetypeId)} aria-label="Robot type">
-            <option value="auto">From the brief</option>
-            <option value="differential_rover">Differential rover</option>
-            <option value="mecanum_rover">Mecanum rover</option>
-            <option value="robotic_arm">Robotic arm</option>
-            <option value="multirotor">Multirotor</option>
-          </select>
-        </label>
-        <label className="g-field"><span>Size</span>
-          <select value={size} onChange={(e) => setSize(e.target.value as ForgeSize)} aria-label="Robot size">
-            <option value="compact">Compact</option>
-            <option value="standard">Standard</option>
-            <option value="large">Large</option>
-          </select>
-        </label>
-      </div>
-      <fieldset className="forge-gen-sensors">
-        <legend>Sensors</legend>
-        {[['lidar', 'Lidar'], ['camera', 'Camera'], ['depth_camera', 'Depth camera'], ['imu', 'IMU'], ['ultrasonic', 'Ultrasonic']].map(([id, label]) => (
-          <label key={id} className="g-check"><input type="checkbox" checked={sensors.includes(id)} onChange={() => toggleSensor(id)} /> {label}</label>
-        ))}
-      </fieldset>
-      <button type="button" className="btn btn-primary" onClick={go}>Generate robot</button>
-      {error && <p className="g-error" role="alert">{error}</p>}
-    </section>
-  );
-}
+/* Forge Engine v1 (lib/forgeEngine): the generated plan renders     */
+/* inside the existing Workshop tabs, and a modification applies as   */
+/* a NEW version. Generation itself lives in the chat's Create panel  */
+/* (components/chat/ComposerCreate) since 2026-11-02. Generated = planned. */
 
 function ForgePlacement({ spec }: { spec: Spec }) {
   const forge = spec?.forge;
@@ -651,11 +597,17 @@ export default function Garage() {
 
   /* #robot=<id> is Wrench's "open <my robot>" landing: select that robot
    * when it exists in this browser's store. Unknown ids are ignored so a
-   * stale link can never blank the Workshop. */
+   * stale link can never blank the Workshop. An optional &tab=<tab>
+   * suffix (the chat's Create results: "Open in Workshop — Simulate
+   * tab") also switches the Workshop tab in the same landing. */
   useEffect(() => {
     const check = () => {
-      const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)$/);
-      if (r && activeRobots.some((x) => x.id === r[1])) { setSelected(r[1]); setTwinOpen(false); }
+      const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)(?:&tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history))?$/);
+      if (r && activeRobots.some((x) => x.id === r[1])) {
+        setSelected(r[1]);
+        setTwinOpen(false);
+        if (r[2]) { setTab(r[2] as WorkTab); setAdding(false); }
+      }
     };
     check();
     window.addEventListener('hashchange', check);
@@ -712,19 +664,10 @@ export default function Garage() {
     setAdding(false);
   };
 
-  /* Forge Engine: a generated robot lands as a PLANNED first version
-   * (source 'generated') and opens in the Workshop like any robot. */
-  const addGenerated = (spec: Spec) => {
-    const r: GarageRobot = {
-      id: uid('robot'), name: spec.name || 'Generated robot', createdAt: now(),
-      versions: [{ id: uid('v'), label: 'Generated plan', note: 'Generated by the Forge Engine — planned, not built yet', source: 'generated', createdAt: now(), spec, planned: true }],
-    };
-    persist([...robots, r]);
-    setSelected(r.id);
-    setAdding(false);
-    setTwinOpen(false);
-    setTab('overview');
-  };
+  /* Forge Engine generation itself now lives in the chat's Create
+   * panel (components/chat/ComposerCreate), which writes the same
+   * PLANNED 'generated' first-version record this panel used to —
+   * the Workshop keeps the rendering and the Modify flow below. */
 
   /* A modification never edits in place: it saves the modified spec
    * as a NEW version (planned flag kept) and reports the diff. The
@@ -988,7 +931,7 @@ export default function Garage() {
         </button>
         {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
-        <GeneratePanel onGenerate={addGenerated} />
+        <p className="faint g-small" style={{ marginTop: 14 }}>Tip: press <strong>Create</strong> in the chat to generate a robot, tests, or a modification.</p>
         {archivedRobots.length > 0 && (
           <details className="g-archived">
             <summary>Archived robots ({archivedRobots.length})</summary>
