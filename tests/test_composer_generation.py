@@ -183,6 +183,11 @@ def test_garage_panel_removed_hint_and_keeps():
         "['imu', 'IMU'], ['ultrasonic', 'Ultrasonic']]",
         "onClick={doGenerate}>Generate robot</button>",
         "addGenerated", "generateRobot(", "parseBrief(",
+        # Abel's copied block ended with this trailing sidebar line;
+        # it is out of Garage too (the same words remain elsewhere in
+        # the app for unrelated local Dex records — this pin is only
+        # about Garage.tsx).
+        "Saved in this browser",
     ):
         assert marker not in GARAGE, marker
     # The slim hint where the panel sat, pointing at the composer.
