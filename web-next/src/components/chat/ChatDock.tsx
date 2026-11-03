@@ -59,11 +59,11 @@ import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, getPath, partToChanges, setPath, type GarageRobot, type Spec } from '@/lib/garage';
 import { downloadText, readStore, writeStore, uid } from '@/lib/store';
-import { runEngineChecks, type CataloguePart } from "@/lib/forgeEngine";
+import { runEngineChecks, syncPlannedPart, type CataloguePart } from "@/lib/forgeEngine";
 import {
   addWebRecord, buildWebProposal, classifyProposalReply, detectWebAddIntent,
   formatProposalText, formatSavedText, isShortReply, mergeCatalogue,
-  proposalToRecord, recordWebAddition, WEB_PARTS_KEY,
+  proposalToRecord, recordWebAddition, toCataloguePart, WEB_PARTS_KEY,
   type ProposalFieldChange, type WebPartProposal, type WebPartRecord,
 } from "@/lib/webParts";
 import { cadFromText } from "@/lib/cadGen";
@@ -625,6 +625,10 @@ export function useForgeAssistant() {
     if (latest?.spec?.forge?.bom?.length) {
       const catalogue = mergeCatalogue(parts as unknown as CataloguePart[], records) as unknown as CataloguePart[];
       const before = runEngineChecks(latest.spec, catalogue);
+      const role = pending.changes?.some((c) => c.path.startsWith('battery.')) ? 'battery'
+        : pending.changes?.some((c) => c.path.startsWith('motor.')) ? 'motor'
+        : pending.changes?.some((c) => c.path.startsWith('wheel.')) ? 'wheel' : undefined;
+      newSpec = syncPlannedPart(newSpec,toCataloguePart(record),catalogue,role);
       const after = runEngineChecks(newSpec, catalogue);
       const beforeById = new Map(before.map((c) => [c.id, c.verdict]));
       const diffs: string[] = [];

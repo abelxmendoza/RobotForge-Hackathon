@@ -125,7 +125,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as wp from './webParts.ts';
 import * as cad from './cadGen.ts';
-import { generateRobot, applyModification, runEngineChecks } from './forgeEngine.ts';
+import { generateRobot, applyModification, runEngineChecks, syncPlannedPart } from './forgeEngine.ts';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const cat = JSON.parse(readFileSync(here + 'parts.json', 'utf8')).parts;
 
@@ -249,6 +249,22 @@ assert.ok(modded.summary.includes('UNVERIFIED'));
 assert.equal(applyModification(plain, 'add a flux capacitor', merged), null);
 assert.equal(applyModification(modded.spec, 'add Acme Dual Motor Driver X2', merged), null, 'no duplicate adds');
 
+// Confirmed proposal paths must update the same engine BOM/checks as chat mods.
+const synced = syncPlannedPart(plain, webEntry, merged);
+assert.ok(synced.forge.bom.some((b) => b.partId === rec.id));
+assert.equal(synced.forge.checks.find((c) => c.id === 'unverified-web-parts').verdict,'WARN');
+assert.ok(synced.forge.checks.find((c) => c.id === 'unpowered').detail.includes(rec.id));
+const pack = {id:'web_pack24',name:'24 V pack',part_class:'batteries',specs:{voltage_v:24,capacity_mah:5000},web_sourced:true};
+const packCat = [...cat,pack];
+const replaced = syncPlannedPart({...plain,battery:{...plain.battery,voltage_v:24}},pack,packCat,'battery');
+assert.equal(replaced.forge.ids.battery,pack.id);
+assert.ok(replaced.forge.bom.some((b) => b.partId === pack.id));
+assert.ok(!replaced.forge.bom.some((b) => b.partId === plain.forge.ids.battery));
+assert.ok(replaced.forge.wiring.some((w) => w.from === pack.id && w.volts === 24));
+assert.ok(replaced.forge.checks.some((c) => c.id.includes('voltage-') && c.verdict === 'ERROR'));
+assert.deepEqual(replaced.forge.checks,runEngineChecks(replaced,packCat));
+assert.notEqual(plain.forge.ids.battery,pack.id,'original version remains unchanged');
+
 // --- Robot additions --------------------------------------------------
 const add1 = wp.recordWebAddition({ name: 'Omega1' }, rec);
 assert.equal(add1.already, false);
@@ -282,6 +298,14 @@ assert.ok(wheel.source.includes('if (bolt_circle_dia_mm > 0)'), 'no bolt holes a
 const spacer = cad.cadFromText('generate a spacer 25mm long');
 assert.equal(spacer.template, 'spacer');
 assert.ok(spacer.source.includes('length_mm = 25;'));
+const boredSpacer = cad.cadFromText('make a spacer 20mm long, bore diameter 3.2mm');
+assert.ok(boredSpacer.source.includes('bore_dia_mm = 3.2;'));
+assert.ok(boredSpacer.defaultsUsed.includes('Outer diameter'));
+assert.ok(!boredSpacer.source.includes('outer_dia_mm = 3.2;'));
+for (const qualifier of ['bore Ø3.2mm','hub diameter 4mm','bolt-circle diameter 30mm']) {
+  const qualified = cad.cadFromText('make a spacer 20mm long, ' + qualifier);
+  assert.ok(qualified.defaultsUsed.includes('Outer diameter'),qualifier);
+}
 // Every template generates a parameter-headed source with no params given.
 for (const t of ['mounting plate', 'l bracket', 'wheel disc', 'spacer']) {
   const r = cad.cadFromText('make a ' + t);

@@ -30,6 +30,8 @@ import { naturalOrder } from '@/lib/photoSpin';
 import { ASSISTANT_NAME, HANDOFF_ACCEPT, HANDOFF_LABEL, handoffKind, takeHandoff } from '@/lib/handoff';
 import { elementText } from '@/lib/copytext';
 import { parts as intakeParts } from '@/lib/data';
+import { mergeCatalogue, WEB_PARTS_KEY, type WebPartRecord } from '@/lib/webParts';
+const intakeCatalogue = () => mergeCatalogue(intakeParts, readStore<WebPartRecord[]>(WEB_PARTS_KEY, []));
 import { applyModification, generateRobot, parseBrief, type ArchetypeId } from '@/lib/forgeEngine';
 import { intakeTarget, friendlyEdit, conceptRequest, mergePhotoDraft, modificationRequest } from '@/lib/wrenchIntake';
 import { OMEGA1_ROBOT_ID, omega1SeedSpec } from '@/lib/omega1Garage';
@@ -1372,7 +1374,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       const priorSensors = Object.keys(previous.forge?.ids || {}).filter((key) => ['camera','depth_camera','lidar','imu','ultrasonic'].includes(key));
       parsed.sensors = [...new Set([...parsed.sensors,...priorSensors])].filter((sensor) => !new RegExp(`(?:without|remove)(?: the| a)? ${sensor.replace('_',' ')}`, 'i').test(value));
     }
-    const spec = generateRobot(parsed,intakeParts);
+    const spec = generateRobot(parsed,intakeCatalogue());
     if (!spec?.forge?.bom?.length) throw new Error('I could not ground that idea in catalogue parts. Describe a rover, robot arm or multirotor.');
     spec.conceptBrief = brief;
     spec.conceptSize = parsed.size;
@@ -1433,7 +1435,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         } else {
           const all = readStore<GarageRobot[]>(GARAGE_KEY,[]);
           const target = context ? intakeTarget(all,context) : null;
-          const mod = target && modificationRequest(value) && applyModification(target.versions.at(-1)?.spec,value,intakeParts);
+          const mod = target && modificationRequest(value) && applyModification(target.versions.at(-1)?.spec,value,intakeCatalogue());
           if (target && mod) {
             const at = new Date().toISOString();
             const version = {id:uid('v'),label:'Text modification',source:'generated' as const,createdAt:at,spec:mod.spec,planned:true,note:mod.summary};

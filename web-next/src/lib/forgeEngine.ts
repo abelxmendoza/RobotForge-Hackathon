@@ -708,3 +708,22 @@ export function applyModification(spec: ForgeSpec, text: string, catalogue: Cata
   }
   return null;
 }
+
+/** Synchronize a confirmed planned part with the engine representation.
+ * A replacement changes the role/BOM together. An addition gets no invented
+ * wiring: missing power paths remain visible in the regenerated checks. */
+export function syncPlannedPart(spec: ForgeSpec, part: CataloguePart, catalogue: CataloguePart[], replaceRole?: string): ForgeSpec {
+  const next: ForgeSpec = JSON.parse(JSON.stringify(spec));
+  if (!next?.forge) return next;
+  const ids = next.forge.ids ?? (next.forge.ids = {});
+  const oldId = replaceRole ? ids[replaceRole] : undefined;
+  const line = oldId ? next.forge.bom.find((b: ForgeBomLine) => b.partId === oldId) : undefined;
+  if (line) line.partId = part.id;
+  else if (!next.forge.bom.some((b: ForgeBomLine) => b.partId === part.id)) next.forge.bom.push({partId:part.id,qty:1,source:'catalogue'});
+  ids[replaceRole || 'added_' + part.id.replace(/[^a-z0-9]+/gi,'_')] = part.id;
+  next.forge.placement = suggestPlacement(next,catalogue);
+  next.forge.wiring = suggestWiring(next,catalogue);
+  next.forge.prints = planPrints(next,catalogue);
+  next.forge.checks = runEngineChecks(next,catalogue);
+  return next;
+}

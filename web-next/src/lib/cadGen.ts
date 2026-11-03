@@ -366,8 +366,11 @@ function extractParams(id: CadTemplateId, text: string): Record<string, number> 
    * radius is doubled — "radius 50" is a 100 mm disc. */
   if (id === 'wheel_disc' || id === 'spacer') {
     const diaKey = id === 'wheel_disc' ? 'diameter_mm' : 'outer_dia_mm';
-    setIfSane(params, diaKey, firstNumber(t, [/[øØ]\s*(\d+(?:\.\d+)?)/, /(\d+(?:\.\d+)?)\s*mm\s*(?:in\s*)?(?:diameter|dia\b)/, /\bouter\s*(?:diameter|dia)\s*(?:of\s*)?(\d+(?:\.\d+)?)/, /\b(?:diameter|dia)\s*(?:of\s*)?(\d+(?:\.\d+)?)/]));
-    const radius = firstNumber(t, [/(\d+(?:\.\d+)?)\s*mm\s*radius\b/, /\bradius\s*(?:of\s*)?(\d+(?:\.\d+)?)/]);
+    // Qualified internal/bolt-circle sizes cannot describe the body.
+    const bodyText = t.replace(/\b(?:bore|hub|bolt[ -]?circle)\s*(?:(?:diameter|dia|radius)\s*)?(?:of\s*)?[øØ]?\s*\d+(?:\.\d+)?\s*(?:mm)?/g, ' ')
+      .replace(/\b(?:bore|hub|bolt[ -]?circle)\s*\d+(?:\.\d+)?\s*mm\s*(?:diameter|dia|radius)\b/g,' ');
+    setIfSane(params, diaKey, firstNumber(bodyText, [/[øØ]\s*(\d+(?:\.\d+)?)/, /(\d+(?:\.\d+)?)\s*mm\s*(?:in\s*)?(?:diameter|dia\b)/, /\bouter\s*(?:diameter|dia)\s*(?:of\s*)?(\d+(?:\.\d+)?)/, /\b(?:diameter|dia)\s*(?:of\s*)?(\d+(?:\.\d+)?)/]));
+    const radius = firstNumber(bodyText, [/(\d+(?:\.\d+)?)\s*mm\s*radius\b/, /\bradius\s*(?:of\s*)?(\d+(?:\.\d+)?)/]);
     if (radius !== null && params[diaKey] === undefined && sane(radius * 2)) params[diaKey] = radius * 2;
   }
   if (id === 'spacer') {
