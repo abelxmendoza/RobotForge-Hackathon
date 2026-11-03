@@ -11,7 +11,7 @@ import {
   SPIN_MAX_FRAMES, SPIN_MIN_FRAMES, SPIN_VIDEO_FRAMES, type PhotoSpin as Spin,
 } from '@/lib/photoSpin';
 import type { ScanMeta } from '@/lib/scan3d';
-import ScanEditor from './ScanEditor';
+import { promptWrench } from '@/lib/wrenchPrompt';
 import ScanMeasure, { type ScanDims } from './ScanMeasure';
 
 const ScanView = dynamic(() => import('./ScanView'), {
@@ -22,7 +22,7 @@ const ScanView = dynamic(() => import('./ScanView'), {
 export function PhotoSpinViewer({ spin, name }: { spin: Spin; name: string }) {
   const n = spin.frames.length;
   const [i, setI] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const drag = useRef<{ x: number; start: number } | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
@@ -180,13 +180,20 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
 /* The Overview's picture: the real photo spin or 3D scan when there is
  * one (with a switch to the 3D model), otherwise the model, with ways
  * to add either. */
-type View = 'photos' | 'scan' | 'model';
-export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScanSave, onApplyScanSize }: {
+export type ReferencePhoto = { url: string; caption: string; source?: string; position?: string };
+type View = 'photos' | 'scan' | 'model' | 'reference';
+export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onSave, onScanSave, onApplyScanSize }: {
   robotId: string;
   spin: Spin | undefined;
   scan: ScanMeta | undefined;
   name: string;
   model: ReactNode;
+  concept?: boolean;
+  photo?: string;
+  photoSet?: string[];
+  photoAddedAt?: string;
+  referencePhoto?: ReferencePhoto;
+  onPhotoSave?: (photo: string | null) => string | null;
   onSave: (next: Spin | null) => string | null;
   onScanSave: (next: ScanMeta | null) => string | null;
   /* Turn the scan's measured size into spec dimensions (Garage saves
@@ -194,19 +201,24 @@ export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScan
   onApplyScanSize?: (dims: ScanDims, scanName: string, unitNote: string) => void;
 }) {
   const [pick, setPick] = useState<View | null>(null);
-  const view: View = pick === 'photos' && spin ? 'photos'
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [photoError, setPhotoError] = useState('');
+  const [failedPhoto, setFailedPhoto] = useState('');
+  const [busyPhoto, setBusyPhoto] = useState(false);
+  const image = (photo && (photoSet?.[photoIndex] || photo)) || referencePhoto?.url;
+  const view: View = pick === 'model' ? 'model'
+    : pick === 'photos' && spin ? 'photos'
     : pick === 'scan' && scan ? 'scan'
-    : pick === 'model' ? 'model'
-    : spin ? 'photos' : scan ? 'scan' : 'model';
+    : pick === 'reference' ? 'reference'
+    : photo && photoAddedAt && photoAddedAt > (scan?.addedAt ?? '') && photoAddedAt > (spin?.addedAt ?? '') ? 'reference' : spin ? 'photos' : scan ? 'scan' : concept && !photo && !referencePhoto ? 'model' : 'reference';
   return (
     <div className="ps-overview">
-      {(spin || scan) && (
-        <div className="ps-switch" role="group" aria-label="Overview picture">
-          {spin && <button type="button" className="btn btn-sm" aria-pressed={view === 'photos'} onClick={() => setPick('photos')}>Photo spin</button>}
-          {scan && <button type="button" className="btn btn-sm" aria-pressed={view === 'scan'} onClick={() => setPick('scan')}>3D scan</button>}
-          <button type="button" className="btn btn-sm" aria-pressed={view === 'model'} onClick={() => setPick('model')}>3D model</button>
-        </div>
-      )}
+      <div className="ps-switch" role="group" aria-label="Overview picture">
+        <button type="button" className="btn btn-sm" aria-pressed={view === 'reference'} onClick={() => setPick('reference')}>{photo ? 'Your photo' : 'Reference photo'}</button>
+        {spin && <button type="button" className="btn btn-sm" aria-pressed={view === 'photos'} onClick={() => setPick('photos')}>Photo 360</button>}
+        {scan && <button type="button" className="btn btn-sm" aria-pressed={view === 'scan'} onClick={() => setPick('scan')}>Your 3D scan</button>}
+        <button type="button" className="btn btn-sm" aria-pressed={view === 'model'} onClick={() => setPick('model')}>Inspect concept model</button>
+      </div>
       {view === 'photos' && spin ? (
         <figure className="ps-figure">
           <PhotoSpinViewer key={spin.addedAt} spin={spin} name={name} />
@@ -216,18 +228,17 @@ export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScan
         </figure>
       ) : view === 'scan' && scan ? (
         <ScanView key={scan.addedAt} robotId={robotId} scan={scan} name={name} />
-      ) : model}
-      <details className="ps-details">
-        <summary>{spin ? 'Change the photo spin' : 'Add a real 360 from your photos'}</summary>
-        <PhotoSpinEditor spin={spin} onSave={(next) => { const err = onSave(next); if (!err && next) setPick('photos'); return err; }} />
-      </details>
-      <details className="ps-details">
-        <summary>{scan ? 'Change the 3D scan' : 'Add a 3D scan (Scaniverse, RealSense)'}</summary>
-        <ScanEditor robotId={robotId} scan={scan} onSave={(next) => { const err = onScanSave(next); if (!err && next) setPick('scan'); return err; }} />
-      </details>
-      {scan && onApplyScanSize && (
-        <ScanMeasure key={scan.addedAt} robotId={robotId} scan={scan} onApply={onApplyScanSize} />
+      ) : view === 'model' ? <><p className="faint g-small">Concept model · approximate geometry, not a measured digital twin.</p>{model}</> : (
+        image && failedPhoto !== image ? <figure className="ws-real-photo">
+          <img src={image} alt={photo ? `Your photo of ${name}` : `Reference image for ${name}`} referrerPolicy="no-referrer" style={{objectPosition: photo ? 'center' : referencePhoto?.position}} onError={() => setFailedPhoto(image)} />
+          <figcaption className="faint g-small">{photo ? 'Your uploaded photo.' : referencePhoto?.caption}{!photo && referencePhoto?.source && <> <a href={referencePhoto.source} target="_blank" rel="noreferrer">Source</a></>}</figcaption>
+        </figure> : <div className="ws-media-empty"><h3>{image ? 'Photo could not load' : 'No photo of this robot yet'}</h3><p>Add a photo, a photo 360 or a scan of your build. The concept model is available above.</p></div>
       )}
+      {view === 'reference' && photoSet && photoSet.length > 1 && <div className="ws-photo-thumbs" role="group" aria-label="Your robot photos">{photoSet.map((src,i) => <button type="button" className="btn btn-sm" aria-pressed={photoIndex===i} key={i} onClick={() => setPhotoIndex(i)}><img src={src} alt={`Photo ${i+1}`} /></button>)}</div>}
+      <div className="ps-actions">
+        <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Update this robot with these photos.',attach:true})}>Add photos through Wrench</button>
+        <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add this 3D scan to my robot.',attach:true})}>Add a scan through Wrench</button>
+      </div>
     </div>
   );
 }

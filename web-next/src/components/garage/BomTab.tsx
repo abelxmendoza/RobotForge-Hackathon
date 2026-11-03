@@ -242,8 +242,11 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
   return (
     <section className="ws-pane ws-bom" aria-label="Bill of materials">
       <div className="ws-history-head">
-        <h3>Bill of materials</h3>
-        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it — the price you type in, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>
+        <h3>Parts list</h3>
+        <p className="faint">Parts for {robotName}, checked against your inventory.</p>
+        <details className="g-small faint"><summary>How matches and prices work</summary>
+        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it — the price you type in, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>        </details>
+
       </div>
       {rows.length === 0 ? (
         <p className="faint">The spec has no battery, motors, wheels or wiring yet, so there is nothing to list. Add them in Specs.</p>
@@ -296,8 +299,9 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
                       <span className="faint g-small">{money(r.price.amount)} each{r.line.qty > 1 ? ` · ${money(r.price.amount * r.line.qty)} for ${r.line.qty}` : ''} · {r.price.label}</span>
                     )
                   ) : (
-                    <span className="faint g-small">Unpriced — no price recorded in your build plan</span>
+                    <span className="faint g-small">Unpriced</span>
                   )}
+                  <details className="g-small ws-row-details"><summary>Price &amp; suppliers</summary>
                   <label className="bom-price faint g-small">
                     Your price $
                     <input type="number" min={0} step={0.01} inputMode="decimal"
@@ -309,6 +313,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
                     each
                   </label>
                   {(r.have.state === 'need' || r.have.state === 'check') && <SourcingLinks query={r.line.searchQuery} />}
+                  </details>
                 </div>
                 <span className={'bom-have ' + r.have.state} title={r.have.part ? r.have.part.name : undefined}>
                   {label(r.have, r.line.qty)}
@@ -327,7 +332,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
             </p>
           ) : (
             <p className="g-small faint">
-              No prices are recorded for these lines in your build plan, so no total is shown — type the price you find next to a line and it will appear here as your price. Shipping, tax and stock are unknown — not included in any total.
+              No prices recorded yet. Add prices under each part’s “Price & suppliers”. Shipping, tax and stock are unknown.
             </p>
           )}
           <p className="ws-hist-actions">

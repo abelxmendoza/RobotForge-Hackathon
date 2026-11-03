@@ -8,6 +8,7 @@ export type Spec = any;
 export type VersionSource = 'upload' | 'robodex' | 'starter' | 'photo' | 'edit' | 'muse-fix' | 'inventory' | 'repo' | 'generated';
 
 export interface RobotVersion {
+  estimatedPaths?: string[];
   id: string;
   label: string;
   note: string;
@@ -41,6 +42,10 @@ export interface GarageRobot {
   /* Real photos taken around the robot, played as a drag-to-turn view
    * on the Overview (lib/photoSpin.ts). */
   spin?: import('./photoSpin').PhotoSpin;
+  /* Owner-provided cover photo, downscaled and stored in this browser. */
+  photo?: string;
+  photoSet?: string[];
+  photoAddedAt?: string;
   /* A 3D scan of the real robot; the file is in IndexedDB (lib/scanStore.ts). */
   scan?: import('./scan3d').ScanMeta;
   /* Up to three labelled scans from the Improve-this-twin flow

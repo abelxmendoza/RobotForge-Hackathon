@@ -13,6 +13,7 @@
 import { FIELD_GROUPS, fmtValue, getPath, type Spec } from './garage';
 
 export interface WorkshopChatContext {
+  robotId?: string;
   robotName: string;
   versionLabel: string;
   tab: string;

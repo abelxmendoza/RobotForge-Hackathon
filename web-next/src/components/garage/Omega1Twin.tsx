@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { assetPath } from '@/components/home/asset';
 import TwinView from './TwinView';
 import {
-  OMEGA1_CHECK_LINES, OMEGA1_FACTS, TWIN_ESTIMATE_NOTE, TWIN_LABEL, TWIN_NOT_GENERATED,
+  OMEGA1_CHECK_LINES, OMEGA1_FACTS, OMEGA1_PHOTO, TWIN_ESTIMATE_NOTE, TWIN_LABEL, TWIN_NOT_GENERATED,
   omega1Parts, omega1Rover, twinSubjects,
 } from '@/lib/omega1Twin';
 
@@ -31,6 +31,7 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
   onOpenGarage?: () => void;
   onAdopt?: () => void;
 }) {
+  const [inspect, setInspect] = useState(false);
   const [subjectId, setSubjectId] = useState(omega1Rover.id);
   const subject = twinSubjects.find((s) => s.id === subjectId) ?? omega1Rover;
   const isRover = subject.id === omega1Rover.id;
@@ -42,38 +43,25 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
         <span className="fbadge live">Built-in specimen</span>
         <span className="fbadge planned">{TWIN_LABEL}</span>
       </div>
-      <p className="sub">
-        Abel’s own rover, reconstructed as a 3D twin by ProjectSim (Kaedim) on 2026-11-01 from a photo of the
-        real robot. {TWIN_ESTIMATE_NOTE} The measured record for the real robot is its measuring worksheet
-        (docs/omega1/MEASURE.md) — nothing here replaces a tape measure.
-      </p>
+      <p className="faint g-small">Estimated twin · dimensions and physics are not measurements.</p>
 
       {tab === 'overview' && (
       <>
       <div className="twin-garage-link">
         {garageScans !== null ? (
           <>
-            <p>
-              <strong>Your Omega1 in the Garage</strong> — {garageScans} scan(s) attached. That stored
-              copy is yours to make accurate: attach a Scaniverse or RealSense scan there, apply its
-              measured size, and keep its wiring map current. This twin stays the estimated specimen.
-              The <strong>Improve this twin</strong> card at the top of its Overview walks you through
-              the scans, the measurements and the wiring, one step at a time.
-            </p>
+            <p><strong>Your Omega1</strong> · {garageScans} scan(s). Open your copy to add scans, measurements and wiring.</p>
             <button type="button" className="btn btn-sm" onClick={onOpenGarage}>Open your Omega1</button>
           </>
         ) : (
           <>
-            <p>
-              <strong>This twin is a built-in specimen</strong> — fixed, and estimated. Add Omega1 to
-              your Garage and you get your own stored copy, seeded from its records (DOCUMENTED fields
-              only — sizes and mass stay blank until you measure them or apply a scan). On that copy
-              you can attach scans and build the real wiring map.
-            </p>
+            <p>Add your own copy to record scans, measurements and wiring.</p>
             <button type="button" className="btn btn-primary btn-sm" onClick={onAdopt}>Add Omega1 to your Garage</button>
           </>
         )}
       </div>
+      <figure className="ws-real-photo"><img src={assetPath(OMEGA1_PHOTO.url)} alt="Real Omega1 rover on its workbench" style={{objectPosition: OMEGA1_PHOTO.position}} /><figcaption className="faint g-small">{OMEGA1_PHOTO.caption} <a href={OMEGA1_PHOTO.source} target="_blank" rel="noreferrer">Source</a></figcaption></figure>
+      <details className="ws-disclosure" onToggle={(e) => setInspect(e.currentTarget.open)}><summary>Inspect estimated reconstruction</summary>
       <div className="twin-subjects" role="group" aria-label="Twin subjects">
         {twinSubjects.map((s) => (
           <button
@@ -88,7 +76,7 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
         ))}
       </div>
 
-      <TwinView key={subject.id} subject={subject} explode={isRover} />
+      <p className="faint g-small">Photo-generated geometry. Dimensions and physics are not measurements.</p>{inspect && <TwinView key={subject.id} subject={subject} explode={isRover} />}
 
       <div className="twin-cols">
         <section aria-label="About this subject">
@@ -96,47 +84,16 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
           <p>{subject.role}</p>
           <p className="faint g-small"><strong>Record basis:</strong> {subject.basis}</p>
           {subject.countNote && <p className="faint g-small">{subject.countNote}</p>}
-          <h4>Physics — ProjectSim estimates, not measurements</h4>
-          <ul className="twin-physics">
-            {subject.physics.map((p) => (
-              <li key={p.label}><span className="faint">{p.label}</span> {p.value}</li>
-            ))}
-          </ul>
           {isRover && (
             <p className="faint g-small">
               The explode slider separates only the rover model’s own links — chassis, sensor head and the
-              four wheels. The part models below were reconstructed separately and are not fitted into it.
+              four wheels. Separate part models are in Build.
             </p>
           )}
         </section>
-
-        <section aria-label="The real Omega1, from its records">
-          <h3>The real Omega1 — from its records</h3>
-          <ul className="twin-physics">
-            {OMEGA1_FACTS.map((f) => (
-              <li key={f.label}><span className="faint">{f.label}</span> {f.value}</li>
-            ))}
-          </ul>
-          <p className="faint g-small">{TWIN_NOT_GENERATED}</p>
-        </section>
       </div>
+      </details>
 
-      <h3>The parts, one by one</h3>
-      <p className="faint g-small">
-        Each part was generated on its own (from a photo or a text description), so the six models are a
-        gallery of separate reconstructions — not pieces of one fitted assembly.
-      </p>
-      <div className="twin-grid">
-        {omega1Parts.map((p) => (
-          <button key={p.id} type="button" className="twin-card" onClick={() => setSubjectId(p.id)} aria-pressed={p.id === subject.id}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={assetPath(p.preview)} alt={`Preview render of ${p.name} from the generator`} loading="lazy" />
-            <strong>{p.name}</strong>
-            <span className="faint g-small">{p.role}</span>
-            <span className="fbadge planned">ESTIMATED</span>
-          </button>
-        ))}
-      </div>
       </>
       )}
 

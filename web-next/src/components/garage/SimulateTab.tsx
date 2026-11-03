@@ -331,8 +331,8 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
   return (
     <section className="ws-pane ws-sim" aria-label="Simulate">
       <div className="ws-history-head">
-        <h3>Simulate</h3>
-        <p className="faint">Quick test runs worked out from this robot&apos;s spec. They are physics estimates, not a full simulator run. The robot and kerb are drawn to one scale from its spec (see the 100 mm bar); change the course or the spec and they run again.</p>
+        <h3>Simulation</h3>
+        <p className="faint">Explore slopes, steps and battery life using your specs. Results are estimates, not physical tests.</p>
       </div>
       {!checks ? (
         <p className="faint">The test runs need a ground robot with wheels, motors and a battery in its spec. This one doesn&apos;t have all three yet; add them in Specs.</p>
@@ -354,10 +354,11 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
             <StepScene check={byName('rover.step_climb')} stepM={opts.stepM} shape={shape} />
             <BatteryScene check={byName('rover.runtime')} targetMin={opts.targetMin} />
           </div>
-          <PhysicsRuns spec={spec} opts={opts} shape={shape} estimates={{ slope: byName('rover.slope_climb'), step: byName('rover.step_climb') }} />
+          <details className="ws-disclosure"><summary>Run browser physics</summary><PhysicsRuns spec={spec} opts={opts} shape={shape} estimates={{ slope: byName('rover.slope_climb'), step: byName('rover.step_climb') }} /></details>
           <details className="g-small faint"><summary>How these are worked out</summary><ul>{checks.flatMap((c) => c.assumptions).filter((a, i, all) => all.indexOf(a) === i).map((a) => <li key={a}>{a}</li>)}</ul></details>
         </>
       )}
+      <details className="ws-disclosure"><summary>More simulation options</summary>
       {match && match.physics ? (
         <div className="ws-cards sim-more">
           <Link className="ws-card" href={`/robots/${match.slug}/#physics`}>
@@ -381,7 +382,8 @@ export default function SimulateTab({ spec, checks, opts, setOpts }: {
        * model is Gazebo-usable, and shows the recorded reason
        * instead of a button when it is not. Built locally at click
        * time, no Worker calls — the same terms as the robot pages. */}
-      {match && <GazeboSection slug={match.slug} robotName={match.name} />}
+      {match && <details className="ws-disclosure"><summary>Run in Gazebo</summary><GazeboSection slug={match.slug} robotName={match.name} /></details>}
+      </details>
     </section>
   );
 }

@@ -5,14 +5,14 @@
  * the engineering checks before and after, and the rover field checks
  * before and after. "Fix with Muse Spark" runs the Forge loop on the
  * draft; parts confirmed in the inventory can be dropped in. */
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import RobodexPicker from './RobodexPicker';
 import RobotAvatar from './RobotAvatar';
+import SpecsDialog from './SpecsDialog';
+import WrenchStart from './WrenchStart';
 import WiringView from '@/components/wiring/WiringView';
-const WiringBench3D = dynamic(() => import('@/components/wiring/WiringBench3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D bench…</p> });
 import { isWiring } from '@/lib/wiring';
 import { parts as catalogParts, robots as dexRobots } from '@/lib/data';
 import { applyModification } from '@/lib/forgeEngine';
@@ -20,12 +20,12 @@ import { forgeTestTally, generateForgeTests, type ForgeTest } from '@/lib/forgeT
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
-import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveStatus';
+import { LiveProgress, useLiveMode } from '@/components/shell/LiveStatus';
 import type { LiveHealth, RobotSpec } from '@/components/forge/model';
-import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
+import { downloadJSON, readStore, writeStore, uid, useStore } from '@/lib/store';
 import { promptWrench } from '@/lib/wrenchPrompt';
 import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_FIX_EVENT } from '@/lib/workshopContext';
-import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
+import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
@@ -33,12 +33,13 @@ import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import Omega1Twin from './Omega1Twin';
+import TwinView from './TwinView';
 import ConnectionsSection from './ConnectionsSection';
 import ImproveTwin from './ImproveTwin';
 import TakeApartPanel from './TakeApartPanel';
 import WiringViews from './WiringViews';
 import type { ScanKind, SlotScan } from '@/lib/scan3d';
-import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, TWIN_LABEL } from '@/lib/omega1Twin';
+import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, OMEGA1_PHOTO, omega1Rover, TWIN_LABEL } from '@/lib/omega1Twin';
 import { OMEGA1_ROBOT_ID, OMEGA1_SEED_NOTE, OMEGA1_SEED_SOURCE, omega1SeedSpec, type SpecConnection } from '@/lib/omega1Garage';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
@@ -70,13 +71,21 @@ const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
-  { id: 'specs', label: 'Specs', icon: 'M5 4h14v16H5zM8 8h8M8 12h8M8 16h5' },
-  { id: 'simulate', label: 'Simulate', icon: 'M3 17l5-5 4 3 8-9M14 6h6v6' },
-  { id: 'checks', label: 'Checks', icon: 'M4 12l5 5L20 6' },
-  { id: 'bom', label: 'BOM', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
-  { id: 'tools', label: 'Tools & Materials', icon: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z' },
+  { id: 'checks', label: 'Test', icon: 'M4 12l5 5L20 6' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
 ];
+
+// Preserve existing chat and result links while showing five main destinations.
+function mainTab(tab: WorkTab): WorkTab {
+  if (tab === 'bom' || tab === 'tools') return 'build';
+  if (tab === 'simulate') return 'checks';
+  if (tab === 'specs') return 'overview';
+  return tab;
+}
+const BUILD_SECTIONS = [{ id: 'build', label: 'Assembly' }, { id: 'bom', label: 'Parts list' }, { id: 'tools', label: 'Tools & materials' }] as const;
+const TEST_SECTIONS = [{ id: 'checks', label: 'Checks' }, { id: 'simulate', label: 'Simulation' }] as const;
+type BrowserDraft = { baseline: string; spec: Spec; label: string; note: string; planned: boolean };
+const draftKey = (id: string) => `robotforge.workshop.draft.${id}`;
 
 const ICON = {
   mass: 'M6 20h12l-2-11H8zM9.5 9a2.5 2.5 0 1 1 5 0',
@@ -126,121 +135,8 @@ const STATUS_CLASS: Record<string, string> = { PASS: 'pass', MARGINAL: 'marginal
 
 /* ------------------------------------------------------------------ */
 
-function AddRobot({ onAdd, firstRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean }) {
-  /* Omega1 is the robot this Garage was built for: the first robot
-   * in an empty Garage is named for it unless the owner changes it. */
-  const [name, setName] = useState(firstRobot ? 'Omega1' : '');
-  const [mode, setMode] = useState<'file' | 'robodex' | 'paste'>('robodex');
-  const [paste, setPaste] = useState('');
-  const [dex, setDex] = useState(dexRobots[0]?.spec_file ?? '');
-  const [dexOpen, setDexOpen] = useState(false);
-  const [error, setError] = useState('');
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const finish = (spec: Spec, source: VersionSource, why: string) => {
-    if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
-      setError('That is not a robot spec (expected a JSON object).');
-      return;
-    }
-    const named = name.trim() ? { ...spec, name: name.trim() } : spec;
-    onAdd(named.name || 'My robot', named, source, why);
-    setError('');
-    setPaste('');
-  };
-
-  const fromFile = async (f: File | undefined) => {
-    if (!f) return;
-    try {
-      finish(JSON.parse(await f.text()), 'upload', `Uploaded ${f.name}`);
-    } catch {
-      setError(`${f.name} is not valid JSON.`);
-    }
-  };
-
-  const fromDex = async (file: string = dex) => {
-    setError('');
-    try {
-      const r = await fetch(assetPath(file));
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const robot = dexRobots.find((x) => x.spec_file === file);
-      finish(await r.json(), 'robodex', `Started from ${robot?.name ?? file}`);
-    } catch (e) {
-      setError('Could not load that spec: ' + (e as Error).message);
-    }
-  };
-
-  return (
-    <div className="garage-add">
-      {firstRobot && <EmptyBench />}
-      <h2>Bring a robot in</h2>
-      <p className="sub">Give Wrench whatever you have, in the chatbox at the bottom of the screen.</p>
-      <ul className="g-ways">
-        <li>
-          <button type="button" className="g-way" onClick={() => promptWrench({ mode: 'chat', text: 'https://github.com/' })}>
-            <Icon d={ICON.code} size={18} />
-            <span><strong>Paste its GitHub repo link</strong>
-              <small>Wrench imports the README, parts list, model files and pictures, then you save it here.</small></span>
-          </button>
-        </li>
-        <li>
-          <button type="button" className="g-way" onClick={() => promptWrench({ attach: true })}>
-            <Icon d={ICON.photo} size={18} />
-            <span><strong>Attach a photo or spec file</strong>
-              <small>Use the paperclip. From a photo, Muse Spark drafts a spec and every size stays ESTIMATED until you measure it.</small></span>
-          </button>
-        </li>
-        <li>
-          <button type="button" className="g-way" onClick={() => promptWrench({ mode: 'design', text: '' })}>
-            <Icon d={ICON.file} size={18} />
-            <span><strong>Describe it in plain words</strong>
-              <small>For example: &ldquo;4-wheel rover, 120 mm wheels, 12 V gearmotors, a Pi 4 and a 4S battery.&rdquo;</small></span>
-          </button>
-        </li>
-      </ul>
-      <details className="g-other-ways">
-        <summary>Other ways in: the Robodex, a spec file, or pasted JSON</summary>
-      <label className="g-field">
-        <span>Robot name</span>
-        <input id="garage-new-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Leave empty to keep the spec's own name" />
-      </label>
-      <div className="g-tabs" role="tablist" aria-label="How to bring it in">
-        {([['robodex', 'From the Robodex', ICON.grid], ['file', 'Spec file', ICON.file], ['paste', 'Paste JSON', ICON.code]] as const).map(([id, label, icon]) => (
-          <button key={id} type="button" className="chip g-addchip" role="tab" aria-pressed={mode === id} onClick={() => { setMode(id); if (id === 'robodex') setDexOpen(true); }}><Icon d={icon} size={16} />{label}</button>
-        ))}
-      </div>
-      {mode === 'file' && (
-        <div className="g-pane">
-          <p className="muted">A RobotForge spec JSON, for example one written by <code>robotforge describe</code> or exported from My robots.</p>
-          <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={(e) => fromFile(e.target.files?.[0])} />
-          <button type="button" className="btn btn-primary" onClick={() => fileRef.current?.click()}>Choose a spec file</button>
-        </div>
-      )}
-      {mode === 'robodex' && (
-        <div className="g-pane">
-          <p className="muted">Start from a known robot and change it into yours.</p>
-          <button type="button" className="btn btn-primary" onClick={() => setDexOpen(true)}>Open the Robodex</button>
-        </div>
-      )}
-      <RobodexPicker
-        open={dexOpen}
-        onClose={() => setDexOpen(false)}
-        onPick={(r) => {
-          setDexOpen(false);
-          if (r.spec_file) { setDex(r.spec_file); void fromDex(r.spec_file); }
-        }}
-      />
-      {mode === 'paste' && (
-        <div className="g-pane">
-          <textarea id="garage-paste" className="g-json" rows={8} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder='{"name": "Omega1", "drivetrain": "skid_steer", ...}' />
-          <button type="button" className="btn btn-primary" disabled={!paste.trim()} onClick={() => {
-            try { finish(JSON.parse(paste), 'upload', 'Pasted spec'); } catch { setError('That text is not valid JSON.'); }
-          }}>Add robot</button>
-        </div>
-      )}
-      </details>
-      {error && <p className="g-error" role="alert">{error}</p>}
-    </div>
-  );
+function AddRobot({ firstRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean }) {
+  return <div className="garage-add">{firstRobot && <EmptyBench />}<h2>Your next robot starts in Wrench</h2><p className="sub">Attach phone photos, a mesh scan or a spec file. Or describe a robot that doesn’t exist yet.</p><button type="button" className="btn btn-primary" onClick={() => promptWrench({mode:'chat',text:'',attach:true})}>Attach files to Wrench</button><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'design',text:'Generate a robot '})}>Describe a new concept</button></div>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -561,6 +457,8 @@ export default function Garage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [baseId, setBaseId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Spec | null>(null);
+  const [draftOwner, setDraftOwner] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState('');
   const [draftNote, setDraftNote] = useState<string[]>([]);
   const [label, setLabel] = useState('');
   const [plannedDraft, setPlannedDraft] = useState(false);
@@ -587,7 +485,9 @@ export default function Garage() {
    * Omega1 panes never closes the twin or touches the stored robot.
    * Entering the twin always starts it at Overview. */
   const [omegaTab, setOmegaTab] = useState<WorkTab>('overview');
-  const [benchWires, setBenchWires] = useState(true);
+  const specsReturn = useRef({ stored: 'overview' as WorkTab, twin: 'overview' as WorkTab });
+  useEffect(() => { if (tab !== 'specs') specsReturn.current.stored = tab; if (omegaTab !== 'specs') specsReturn.current.twin = omegaTab; }, [tab, omegaTab]);
+  const [benchWires, setBenchWires] = useState(false);
   /* #assembly (Wrench's assembly proposals link there) opens Build.
    * #tab=<workshop tab> is Wrench's Tier-0 navigation landing here. */
   useEffect(() => {
@@ -643,10 +543,20 @@ export default function Garage() {
     if (next !== selected) setSelected(next);
   }, [ready, activeRobots, selected]);
 
+  const loadedSpec = useRef<{id:string; spec:Spec} | null>(null);
   useEffect(() => {
-    if (!robot) { setDraft(null); return; }
+    if (!robot) { setDraft(null); loadedSpec.current = null; return; }
     const v = robot.versions[robot.versions.length - 1];
-    setDraft(JSON.parse(JSON.stringify(v.spec)));
+    const previous = loadedSpec.current;
+    loadedSpec.current = {id:robot.id,spec:v.spec};
+    if (previous?.id === robot.id && draft && diffSpecs(previous.spec,draft).length > 0) return;
+    const cached = readStore<BrowserDraft | null>(draftKey(robot.id), null);
+    const restored = cached?.baseline === v.id && cached.spec && typeof cached.spec === 'object' && !Array.isArray(cached.spec) ? cached : null;
+    setDraft(JSON.parse(JSON.stringify(restored?.spec ?? v.spec)));
+    setLabel(restored?.label ?? '');
+    setNote(restored?.note ?? '');
+    setPlannedDraft(restored?.planned ?? !!v.planned);
+    setDraftOwner(robot.id);
     setBaseId(v.id);
     setDraftNote([]);
     runRef.current += 1;
@@ -654,9 +564,9 @@ export default function Garage() {
     setLoop(null);
     setLoopRounds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [robot?.id]);
+  }, [robot?.id, latest?.id]);
 
-  const persist = (next: GarageRobot[]) => setSaveError(saveRobots(next) ?? '');
+  const persist = (next: GarageRobot[]) => { const error = saveRobots(next); setSaveError(error ?? ''); return error; };
   /* Photos and scans take a while to process: read the garage as it is
    * now, so edits made meanwhile are kept, and skip a robot deleted
    * while they were processing. */
@@ -702,7 +612,7 @@ export default function Garage() {
     if (!robot || !draft) return;
     const spec = { ...draft, connections: next };
     const v: RobotVersion = {
-      id: uid('v'), label: `Upgrade ${robot.versions.length}`,
+      id: uid('v'), label: `Version ${robot.versions.length + 1}`,
       note: 'Connections edited in the Wiring tab', source: 'edit', createdAt: now(), spec,
     };
     persist(robots.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, v] } : r)));
@@ -753,7 +663,7 @@ export default function Garage() {
     if (!robot || !draft) return;
     const spec = { ...draft, length_m: dims.length_m, width_m: dims.width_m, height_m: dims.height_m };
     const v: RobotVersion = {
-      id: uid('v'), label: `Upgrade ${robot.versions.length}`,
+      id: uid('v'), label: `Version ${robot.versions.length + 1}`,
       note: `Dimensions measured from scan ${scanName} (${now().slice(0, 10)}) — bounding box of the scan file, axes as stored in the file (x → length, y → width, z → height)${unitNote ? `; ${unitNote}` : ''}. A scan gives size only — mass, motors and voltage do not come from it.`,
       source: 'upload', createdAt: now(), spec,
     };
@@ -808,15 +718,14 @@ export default function Garage() {
   const saveVersion = (source: VersionSource) => {
     if (!robot || !draft) return;
     const v: RobotVersion = {
-      id: uid('v'), label: label.trim() || `Upgrade ${robot.versions.length}`,
+      id: uid('v'), label: label.trim() || `Version ${robot.versions.length + 1}`,
       note: [note.trim(), ...draftNote].filter(Boolean).join(' · '), source, createdAt: now(), spec: draft,
       ...(plannedDraft ? { planned: true } : {}),
     };
-    persist(robots.map((r) => (r.id === robot.id ? { ...r, name: draft.name || r.name, versions: [...r.versions, v] } : r)));
+    if (persist(robots.map((r) => (r.id === robot.id ? { ...r, name: draft.name || r.name, versions: [...r.versions, v] } : r)))) return;
     setLabel('');
     setNote('');
     setDraftNote([]);
-    setPlannedDraft(false);
   };
 
   const togglePlanned = (versionId: string) => {
@@ -884,9 +793,13 @@ export default function Garage() {
   /* Unsaved = the draft against the latest saved version (diff compares
    * against whichever version is picked on the timeline). */
   const unsaved = useMemo(() => (latest && draft ? diffSpecs(latest.spec, draft) : []), [latest, draft]);
-  const roverOn = draft && isRover(draft);
+  useEffect(() => {
+    if (!robot || !latest || !draft || draftOwner !== robot.id) return;
+    const value: BrowserDraft | null = unsaved.length ? { baseline: latest.id, spec: draft, label, note, planned: plannedDraft } : null;
+    setDraftError(writeStore(draftKey(robot.id), value) ?? '');
+  }, [robot?.id, latest?.id, draftOwner, draft, label, note, plannedDraft, unsaved.length]);
+
   const roverDraft = useMemo(() => (draft && isRover(draft) ? checkRover(draft, rover).checks : null), [draft, rover]);
-  const roverBase = useMemo(() => (base && isRover(base.spec) ? checkRover(base.spec, rover).checks : null), [base, rover]);
   /* Tools are equipment, not components — they live in the inventory's
    * Tools section and are never fitted to a robot. Sim-only parts CAN
    * be fitted (the fit is a simulation fit, and usePart says so). */
@@ -949,7 +862,7 @@ export default function Garage() {
    *    presence without fake function. */
   const wsVerdict = verdictOf(draftLines);
   const barTab = twinOpen ? omegaTab : tab;
-  const barDisabled = !twinOpen && !(robot && draft);
+  const barDisabled = !twinOpen && (adding || !(robot && draft));
   const goTab = (t: WorkTab) => {
     if (twinOpen) { setOmegaTab(t); return; }
     setTab(t); setTwinOpen(false); setAdding(false);
@@ -957,7 +870,13 @@ export default function Garage() {
   const tabBar = (
     <div className="ws-tabs" role="tablist" aria-label="Workshop">
       {WORK_TABS.map((t) => (
-        <button key={t.id} type="button" role="tab" aria-selected={barTab === t.id} disabled={barDisabled} aria-disabled={barDisabled} onClick={() => goTab(t.id)}>
+        <button key={t.id} type="button" role="tab" id={`ws-tab-${t.id}`} aria-selected={mainTab(barTab) === t.id} tabIndex={mainTab(barTab) === t.id ? 0 : -1} disabled={barDisabled} aria-disabled={barDisabled} onClick={() => goTab(t.id)} onKeyDown={(e) => {
+          const index = WORK_TABS.findIndex((item) => item.id === t.id);
+          const next = e.key === 'ArrowRight' ? (index + 1) % WORK_TABS.length : e.key === 'ArrowLeft' ? (index + WORK_TABS.length - 1) % WORK_TABS.length : e.key === 'Home' ? 0 : e.key === 'End' ? WORK_TABS.length - 1 : -1;
+          if (next < 0) return;
+          e.preventDefault(); goTab(WORK_TABS[next].id);
+          document.getElementById(`ws-tab-${WORK_TABS[next].id}`)?.focus();
+        }}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
           {t.label}
           {t.id === 'checks' && (twinOpen
@@ -982,18 +901,19 @@ export default function Garage() {
         robotName: 'Omega1',
         versionLabel: TWIN_LABEL,
         tab: omegaTab,
-        tabLabel: WORK_TABS.find((t) => t.id === omegaTab)?.label ?? omegaTab,
+        tabLabel: WORK_TABS.find((t) => t.id === mainTab(omegaTab))?.label ?? omegaTab,
         specLines: OMEGA1_FACTS.map((f) => `${f.label}: ${f.value}`),
         checksVerdict: 'Not gated',
         checkLines: OMEGA1_CHECK_LINES,
       });
-    } else if (robot && draft) {
+    } else if (!adding && robot && draft) {
       const bi = base ? robot.versions.findIndex((v) => v.id === base.id) : -1;
       publishWorkshopContext({
+        robotId: robot.id,
         robotName: draft.name || robot.name,
         versionLabel: base ? `v${bi + 1} — ${base.label}` : '',
         tab,
-        tabLabel: WORK_TABS.find((t) => t.id === tab)?.label ?? tab,
+        tabLabel: WORK_TABS.find((t) => t.id === mainTab(tab))?.label ?? tab,
         specLines: summarizeSpec(draft),
         checksVerdict: wsVerdict.label,
         checkLines: draftLines,
@@ -1002,7 +922,7 @@ export default function Garage() {
       publishWorkshopContext(null);
     }
     return () => publishWorkshopContext(null);
-  }, [twinOpen, omegaTab, robot, draft, base, tab, draftLines, wsVerdict.label]);
+  }, [twinOpen, omegaTab, robot, draft, base, tab, adding, draftLines, wsVerdict.label]);
 
   /* One-tap Fix from a grounded chat answer (lib/workshopContext):
    * the chat's "Fix this" button on a FAIL-grounded answer asks for
@@ -1056,9 +976,7 @@ export default function Garage() {
           <span className="fbadge live">Digital twin</span>
           <span className="faint">ProjectSim reconstruction · estimated</span></span>
         </button>
-        {!storedOmega1 && (
-          <button type="button" className="btn btn-sm" style={{ marginTop: 6 }} onClick={adoptOmega1}>Add Omega1 to your Garage</button>
-        )}
+
         {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
         <p className="faint g-small" style={{ marginTop: 14 }}>Tip: press <strong>Create</strong> in the chat to generate a robot, tests, or a modification.</p>
@@ -1083,32 +1001,31 @@ export default function Garage() {
       <div className="garage-main">
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
         {lifecycleNotice && <p className="g-notice" role="status">{lifecycleNotice}</p>}
+        {(mainTab(barTab) === 'overview' || barDisabled) && <WrenchStart expanded={barDisabled} />}
         {tabBar}
-        {twinOpen && <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />}
+        {!barDisabled && <div className="ws-taskbar">
+          {(mainTab(barTab) === 'build' || mainTab(barTab) === 'checks') && <div className="ws-sections" role="group" aria-label={mainTab(barTab) === 'build' ? 'Build sections' : 'Test sections'}>
+            {(mainTab(barTab) === 'build' ? BUILD_SECTIONS : TEST_SECTIONS).map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
+          </div>}
+          <button type="button" className="btn btn-sm ws-edit-specs" onClick={() => goTab('specs')}>{twinOpen ? 'View specs' : 'Specs'}</button>
+        </div>}
+        {draftError && <p className="g-error" role="alert">Draft not saved: {draftError}</p>}
+        {twinOpen && (omegaTab === 'specs'
+          ? <SpecsDialog readOnly onClose={() => setOmegaTab(specsReturn.current.twin)}><Omega1Twin tab="specs" /></SpecsDialog>
+          : <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />)}
         {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} />}
 
         {!twinOpen && !adding && robot && draft && (() => {
           const verdict = verdictOf(draftLines);
-          const roverCounts = roverDraft ? {
-            pass: roverDraft.filter((c) => c.status === 'PASS').length,
-            fail: roverDraft.filter((c) => c.status === 'FAIL').length,
-            marginal: roverDraft.filter((c) => c.status === 'MARGINAL').length,
-            unchecked: roverDraft.filter((c) => c.status !== 'PASS' && c.status !== 'FAIL' && c.status !== 'MARGINAL').length,
-          } : null;
-          const roverText = roverCounts ? [
-            `${roverCounts.pass} pass`,
-            roverCounts.marginal ? `${roverCounts.marginal} marginal` : '',
-            `${roverCounts.fail} fail`,
-            roverCounts.unchecked ? `${roverCounts.unchecked} not checked` : '',
-          ].filter(Boolean).join(' · ') : '';
           /* A number still equal to what the photo draft guessed is ESTIMATED:
            * it gets an amber dot until the owner types a measured value. */
-          const photoV = robot.versions.find((v) => v.source === 'photo')
+          const photoV = [...robot.versions].reverse().find((v) => v.source === 'photo')
             /* An imported or re-imported photo draft keeps its provenance only in the description. */
             ?? robot.versions.find((v) => String(v.spec?.description || '').startsWith('Photo draft'));
           const estimated = new Set<string>(photoV ? FIELD_GROUPS.flatMap((g) => g.fields)
             .filter((f) => f.kind === 'number' || f.kind === 'integer')
             .map((f) => f.path)
+            .filter((path) => latest?.estimatedPaths ? latest.estimatedPaths.includes(path) : !photoV.estimatedPaths || photoV.estimatedPaths.includes(path))
             .filter((p) => { const v = getPath(draft, p); return v != null && JSON.stringify(v) === JSON.stringify(getPath(photoV.spec, p)); }) : []);
           const tiles: { label: string; value: string; unit: string; icon: string; paths: string[] }[] = [
             { label: 'Mass', value: num(draft.mass_kg, 1, 2), unit: 'kg', icon: ICON.mass, paths: ['mass_kg'] },
@@ -1124,11 +1041,13 @@ export default function Garage() {
                 <RobotAvatar names={[robot.name, String(draft.name ?? '')]} size={48} />
                 <h2>{draft.name || robot.name}</h2>
                 <span className="ws-vchip">v{robot.versions.length}</span>
-                {latest?.planned && <span className="fbadge planned" title="The current version is a plan — not built yet, and its parts may not be owned.">PLANNED — not built yet</span>}
-                <span key={verdict.cls} className={'verdict ws-verdict ' + verdict.cls}>{verdict.label}</span>
-                <ModeBanner compact mode={lm.mode} reason={lm.reason} />
+                {latest?.planned && <span className="fbadge planned" title="The current version is a plan — not built yet, and its parts may not be owned.">Planned</span>}
+                <span className="faint g-small">{unsaved.length ? (draftError ? 'Draft not saved' : 'Draft kept in this browser') : 'Saved'}</span>
+
               </div>
-              <div className="g-head-actions">
+              <details className="ws-more-actions">
+                <summary>Robot actions</summary>
+                <div className="g-head-actions">
                 <button type="button" className="btn btn-sm" onClick={saveCopy} title="Save a separate copy of this robot in your Garage — versions and provenance carried over; the original is unchanged">Save a copy</button>
                 <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
                 {confirmArchive === robot.id ? (
@@ -1141,46 +1060,31 @@ export default function Garage() {
                   <button type="button" className="btn btn-sm btn-ghost" onClick={archiveRobot}>Archive</button>
                 )}
               </div>
+              </details>
             </div>
 
-            <ol className="ws-timeline" aria-label="Versions (pick one to compare with the draft)">
-              {robot.versions.map((v, i) => (
-                <li key={v.id}>
-                  <button type="button" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title={`${v.label} · ${SOURCE_LABEL[v.source]} · ${new Date(v.createdAt).toLocaleDateString()}${v.note ? ' · ' + v.note : ''}`}>
-                    <span className="ws-dot" aria-hidden="true" />v{i + 1} <span className="ws-vlabel">{v.label}</span>{v.planned && <span className="fbadge planned">PLANNED</span>}
-                  </button>
-                </li>
-              ))}
-            </ol>
+
 
             {unsaved.length > 0 && (
               <div className="ws-savebar" role="region" aria-label="Unsaved changes">
                 <span><strong>{unsaved.length} unsaved change{unsaved.length === 1 ? '' : 's'}</strong></span>
-                <input id="garage-label" aria-label="Version name" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name this version" />
-                <input id="garage-note" aria-label="Note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
-                <label className="ws-planned-toggle" title="A planned version is an upgrade or build that is not built yet — its parts may not be owned. It keeps a plan from being read as the as-built robot.">
-                  <input type="checkbox" checked={plannedDraft} onChange={(e) => setPlannedDraft(e.target.checked)} /> Planned — not built yet
-                </label>
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => saveVersion(draftNote.some((n) => n.startsWith('Muse')) ? 'muse-fix' : draftNote.some((n) => n.startsWith('Fitted')) ? 'inventory' : 'edit')}>Save version</button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setDraft(JSON.parse(JSON.stringify(latest!.spec))); setDraftNote([]); }}>Discard</button>
               </div>
             )}
 
-            {tab === 'overview' && robot.id === OMEGA1_ROBOT_ID && (
-              <ImproveTwin
-                key={robot.id}
-                robot={robot}
-                draft={draft}
-                onSlotSave={(kind, next) => patchSlotScan(robot.id, kind, next)}
-                onApplyScanSize={applyScanSize}
-                onSaveMeasured={saveMeasured}
-                onSaveConnections={saveConnections}
-                onGoWiring={() => setTab('wiring')}
-              />
-            )}
-
             {tab === 'overview' && (
               <section className="ws-pane" aria-label="Overview">
+                {(() => {
+                  const missing = ['mass_kg', 'length_m', 'width_m', 'height_m'].filter((path) => !(Number(getPath(draft, path)) > 0)).length;
+                  const connections = Array.isArray(draft.connections) && draft.connections.length > 0;
+                  const next = latest?.planned ? { title: 'Refine your concept', text: 'Tell Wrench what to add, remove or change. Each revision stays in History.', action: 'Describe a change', tab: 'overview' as WorkTab, prompt: 'Make it wider' } : missing || estimated.size
+                    ? { title: 'Add your measurements', text: 'Measured dimensions make the model and tests more useful.', action: 'Add measurements', tab: 'specs' as WorkTab, prompt: 'My robot weighs ' }
+                    : !isWiring(draft.wiring) && !connections
+                    ? { title: 'Map your connections', text: 'Record how power and signals reach each part.', action: 'Open wiring', tab: 'wiring' as WorkTab }
+                    : { title: counts(draftLines).errors ? 'Review the issues' : 'Check your robot', text: 'Review engineering checks and explore a simulation.', action: 'Open Test', tab: 'checks' as WorkTab };
+                  return <div className="ws-next"><div><span className="eyebrow">Next step</span><h3>{next.title}</h3><p>{next.text}</p></div><button type="button" className="btn btn-primary" onClick={() => { if ('prompt' in next) promptWrench({mode:'chat',text:next.prompt}); else setTab(next.tab); }}>{next.action}</button></div>;
+                })()}
                 {(() => {
                   const art = drawingFor(draft?.name, robot.name, robot.id);
                   const drawing = art ? (
@@ -1192,12 +1096,27 @@ export default function Garage() {
                   ) : null;
                   return (
                     <OverviewMedia
-                      key={robot.id}
+                      key={`${robot.id}:${robot.scan?.addedAt ?? ''}:${robot.photoAddedAt ?? ''}:${robot.spin?.addedAt ?? ''}`}
                       robotId={robot.id}
                       spin={robot.spin}
+                      concept={!!latest?.planned}
+                      photo={robot.photo}
+                      photoSet={robot.photoSet}
+                      photoAddedAt={robot.photoAddedAt}
+                      referencePhoto={(() => {
+                        if (robot.id === OMEGA1_ROBOT_ID) return { ...OMEGA1_PHOTO, url: assetPath(OMEGA1_PHOTO.url) };
+                        const normalize = (value: unknown) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/demo$/, '');
+                        const names = [robot.name, draft.name, robot.versions[0]?.spec?.name].map(normalize);
+                        const match = dexRobots.find((r) => names.includes(normalize(r.name)) || names.includes(normalize(r.slug)));
+                        if (match?.image_url) return { url: match.image_url.startsWith('assets/') ? assetPath(match.image_url) : match.image_url, caption: `${match.image_credit || 'Catalogue reference image'} · reference robot, not your build.` };
+                        const repo = robotRepos(robot).find((r) => cardImagesOf(r).length);
+                        const image = repo && cardImagesOf(repo)[0];
+                        return image ? { url: image.url, caption: 'Repository reference image · appearance has not been verified against your build.', source: repo.provenance.repoUrl } : undefined;
+                      })()}
+                      onPhotoSave={(photo) => patchRobot(robot.id, (r) => { if (photo) return { ...r, photo }; const { photo: _removed, ...rest } = r; return rest; })}
                       scan={robot.scan}
                       name={robot.name}
-                      model={<OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
+                      model={robot.id === OMEGA1_ROBOT_ID ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
                       onSave={(next) => patchRobot(robot.id, (r) => {
                         if (next) return { ...r, spin: next };
                         const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -1221,9 +1140,8 @@ export default function Garage() {
                     </div>
                   ))}
                 </div>
-                <ForgePlacement spec={draft} />
-                <ModifyBox spec={draft} onModify={applyMod} />
-                <section className="g-repos" aria-label="Code repos">
+                <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode: 'chat', text: 'I want to modify this robot: '})}>Describe a change to Wrench</button>
+                <details className="g-repos ws-disclosure"><summary>Source repositories ({robotRepos(robot).length})</summary>
                   <h3>Code repos{robotRepos(robot).length > 0 && <span className="faint"> · {robotRepos(robot).length}</span>}</h3>
                   {robotRepos(robot).length === 0 ? (
                     <p className="faint g-small">No repos yet. Add the robot&apos;s firmware, ROS packages or CAD repo and RobotForge reads its parts and model files.</p>
@@ -1292,63 +1210,25 @@ export default function Garage() {
                     ))}
                     <span className="faint g-small">Removing a repo keeps the robot, its specs and its versions.</span>
                   </p>
-                </section>
-                <div className="ws-cards">
-                  <button type="button" className={'ws-card ' + verdict.cls} onClick={() => setTab('checks')}>
-                    <span className="ws-card-icon"><Icon d={ICON.checks} size={22} /></span>
-                    <span className="ws-card-label">Engineering checks</span>
-                    <strong>{verdict.label}</strong>
-                    <span className="ws-card-go">See checks →</span>
-                  </button>
-                  {roverCounts && (
-                    <button type="button" className={'ws-card ' + (roverCounts.fail ? 'fail' : (roverCounts.marginal || roverCounts.unchecked) ? 'marginal' : 'pass')} onClick={() => setTab('simulate')}>
-                      <span className="ws-card-icon"><Icon d={ICON.field} size={22} /></span>
-                      <span className="ws-card-label">Field checks</span>
-                      <strong>{roverText}</strong>
-                      <span className="ws-card-go">Watch the test runs →</span>
-                    </button>
-                  )}
-                  <button type="button" className="ws-card" onClick={() => setTab('history')}>
-                    <span className="ws-card-icon"><Icon d={ICON.history} size={22} /></span>
-                    <span className="ws-card-label">Version history</span>
-                    <strong>{robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}</strong>
-                    <span className="ws-card-go">Open History →</span>
-                  </button>
-                  <button type="button" className="ws-card" onClick={() => setTab('build')}>
-                    <span className="ws-card-icon"><Icon d={ICON.bench} size={22} /></span>
-                    <span className="ws-card-label">Bench</span>
-                    <strong>Add and place parts in 3D</strong>
-                    <span className="ws-card-go">Open Build →</span>
-                  </button>
-                </div>
-                {estimated.size > 0 && (
-                  <button type="button" className="ws-estnote" onClick={() => setTab('specs')}>
-                    <i className="est-dot" aria-hidden="true" /> {estimated.size} number{estimated.size === 1 ? ' is' : 's are'} guessed from the photo. <span>Measure in Specs →</span>
-                  </button>
-                )}
+                </details>
                 <p><Link className="btn btn-sm" href={'/inventory/?robot=' + encodeURIComponent(robot.id)}>Photos & parts for {robot.name}</Link> </p>
               </section>
             )}
 
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
-                <ConnectionsSection connections={draft.connections} onSave={saveConnections} />
-                <WiringViews robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} />
-                {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} spec={draft as unknown as RobotSpec} /></> : (
-                  <div className="ws-empty">
-                    <svg viewBox="0 0 120 60" width="140" aria-hidden="true"><rect x="6" y="20" width="30" height="20" rx="4" fill="var(--surface-3)" /><rect x="84" y="8" width="30" height="18" rx="4" fill="var(--surface-3)" /><rect x="84" y="34" width="30" height="18" rx="4" fill="var(--surface-3)" /><path d="M36 30 C60 30 60 17 84 17" stroke="var(--marginal)" strokeWidth="2" fill="none" /><path d="M36 30 C60 30 60 43 84 43" stroke="var(--link)" strokeWidth="2" strokeDasharray="5 4" fill="none" /></svg>
-                    <p><strong>No wiring recorded for this robot yet.</strong> Robodex robots such as Pathfinder and TurtleBot3 come with their harness. You can plan connections on the bench below.</p>
-                  </div>
-                )}
-                <ForgeWiring spec={draft} />
-                {!benchWires && <button type="button" className="btn btn-sm" onClick={() => setBenchWires(true)}>Plan new connections on the 3D bench</button>}
+                <div className="ws-sections" role="group" aria-label="Wiring workspace">
+                  <button type="button" className="btn btn-sm" aria-pressed={!benchWires} onClick={() => setBenchWires(false)}>Connections</button>
+                  <button type="button" className="btn btn-sm" aria-pressed={benchWires} onClick={() => setBenchWires(true)}>Plan in 3D</button>
+                </div>
+                {!benchWires && <>
+                  {!isWiring(draft.wiring) && <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot.name}"`})}>Describe a connection to Wrench</button>}
+                  {isWiring(draft.wiring) && <details className="ws-disclosure"><summary>Connection notes</summary><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot.name}"`})}>Describe a connection to Wrench</button></details>}
+                  {isWiring(draft.wiring) ? <WiringView compact wiring={draft.wiring} spec={draft as unknown as RobotSpec} /> : <p className="ws-empty">No wiring diagram yet. Record your connections above or plan them in 3D.</p>}
+                  <details className="ws-disclosure"><summary>Photos and connection views</summary><WiringViews robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} /></details>
+                  <details className="ws-disclosure"><summary>Generated wiring notes</summary><ForgeWiring spec={draft} /></details>
+                </>}
               </section>
-            )}
-
-            {tab === 'build' && <ForgeBuild spec={draft} />}
-
-            {tab === 'build' && (
-              <TakeApartPanel key={robot.id} robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} />
             )}
 
             {/* One bench instance for Build and the Wiring planner, so picking a
@@ -1358,47 +1238,25 @@ export default function Garage() {
                 onView={(v) => { if (v === 'wiring') setBenchWires(true); setTab(v === 'components' ? 'build' : 'wiring'); }} />
             )}
 
-            {tab === 'specs' && (
-            <section className="g-editor ws-pane" aria-label="Specs">
-              <div className="g-groups">
-                {FIELD_GROUPS.map((g) => (
-                  <fieldset key={g.title} className="g-group">
-                    <legend>{g.title}</legend>
-                    {g.fields.map((f) => <FieldInput key={f.path} field={f} spec={draft} onChange={edit} estimated={estimated.has(f.path)} />)}
-                  </fieldset>
-                ))}
-              </div>
-              <details className="g-raw" open={rawOpen} onToggle={(e) => { const o = (e.target as HTMLDetailsElement).open; setRawOpen(o); if (o) { setRawText(JSON.stringify(draft, null, 2)); setRawError(''); } }}>
-                <summary>Edit as JSON</summary>
-                <textarea id="garage-raw" className="g-json" rows={14} value={rawText} onChange={(e) => setRawText(e.target.value)} />
-                <button type="button" className="btn btn-sm" onClick={() => {
-                  try { setDraft(JSON.parse(rawText)); setRawError(''); } catch { setRawError('That is not valid JSON; the draft was not changed.'); }
-                }}>Apply JSON</button>
-                {rawError && <p className="g-error">{rawError}</p>}
-              </details>
+            {tab === 'build' && <details className="ws-disclosure"><summary>Build instructions and placement</summary><ForgeBuild spec={draft} /><ForgePlacement spec={draft} /></details>}
 
-              {usableParts.length > 0 && (
-                <div className="g-parts">
-                  <h4>Fit a part from your inventory</h4>
-                  <ul>
-                    {usableParts.map((p) => (
-                      <li key={p.id}>
-                        {p.photo && <img src={p.photo} alt="" width={40} height={40} />}
-                        <span><strong>{p.name}</strong> <span className="faint g-small">{partReality(p) === 'sim_only' ? 'sim only · ' : ''}{partToChanges(p).map((c) => c.path).join(', ')}</span></span>
-                        <button type="button" className="btn btn-sm" onClick={() => usePart(p)}>Fit</button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            {tab === 'build' && (
+              <details className="ws-disclosure"><summary>Take apart and assemble</summary><TakeApartPanel key={robot.id} robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} /></details>
+            )}
+
+            {tab === 'specs' && (
+            <SpecsDialog onClose={() => setTab(specsReturn.current.stored)}>
+            <section className="g-editor ws-pane" aria-label="Specs">
+              <p>Tell Wrench what you measured or what you want to change. For example: “My robot weighs 2 kg” or “Make the wheels 100 mm”.</p>
+              <button type="button" className="btn btn-primary" onClick={() => { setTab(specsReturn.current.stored); promptWrench({mode:'chat',text:'My robot weighs '}); }}>Update specs in Wrench</button>
+              <div className="g-groups">{FIELD_GROUPS.map((g) => <details key={g.title} className="ws-disclosure" open={g === FIELD_GROUPS[0]}><summary>{g.title}</summary><dl>{g.fields.map((f) => { const value = getPath(draft,f.path); return <div className="ws-spec-row" key={f.path}><dt>{f.label}</dt><dd>{value == null ? 'Not recorded' : typeof value === 'number' ? num(value,f.scale ?? 1,3) : String(value)} {f.unit}</dd></div>; })}</dl></details>)}</div>
+
             </section>
+            </SpecsDialog>
             )}
 
             {tab === 'simulate' && (
-              <>
-                <SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} />
-                <ForgeTestsSection spec={draft} onGenerate={generateTests} onModify={applyMod} />
-              </>
+              <SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} />
             )}
 
             {tab === 'bom' && (
@@ -1461,36 +1319,32 @@ export default function Garage() {
 
             {tab === 'checks' && (
             <section className="g-compare ws-pane" aria-label="Checks">
-              <h3>{base?.label} → draft</h3>
-              {diff.length === 0 ? <p className="faint">No changes yet. Edit a spec to compare.</p> : (
-                <div className="g-tablewrap">
-                  <table className="g-table">
-                    <thead><tr><th>Field</th><th>{base?.label}</th><th>Draft</th></tr></thead>
-                    <tbody>{diff.map((d) => <tr key={d.path}><td><code>{d.path}</code></td><td>{fmtValue(d.before)}</td><td><strong>{fmtValue(d.after)}</strong></td></tr>)}</tbody>
-                  </table>
-                </div>
-              )}
+              <h3>Engineering checks</h3>
+              <p className="g-small faint">Calculated from your specs; these are not physical test results.</p>
+              <Findings lines={draftLines} />
+              <details className="ws-disclosure"><summary>Compare with a saved version</summary>
+            <ol className="ws-timeline" aria-label="Versions (pick one to compare with the draft)">
+              {robot.versions.map((v, i) => (
+                <li key={v.id}>
+                  <button type="button" aria-pressed={v.id === base?.id} onClick={() => setBaseId(v.id)} title={`${v.label} · ${SOURCE_LABEL[v.source]} · ${new Date(v.createdAt).toLocaleDateString()}${v.note ? ' · ' + v.note : ''}`}>
+                    <span className="ws-dot" aria-hidden="true" />v{i + 1} <span className="ws-vlabel">{v.label}</span>{v.planned && <span className="fbadge planned">PLANNED</span>}
+                  </button>
+                </li>
+              ))}
+            </ol>
+                <h4>{base?.label}</h4><Findings lines={baseLines} />
+                {diff.length === 0 ? <p className="faint">No spec changes.</p> : <div className="g-tablewrap"><table className="g-table"><thead><tr><th>Spec</th><th>Saved</th><th>Draft</th></tr></thead><tbody>{diff.map((d) => { const c = changeText(d.path, d.before, d.after); return <tr key={d.path}><td>{c.label}</td><td>{c.before} {c.unit}</td><td>{c.after} {c.unit}</td></tr>; })}</tbody></table></div>}
+              </details>
+              <details className="ws-disclosure"><summary>Design checks</summary><ForgeChecks spec={draft} /></details>
+              <details className="ws-disclosure"><summary>Acceptance tests</summary><ForgeTestsSection spec={draft} onGenerate={generateTests} onModify={applyMod} /></details>
 
-              <div className="g-checks">
-                <div>
-                  <h4>Engineering · {base?.label}</h4>
-                  <Findings lines={baseLines} />
-                </div>
-                <div>
-                  <h4>Engineering · draft <span className="fbadge local">LOCAL</span></h4>
-                  <Findings lines={draftLines} />
-                </div>
-              </div>
-
-              <ForgeChecks spec={draft} />
-
-              <div className="g-fix">
+              {(fixable || looping || loop) && <div className="g-fix">
                 <div className="g-fix-head">
-                  <h4>Fix with Muse Spark</h4>
+                  <h4>Fix issues</h4>
                   <label className="g-check"><input type="checkbox" id="garage-warnings" checked={withWarnings} onChange={(e) => setWithWarnings(e.target.checked)} /> include warnings</label>
                 </div>
                 <p className="g-small muted" title="Muse Spark proposes field changes for the findings, the checks re-run, up to three rounds. The validator decides, and you decide whether to keep it.">Proposes fixes. The checks decide, then you do.</p>
-                <button type="button" className="btn btn-primary" disabled={!fixable || looping} onClick={runLoop}>{fixable ? 'Run the Forge loop' : 'Nothing to fix'}</button>
+                <button type="button" className="btn btn-primary" disabled={!fixable || looping} onClick={runLoop}>{fixable ? 'Suggest fixes' : 'Nothing to fix'}</button>
                 {health !== undefined && !routeOn(health ?? null, 'fix') && fixable && (
                   <p className="faint g-small">Offline: uses textbook rules (<LiveOffReason h={health ?? null} route="fix" />).</p>
                 )}
@@ -1498,25 +1352,9 @@ export default function Garage() {
                 {loop && loop.rounds.length > 0 && !looping && (
                   <button type="button" className="btn" onClick={acceptLoop}>Use these changes in the draft</button>
                 )}
-              </div>
+              </div>}
 
-              {roverOn && (
-                <div className="g-rover">
-                  <h4>Field checks <span className="g-small faint">estimates</span></h4>
-                  <div className="g-rover-opts">
-                    <label className="g-field"><span>Terrain</span>
-                      <select id="garage-terrain" value={rover.terrain} onChange={(e) => setRover({ ...rover, terrain: e.target.value })}>
-                        {Object.keys(TERRAINS).map((t) => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </label>
-                    <label className="g-field"><span>Slope <em>°</em></span><input id="garage-slope" type="number" min={0} max={60} value={rover.slopeDeg} onChange={(e) => setRover({ ...rover, slopeDeg: Number(e.target.value) || 0 })} /></label>
-                    <label className="g-field"><span>Step <em>mm</em></span><input id="garage-step" type="number" min={0} value={Math.round(rover.stepM * 1000)} onChange={(e) => setRover({ ...rover, stepM: (Number(e.target.value) || 0) / 1000 })} /></label>
-                    <label className="g-field"><span>Runtime target <em>min</em></span><input id="garage-target" type="number" min={1} value={rover.targetMin} onChange={(e) => setRover({ ...rover, targetMin: Number(e.target.value) || 1 })} /></label>
-                  </div>
-                  <RoverTable before={roverBase} after={roverDraft} />
-                  <details className="g-small faint"><summary>Assumptions</summary><ul>{roverDraft?.flatMap((c) => c.assumptions).filter((a, i, all) => all.indexOf(a) === i).map((a) => <li key={a}>{a}</li>)}</ul></details>
-                </div>
-              )}
+
             </section>
             )}
           </>

@@ -35,7 +35,7 @@ def test_kind_module_is_pure():
 
 def test_switcher_mounted_in_wiring_tab_after_the_editor():
     assert "import WiringViews from './WiringViews';" in GARAGE_TSX
-    editor_at = GARAGE_TSX.index("<ConnectionsSection")
+    editor_at = GARAGE_TSX.index("Describe a connection to Wrench")
     views_at = GARAGE_TSX.index("<WiringViews")
     wiring_at = GARAGE_TSX.index("tab === 'wiring'")
     assert wiring_at < editor_at < views_at

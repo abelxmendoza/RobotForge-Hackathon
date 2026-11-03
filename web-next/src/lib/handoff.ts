@@ -12,17 +12,19 @@ export type HandoffKind = 'photo' | 'doc' | 'spec' | 'scan';
 export interface Handoff {
   kind: HandoffKind;
   file: File;
+  files?: File[];
   text: string;
 }
 
 /* One accept list for every chat surface. */
-export const HANDOFF_ACCEPT = 'image/*,.json,application/json,.txt,.md,.csv,text/plain,.ply';
+export const HANDOFF_ACCEPT = 'image/*,.json,application/json,.txt,.md,.csv,text/plain,.ply,.glb,.obj,model/gltf-binary';
 
 /* Which pipeline a file belongs to, from its type and extension. */
 export function handoffKind(file: File): HandoffKind | null {
   const name = file.name.toLowerCase();
   if (file.type.startsWith('image/')) return 'photo';
-  if (name.endsWith('.ply')) return 'scan';
+  if (/\.(ply|glb|obj)$/.test(name)) return 'scan';
+  if (name.endsWith('.gltf')) return null;
   if (name.endsWith('.json') || file.type === 'application/json') return 'spec';
   if (/\.(txt|md|csv)$/.test(name) || file.type.startsWith('text/')) return 'doc';
   return null;
@@ -32,7 +34,7 @@ export const HANDOFF_LABEL: Record<HandoffKind, string> = {
   photo: 'Photo',
   doc: 'Parts list',
   spec: 'Spec file',
-  scan: 'Scan (.ply)',
+  scan: '3D scan (GLB / OBJ / PLY)',
 };
 
 let pending: Handoff | null = null;

@@ -39,7 +39,7 @@ export function applyOperation(robots: GarageRobot[], input: unknown, versionId:
     if (r.id !== op.robotId) return r;
     const spec = setPath(r.versions.at(-1)!.spec, op.path, op.value);
     return { ...r, name: spec.name || r.name, versions: [...r.versions, {
-      id: versionId, createdAt, source: 'edit' as const, label: 'Chat: ' + op.path,
+      id: versionId, createdAt, ...(r.versions.at(-1)?.planned ? {planned:true} : {}), ...(r.versions.at(-1)?.estimatedPaths ? {estimatedPaths:r.versions.at(-1)!.estimatedPaths!.filter((path) => path !== op.path)} : {}), source: 'edit' as const, label: 'Chat: ' + op.path,
       note: 'Chat operation; user applied preview. Browser checks are a subset, not hardware validation.', spec,
     }] };
   });
@@ -76,5 +76,5 @@ export function undoOperation(robots: GarageRobot[], robotId: string, appliedVer
   const robot = robots.find(r => r.id === robotId);
   if (!robot || robot.versions.at(-1)?.id !== appliedVersionId || robot.versions.length < 2) throw new Error('There is a newer change. Restore a version in My robots instead.');
   const spec = JSON.parse(JSON.stringify(robot.versions.at(-2)!.spec));
-  return robots.map(r => r.id !== robotId ? r : { ...r, name: spec.name || r.name, versions: [...r.versions, { id: versionId, createdAt, source: 'edit' as const, label: 'Undo chat change', note: 'Restored the spec before ' + appliedVersionId, spec }] });
+  return robots.map(r => r.id !== robotId ? r : { ...r, name: spec.name || r.name, versions: [...r.versions, { id: versionId, createdAt, ...(r.versions.at(-2)?.planned ? {planned:true} : {}), ...(r.versions.at(-2)?.estimatedPaths ? {estimatedPaths:r.versions.at(-2)!.estimatedPaths} : {}), source: 'edit' as const, label: 'Undo chat change', note: 'Restored the spec before ' + appliedVersionId, spec }] });
 }

@@ -10,7 +10,11 @@ export type WrenchPrompt = {
   attach?: boolean;
 };
 
+let pending: WrenchPrompt | null = null;
+export function takeWrenchPrompt(): WrenchPrompt | null { const value = pending; pending = null; return value; }
+
 export function promptWrench(p: WrenchPrompt): void {
   if (typeof window === "undefined") return;
+  pending = p;
   window.dispatchEvent(new CustomEvent(WRENCH_PROMPT_EVENT, { detail: p }));
 }
