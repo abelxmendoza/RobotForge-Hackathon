@@ -14,16 +14,26 @@
  * on screen without a demo marker. The dismissal is keyed to the
  * demo session's start stamp (lib/demoMode.ts): it survives page
  * loads inside one demo session and a fresh demo start shows the
- * bar again. */
+ * bar again.
+ *
+ * The bar and the pill also carry the way OUT to a real account
+ * (2026-11-03): a primary sign-in action. With a stored session
+ * it reads "Switch to my account" and simply exits the demo back
+ * to the visitor's real data; without one it asks the account
+ * control to open the sign-in card (lib/auth requestSignIn) —
+ * there is no second sign-in form here. "Exit demo" stays the
+ * plain log-out-of-the-demo action beside it. */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  DEMO_EVENT,
   setDemoBarDismissed,
   setDemoMode,
   useDemoBarDismissed,
   useDemoMode,
 } from "@/lib/demoMode";
+import { AUTH_EVENT, loadSession, requestSignIn } from "@/lib/auth";
 
 const WELCOMED_KEY = "rf.demo.welcomed";
 
@@ -38,11 +48,47 @@ export function useDemoExit() {
   };
 }
 
+/* The demo chrome's primary action: get from the demo to a real
+ * account. A stored session means the visitor signed in before
+ * entering the demo, so the action is a switch — exit the demo
+ * and land on their own garage, real data and all. No session
+ * means the action opens the account control's sign-in card by
+ * event (requestSignIn); completing any auth there exits the
+ * demo too (AccountControl's handleAuthed / fragment path). */
+export function useDemoSignInAction() {
+  const router = useRouter();
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    const read = () => setHasSession(Boolean(loadSession()?.token));
+    read();
+    window.addEventListener(AUTH_EVENT, read);
+    window.addEventListener(DEMO_EVENT, read);
+    window.addEventListener("focus", read);
+    return () => {
+      window.removeEventListener(AUTH_EVENT, read);
+      window.removeEventListener(DEMO_EVENT, read);
+      window.removeEventListener("focus", read);
+    };
+  }, []);
+
+  const act = () => {
+    if (loadSession()?.token) {
+      setDemoMode(false);
+      router.push("/garage/");
+    } else {
+      requestSignIn();
+    }
+  };
+  return { hasSession, act };
+}
+
 export default function DemoBar() {
   const demo = useDemoMode();
   const barDismissed = useDemoBarDismissed();
   const [welcomed, setWelcomed] = useState(true);
   const exit = useDemoExit();
+  const signIn = useDemoSignInAction();
 
   useEffect(() => {
     if (!demo) return;
@@ -70,9 +116,19 @@ export default function DemoBar() {
         <span className="demo-bar-tag">Demo</span>
         <span className="demo-bar-text">
           Sample data — chat answers are recorded from real runs, nothing here
-          is live.
+          is live. Sign in to switch to your own account; Exit demo just
+          logs you out of the demo — nothing here is saved to an account,
+          and your real data is untouched.
         </span>
-        <button type="button" className="demo-bar-exit" onClick={exit}>
+        <button type="button" className="demo-bar-signin" onClick={signIn.act}>
+          {signIn.hasSession ? "Switch to my account" : "Sign in to your account"}
+        </button>
+        <button
+          type="button"
+          className="demo-bar-exit"
+          title="Log out of the demo — sample data stays behind, your real data is untouched"
+          onClick={exit}
+        >
           Exit demo
         </button>
         <button
@@ -112,14 +168,16 @@ export default function DemoBar() {
 /* The persistent DEMO marker shown while the bar is dismissed.
  * Mounted in the app topbar and the landing header; renders
  * nothing unless demo mode is on AND the bar is hidden. Its menu
- * is the exit ramp that survives the dismissal: "Show the demo
- * bar" restores the strip, "Exit demo" leaves the demo. */
+ * is the exit ramp that survives the dismissal: the sign-in /
+ * switch action goes to a real account, "Show the demo bar"
+ * restores the strip, "Exit demo" logs out of the demo. */
 export function DemoPill() {
   const demo = useDemoMode();
   const barDismissed = useDemoBarDismissed();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const exit = useDemoExit();
+  const signIn = useDemoSignInAction();
 
   useEffect(() => {
     if (!open) return;
@@ -155,9 +213,22 @@ export function DemoPill() {
       {open && (
         <div className="demo-pill-menu" role="menu" aria-label="Demo mode">
           <p className="demo-pill-note">
-            Demo mode — sample data, recorded answers. Your own robots and
-            parts are untouched.
+            Demo mode — sample data, recorded answers. Sign in to switch
+            to your own robots and parts, or Exit demo to log out of the
+            demo. Your own data is untouched either way, and nothing
+            from the demo is saved to an account.
           </p>
+          <button
+            type="button"
+            role="menuitem"
+            className="demo-pill-primary"
+            onClick={() => {
+              setOpen(false);
+              signIn.act();
+            }}
+          >
+            {signIn.hasSession ? "Switch to my account" : "Sign in to your account"}
+          </button>
           <button
             type="button"
             role="menuitem"

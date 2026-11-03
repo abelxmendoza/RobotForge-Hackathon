@@ -104,7 +104,10 @@ def test_account_menu_starts_the_demo_and_the_demo_skips_revalidation():
     assert "Start demo" in acct
     assert "seedDemoStores" in acct
     assert "setDemoMode(true)" in acct
-    assert "Exit demo" in acct
+    # Since the demo-login fix (tests/test_demo_login.py) the
+    # in-demo panel action is labelled as what it does for a
+    # signed-in visitor: switch back to their real account.
+    assert "Switch to my account" in acct
     # The demo makes no Worker calls: a stored session is adopted
     # as-is, never refreshed against /auth/me while the flag is on.
     assert "isDemoMode() && !frag.token" in acct

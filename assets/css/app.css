@@ -685,6 +685,8 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .demo-bar-text{color:var(--text-muted);flex:1;min-width:0}
 .demo-bar-exit{flex:none;min-height:44px;padding:6px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer}
 .demo-bar-exit:hover{border-color:var(--text-faint);background:var(--surface-3)}
+.demo-bar-signin{flex:none;min-height:44px;padding:6px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+.demo-bar-signin:hover{border-color:var(--text-faint)}
 .demo-bar-welcome{max-width:1200px;margin:0 auto;padding:0 14px 12px}
 .demo-bar-welcome p{margin:0 0 10px;color:var(--text-muted);max-width:72ch}
 .demo-bar-welcome strong{color:var(--text)}
@@ -701,6 +703,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .demo-pill-note{margin:0;color:var(--text-muted);font-size:var(--fs-sm)}
 .demo-pill-menu button{padding:8px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer;text-align:left}
 .demo-pill-menu button:hover{border-color:var(--text-faint);background:var(--surface-3)}
+.demo-pill-menu button.demo-pill-primary{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:600}
 /* The demo persona chip (shell/DemoIdentity.tsx): whose sample
  * shelf this is, next to the real Sign in control. */
 .demo-identity{display:inline-flex;align-items:center;gap:8px;flex:none}
