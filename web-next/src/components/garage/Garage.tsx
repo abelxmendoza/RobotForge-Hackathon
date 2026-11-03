@@ -33,7 +33,11 @@ import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
 import ToolsMaterialsTab from './ToolsMaterialsTab';
 import Omega1Twin from './Omega1Twin';
+import ConnectionsSection from './ConnectionsSection';
+import ImproveTwin from './ImproveTwin';
+import type { ScanKind, SlotScan } from '@/lib/scan3d';
 import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, TWIN_LABEL } from '@/lib/omega1Twin';
+import { OMEGA1_ROBOT_ID, OMEGA1_SEED_NOTE, OMEGA1_SEED_SOURCE, omega1SeedSpec, type SpecConnection } from '@/lib/omega1Garage';
 import { runForgeLoop, type LoopResult, type LoopRound } from '@/lib/fixloop';
 import {
   clearRepos, detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
@@ -670,6 +674,92 @@ export default function Garage() {
     setAdding(false);
   };
 
+  /* Adopt Omega1: the built-in twin is a fixed, estimated specimen;
+   * the stored copy (fixed id 'omega1', so scans and links can find
+   * it) is the one Abel improves. Seeded from the records only —
+   * lib/omega1Garage.ts holds the seed and its provenance. Shown
+   * only while no stored 'omega1' exists; adopting selects it. */
+  const storedOmega1 = robots.find((r) => r.id === OMEGA1_ROBOT_ID) ?? null;
+  const adoptOmega1 = () => {
+    if (storedOmega1) { setSelected(OMEGA1_ROBOT_ID); setTwinOpen(false); setAdding(false); return; }
+    const r: GarageRobot = {
+      id: OMEGA1_ROBOT_ID, name: 'Omega1', createdAt: now(),
+      versions: [{ id: uid('v'), label: 'Baseline', note: OMEGA1_SEED_NOTE, source: OMEGA1_SEED_SOURCE, createdAt: now(), spec: omega1SeedSpec() }],
+    };
+    persist([...robots, r]);
+    setSelected(r.id);
+    setAdding(false);
+    setTwinOpen(false);
+  };
+  const openStoredOmega1 = () => { setSelected(OMEGA1_ROBOT_ID); setTwinOpen(false); setAdding(false); setTab('overview'); };
+
+  /* The wiring map (spec.connections): adding or removing a row
+   * saves a NEW version, like every other spec edit — the draft as
+   * it stands, with the new list, under an 'edit' source. */
+  const saveConnections = (next: SpecConnection[]) => {
+    if (!robot || !draft) return;
+    const spec = { ...draft, connections: next };
+    const v: RobotVersion = {
+      id: uid('v'), label: `Upgrade ${robot.versions.length}`,
+      note: 'Connections edited in the Wiring tab', source: 'edit', createdAt: now(), spec,
+    };
+    persist(robots.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, v] } : r)));
+    setDraft(JSON.parse(JSON.stringify(spec)));
+    setBaseId(v.id);
+  };
+
+  /* Improve-this-twin flow: a labelled scan slot lands on the robot
+   * (the file already went to IndexedDB in the slot component); the
+   * newest slot also mirrors into `scan`, the Overview viewer's
+   * primary scan. Removing the mirrored slot falls back to the
+   * newest remaining one. */
+  const patchSlotScan = (id: string, kind: ScanKind, next: SlotScan | null): string | null =>
+    patchRobot(id, (r) => {
+      const scans = next
+        ? [...(r.scans ?? []).filter((s) => s.kind !== kind), next]
+        : (r.scans ?? []).filter((s) => s.kind !== kind);
+      const out: GarageRobot = { ...r, scans };
+      const mirror = scans[scans.length - 1];
+      if (mirror) out.scan = { name: mirror.name, format: mirror.format, bytes: mirror.bytes, addedAt: mirror.addedAt };
+      else delete out.scan;
+      return out;
+    });
+
+  /* Step 3 of the flow: the tape-measure numbers, saved as ONE new
+   * version badged Measured with today's date — never scattered
+   * through the full Specs editor one field at a time. */
+  const saveMeasured = (fields: { path: string; value: number }[]) => {
+    if (!robot || !draft || fields.length === 0) return;
+    let spec = draft;
+    for (const f of fields) spec = setPath(spec, f.path, f.value);
+    const v: RobotVersion = {
+      id: uid('v'), label: 'Measured',
+      note: `Measured on the real robot by the owner — tape measure, calipers and scale (${now().slice(0, 10)}): ${fields.map((f) => f.path).join(', ')}`,
+      source: 'edit', createdAt: now(), spec,
+    };
+    persist(robots.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, v] } : r)));
+    setDraft(JSON.parse(JSON.stringify(spec)));
+    setBaseId(v.id);
+  };
+
+  /* Scan → measured dimensions: the scan card measured the file's
+   * bounding box (components/forge/scan.ts, axes as stored: x →
+   * length, y → width, z → height); applying it saves a NEW version
+   * whose note names the scan, the date and the unit rule that ran.
+   * Source 'upload': the dimensions came out of an uploaded file. */
+  const applyScanSize = (dims: { length_m: number; width_m: number; height_m: number }, scanName: string, unitNote: string) => {
+    if (!robot || !draft) return;
+    const spec = { ...draft, length_m: dims.length_m, width_m: dims.width_m, height_m: dims.height_m };
+    const v: RobotVersion = {
+      id: uid('v'), label: `Upgrade ${robot.versions.length}`,
+      note: `Dimensions measured from scan ${scanName} (${now().slice(0, 10)}) — bounding box of the scan file, axes as stored in the file (x → length, y → width, z → height)${unitNote ? `; ${unitNote}` : ''}. A scan gives size only — mass, motors and voltage do not come from it.`,
+      source: 'upload', createdAt: now(), spec,
+    };
+    persist(robots.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, v] } : r)));
+    setDraft(JSON.parse(JSON.stringify(spec)));
+    setBaseId(v.id);
+  };
+
   /* Forge Engine generation itself now lives in the chat's Create
    * panel (components/chat/ComposerCreate), which writes the same
    * PLANNED 'generated' first-version record this panel used to —
@@ -964,6 +1054,9 @@ export default function Garage() {
           <span className="fbadge live">Digital twin</span>
           <span className="faint">ProjectSim reconstruction · estimated</span></span>
         </button>
+        {!storedOmega1 && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 6 }} onClick={adoptOmega1}>Add Omega1 to your Garage</button>
+        )}
         {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
         <p className="faint g-small" style={{ marginTop: 14 }}>Tip: press <strong>Create</strong> in the chat to generate a robot, tests, or a modification.</p>
@@ -989,7 +1082,7 @@ export default function Garage() {
         {saveError && <p className="g-error" role="alert">{saveError}</p>}
         {lifecycleNotice && <p className="g-notice" role="status">{lifecycleNotice}</p>}
         {tabBar}
-        {twinOpen && <Omega1Twin tab={omegaTab} />}
+        {twinOpen && <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />}
         {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} />}
 
         {!twinOpen && !adding && robot && draft && (() => {
@@ -1071,6 +1164,19 @@ export default function Garage() {
               </div>
             )}
 
+            {tab === 'overview' && robot.id === OMEGA1_ROBOT_ID && (
+              <ImproveTwin
+                key={robot.id}
+                robot={robot}
+                draft={draft}
+                onSlotSave={(kind, next) => patchSlotScan(robot.id, kind, next)}
+                onApplyScanSize={applyScanSize}
+                onSaveMeasured={saveMeasured}
+                onSaveConnections={saveConnections}
+                onGoWiring={() => setTab('wiring')}
+              />
+            )}
+
             {tab === 'overview' && (
               <section className="ws-pane" aria-label="Overview">
                 {(() => {
@@ -1100,6 +1206,7 @@ export default function Garage() {
                         const { scan: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
                         return rest;
                       })}
+                      onApplyScanSize={applyScanSize}
                     />
                   );
                 })()}
@@ -1223,6 +1330,7 @@ export default function Garage() {
 
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
+                <ConnectionsSection connections={draft.connections} onSave={saveConnections} />
                 {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} spec={draft as unknown as RobotSpec} /></> : (
                   <div className="ws-empty">
                     <svg viewBox="0 0 120 60" width="140" aria-hidden="true"><rect x="6" y="20" width="30" height="20" rx="4" fill="var(--surface-3)" /><rect x="84" y="8" width="30" height="18" rx="4" fill="var(--surface-3)" /><rect x="84" y="34" width="30" height="18" rx="4" fill="var(--surface-3)" /><path d="M36 30 C60 30 60 17 84 17" stroke="var(--marginal)" strokeWidth="2" fill="none" /><path d="M36 30 C60 30 60 43 84 43" stroke="var(--link)" strokeWidth="2" strokeDasharray="5 4" fill="none" /></svg>

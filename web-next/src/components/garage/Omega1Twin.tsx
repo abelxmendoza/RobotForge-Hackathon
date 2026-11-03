@@ -21,7 +21,16 @@ import {
  * each tab below renders one pane from the twin's records only. */
 export type TwinTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
 
-export default function Omega1Twin({ tab = 'overview' }: { tab?: TwinTab }) {
+export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpenGarage, onAdopt }: {
+  tab?: TwinTab;
+  /* Scans attached to the owner's own stored Omega1 in the Garage:
+   * null = no stored copy exists yet; otherwise the count (0 or 1,
+   * a robot carries one scan). The twin itself stays a fixed,
+   * estimated specimen — the stored copy is the one that improves. */
+  garageScans?: number | null;
+  onOpenGarage?: () => void;
+  onAdopt?: () => void;
+}) {
   const [subjectId, setSubjectId] = useState(omega1Rover.id);
   const subject = twinSubjects.find((s) => s.id === subjectId) ?? omega1Rover;
   const isRover = subject.id === omega1Rover.id;
@@ -41,6 +50,30 @@ export default function Omega1Twin({ tab = 'overview' }: { tab?: TwinTab }) {
 
       {tab === 'overview' && (
       <>
+      <div className="twin-garage-link">
+        {garageScans !== null ? (
+          <>
+            <p>
+              <strong>Your Omega1 in the Garage</strong> — {garageScans} scan(s) attached. That stored
+              copy is yours to make accurate: attach a Scaniverse or RealSense scan there, apply its
+              measured size, and keep its wiring map current. This twin stays the estimated specimen.
+              The <strong>Improve this twin</strong> card at the top of its Overview walks you through
+              the scans, the measurements and the wiring, one step at a time.
+            </p>
+            <button type="button" className="btn btn-sm" onClick={onOpenGarage}>Open your Omega1</button>
+          </>
+        ) : (
+          <>
+            <p>
+              <strong>This twin is a built-in specimen</strong> — fixed, and estimated. Add Omega1 to
+              your Garage and you get your own stored copy, seeded from its records (DOCUMENTED fields
+              only — sizes and mass stay blank until you measure them or apply a scan). On that copy
+              you can attach scans and build the real wiring map.
+            </p>
+            <button type="button" className="btn btn-primary btn-sm" onClick={onAdopt}>Add Omega1 to your Garage</button>
+          </>
+        )}
+      </div>
       <div className="twin-subjects" role="group" aria-label="Twin subjects">
         {twinSubjects.map((s) => (
           <button

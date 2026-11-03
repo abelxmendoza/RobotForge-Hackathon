@@ -14,6 +14,29 @@ export interface ScanMeta {
   addedAt: string;
 }
 
+/* The Improve-this-twin flow keeps up to THREE scans per robot, one
+ * per job: a Scaniverse PLY (the photoreal look), a RealSense PLY
+ * (true scale — the one dimensions are measured from) and a GLB
+ * photo model (textured mesh). The slot the owner picks sets the
+ * label; the file itself lives in IndexedDB under a per-slot key. */
+export type ScanKind = 'scaniverse' | 'realsense' | 'photomodel';
+
+export interface SlotScan extends ScanMeta {
+  kind: ScanKind;
+}
+
+export const SCAN_SLOTS: { kind: ScanKind; label: string; gives: string; format: ScanFormat }[] = [
+  { kind: 'scaniverse', label: 'Scaniverse scan (.ply)', gives: 'The photoreal look — your real robot, as points', format: 'ply' },
+  { kind: 'realsense', label: 'RealSense scan (.ply)', gives: 'True scale — the scan dimensions are measured from', format: 'ply' },
+  { kind: 'photomodel', label: 'Photo model (.glb)', gives: 'A textured mesh from your photos', format: 'glb' },
+];
+
+/* IndexedDB key for one slot's file. The single-scan key above stays
+ * for the robot's primary (viewer) scan. */
+export function slotScanKey(robotId: string, kind: ScanKind, demo: boolean): string {
+  return (demo ? 'demo:' : '') + robotId + ':' + kind;
+}
+
 /* Big enough for a detailed phone scan, small enough for IndexedDB on
  * a phone. Scaniverse's "medium" GLB of a desk-sized robot is ~5-25 MB. */
 export const SCAN_MAX_BYTES = 80 * 1024 * 1024;
