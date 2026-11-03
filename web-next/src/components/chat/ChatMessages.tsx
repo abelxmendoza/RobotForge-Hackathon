@@ -16,16 +16,24 @@ export interface ChatMsg {
   /* Live answers grounded in a Workshop snapshot only (set in
    * ChatDock at ask time). Recorded answers never carry this. */
   grounding?: { caption: string; failing: boolean };
+  /* Local Create-panel action results only (ComposerCreate): a
+   * FORGE ENGINE / FORGE TESTS pill and an Open-in-Workshop action.
+   * Never set on recorded or live answers, and never combined with
+   * a grounding caption. */
+  pill?: string;
+  openAction?: { robotId: string; tab?: string; label: string };
 }
 
 export default function ChatMessages({
   messages,
   onHitClick,
   onFixClick,
+  onOpenRobot,
 }: {
   messages: ChatMsg[];
   onHitClick: (h: Hit) => void;
   onFixClick?: () => void;
+  onOpenRobot?: (a: { robotId: string; tab?: string; label: string }) => void;
 }) {
   return (
     <>
@@ -42,8 +50,22 @@ export default function ChatMessages({
       )}
       {messages.map((m) => (
         <div key={m.id} className={"fc-msg " + m.who}>
+          {m.pill && (
+            <p><span className="fbadge local">{m.pill}</span></p>
+          )}
           {m.html && <div dangerouslySetInnerHTML={{ __html: m.html }} />}
           {m.text && <p style={{ whiteSpace: "pre-wrap" }}>{m.text}</p>}
+          {m.openAction && onOpenRobot && (
+            <p>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => onOpenRobot(m.openAction!)}
+              >
+                {m.openAction.label}
+              </button>
+            </p>
+          )}
           {m.grounding && (
             <p className="fc-grounding">{m.grounding.caption}</p>
           )}

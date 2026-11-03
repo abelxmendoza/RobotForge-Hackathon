@@ -141,7 +141,12 @@ def test_chat_rail_comes_before_the_nav_sidebar():
 
 def test_next_landing_final_cta_has_no_dense_demo_screenshot():
     page = (REPO / "web-next/src/app/page.tsx").read_text()
-    assert "See a broken robot get fixed in one click." in page
+    # The final CTA band repeated the hero's two CTAs a third time
+    # down the page; Abel's 2026-11-02 declutter removed the band
+    # (disclosed pin change — the hero keeps both CTAs, and the
+    # no-dense-screenshot rule still holds page-wide).
+    assert "See a broken robot get fixed in one click." not in page
+    assert "cta-band" not in page
     assert "Run the demo" in page
     assert "Open the app" in page
     assert 'assets/img/demo-shot.jpg' not in page

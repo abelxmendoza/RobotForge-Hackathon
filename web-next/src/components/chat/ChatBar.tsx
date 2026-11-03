@@ -15,6 +15,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
+import ComposerCreate from "./ComposerCreate";
 import AttachButton from "./AttachButton";
 import CopyButton from "./CopyButton";
 import { transcript } from "@/lib/copytext";
@@ -24,6 +25,7 @@ export default function ChatBar() {
   const pathname = usePathname();
   const assistant = useForgeAssistant();
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [text, setText] = useState("");
   const msgsRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -104,7 +106,7 @@ export default function ChatBar() {
             </button>
           </div>
           <div className="fc-msgs" ref={msgsRef} aria-live="polite">
-            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} />
+            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} onOpenRobot={(a) => assistant.openRobot(a.robotId, a.tab)} />
           </div>
           <div className="chat-bar-actions">{assistant.actions}</div>
           <div className="fc-chips">
@@ -115,6 +117,15 @@ export default function ChatBar() {
             ))}
           </div>
         </section>
+      )}
+
+      {createOpen && (
+        <ComposerCreate
+          onResult={(r) => {
+            assistant.postCreateResult(r);
+            setOpenPersist(true); // the result lands in the conversation — open it
+          }}
+        />
       )}
 
       <form
@@ -133,6 +144,19 @@ export default function ChatBar() {
           title={open ? "Collapse conversation" : "Open conversation"}
         >
           {open ? "▾" : "▴"}
+        </button>
+        <button
+          type="button"
+          className="chat-bar-create"
+          onClick={() => setCreateOpen(!createOpen)}
+          aria-expanded={createOpen}
+          aria-label="Create: generate a robot, acceptance tests, or a modification"
+          title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)"
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+            <path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z" />
+          </svg>
+          Create
         </button>
         <AttachButton text={text} onSent={() => setText("")} />
         <textarea

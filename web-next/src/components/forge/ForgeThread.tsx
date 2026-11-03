@@ -39,6 +39,7 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useForgeAssistant } from '@/components/chat/ChatDock';
+import ComposerCreate from '@/components/chat/ComposerCreate';
 import { repoLinkIn } from '@/lib/repoLink';
 import { WRENCH_PROMPT_EVENT, type WrenchPrompt } from '@/lib/wrenchPrompt';
 import { conversationalAnswer } from '@/components/chat/engine';
@@ -324,6 +325,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   assistantRef.current = assistant;
   const assistantEntryIds = useRef(new Map<number,number>());
   const [inputMode,setInputMode]=useState<'chat'|'design'>('chat');
+  const [createOpen, setCreateOpen] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('Checking what this deployment can do…');
   const [mode, setMode] = useState<{ mode: LiveMode; why: string }>({
@@ -398,8 +400,10 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         continue;
       }
       const node=<div className="main-assistant-reply">
+        {message.pill&&<p><span className="fbadge local">{message.pill}</span></p>}
         {message.html&&<div dangerouslySetInnerHTML={{__html:message.html}}/>}
         {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
+        {message.openAction&&<p><button type="button" className="btn btn-sm" onClick={()=>assistantRef.current.openRobot(message.openAction!.robotId, message.openAction!.tab)}>{message.openAction.label}</button></p>}
         {message.grounding&&<p className="fc-grounding">{message.grounding.caption}</p>}
         {message.grounding&&message.grounding.failing&&<button type="button" className="fc-fix-btn" onClick={()=>assistantRef.current.fixGroundedAnswer()}>Fix this</button>}
         {message.hits&&<div className="g-tabs">{message.hits.map((hit,i)=><button type="button" className="chip" key={i} onClick={()=>assistantRef.current.onHitClick(hit)}>{hit.label}</button>)}</div>}
@@ -1562,8 +1566,16 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           <div className="wrench-panel-body" ref={panelBodyRef}>{panel}</div>
         </section>
       ) : panel}
+      {createOpen && (
+        <ComposerCreate
+          onResult={(r) => {
+            assistant.postCreateResult(r);
+            setOpen(true); // the result lands in the conversation — open it
+          }}
+        />
+      )}
       <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
-        <div className="g-tabs" aria-label="Message mode"><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button></div>
+        <div className="g-tabs" aria-label="Message mode"><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button><button type="button" className="chip" aria-pressed={createOpen} onClick={()=>setCreateOpen(!createOpen)} aria-label="Create: generate a robot, acceptance tests, or a modification" title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)">✦ Create</button></div>
         {/* The assistant's suggestion chips belong to THIS surface on
             /garage: the bottom ChatBar that renders them on other
             pages returns null on /garage, /forge and /chat, so the
@@ -1573,7 +1585,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
             invisible on its own page. Docked only: the full-page
             thread keeps its existing layout. */}
         {docked && inputMode === 'chat' && assistant.chips.length > 0 && (
-          <div className="fc-chips" aria-label="Suggestions for the open Workshop tab">
+          <div className="fc-chips" aria-label="Suggestions for the open Workshop tab" hidden={createOpen}>
             {assistant.chips.map((c) => (
               <button
                 type="button"

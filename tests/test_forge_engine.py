@@ -29,6 +29,7 @@ LIB = WEB / "src" / "lib"
 FORGE = (LIB / "forgeEngine.ts").read_text()
 GARAGE_LIB = (LIB / "garage.ts").read_text()
 GARAGE_TSX = (WEB / "src/components/garage/Garage.tsx").read_text()
+CREATE_TSX = (WEB / "src/components/chat/ComposerCreate.tsx").read_text()
 APP_CSS = (ROOT / "assets/css/app.css").read_text()
 WRENCH = (WEB / "src/components/chat/wrench.ts").read_text()
 ENGINE = (WEB / "src/components/chat/engine.ts").read_text()
@@ -194,9 +195,19 @@ def test_all_archetype_selections_exist_in_the_catalogue():
 
 
 def test_ui_wiring_and_generated_source():
-    assert "Generate a robot" in GARAGE_TSX
-    assert "generateRobot(brief, catalogParts)" in GARAGE_TSX
-    assert "parseBrief(prompt" in GARAGE_TSX
+    # Generation's UI moved into the chat composer (2026-11-02,
+    # Abel's direction): the Create panel owns the brief form and the
+    # engine calls, and writes the same PLANNED 'generated' record
+    # the Garage panel used to. The pins moved with it — disclosed
+    # here rather than silently dropped.
+    assert "Generate a robot" in CREATE_TSX
+    assert "generateRobot(brief, catalogParts)" in CREATE_TSX
+    assert "parseBrief(prompt" in CREATE_TSX
+    assert "source: 'generated'" in CREATE_TSX
+    assert "planned: true" in CREATE_TSX
+    assert "label: 'Generated plan'" in CREATE_TSX
+    # The Garage no longer carries a standalone Generate panel.
+    assert "Generate a robot" not in GARAGE_TSX
     assert "source: 'generated'" in GARAGE_TSX
     assert "planned: true" in GARAGE_TSX
     assert "'generated'" in GARAGE_LIB
@@ -212,8 +223,12 @@ def test_ui_wiring_and_generated_source():
 
 
 def test_styles_live_in_the_css_source_of_truth():
-    for cls in [".forge-gen", ".forge-block", ".forge-map", ".forge-dot", ".forge-list"]:
+    # ".forge-gen" (the removed Garage panel's own rules) left with
+    # the panel in the composer move; the row/sensor rules stay —
+    # the Modify box and the Create panel both use them.
+    for cls in [".forge-block", ".forge-map", ".forge-dot", ".forge-list", ".forge-gen-row", ".forge-gen-sensors"]:
         assert cls in APP_CSS, cls
+    assert ".forge-gen{" not in APP_CSS
 
 
 def test_wrench_layer_never_imports_the_engine():

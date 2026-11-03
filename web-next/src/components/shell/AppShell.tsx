@@ -61,11 +61,14 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
               <span>More</span>
             </summary>
             <div className="nav-more-menu">
+              {/* Only the folded nav items live here: two links used
+               * to be repeated in this menu AND in the side-foot
+               * directly below (one of them is in the topbar too) —
+               * one copy each, in the side-foot, since the
+               * 2026-11-02 declutter. */}
               {NAV.filter((n) => n.more).map((n) => (
                 <Link key={n.id} href={n.href} aria-current={n.id === active ? "page" : undefined}>{n.label}</Link>
               ))}
-              <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
-              <a href={REPO_URL}>GitHub</a>
             </div>
           </details>
         </nav>
