@@ -149,6 +149,13 @@ interface Msg {
    * live attempts that fell back to one — carry no grounding, so
    * they never show a caption or a Fix button they did not earn. */
   grounding?: { caption: string; failing: boolean };
+  /* Set ONLY on a local Create-panel action result (ComposerCreate:
+   * Forge Engine generation / modification, Forge Tests): the pill
+   * names the deterministic engine that ran, and openAction routes
+   * to the robot in the Workshop. These messages never go through
+   * the recorded/live answer pipeline and never carry grounding. */
+  pill?: string;
+  openAction?: { robotId: string; tab?: string; label: string };
 }
 
 let nextId = 1;
@@ -260,6 +267,33 @@ export function useForgeAssistant() {
       appendMsg({ who: "bot", text });
     },
     [appendMsg]
+  );
+
+  /* Create-panel results (components/chat/ComposerCreate): local,
+   * deterministic engine actions posted as their own message kind —
+   * pill + text + an optional Open-in-Workshop action — outside the
+   * recorded/live answer pipeline entirely. */
+  const postCreateResult = useCallback(
+    (r: { pill: string; text: string; openAction?: { robotId: string; tab?: string; label: string } }) => {
+      appendMsg({ who: "bot", text: r.text, pill: r.pill, openAction: r.openAction });
+    },
+    [appendMsg]
+  );
+
+  /* Open a saved robot in the Workshop, optionally on a named tab.
+   * On /garage the Garage is already mounted and reads the combined
+   * #robot=<id>&tab=<tab> hash; from anywhere else the router lands
+   * on the same hash. */
+  const openRobot = useCallback(
+    (robotId: string, tab?: string) => {
+      const hash = "robot=" + robotId + (tab ? "&tab=" + tab : "");
+      if ((pathname || "").startsWith("/garage")) {
+        window.location.hash = hash;
+      } else {
+        router.push("/garage/#" + hash);
+      }
+    },
+    [pathname, router]
   );
 
   /* Demo thread: the demo opens like a first visit (Abel, 2026-11-01),
@@ -1115,7 +1149,7 @@ export function useForgeAssistant() {
     setChipsState(chipsFor({}));
   }, [pathname, wrench]);
 
-  return {ask,messages,chips,onHitClick,fixGroundedAnswer,subText,resetConversation,actions: <div className="main-chat-actions">
+  return {ask,messages,chips,onHitClick,fixGroundedAnswer,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
           onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}
