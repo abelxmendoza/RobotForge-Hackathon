@@ -467,7 +467,26 @@ function omega1HowTo(qt: string[]): boolean {
 
 type Omega1Aspect =
   | "broken" | "power" | "sensors" | "drive" | "compute"
-  | "control" | "size" | "gate" | "specimen" | "overview";
+  | "control" | "size" | "gate" | "specimen" | "overview" | "unknown";
+
+/* Words that make an ask an introduction ("do you know Omega1?",
+ * "tell me about Omega1", or just "Omega1?"). Any other Omega1 ask
+ * the aspects above do not cover is a fact the records do not hold. */
+const INTRO_WORDS = ["know", "about", "who", "tell", "describe", "introduce", "overview", "summary", "explain", "more"];
+const FILLER = ["omega", "omega1", "1", "what", "whats", "is", "s", "the", "a", "an", "this", "that", "he", "him", "hes", "it", "its", "and", "so", "ok", "okay", "hey", "wrench"];
+
+function omega1Intro(qt: string[]): boolean {
+  if (INTRO_WORDS.some((w) => qt.indexOf(w) !== -1)) return true;
+  return qt.every((t) => FILLER.indexOf(t) !== -1);
+}
+
+/* An explicit list or catalogue ask ("show me robots that passed")
+ * is not about the remembered robot, even when it says "that". */
+function listAsk(qt: string[]): boolean {
+  return ["robots", "which", "list", "show", "all", "any", "every", "parts", "catalogue", "catalog"].some(
+    (w) => qt.indexOf(w) !== -1
+  );
+}
 
 function omega1Aspect(qt: string[]): Omega1Aspect {
   const has = (ws: string[]) => ws.some((w) => qt.indexOf(w) !== -1);
@@ -485,7 +504,7 @@ function omega1Aspect(qt: string[]): Omega1Aspect {
   if (has(["size", "big", "small", "weight", "weigh", "weighs", "heavy", "mass", "dimensions", "long", "wide", "tall"]))
     return "size";
   if (has(["specimen", "workshop", "looking", "see", "seeing", "here", "garage", "twin", "model"])) return "specimen";
-  return "overview";
+  return omega1Intro(qt) ? "overview" : "unknown";
 }
 
 const OMEGA1_OVERVIEW =
@@ -580,9 +599,21 @@ function omega1Answer(qt: string[], root: string): AnswerResult {
         "Workshop&rsquo;s Improve this twin steps take a RealSense scan for " +
         "true size and a short tape-measure form for the rest.</p>";
       break;
+    case "unknown":
+      /* Same honesty contract as the engine's fallback: say it is not
+       * recorded, and flag it so a live model may take it when on. */
+      return {
+        html:
+          "<p>That isn&rsquo;t in " + lead + "&rsquo;s records, so I&rsquo;d " +
+          "rather say so than guess. What is recorded about it:</p>" +
+          OMEGA1_OVERVIEW,
+        chips: omega1Chips(aspect),
+        hits: [{ kind: "route", label: "Workshop — Omega1", route: workshopRoute(root) }],
+        fallback: true,
+      };
     default:
       html =
-        "<p>Yes. " + lead + " is RobotForge&rsquo;s own robot: a real " +
+        "<p>" + (qt.indexOf("know") !== -1 ? "Yes. " : "") + lead + " is RobotForge&rsquo;s own robot: a real " +
         "rover on its builder&rsquo;s bench, and the built-in specimen in " +
         "the Workshop. It is the robot the demo is tested on.</p>" +
         OMEGA1_OVERVIEW;
@@ -696,6 +727,7 @@ export function createWrench(data: EngineData): Wrench {
     const carried =
       !named &&
       mem.robotSlug === OMEGA1_SLUG &&
+      !listAsk(qt) &&
       (qt.some((t) => PERSON_REF.indexOf(t) !== -1) || isFollowUp(qt));
     if ((named || carried) && !omega1HowTo(qt) && !matchRobot(qt, robots)) {
       const oa = omega1Answer(qt, root);

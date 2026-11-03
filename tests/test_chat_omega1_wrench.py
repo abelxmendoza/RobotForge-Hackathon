@@ -44,6 +44,8 @@ CASES = [
     {"id": "andino", "turns": ["do you know Omega1?", "Tell me about Andino"]},
     {"id": "caps", "q": "what can you do"},
     {"id": "chip", "q": "Tell me about Omega1"},
+    {"id": "moveon", "turns": ["Tell me about Omega1", "Show me robots that passed the gate"]},
+    {"id": "speed", "q": "What is the top speed of Omega1?"},
 ]
 
 _CACHE = {}
@@ -108,6 +110,13 @@ def test_single_asks():
     # Naming a Robodex robot after Omega1 moves on to that robot.
     assert "andino" in _text(r["andino"]["turns"][1]["html"])
     assert "omega1" in _text(r["caps"]["html"])
+    # A list ask after Omega1 is answered as a list, not as Omega1.
+    moved = _text(r["moveon"]["turns"][1]["html"])
+    assert "pathfinder" in moved and "no gate has run" not in moved
+    # An Omega1 fact the records lack is named as missing and flagged.
+    speed = r["speed"]
+    assert speed["fallback"] and FALLBACK in _text(speed["html"])
+    assert not re.search(r"\d+(\.\d+)?\s*(m/s|km/h|mph)", _text(speed["html"]))
     # The greeting's "Tell me about Omega1" chip lands on a real answer.
     assert not r["chip"]["fallback"] and "freenove" in _text(r["chip"]["html"])
 
