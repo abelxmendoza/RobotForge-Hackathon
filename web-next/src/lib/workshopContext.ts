@@ -143,8 +143,8 @@ const TAB_CHIPS: Record<string, string[]> = {
   ],
   simulate: [
     'What will the simulation check on this robot?',
-    'What could make this robot fail the motion gate?',
-    'How does this robot’s spec affect its sim?',
+    'Which acceptance tests would this robot fail?',
+    'Which acceptance tests can’t be checked for this robot yet?',
   ],
   checks: [
     'Why is this robot failing its checks?',
