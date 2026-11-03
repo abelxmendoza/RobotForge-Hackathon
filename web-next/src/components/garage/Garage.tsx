@@ -948,7 +948,6 @@ export default function Garage() {
             </ul>
           </details>
         )}
-        <p className="faint g-small" title="Saved in this browser only. Use Export to keep a copy.">Saved in this browser</p>
       </aside>
 
       <div className="garage-main">
