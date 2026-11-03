@@ -14,7 +14,8 @@ import RobotAvatar from './RobotAvatar';
 import WiringView from '@/components/wiring/WiringView';
 const WiringBench3D = dynamic(() => import('@/components/wiring/WiringBench3D'), { ssr: false, loading: () => <p className="faint">Loading the 3D bench…</p> });
 import { isWiring } from '@/lib/wiring';
-import { robots as dexRobots } from '@/lib/data';
+import { parts as catalogParts, robots as dexRobots } from '@/lib/data';
+import { applyModification, generateRobot, parseBrief, type ArchetypeId, type ForgeSize } from '@/lib/forgeEngine';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
@@ -381,6 +382,170 @@ function drawingFor(...names: unknown[]): string | null {
   return null;
 }
 
+/* ------------------------------------------------------------------ */
+/* Forge Engine v1 (lib/forgeEngine): generate a robot from a brief,  */
+/* render the generated plan inside the existing Workshop tabs, and   */
+/* apply a modification as a NEW version. Generated = planned.        */
+
+function GeneratePanel({ onGenerate }: { onGenerate: (spec: Spec) => void }) {
+  const [prompt, setPrompt] = useState('');
+  const [archetype, setArchetype] = useState<'auto' | ArchetypeId>('auto');
+  const [size, setSize] = useState<ForgeSize>('standard');
+  const [sensors, setSensors] = useState<string[]>([]);
+  const [error, setError] = useState('');
+  const toggleSensor = (s: string) => setSensors((x) => (x.includes(s) ? x.filter((y) => y !== s) : [...x, s]));
+  const go = () => {
+    const brief = parseBrief(prompt, {
+      ...(archetype !== 'auto' ? { archetype } : {}),
+      size,
+      ...(sensors.length ? { sensors } : {}),
+    });
+    const spec = generateRobot(brief, catalogParts);
+    if (!spec?.forge?.bom?.length) { setError('The engine could not ground that brief in catalogue parts — nothing was generated.'); return; }
+    setError('');
+    onGenerate(spec);
+  };
+  return (
+    <section className="forge-gen" aria-label="Generate a robot">
+      <h3>Generate a robot</h3>
+      <p className="faint g-small">Describe it and the Forge Engine picks real catalogue parts, places them, plans the wiring and prints, and checks its own work. The result is a <strong>planned</strong> robot — not built yet.</p>
+      <label className="g-field"><span>Brief</span>
+        <input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="e.g. a rover with lidar and a camera for the hallway" aria-label="Robot brief" />
+      </label>
+      <div className="forge-gen-row">
+        <label className="g-field"><span>Type</span>
+          <select value={archetype} onChange={(e) => setArchetype(e.target.value as 'auto' | ArchetypeId)} aria-label="Robot type">
+            <option value="auto">From the brief</option>
+            <option value="differential_rover">Differential rover</option>
+            <option value="mecanum_rover">Mecanum rover</option>
+            <option value="robotic_arm">Robotic arm</option>
+            <option value="multirotor">Multirotor</option>
+          </select>
+        </label>
+        <label className="g-field"><span>Size</span>
+          <select value={size} onChange={(e) => setSize(e.target.value as ForgeSize)} aria-label="Robot size">
+            <option value="compact">Compact</option>
+            <option value="standard">Standard</option>
+            <option value="large">Large</option>
+          </select>
+        </label>
+      </div>
+      <fieldset className="forge-gen-sensors">
+        <legend>Sensors</legend>
+        {[['lidar', 'Lidar'], ['camera', 'Camera'], ['depth_camera', 'Depth camera'], ['imu', 'IMU'], ['ultrasonic', 'Ultrasonic']].map(([id, label]) => (
+          <label key={id} className="g-check"><input type="checkbox" checked={sensors.includes(id)} onChange={() => toggleSensor(id)} /> {label}</label>
+        ))}
+      </fieldset>
+      <button type="button" className="btn btn-primary" onClick={go}>Generate robot</button>
+      {error && <p className="g-error" role="alert">{error}</p>}
+    </section>
+  );
+}
+
+function ForgePlacement({ spec }: { spec: Spec }) {
+  const forge = spec?.forge;
+  if (!forge?.placement?.length) return null;
+  const L = Math.max(1, Math.round((spec.length_m ?? 0.3) * 1000));
+  const W = Math.max(1, Math.round((spec.width_m ?? 0.25) * 1000));
+  return (
+    <section className="forge-block" aria-label="Suggested placement">
+      <h3>Suggested placement <span className="fbadge local">FORGE ENGINE</span></h3>
+      <p className="faint g-small">Top-down: +X is the front of the robot. Every position carries the rule that placed it.</p>
+      <div className="forge-map" role="img" aria-label="Top-down placement map">
+        <span className="forge-map-front" aria-hidden="true">front (+X) ↑</span>
+        {forge.placement.map((p: { partId: string; role: string; pos_mm: number[] }, i: number) => {
+          const left = 50 + (p.pos_mm[1] / W) * 90;
+          const top = 50 - (p.pos_mm[0] / L) * 90;
+          return <span key={i} className="forge-dot" style={{ left: `${left}%`, top: `${top}%` }} title={`${p.role} (${p.partId}) at [${p.pos_mm.join(', ')}] mm`} aria-hidden="true" />;
+        })}
+      </div>
+      <ul className="forge-list">
+        {forge.placement.map((p: { partId: string; role: string; pos_mm: number[]; orient: string; why: string }, i: number) => (
+          <li key={i}><strong>{p.role}</strong> <span className="faint">({p.partId})</span> — [{p.pos_mm.join(', ')}] mm · {p.orient}<br /><span className="faint">{p.why}</span></li>
+        ))}
+      </ul>
+      {forge.gather?.length > 0 && <p className="faint g-small">Not in the catalogue (gather requests, never invented): {forge.gather.join(' ')}</p>}
+    </section>
+  );
+}
+
+function ForgeBuild({ spec }: { spec: Spec }) {
+  const forge = spec?.forge;
+  if (!forge?.prints?.length && !forge?.assembly?.length) return null;
+  return (
+    <section className="forge-block" aria-label="Prints and assembly">
+      <h3>3D prints & assembly <span className="fbadge local">FORGE ENGINE</span></h3>
+      {forge.prints?.length > 0 && (
+        <div className="g-tablewrap"><table className="g-table">
+          <thead><tr><th>Print</th><th>Material</th><th>Orientation</th><th>Settings</th><th>Bed fit (220×220 assumed)</th><th>Filament / time</th></tr></thead>
+          <tbody>{forge.prints.map((p: { name: string; scad: string; material: string; orientation: string; infill_pct: number; walls: number; bed_fit: string; filament_g_est: number; time_min_est: number; estimate_label: string }, i: number) => (
+            <tr key={i}><td><strong>{p.name}</strong><br /><span className="faint">{p.scad}</span></td><td>{p.material}</td><td>{p.orientation}</td><td>{p.infill_pct}% infill · {p.walls} walls</td><td>{p.bed_fit}</td><td>{p.filament_g_est} g · ~{p.time_min_est} min<br /><span className="faint">{p.estimate_label}</span></td></tr>
+          ))}</tbody>
+        </table></div>
+      )}
+      {forge.assembly?.length > 0 && (<>
+        <h4>Assembly order</h4>
+        <ol className="forge-list">{forge.assembly.map((a: string, i: number) => <li key={i}>{a}</li>)}</ol>
+      </>)}
+    </section>
+  );
+}
+
+function ForgeWiring({ spec }: { spec: Spec }) {
+  const forge = spec?.forge;
+  if (!forge?.wiring?.length) return null;
+  return (
+    <section className="forge-block" aria-label="Suggested connections">
+      <h3>Suggested connections <span className="fbadge local">FORGE ENGINE</span></h3>
+      <ul className="forge-list">
+        {forge.wiring.map((w: { from: string; to: string; kind: string; volts: number | null; connector: string; why: string }, i: number) => (
+          <li key={i}><strong>{w.from} → {w.to}</strong> <span className="fbadge">{w.kind}</span>{w.volts !== null && w.volts !== undefined ? ` ${w.volts} V` : ''} · {w.connector}<br /><span className="faint">{w.why}</span></li>
+        ))}
+      </ul>
+      <p className="faint g-small">Orientation: power runs battery → fuse → driver/regulator → loads; sensor orientations are on the Overview placement list. Voltage verdicts are in Checks.</p>
+    </section>
+  );
+}
+
+function ForgeChecks({ spec }: { spec: Spec }) {
+  const forge = spec?.forge;
+  if (!forge?.checks?.length) return null;
+  const cls: Record<string, string> = { PASS: 'pass', WARN: 'marginal', ERROR: 'fail', NOT_CHECKED: 'norun' };
+  return (
+    <section className="forge-block" aria-label="Forge Engine checks">
+      <h3>Forge Engine checks <span className="fbadge local">GENERATED PLAN</span></h3>
+      <ul className="forge-list">
+        {forge.checks.map((c: { id: string; verdict: string; detail: string }, i: number) => (
+          <li key={i}><span className={'verdict ' + (cls[c.verdict] ?? 'norun')}>{c.verdict}</span> <strong>{c.id}</strong> — {c.detail}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ModifyBox({ spec, onModify }: { spec: Spec; onModify: (text: string) => string | null }) {
+  const [text, setText] = useState('');
+  const [msg, setMsg] = useState('');
+  if (!spec?.forge) return null;
+  const go = () => {
+    const r = onModify(text);
+    setMsg(r ?? 'That modification is outside the engine grammar (try: add a camera, add lidar, make it wider, swap in a bigger battery) — nothing was changed.');
+    if (r) setText('');
+  };
+  return (
+    <section className="forge-block" aria-label="Modify this robot">
+      <h3>Modify <span className="fbadge local">FORGE ENGINE</span></h3>
+      <div className="forge-gen-row">
+        <label className="g-field"><span>Modification</span>
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. add a camera · make it wider · swap in a bigger battery" aria-label="Modification" />
+        </label>
+        <button type="button" className="btn" onClick={go}>Apply as new version</button>
+      </div>
+      {msg && <p className="g-small" role="status">{msg}</p>}
+    </section>
+  );
+}
+
 const ALL_REPOS = '*all*';
 
 export default function Garage() {
@@ -493,6 +658,38 @@ export default function Garage() {
     persist([...robots, r]);
     setSelected(r.id);
     setAdding(false);
+  };
+
+  /* Forge Engine: a generated robot lands as a PLANNED first version
+   * (source 'generated') and opens in the Workshop like any robot. */
+  const addGenerated = (spec: Spec) => {
+    const r: GarageRobot = {
+      id: uid('robot'), name: spec.name || 'Generated robot', createdAt: now(),
+      versions: [{ id: uid('v'), label: 'Generated plan', note: 'Generated by the Forge Engine — planned, not built yet', source: 'generated', createdAt: now(), spec, planned: true }],
+    };
+    persist([...robots, r]);
+    setSelected(r.id);
+    setAdding(false);
+    setTwinOpen(false);
+    setTab('overview');
+  };
+
+  /* A modification never edits in place: it saves the modified spec
+   * as a NEW version (planned flag kept) and reports the diff. The
+   * engine returns null for anything outside its grammar. */
+  const applyMod = (text: string): string | null => {
+    if (!robot || !draft) return null;
+    const mod = applyModification(draft, text, catalogParts);
+    if (!mod) return null;
+    const rows = diffSpecs(draft, mod.spec).length;
+    const v: RobotVersion = {
+      id: uid('v'), label: `Forge mod ${robot.versions.length + 1}`,
+      note: mod.summary, source: 'generated', createdAt: now(), spec: mod.spec, planned: true,
+    };
+    persist(robots.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, v] } : r)));
+    setDraft(JSON.parse(JSON.stringify(mod.spec)));
+    setBaseId(v.id);
+    return `${mod.summary} Saved as a new version (${rows} spec field${rows === 1 ? '' : 's'} differ).`;
   };
 
   /* Save a copy: the save-as-new half of the chat's save choice,
@@ -730,6 +927,7 @@ export default function Garage() {
         </button>
         {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
+        <GeneratePanel onGenerate={addGenerated} />
         {archivedRobots.length > 0 && (
           <details className="g-archived">
             <summary>Archived robots ({archivedRobots.length})</summary>
@@ -878,6 +1076,8 @@ export default function Garage() {
                     </div>
                   ))}
                 </div>
+                <ForgePlacement spec={draft} />
+                <ModifyBox spec={draft} onModify={applyMod} />
                 <section className="g-repos" aria-label="Code repos">
                   <h3>Code repos{robotRepos(robot).length > 0 && <span className="faint"> · {robotRepos(robot).length}</span>}</h3>
                   {robotRepos(robot).length === 0 ? (
@@ -993,9 +1193,12 @@ export default function Garage() {
                     <p><strong>No wiring recorded for this robot yet.</strong> Robodex robots such as Pathfinder and TurtleBot3 come with their harness. You can plan connections on the bench below.</p>
                   </div>
                 )}
+                <ForgeWiring spec={draft} />
                 {!benchWires && <button type="button" className="btn btn-sm" onClick={() => setBenchWires(true)}>Plan new connections on the 3D bench</button>}
               </section>
             )}
+
+            {tab === 'build' && <ForgeBuild spec={draft} />}
 
             {/* One bench instance for Build and the Wiring planner, so picking a
                 planned cable in Build keeps its selection when it opens Wiring. */}
@@ -1124,6 +1327,8 @@ export default function Garage() {
                   <Findings lines={draftLines} />
                 </div>
               </div>
+
+              <ForgeChecks spec={draft} />
 
               <div className="g-fix">
                 <div className="g-fix-head">
