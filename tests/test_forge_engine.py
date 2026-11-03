@@ -201,7 +201,10 @@ def test_ui_wiring_and_generated_source():
     # the Garage panel used to. The pins moved with it — disclosed
     # here rather than silently dropped.
     assert "Generate a robot" in CREATE_TSX
-    assert "generateRobot(brief, catalogParts)" in CREATE_TSX
+    # (2026-11-03: the Create panel now passes engineCatalogue() —
+    # the built-in catalogue merged with confirmed web parts —
+    # instead of the raw import; pin updated with the change.)
+    assert "generateRobot(brief, engineCatalogue())" in CREATE_TSX
     assert "parseBrief(prompt" in CREATE_TSX
     assert "source: 'generated'" in CREATE_TSX
     assert "planned: true" in CREATE_TSX
@@ -218,7 +221,10 @@ def test_ui_wiring_and_generated_source():
     assert "<ForgeWiring spec={draft} />" in GARAGE_TSX           # Wiring
     assert "<ForgeChecks spec={draft} />" in GARAGE_TSX           # Checks
     # Modification saves a NEW version via the engine grammar.
-    assert "applyModification(draft, text, catalogParts)" in GARAGE_TSX
+    # (Since the web knowledge loop, 2026-11-03, the Modify box
+    # passes the merged catalogue view — built-in + confirmed web
+    # parts — held in the local `catalogue` variable.)
+    assert "applyModification(draft, text, catalogue)" in GARAGE_TSX
     assert "diffSpecs(draft, mod.spec)" in GARAGE_TSX
 
 

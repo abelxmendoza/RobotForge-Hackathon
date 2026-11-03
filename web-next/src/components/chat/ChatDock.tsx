@@ -57,8 +57,16 @@ import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,
 import { buildWsContext, groundingCaption, readWorkshopContext, requestWorkshopFix, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
-import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from '@/lib/garage';
-import { readStore, writeStore, uid } from '@/lib/store';
+import { FIELD_GROUPS, GARAGE_KEY, fmtValue, getPath, partToChanges, setPath, type GarageRobot, type Spec } from '@/lib/garage';
+import { downloadText, readStore, writeStore, uid } from '@/lib/store';
+import { runEngineChecks, syncPlannedPart, type CataloguePart } from "@/lib/forgeEngine";
+import {
+  addWebRecord, buildWebProposal, classifyProposalReply, detectWebAddIntent,
+  formatProposalText, formatSavedText, isShortReply, mergeCatalogue,
+  proposalToRecord, recordWebAddition, toCataloguePart, WEB_PARTS_KEY,
+  type ProposalFieldChange, type WebPartProposal, type WebPartRecord,
+} from "@/lib/webParts";
+import { cadFromText } from "@/lib/cadGen";
 import { activeRecords } from '@/lib/lifecycle';
 import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 import { REPO_IMPORT_EVENT, repoLinkIn } from '@/lib/repoLink';
@@ -67,7 +75,7 @@ import { appendFreshBaseline, buildDexEntry, copyAsNew, parseSaveChoice, parseSa
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
 import { isDemoMode, useDemoMode } from "@/lib/demoMode";
-import { buildWebGrounding, detectWebIntent, webSourceCaption, type WebFetchResult } from "@/lib/webIntent";
+import { buildWebGrounding, detectWebIntent, extractFirstUrl, webSourceCaption, type WebFetchResult } from "@/lib/webIntent";
 
 
 const DEFAULT_CHIPS = [
@@ -167,6 +175,34 @@ let nextId = 1;
  * navigation: "Full size" continues the same conversation, pending
  * proposal and undo included. */
 type Applied = { robotId: string; versionId: string; scope?: 'assembly' } | null;
+
+/* A pending web-knowledge proposal (lib/webParts): a record
+ * extracted from a fetched page, presented in chat, waiting for
+ * the visitor's yes. It lives only in the conversation — nothing
+ * is written anywhere until landWebProposal runs on an explicit
+ * affirmative. Robot-directed proposals carry the field changes
+ * (or the addition-only flag) computed at proposal time; the save
+ * re-reads the store before writing, like every other path here. */
+interface PendingWebProposal {
+  proposal: WebPartProposal;
+  targetRobotId?: string;
+  targetRobotName?: string;
+  changes?: ProposalFieldChange[];
+  additionOnly?: boolean;
+  reasked: boolean;
+}
+
+/* Which Garage field family a web part can drive through
+ * lib/garage.partToChanges: wheels and motors map directly; a
+ * power part maps to the battery fields only when the page stated
+ * a capacity (the field family's anchor value). Anything else is
+ * recorded on the robot as a planned addition instead. */
+function webFieldCategory(p: WebPartProposal): 'battery' | 'motor' | 'wheel' | null {
+  if (p.category === 'wheels') return 'wheel';
+  if (p.category === 'actuators') return 'motor';
+  if (p.category === 'power' && 'capacity_mah' in p.specs) return 'battery';
+  return null;
+}
 const carry: {
   messages: Msg[];
   chips: string[] | null;
@@ -362,21 +398,19 @@ export function useForgeAssistant() {
         !(h.budget && h.budget.exhausted)
     );
 
-  /* Web grounding (Firecrawl via the Worker's /web route): when the
-   * question carries an explicit web intent (lib/webIntent.ts — a
-   * pasted URL, or an opening "search the web for …"), fetch the
-   * page/search FIRST and hand the formatted, source-labelled block
-   * to liveChat as web_context. Every failure is silent by design:
-   * no intent, route off (health reports routes.web false — which
-   * includes the not-yet-configured 501 state), fetch failure or an
-   * empty fetch all resolve null, and the live answer then proceeds
-   * with NO web claim and no source caption. Demo mode never
-   * reaches here: the ask flow only calls this on the live path,
-   * after checkLive, and checkLive itself refuses in demo. */
-  const fetchWebGrounding = useCallback(
-    async (
-      q: string
-    ): Promise<{ context: string; caption: string } | null> => {
+  /* The one /web fetch (Firecrawl via the Worker's /web route),
+   * shared by web grounding and the web knowledge loop's proposal
+   * path. When the question carries an explicit web intent
+   * (lib/webIntent.ts — a pasted URL, or an opening "search the web
+   * for …"), fetch the page/search and return the raw result.
+   * Every failure resolves null: no intent, route off (health
+   * reports routes.web false — which includes the
+   * not-yet-configured 501 state), fetch failure or an empty body.
+   * Demo mode never reaches here: callers only run this on the
+   * live path, after checkLive, and checkLive itself refuses in
+   * demo. */
+  const fetchWebResult = useCallback(
+    async (q: string): Promise<WebFetchResult | null> => {
       const intent = detectWebIntent(q);
       if (!intent) return null;
       const h = await checkLive();
@@ -400,16 +434,30 @@ export function useForgeAssistant() {
         const body = (await r.json().catch(() => null)) as
           | WebFetchResult
           | null;
-        if (!body) return null;
-        const context = buildWebGrounding(body);
-        const caption = webSourceCaption(body);
-        if (!context || !caption) return null;
-        return { context, caption };
+        return body;
       } catch {
         return null;
       }
     },
     [checkLive, liveBase]
+  );
+
+  /* Web grounding: hand the formatted, source-labelled block from
+   * a successful fetch to liveChat as web_context. A fetch that
+   * produced no content or no source earns no grounding and no
+   * caption — the live answer then proceeds with NO web claim. */
+  const fetchWebGrounding = useCallback(
+    async (
+      q: string
+    ): Promise<{ context: string; caption: string } | null> => {
+      const body = await fetchWebResult(q);
+      if (!body) return null;
+      const context = buildWebGrounding(body);
+      const caption = webSourceCaption(body);
+      if (!context || !caption) return null;
+      return { context, caption };
+    },
+    [fetchWebResult]
   );
 
   const liveChat = useCallback(
@@ -476,6 +524,140 @@ export function useForgeAssistant() {
     },
     [liveBase]
   );
+
+  /* ---------------- web knowledge loop ---------------- */
+
+  /* A proposal extracted from a fetched page, waiting for the
+   * visitor's yes (see PendingWebProposal above). A ref, like the
+   * save-collision choice below: it is conversation state, not
+   * app state, and reset clears it. */
+  const pendingWebProposal = useRef<PendingWebProposal | null>(null);
+
+  /* Propose: an add/update ask carrying a page URL fetches the
+   * page (the same gated /web route as grounding), extracts a
+   * structured record deterministically (lib/webParts), and
+   * presents it in chat. A robot-directed ask resolves its robot
+   * first and computes the field changes against the robot's
+   * latest version, so the proposal shows old → new before
+   * anything is saved. Refusals are posted plainly; a question
+   * (no add intent) never reaches here. */
+  const proposeFromWeb = async (q: string) => {
+    const body = await fetchWebResult(q);
+    if (!body || body.mode !== 'scrape') {
+      noteBubble("I couldn't fetch that page — the web route didn't answer with it — so nothing was proposed and nothing was saved.");
+      return;
+    }
+    const proposal = buildWebProposal(body, new Date().toISOString());
+    if (!proposal) {
+      noteBubble("That page didn't yield a record I can stand behind — no usable name, or no specs I could tie to the page text — so I proposed nothing and saved nothing.");
+      return;
+    }
+    const intent = detectWebAddIntent(q);
+    if (intent && intent.kind === 'robot') {
+      const saved = activeRecords(readStore<GarageRobot[]>(GARAGE_KEY, []));
+      const matches = saved.filter((r) => r.name.toLowerCase() === intent.robotName.toLowerCase());
+      if (matches.length !== 1) {
+        noteBubble("I don't have exactly one saved robot called “" + intent.robotName + "”, so I didn't aim that proposal at any robot. Nothing was saved. To keep the part on its own instead, paste the link with just “add this”.");
+        return;
+      }
+      const robot = matches[0];
+      const latest = robot.versions.at(-1);
+      const specVals: Record<string, unknown> = {};
+      for (const [k, e] of Object.entries(proposal.specs)) specVals[k] = e.value;
+      const fc = webFieldCategory(proposal);
+      const changes: ProposalFieldChange[] = (fc ? partToChanges({ category: fc, specs: specVals, quantity: 1 }) : [])
+        .map((c) => ({ path: c.path, before: getPath(latest?.spec, c.path), after: c.value }))
+        .filter((c) => JSON.stringify(c.before) !== JSON.stringify(c.after));
+      pendingWebProposal.current = {
+        proposal,
+        targetRobotId: robot.id,
+        targetRobotName: robot.name,
+        changes,
+        additionOnly: changes.length === 0,
+        reasked: false,
+      };
+      noteBubble(formatProposalText(proposal, { robotName: robot.name, changes, additionOnly: changes.length === 0 }));
+      return;
+    }
+    pendingWebProposal.current = { proposal, reasked: false };
+    noteBubble(formatProposalText(proposal));
+  };
+
+  /* Land: the ONLY writer in the loop, run by ask() on an explicit
+   * affirmative. The record always lands in the web parts store;
+   * a robot-directed proposal then applies to the robot as a NEW
+   * version (history kept, planned flag set — the figures are
+   * unverified), and when the robot carries Forge Engine data its
+   * checks re-run against the merged catalogue and any verdict
+   * change is reported in the confirmation. */
+  const landWebProposal = (pending: PendingWebProposal) => {
+    const nowIso = new Date().toISOString();
+    const record = proposalToRecord(pending.proposal, nowIso);
+    const records = addWebRecord(readStore<WebPartRecord[]>(WEB_PARTS_KEY, []), record);
+    const listErr = writeStore(WEB_PARTS_KEY, records);
+    if (listErr) { noteBubble("I couldn't save (" + listErr + "). Nothing was saved."); return; }
+    if (!pending.targetRobotId) { noteBubble(formatSavedText(record)); return; }
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const robot = activeRecords(all).find((r) => r.id === pending.targetRobotId);
+    if (!robot) {
+      noteBubble("Saved “" + record.name + "” to your web parts list, but “" + (pending.targetRobotName || "that robot") + "” is no longer in your Garage, so no robot was changed.");
+      return;
+    }
+    const latest = robot.versions.at(-1);
+    let newSpec: Spec = latest?.spec;
+    let label: string;
+    let note: string;
+    if (pending.changes && pending.changes.length) {
+      for (const c of pending.changes) newSpec = setPath(newSpec, c.path, c.after);
+      label = "Web-sourced update";
+      note = "Web-sourced spec update from " + record.provenance.sourceUrl + " (fetched " + record.provenance.fetchedAt.slice(0, 10) + ") — " + record.verification + ". Fields set: " + pending.changes.map((c) => c.path).join(", ") + ". Confirmed in chat; the figures are unverified until checked against the real part.";
+    } else {
+      const added = recordWebAddition(latest?.spec, record);
+      if (added.already) {
+        noteBubble("“" + record.name + "” is already recorded on “" + robot.name + "”, so the robot is unchanged. The part itself is in your web parts list.");
+        return;
+      }
+      newSpec = added.spec;
+      label = "Added " + record.name + " (web)";
+      note = "Web-sourced planned addition from " + record.provenance.sourceUrl + " (fetched " + record.provenance.fetchedAt.slice(0, 10) + ") — " + record.verification + ". Planned, not built or installed.";
+    }
+    let checksLine = "";
+    if (latest?.spec?.forge?.bom?.length) {
+      const catalogue = mergeCatalogue(parts as unknown as CataloguePart[], records) as unknown as CataloguePart[];
+      const before = runEngineChecks(latest.spec, catalogue);
+      const role = pending.changes?.some((c) => c.path.startsWith('battery.')) ? 'battery'
+        : pending.changes?.some((c) => c.path.startsWith('motor.')) ? 'motor'
+        : pending.changes?.some((c) => c.path.startsWith('wheel.')) ? 'wheel' : undefined;
+      newSpec = syncPlannedPart(newSpec,toCataloguePart(record),catalogue,role);
+      const after = runEngineChecks(newSpec, catalogue);
+      const beforeById = new Map(before.map((c) => [c.id, c.verdict]));
+      const diffs: string[] = [];
+      for (const c of after) {
+        const was = beforeById.get(c.id);
+        if (was === undefined) diffs.push(c.id + ": new " + c.verdict);
+        else if (was !== c.verdict) diffs.push(c.id + ": " + was + " → " + c.verdict);
+      }
+      checksLine = diffs.length
+        ? " Forge Engine checks re-run — verdict changes: " + diffs.join("; ") + "."
+        : " Forge Engine checks re-run — no verdict changed.";
+    } else {
+      checksLine = " This robot has no Forge Engine checks recorded, so there were no verdicts to re-run.";
+    }
+    const versionId = uid("v");
+    const version = {
+      id: versionId,
+      label,
+      note,
+      source: "edit" as const,
+      createdAt: nowIso,
+      spec: newSpec,
+      planned: true,
+    };
+    const err = writeStore(GARAGE_KEY, all.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, version] } : r)));
+    if (err) { noteBubble("The part is in your web parts list, but the robot update failed (" + err + ")."); return; }
+    lastApplied.current = { robotId: robot.id, versionId };
+    noteBubble(formatSavedText(record, robot.name) + " Saved as a new version (“" + label + "”); the previous version is unchanged. Type “undo” to restore it." + checksLine);
+  };
 
   /* ---------------- part focus + in-page actions ---------------- */
 
@@ -797,6 +979,26 @@ export function useForgeAssistant() {
         } catch (e) { noteBubble((e as Error).message); }
         return true;
       }
+      /* CAD generation (lib/cadGen): "make a mounting plate 80x60,
+       * 3mm thick, M3 holes" generates a parametric OpenSCAD part
+       * from the chat-stated dimensions — deterministic and local.
+       * The .scad downloads through the store's blob pattern and
+       * the full source rides in a collapsible block in the reply;
+       * generated geometry is ESTIMATED/PLANNED and says so. Demo
+       * mode skips this branch entirely (the loop is inert there),
+       * so demo answers stay byte-unchanged. */
+      if (!demoRef.current) {
+        const cad = cadFromText(q);
+        if (cad) {
+          downloadText(cad.filename, cad.source);
+          appendMsg({
+            who: "bot",
+            html: "<p>" + esc(cad.summary) + "</p>" +
+              "<details><summary>OpenSCAD source — " + esc(cad.filename) + "</summary><pre>" + esc(cad.source) + "</pre></details>",
+          });
+          return true;
+        }
+      }
       const command = parseCommand(q);
       if (command) {
         try {
@@ -961,6 +1163,31 @@ export function useForgeAssistant() {
       setProposal(null);
       setAssemblyProposal(null);
       setInventoryProposal(null);
+      /* A pending web proposal owns the next reply: an affirmative
+       * lands it (deterministic code, never the model), a negative
+       * discards it, a short ambiguity re-asks ONCE, and anything
+       * else — a new topic, another link — retires it silently and
+       * falls through to the normal paths below. */
+      if (pendingWebProposal.current) {
+        const pending = pendingWebProposal.current;
+        const verdict = classifyProposalReply(q);
+        if (verdict === "confirm") {
+          pendingWebProposal.current = null;
+          landWebProposal(pending);
+          return;
+        }
+        if (verdict === "discard") {
+          pendingWebProposal.current = null;
+          noteBubble("Discarded — nothing was saved.");
+          return;
+        }
+        if (!extractFirstUrl(q) && isShortReply(q) && !pending.reasked) {
+          pending.reasked = true;
+          noteBubble("I still have that web proposal waiting — reply “yes” to save it or “no” to discard it. Nothing is saved until you say yes.");
+          return;
+        }
+        pendingWebProposal.current = null;
+      }
       /* Submit a robot through chat: a GitHub repo link anywhere in
        * the message opens the repo importer with that repo, and the
        * import starts there (same pipeline as /import/'s own form). */
@@ -979,6 +1206,15 @@ export function useForgeAssistant() {
       if (runCommands(q)) return;
       const nav = parseNavCommand(q, navContext());
       if (nav) { doNav(nav); return; }
+      /* Web knowledge loop: an add/update ask carrying a page URL
+       * becomes a proposal, presented in chat for confirmation —
+       * never a silent write. Live path only: in demo mode this
+       * branch is skipped entirely, so the demo proposes nothing,
+       * saves nothing and makes no /web call. */
+      if (!demoRef.current && detectWebAddIntent(q) && detectWebIntent(q)?.kind === 'scrape') {
+        void proposeFromWeb(q);
+        return;
+      }
       /* Operation verbs the grammar missed: never send them to an
        * answer-only path that could claim an action happened. They go to
        * the Tier-1 translator, which can only propose a validated
@@ -1111,7 +1347,7 @@ export function useForgeAssistant() {
         });
       }, 0);
     },
-    [appendMsg, autoAction, checkLive, doNav, engine, fetchWebGrounding, liveBase, liveChat, pathname, proposeViaLive, runCommands, setChips, wrench, noteBubble, router]
+    [appendMsg, autoAction, checkLive, doNav, engine, fetchWebGrounding, liveBase, liveChat, pathname, proposeViaLive, proposeFromWeb, landWebProposal, runCommands, setChips, wrench, noteBubble, router]
   );
 
   /* The fix handoff: a failing robot's recorded spec goes into the
@@ -1210,6 +1446,7 @@ export function useForgeAssistant() {
   const resetConversation = useCallback(() => {
     setMessages([]);
     pendingSave.current = null;
+    pendingWebProposal.current = null;
     setProposal(null);
     setAssemblyProposal(null);
     setInventoryProposal(null);

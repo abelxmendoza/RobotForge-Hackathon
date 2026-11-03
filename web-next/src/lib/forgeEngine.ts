@@ -15,6 +15,13 @@ export interface CataloguePart {
   name?: string;
   part_class?: string;
   specs?: Record<string, unknown>;
+  /* Set only on entries that arrived through the web knowledge
+   * loop (lib/webParts.mergeCatalogue): a page the visitor fetched
+   * and confirmed in chat. Their specs are WEB-SOURCED —
+   * UNVERIFIED, and runEngineChecks says so on any build that uses
+   * one. Built-in catalogue entries never carry this flag. */
+  web_sourced?: boolean;
+  provenance?: { sourceUrl: string; fetchedAt: string; sourceKind: 'scrape' | 'search' };
 }
 
 export type ArchetypeId = 'differential_rover' | 'mecanum_rover' | 'robotic_arm' | 'multirotor';
@@ -403,6 +410,22 @@ export function runEngineChecks(spec: ForgeSpec, catalogue: CataloguePart[]): Fo
     ? { id: 'unknown-parts', verdict: 'ERROR', detail: `BOM lines not in the catalogue: ${unknown.join(', ')}. The engine never invents parts — these are gather requests.` }
     : { id: 'unknown-parts', verdict: 'PASS', detail: 'Every BOM line resolves to a real catalogue part id.' });
 
+  // Web-sourced parts: a build that depends on an UNVERIFIED spec
+  // must surface that fact — one combined WARN (the existing
+  // severity, no new one) naming each web part in the BOM with its
+  // source, so the reader can check it against the datasheet.
+  const webUsed = bom.filter((b) => have.get(b.partId)?.web_sourced);
+  if (webUsed.length) {
+    const names = webUsed.map((b) => {
+      const p = have.get(b.partId);
+      const src = p?.provenance
+        ? ` (source: ${p.provenance.sourceUrl}, fetched ${String(p.provenance.fetchedAt).slice(0, 10)})`
+        : '';
+      return `${p?.name ?? b.partId}${src}`;
+    });
+    checks.push({ id: 'unverified-web-parts', verdict: 'WARN', detail: `This build uses web-sourced part(s) whose specs are UNVERIFIED: ${names.join('; ')}. The figures came from a fetched web page, not a datasheet or a measurement — confirm each before building.` });
+  }
+
   // Wheel / motor count agreement.
   const motorQty = bom.filter((b) => ['gearmotor_12v', 'brushless_2207_1960kv', 'servo_mg996r', 'servo_sts3215'].includes(b.partId)).reduce((a, b) => a + b.qty, 0);
   const specMotorCount = num(spec?.motor?.count);
@@ -654,6 +677,29 @@ export function applyModification(spec: ForgeSpec, text: string, catalogue: Cata
     // instead of hiding it; the fix is a rated driver, not silence.
     return finish('Swapped in the bigger 4S 5200 mAh pack (lipo_4s_5200). Checks re-run — note the driver voltage verdict: the recorded driver rating may now fail, and the check says so.');
   }
+  // Generic add-by-name: "add <part name>" for any other part in
+  // the catalogue view the caller passed — built-in parts and
+  // confirmed web parts alike (lib/webParts.mergeCatalogue). The
+  // part lands on the BOM as a planned addition; the sensor adds
+  // above keep their mounts and placement rules, and this branch
+  // covers the parts those rules don't. An unknown or ambiguous
+  // name refuses (null), like everything outside the grammar.
+  const addMatch = t.match(/^\s*add\s+(?:a\s+|an\s+|the\s+)?(.+?)\s*$/);
+  if (addMatch) {
+    const q = addMatch[1].replace(/\s+/g, ' ').trim();
+    const hits = catalogue.filter((p) => {
+      const n = String(p.name ?? '').toLowerCase();
+      return p.id === q || n === q || n.includes(q);
+    });
+    const part = hits.length === 1 ? hits[0] : undefined;
+    if (!part) return null;
+    if ((next.forge.bom as ForgeBomLine[]).some((b) => b.partId === part.id)) return null;
+    addBom(part.id, 1);
+    ids['added_' + part.id.replace(/[^a-z0-9]+/gi, '_')] = part.id;
+    return finish(part.web_sourced
+      ? `Added the web-sourced part “${part.name ?? part.id}” (${part.id}) to the plan — its specs are WEB-SOURCED — UNVERIFIED, and the checks flag it. Placement, wiring, prints and checks regenerated.`
+      : `Added “${part.name ?? part.id}” (${part.id}) to the plan from the catalogue. Placement, wiring, prints and checks regenerated.`);
+  }
   if (/\bremove\b.*\barm\b/.test(t)) {
     if (spec?.drivetrain !== 'robotic_arm') return null;
     // Removing the arm from an arm robot leaves the mobile base parts
@@ -661,4 +707,23 @@ export function applyModification(spec: ForgeSpec, text: string, catalogue: Cata
     return null;
   }
   return null;
+}
+
+/** Synchronize a confirmed planned part with the engine representation.
+ * A replacement changes the role/BOM together. An addition gets no invented
+ * wiring: missing power paths remain visible in the regenerated checks. */
+export function syncPlannedPart(spec: ForgeSpec, part: CataloguePart, catalogue: CataloguePart[], replaceRole?: string): ForgeSpec {
+  const next: ForgeSpec = JSON.parse(JSON.stringify(spec));
+  if (!next?.forge) return next;
+  const ids = next.forge.ids ?? (next.forge.ids = {});
+  const oldId = replaceRole ? ids[replaceRole] : undefined;
+  const line = oldId ? next.forge.bom.find((b: ForgeBomLine) => b.partId === oldId) : undefined;
+  if (line) line.partId = part.id;
+  else if (!next.forge.bom.some((b: ForgeBomLine) => b.partId === part.id)) next.forge.bom.push({partId:part.id,qty:1,source:'catalogue'});
+  ids[replaceRole || 'added_' + part.id.replace(/[^a-z0-9]+/gi,'_')] = part.id;
+  next.forge.placement = suggestPlacement(next,catalogue);
+  next.forge.wiring = suggestWiring(next,catalogue);
+  next.forge.prints = planPrints(next,catalogue);
+  next.forge.checks = runEngineChecks(next,catalogue);
+  return next;
 }

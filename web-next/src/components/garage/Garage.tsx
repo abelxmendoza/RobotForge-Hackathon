@@ -15,7 +15,8 @@ import WrenchStart from './WrenchStart';
 import WiringView from '@/components/wiring/WiringView';
 import { isWiring } from '@/lib/wiring';
 import { parts as catalogParts, robots as dexRobots } from '@/lib/data';
-import { applyModification } from '@/lib/forgeEngine';
+import { applyModification, type CataloguePart } from '@/lib/forgeEngine';
+import { mergeCatalogue, WEB_PARTS_KEY, type WebPartRecord } from '@/lib/webParts';
 import { forgeTestTally, generateForgeTests, type ForgeTest } from '@/lib/forgeTests';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -682,7 +683,14 @@ export default function Garage() {
    * engine returns null for anything outside its grammar. */
   const applyMod = (text: string): string | null => {
     if (!robot || !draft) return null;
-    const mod = applyModification(draft, text, catalogParts);
+    /* The engine's catalogue view includes the visitor's confirmed
+     * web parts (lib/webParts) next to the built-in catalogue —
+     * flagged WEB-SOURCED — UNVERIFIED, and the checks say so. */
+    const catalogue = mergeCatalogue(
+      catalogParts as unknown as CataloguePart[],
+      readStore<WebPartRecord[]>(WEB_PARTS_KEY, []),
+    ) as unknown as CataloguePart[];
+    const mod = applyModification(draft, text, catalogue);
     if (!mod) return null;
     const rows = diffSpecs(draft, mod.spec).length;
     const v: RobotVersion = {
