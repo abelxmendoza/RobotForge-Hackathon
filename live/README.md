@@ -1,5 +1,9 @@
 # RobotForge live endpoint — deploy runbook
 
+> **Agents and humans:** read the deploy rules in [`AGENTS.md`](../AGENTS.md)
+> first. Only deploy from this folder, and ask the owner before any deploy. A
+> `wrangler deploy` run elsewhere wiped this Worker and its secrets on 2026-11-03.
+
 The RobotForge site is a static Next.js export deployed on Vercel and cannot
 hold an API key. This folder is the one server-side piece: a single-file
 Cloudflare Worker (`worker.js`) that proxies the site's live calls
