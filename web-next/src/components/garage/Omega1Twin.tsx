@@ -161,6 +161,21 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
               </article>
             ))}
           </div>
+          <div className="ta-twin-note">
+            <h4>Take it apart, put it back</h4>
+            <p className="faint g-small">
+              The Take apart / Assemble diagram works on your own stored copy of Omega1, along the
+              connections its record carries — this twin is a fixed specimen and stays assembled.
+              {garageScans === null
+                ? ' Adopt Omega1 into your Garage and its Build tab gets the diagram.'
+                : ' Your stored copy’s Build tab has the diagram.'}
+            </p>
+            {garageScans === null ? (
+              <button type="button" className="btn btn-sm" onClick={onAdopt}>Add Omega1 to your Garage</button>
+            ) : (
+              <button type="button" className="btn btn-sm" onClick={onOpenGarage}>Open your Omega1</button>
+            )}
+          </div>
         </section>
       )}
 

@@ -10,7 +10,8 @@
   "Show me 4S batteries",
   "Is the Go2 stable?",
   "Plan a differential rover build",
-  "How do I improve my Omega1 twin?"
+  "How do I improve my Omega1 twin?",
+  "How do I take my robot apart?"
  ],
  "topics": [
   {
@@ -473,6 +474,33 @@
    "samples": [
     "Where do my scans live?",
     "Are my scans uploaded?"
+   ]
+  },
+  {
+   "answer": "Open your robot in the Garage → Build tab → the Take apart / Assemble panel.\n\nIt draws the robot's recorded parts as a diagram you can pull apart: drag any part to move it. The app remembers how the parts connect — the connections come from the robot's own record — so putting it back is one tap: Assemble all, or walk the Assemble steps one connection at a time and each step snaps its parts home. Drag a part back near its place, or near the part it connects to, and it snaps in: that connection is restored. Take apart runs the same steps in exact reverse.\n\nTwo honesty notes. Dragging parts around is view-only — it never changes the robot's saved record. And if a robot's record names parts but no connections, the panel is a free canvas with no steps; if it names neither, the panel says so instead of inventing a build.\n\n(For a printable OpenSCAD parts kit of a robot, ask about the take-apart kit instead.)",
+   "id": "build_take_apart",
+   "keywords": [
+    "take my robot apart",
+    "take a robot apart",
+    "take the robot apart",
+    "take it apart",
+    "take apart",
+    "take-apart",
+    "put it back together",
+    "put my robot back together",
+    "put back together",
+    "reassemble",
+    "disassemble",
+    "how do i assemble",
+    "assemble my robot",
+    "exploded view",
+    "auto-connect",
+    "autoconnect",
+    "snap back"
+   ],
+   "samples": [
+    "How do I take my robot apart?",
+    "How do I put my robot back together?"
    ]
   }
  ],
