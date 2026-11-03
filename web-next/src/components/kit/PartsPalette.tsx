@@ -27,6 +27,7 @@ import {
   type PaletteItem,
 } from '@/lib/palette';
 import { partClassLabel } from '../robots/shared';
+import { PART_GROUPS, partGroup } from '@/lib/partTaxonomy';
 import PropThumb from './PropThumb';
 import PartPhoto from '@/components/parts/PartPhoto';
 import { verifiedPhoto } from '@/lib/partPhoto';
@@ -119,13 +120,12 @@ export default function PartsPalette({
       .includes(q);
   const props = items.filter((i) => i.kind === 'bench-prop' && hit(i));
   const catItems = items.filter((i) => i.kind === 'catalog-part' && hit(i));
-  const groups: { cls: string; items: PaletteItem[] }[] = [];
-  for (const item of catItems) {
-    const cls = item.part?.part_class ?? '';
-    const last = groups[groups.length - 1];
-    if (last && last.cls === cls) last.items.push(item);
-    else groups.push({ cls, items: [item] });
-  }
+  const groups = PART_GROUPS.map((group) => ({
+    ...group,
+    sections: Array.from(new Set(catItems.filter((i) => partGroup(i.part?.part_class ?? '', i.name) === group.id).map((i) => i.part?.part_class ?? 'other'))).map((cls) => ({
+      cls, items: catItems.filter((i) => (i.part?.part_class ?? 'other') === cls && partGroup(cls, i.name) === group.id),
+    })),
+  })).filter((g) => g.sections.length > 0);
   const totalQty = entries.reduce((s, e) => s + e.qty, 0);
 
   return (
@@ -165,14 +165,17 @@ export default function PartsPalette({
       ) : null}
 
       {groups.map((g) => (
-        <div key={g.cls}>
-          <h3 className="palette-sec">{partClassLabel(g.cls)}</h3>
-          <div className="palette-grid">
-            {g.items.map((item) => (
-              <PaletteCard key={item.key} item={item} onAdd={onAdd} />
-            ))}
-          </div>
-        </div>
+        <details key={g.id} open={Boolean(q)}>
+          <summary className="palette-sec">{g.label} ({g.sections.reduce((n, section) => n + section.items.length, 0)})</summary>
+          {g.sections.map((section) => (
+            <details key={section.cls} open={Boolean(q)}>
+              <summary>{partClassLabel(section.cls)} ({section.items.length})</summary>
+              <div className="palette-grid">
+                {section.items.map((item) => <PaletteCard key={item.key} item={item} onAdd={onAdd} />)}
+              </div>
+            </details>
+          ))}
+        </details>
       ))}
       {!props.length && !groups.length ? (
         <p className="palette-note">No palette parts match that filter.</p>
