@@ -2,7 +2,7 @@
 /* The scan files themselves, in this browser's IndexedDB. They are not
  * uploaded anywhere and are not part of Save to account (too big). */
 import { isDemoMode } from './demoMode';
-import { scanKey } from './scan3d';
+import { scanKey, slotScanKey, type ScanKind } from './scan3d';
 
 const DB = 'robotforge-scans-v1';
 const STORE = 'scans';
@@ -44,4 +44,20 @@ export async function readScanFile(robotId: string): Promise<ArrayBuffer | null>
 
 export async function removeScanFile(robotId: string): Promise<void> {
   await run('readwrite', (s) => s.delete(scanKey(robotId, isDemoMode())));
+}
+
+/* Per-slot files for the Improve-this-twin flow (lib/scan3d.ts
+ * SCAN_SLOTS): same store, per-slot keys, same browser-only rule. */
+export async function saveSlotScanFile(robotId: string, kind: ScanKind, file: Blob): Promise<void> {
+  const data = await file.arrayBuffer();
+  await run('readwrite', (s) => s.put(data, slotScanKey(robotId, kind, isDemoMode())));
+}
+
+export async function readSlotScanFile(robotId: string, kind: ScanKind): Promise<ArrayBuffer | null> {
+  const v = await run<ArrayBuffer>('readonly', (s) => s.get(slotScanKey(robotId, kind, isDemoMode())));
+  return v instanceof ArrayBuffer ? v : null;
+}
+
+export async function removeSlotScanFile(robotId: string, kind: ScanKind): Promise<void> {
+  await run('readwrite', (s) => s.delete(slotScanKey(robotId, kind, isDemoMode())));
 }
