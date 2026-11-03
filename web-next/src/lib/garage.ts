@@ -43,6 +43,11 @@ export interface GarageRobot {
   spin?: import('./photoSpin').PhotoSpin;
   /* A 3D scan of the real robot; the file is in IndexedDB (lib/scanStore.ts). */
   scan?: import('./scan3d').ScanMeta;
+  /* Up to three labelled scans from the Improve-this-twin flow
+   * (lib/scan3d.ts SCAN_SLOTS); files in the same IndexedDB store
+   * under per-slot keys. `scan` mirrors the most recent slot so the
+   * Overview viewer keeps showing the newest scan. */
+  scans?: import('./scan3d').SlotScan[];
 }
 
 type Specimen = import('./repoImport').RepoSpecimen;
