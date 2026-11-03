@@ -35,7 +35,7 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
   onNeedSpecs: () => void;
 }) {
   const [failed, setFailed] = useState(false);
-  const [spin, setSpin] = useState(true);
+  const [spin, setSpin] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const stage = useStageAnimation(stageRef);
   const body = hasBody(spec);
@@ -67,7 +67,7 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
         {fallback}
         {!body && (
           <button type="button" className="ws-estnote" onClick={onNeedSpecs}>
-            Add the robot&apos;s length and width to see it turning in 3D. <span>Open Specs →</span>
+            Add the robot&apos;s length and width to preview a concept in 3D. <span>Open Specs →</span>
           </button>
         )}
       </>
@@ -93,7 +93,7 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
         </button>
       </div>
       <figcaption className="faint g-small">
-        3D model built from {name}&apos;s spec, not a photo. Drag to turn it, pinch or scroll to zoom.
+        Concept model built from {name}&apos;s spec, not a photo or a measured twin. Drag to turn it, pinch or scroll to zoom.
         {capability ? ' Moving parts follow the recorded robot data.' : ' Nothing on it moves until recorded data says it can.'}
       </figcaption>
     </figure>

@@ -11,11 +11,11 @@
  * mounted on /garage/ (the Workshop), where Wrench is docked beside
  * your robots. */
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
-import ComposerCreate from "./ComposerCreate";
+import { promptWrench } from "@/lib/wrenchPrompt";
 import AttachButton from "./AttachButton";
 import VoiceButton from "./VoiceButton";
 import CopyButton from "./CopyButton";
@@ -24,9 +24,9 @@ import { ASSISTANT_NAME } from "@/lib/handoff";
 
 export default function ChatBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const assistant = useForgeAssistant();
   const [open, setOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [text, setText] = useState("");
   const msgsRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -120,15 +120,6 @@ export default function ChatBar() {
         </section>
       )}
 
-      {createOpen && (
-        <ComposerCreate
-          onResult={(r) => {
-            assistant.postCreateResult(r);
-            setOpenPersist(true); // the result lands in the conversation — open it
-          }}
-        />
-      )}
-
       <form
         className="chat-bar-composer"
         onSubmit={(e) => {
@@ -149,8 +140,7 @@ export default function ChatBar() {
         <button
           type="button"
           className="chat-bar-create"
-          onClick={() => setCreateOpen(!createOpen)}
-          aria-expanded={createOpen}
+          onClick={() => { promptWrench({mode:'design',text:'Generate a robot '}); router.push('/garage/#wrench'); }}
           aria-label="Create: generate a robot, acceptance tests, or a modification"
           title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)"
         >

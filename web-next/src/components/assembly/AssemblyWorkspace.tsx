@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { promptWrench } from '@/lib/wrenchPrompt';
 import { assetPath } from '@/components/home/asset';
 import {
   overlapPairs,
@@ -10,7 +11,7 @@ import {
   normalizeYawDeg,
 } from '@/lib/spatial';
 import { COMPONENTS, componentById, type ComponentDefinition } from '@/lib/components';
-import { PART_GROUPS, partGroup, type PartGroupId } from '@/lib/partTaxonomy';
+import { PART_GROUPS, partGroup } from '@/lib/partTaxonomy';
 import {
   ASSEMBLY_KEY,
   applyAssembly,
@@ -200,10 +201,6 @@ function PoseEditor({
   );
 }
 
-const CATEGORY_LABELS: { id: 'all' | PartGroupId; label: string }[] = [
-  { id: 'all', label: 'All parts' },
-  ...PART_GROUPS.map((g) => ({ id: g.id, label: g.label })),
-];
 
 const STATUS_BADGE: Record<'pass' | 'warn' | 'fail', string> = {
   pass: 'pass',
@@ -231,7 +228,6 @@ export default function AssemblyWorkspace({
     setTabState(t);
     onView?.(t);
   };
-  const [categoryFilter, setCategoryFilter] = useState<'all' | PartGroupId>('all');
   const [componentId, setComponentId] = useState(COMPONENTS[0].id);
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedWire, setSelectedWire] = useState<string | null>(null);
@@ -246,7 +242,7 @@ export default function AssemblyWorkspace({
   const [animate, setAnimate] = useState(true);
   const [xray, setXray] = useState(false);
   const [explode, setExplode] = useState(0);
-  const [dragMode, setDragMode] = useState(true);
+  const [dragMode, setDragMode] = useState(!view);
   const [snapDeck, setSnapDeck] = useState(true);
   const [ghostMount, setGhostMount] = useState(true);
   const [showSpecWiring, setShowSpecWiring] = useState(true);
@@ -266,7 +262,7 @@ export default function AssemblyWorkspace({
   const [tdDir, setTdDir] = useState<1 | -1>(1);
   const [tdPlaying, setTdPlaying] = useState(false);
   /* Slow idle turn until the person first touches the model. */
-  const [spin, setSpin] = useState(true);
+  const [spin, setSpin] = useState(false);
   const robot = robots.find((r) => r.id === robotId);
   const spec = robot?.versions.at(-1)?.spec;
   const saved = useMemo(() => currentAssembly(all, robotId), [all, robotId]);
@@ -486,153 +482,27 @@ export default function AssemblyWorkspace({
       </div>
     ) : null;
 
-  const visibleParts = COMPONENTS.filter(
-    (c) => categoryFilter === 'all' || partGroup(c.category, c.name) === categoryFilter,
-  );
-
   const wiringOrParts =
     tab === 'components' ? (
-      <div className="assembly-catalog">
-        <div className="g-tabs" role="tablist" aria-label="Part category filter" style={{ marginBottom: 8 }}>
-          {CATEGORY_LABELS.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              className="chip"
-              aria-pressed={categoryFilter === cat.id}
-              onClick={() => setCategoryFilter(cat.id)}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        <label className="g-field">
-          <span>Add a 3D component by name</span>
+      <details className="assembly-catalog ws-disclosure">
+        <summary>Add a component</summary>
+        <label className="g-field"><span>Component</span>
           <select value={componentId} onChange={(e) => setComponentId(e.target.value)}>
-            {PART_GROUPS.map((g) => (
-              <optgroup key={g.id} label={g.label}>
-                {COMPONENTS.filter((c) => partGroup(c.category, c.name) === g.id).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({Math.round(c.sizeM[0] * 1000)}×{Math.round(c.sizeM[1] * 1000)}×{Math.round(c.sizeM[2] * 1000)} mm · {c.mounting.fastener})
-                  </option>
-                ))}
-              </optgroup>
-            ))}
+            {PART_GROUPS.map((g) => <optgroup key={g.id} label={g.label}>{COMPONENTS.filter((c) => partGroup(c.category, c.name) === g.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
           </select>
         </label>
-
-        {/* Visual 3D Part Gallery Cards with Photos & Isometric Mounting Blueprints */}
-        <div
-          className="assembly-part-gallery"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: 10,
-            margin: '10px 0 12px',
-          }}
-        >
-          {visibleParts.map((c) => {
-            const isCurrent = c.id === componentId;
-            return (
-              <div
-                key={c.id}
-                className="card"
-                onClick={() => setComponentId(c.id)}
-                style={{
-                  cursor: 'pointer',
-                  padding: 10,
-                  border: isCurrent
-                    ? '1.5px solid var(--accent, #2dd4bf)'
-                    : '1px solid var(--border, rgba(148,163,184,0.2))',
-                  background: isCurrent ? 'rgba(20, 184, 166, 0.08)' : undefined,
-                }}
-              >
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <img
-                    src={assetPath(c.image)}
-                    alt={c.imageCaption}
-                    width={64}
-                    height={64}
-                    style={{
-                      width: 64,
-                      height: 64,
-                      objectFit: 'cover',
-                      borderRadius: 6,
-                      border: '1px solid rgba(148,163,184,0.25)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <PartBlueprintSVG part={c} yawDeg={c.orientation.preferredYawDeg ?? 0} />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
-                    <strong style={{ fontSize: 13 }}>{c.name}</strong>
-                    <span className="faint" style={{ fontSize: 11 }}>
-                      {Math.round(c.massKg * 1000)} g
-                    </span>
-                  </div>
-                  <p className="faint" style={{ fontSize: 11, margin: '2px 0 4px' }}>
-                    {c.imageCaption}
-                  </p>
-                  <p style={{ fontSize: 12, margin: '4px 0' }}>
-                    <strong>Mount:</strong> {c.mounting.fastener} · {c.mounting.standoffHeightMm} mm
-                    standoff · <em>{c.mounting.preferredZone}</em>
-                  </p>
-                  <p className="faint" style={{ fontSize: 11, margin: '2px 0 8px' }}>
-                    <strong>Orient:</strong> {c.orientation.forwardAxisLabel}
-                  </p>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setComponentId(c.id);
-                        addSmart(c.id);
-                      }}
-                    >
-                      Smart place & orient
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setComponentId(c.id);
-                        const id = uid('part');
-                        setSelected(id);
-                        propose({
-                          kind: 'add',
-                          instanceId: id,
-                          componentId: c.id,
-                          positionM: [0, 0, mountedCenterZ(deckSpec, c)],
-                          yawDeg: c.orientation.preferredYawDeg ?? 0,
-                        });
-                      }}
-                    >
-                      Place at centre
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="ws-component-preview">
+          <img src={assetPath(activePartDef.image)} alt={activePartDef.imageCaption} width={64} height={64} />
+          <div><strong>{activePartDef.name}</strong><p className="faint g-small">Preview placement before adding it to your assembly.</p></div>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => addSmart(componentId)}>Preview placement</button>
         </div>
-
-        <p className="faint">{activePartDef.note}</p>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => addSmart(componentId)}>
-            Smart place & orient ({activePartDef.name})
-          </button>
-          <button type="button" className="btn btn-sm" onClick={addCenter}>
-            Preview component at deck centre
-          </button>
-        </div>
-        <p style={{ marginTop: 6 }}>
-          Or tell Wrench: <code>add a Jetson Orin Nano to &quot;{robot?.name}&quot;</code>
-        </p>
-      </div>
+        <details className="ws-disclosure"><summary>Dimensions and mounting</summary>
+          <PartBlueprintSVG part={activePartDef} yawDeg={activePartDef.orientation.preferredYawDeg ?? 0} />
+          <p>{activePartDef.mounting.fastener} · {Math.round(activePartDef.massKg * 1000)} g</p>
+          <p className="faint g-small">{activePartDef.note}</p>
+          <button type="button" className="btn btn-sm" onClick={addCenter}>Preview at centre</button>
+        </details>
+      </details>
     ) : (
       <>
         <h4>
@@ -810,8 +680,8 @@ export default function AssemblyWorkspace({
           </button>
         </div>
       )}
-      <details className="assembly-tools" open>
-        <summary>Graphics, 3D harness & placement controls</summary>
+      <details className="assembly-tools">
+        <summary>View and placement settings</summary>
         <div className="g-tabs assembly-controls" aria-label="3D workbench controls">
           <label className="g-field">
             <span>Graphics quality</span>
@@ -900,11 +770,11 @@ export default function AssemblyWorkspace({
         </p>
       )}
       {ghostMount && (
-        <p className="faint">
+        <details className="ws-disclosure"><summary>About the model</summary><p className="faint">
           3D standoffs & mounts show illustrative corner standoff posts, battery straps, and +X
           forward orientation arrows. Hole locations and fasteners are unverified; it is not
           printable CAD.
-        </p>
+        </p></details>
       )}
       {showFov && (
         <fieldset className="g-group">
@@ -976,7 +846,7 @@ export default function AssemblyWorkspace({
           </p>
         </fieldset>
       )}
-      {view === 'wiring' && wiringOrParts}
+      {view === 'wiring' && <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot?.name}"`})}>Plan a connection with Wrench</button>}
       {view !== 'wiring' && motionBar}
       {!failed3D ? (
         <div
@@ -1060,7 +930,7 @@ export default function AssemblyWorkspace({
 
       {/* Placement, Orientation & Mounting Intelligence Summary */}
       {intelligence && preview.components.length > 0 && (
-        <div
+        <details className="ws-disclosure"><summary>Placement analysis</summary><div
           className="card"
           role="region"
           aria-label="Placement, orientation and mounting intelligence"
@@ -1173,12 +1043,12 @@ export default function AssemblyWorkspace({
               </tbody>
             </table>
           </div>
-        </div>
+        </div></details>
       )}
 
-      {view !== 'wiring' && wiringOrParts}
+      {view !== 'wiring' && (view ? <button type="button" className="btn btn-primary btn-sm" onClick={() => promptWrench({mode:'chat',text:`Add a camera to "${robot?.name}"`})}>Add a component with Wrench</button> : wiringOrParts)}
       <h4>Components ({preview.components.length})</h4>
-      {!preview.components.length && <p>No components yet. Add one above or through Wrench.</p>}
+      {!preview.components.length && <p>No added components yet. Use “Add a component” to preview one.</p>}
       <ul className="assembly-parts">
         {preview.components.map((c) => {
           const def = componentById(c.componentId);
@@ -1193,17 +1063,17 @@ export default function AssemblyWorkspace({
                   setSelected(c.id);
                 }}
               >
-                {def?.name} · {c.id}
+                {def?.name}
               </button>{' '}
-              <span className="faint">
+              {selected === c.id && <span className="faint">
                 {c.positionM.map((v) => Math.round(v * 1000)).join(', ')} mm · yaw{' '}
                 {normalizeYawDeg(c.yawDeg)}° · {def?.mounting.fastener}
-              </span>
+              </span>}
             </li>
           );
         })}
       </ul>
-      {instance && definition && (
+      {!view && instance && definition && (
         <div className="card">
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
             <img

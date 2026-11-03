@@ -48,7 +48,7 @@ def test_lib_is_pure_and_import_free():
 
 def test_panel_mounted_in_build_tab():
     assert "import TakeApartPanel from './TakeApartPanel';" in GARAGE_TSX
-    build_at = GARAGE_TSX.index("tab === 'build' && <ForgeBuild")
+    build_at = GARAGE_TSX.index("Build instructions and placement")
     mount_at = GARAGE_TSX.index("<TakeApartPanel")
     assert mount_at > build_at
     assert "onNeedSpecs={() => setTab('specs')}" in GARAGE_TSX

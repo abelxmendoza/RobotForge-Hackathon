@@ -178,7 +178,7 @@ def test_the_docked_thread_renders_the_chips_on_garage():
     # docked thread, the per-tab chips render nowhere on /garage.
     assert '"/garage", "/garage/"' in CHATBAR
     assert "assistant.chips.map" in FORGE_THREAD
-    assert ("docked && inputMode === 'chat' && assistant.chips.length > 0"
+    assert ("docked && open && inputMode === 'chat' && assistant.chips.length > 0"
             in FORGE_THREAD)
     assert 'aria-label="Suggestions for the open Workshop tab"' in FORGE_THREAD
     # A chip click asks the question through the same engine path the

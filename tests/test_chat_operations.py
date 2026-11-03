@@ -23,6 +23,9 @@ import { parseCommand, proposeCommand, previewOperation, applyOperation, undoOpe
 const spec = {name:'Omega1', wheel:{diameter_m:0.1}, mass_kg:2};
 const robots = [{id:'r',name:'Omega1',createdAt:'t',versions:[{id:'v0',label:'Baseline',note:'',source:'starter',createdAt:'t',spec}]}];
 const original = JSON.stringify(robots);
+const planned = [{...robots[0],versions:[{...robots[0].versions[0],planned:true}]}];
+const pp = proposeCommand(planned,parseCommand('set \"Omega1\" mass_kg to 1.2'));
+assert.equal(applyOperation(planned,pp.operation,'vp','tp')[0].versions.at(-1).planned,true);
 assert.equal(parseCommand('what battery should I use?'), null);
 assert.equal(parseCommand('undo last chat change').kind, 'undo');
 const c = parseCommand('set "omega1" wheel.diameter_m to 0.12');

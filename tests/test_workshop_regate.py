@@ -136,7 +136,8 @@ def test_bom_tab_price_badges_and_totals_language():
     assert "resolvedPrice" in BOM_TAB and "priceTotals" in BOM_TAB
     # the wizard's badge language, verbatim where it matters
     assert "web-gathered estimate" in BOM_TAB
-    assert "Unpriced — no price recorded in your build plan" in BOM_TAB
+    assert ">Unpriced</span>" in BOM_TAB
+    assert "<summary>Price &amp; suppliers</summary>" in BOM_TAB
     assert "rests on unverified web-gathered data" in BOM_TAB
     assert "Shipping, tax and stock are unknown — not included in any total." in BOM_TAB
     assert "never counted as $0" in BOM_TAB  # unpriced is never zero-filled

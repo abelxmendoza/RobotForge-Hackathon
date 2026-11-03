@@ -79,3 +79,16 @@ NOT in the repo.
 - Gearmotor + wheel: `ast_01M6CHS9QHPVYABX8K438D6CQ5`
 - 18650 pair: `ast_01M6CHSAV5MPJK0XN12XB99SK8`
 - Chassis plate: `ast_01M6CHSC1B4QN7W11M0K4X4ESA`
+
+## Workshop presentation, 2026-11-03
+
+Overview now defaults to the real source photograph, stored unchanged as
+`assets/omega1-twin/omega1-real-photo.png` from the pinned Omega-Code
+commit `1d7bb60d68520639578917b9fbb2a70cc903dd0a`, path
+`image/README/1719168223539.png`. The displayed crop focuses on the rover;
+the full original remains in the asset. The estimated reconstruction is
+opt-in and starts stationary. Stored Omega1 also uses this existing
+textured GLB when the concept view is requested, replacing the generic
+spec-based geometry there. This does not add measurements or improve the
+underlying reconstruction: an actual calibrated twin still requires
+measured dimensions, registered scans/CAD, and validated physics.

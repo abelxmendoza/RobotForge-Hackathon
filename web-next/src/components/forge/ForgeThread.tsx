@@ -25,8 +25,18 @@
  * imperative DOM log); the Redux forge slice tracks the current
  * run's stage position (step) and input kind (tab), per the store
  * contract. */
+import Link from 'next/link';
+import { naturalOrder } from '@/lib/photoSpin';
 import { ASSISTANT_NAME, HANDOFF_ACCEPT, HANDOFF_LABEL, handoffKind, takeHandoff } from '@/lib/handoff';
 import { elementText } from '@/lib/copytext';
+import { parts as intakeParts } from '@/lib/data';
+import { applyModification, generateRobot, parseBrief, type ArchetypeId } from '@/lib/forgeEngine';
+import { intakeTarget, friendlyEdit, conceptRequest, mergePhotoDraft, modificationRequest } from '@/lib/wrenchIntake';
+import { OMEGA1_ROBOT_ID, omega1SeedSpec } from '@/lib/omega1Garage';
+import { readWorkshopContext } from '@/lib/workshopContext';
+import { saveScanFile, readScanFile, removeScanFile } from '@/lib/scanStore';
+import { scanFormat, scanProblem } from '@/lib/scan3d';
+import { spinFrame } from '@/lib/image';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
 import CopyButton from '@/components/chat/CopyButton';
@@ -39,9 +49,8 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useForgeAssistant } from '@/components/chat/ChatDock';
-import ComposerCreate from '@/components/chat/ComposerCreate';
 import { repoLinkIn } from '@/lib/repoLink';
-import { WRENCH_PROMPT_EVENT, type WrenchPrompt } from '@/lib/wrenchPrompt';
+import { WRENCH_PROMPT_EVENT, takeWrenchPrompt, type WrenchPrompt } from '@/lib/wrenchPrompt';
 import { conversationalAnswer } from '@/components/chat/engine';
 import PartPhotoIntake from '@/components/inventory/PartPhotoIntake';
 import VoiceButton from '@/components/chat/VoiceButton';
@@ -324,8 +333,8 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   const assistantRef = useRef(assistant);
   assistantRef.current = assistant;
   const assistantEntryIds = useRef(new Map<number,number>());
+  const [submitting, setSubmitting] = useState(false);
   const [inputMode,setInputMode]=useState<'chat'|'design'>('chat');
-  const [createOpen, setCreateOpen] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('Checking what this deployment can do…');
   const [mode, setMode] = useState<{ mode: LiveMode; why: string }>({
@@ -337,7 +346,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   }, []);
   const liveWorked = useCallback(() => setMode({ mode: 'live', why: '' }), []);
   const [text, setText] = useState('');
-  const [attach, setAttach] = useState<{ kind: AttachKind; file: File } | null>(
+  const [attach, setAttach] = useState<{ kind: AttachKind; file: File; files?: File[] } | null>(
     null,
   );
   const idRef = useRef(0);
@@ -356,7 +365,9 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   /* Other pages can ready the composer (mode, text, focus, file picker). */
   useEffect(() => {
     const onPrompt = (e: Event) => {
-      const p = ((e as CustomEvent).detail || {}) as WrenchPrompt;
+      const p = takeWrenchPrompt() ?? (((e as CustomEvent).detail || {}) as WrenchPrompt);
+      if (busyRef.current) return;
+      setOpen(true);
       if (p.mode) setInputMode(p.mode);
       // A text-based intake replaces any file still waiting to be sent.
       if (typeof p.text === 'string') { setText(p.text); setAttach(null); }
@@ -370,6 +381,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       });
     };
     window.addEventListener(WRENCH_PROMPT_EVENT, onPrompt);
+    const queued = takeWrenchPrompt(); if (queued) onPrompt(new CustomEvent(WRENCH_PROMPT_EVENT,{detail:queued}));
     return () => window.removeEventListener(WRENCH_PROMPT_EVENT, onPrompt);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -908,7 +920,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   );
 
   const runPhoto = useCallback(
-    async (file: File, noteText: string) => {
+    async (file: File, noteText: string, robotPhoto = false, targetId?: string) => {
       beginRun('Photo');
       let dataUrl: string;
       try {
@@ -926,7 +938,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           {noteText ? <p>{noteText}</p> : null}
         </>,
       );
-      const mode = await choosePhotoMode();
+      const mode = robotPhoto ? 'robot' : await choosePhotoMode();
       if(mode==='part'){pushNote(<PartPhotoIntake file={file}/>);return;}
       if (mode === 'document') {
         await runPhotoDocument(noteText, dataUrl);
@@ -938,8 +950,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           <>
             <strong>Your photo was not processed:</strong> photo drafting needs
             the live endpoint, and <LiveOffReason h={h} route="photo" />. The
-            photo above exists only in this thread, in your browser — it was
-            sent nowhere. The recorded photo run shows what a photo draft looks
+            photo stays in this browser; no estimated dimensions were invented. The recorded photo run shows what a photo draft looks
             like (the TurtleBot example, a SAMPLE):
           </>,
         );
@@ -998,7 +1009,18 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
             <RawJSON obj={draft.spec} label="Draft spec JSON" />
           </>,
         );
-        specPipeline(draft.spec, 'photo-draft.json');
+        if (targetId) {
+          const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          const current = all.find((robot) => robot.id === targetId && !robot.archivedAt);
+          if (!current) throw new Error('That robot is no longer active. Its photo draft was not saved.');
+          const latest = current.versions.at(-1)!;
+          const {spec:merged,estimatedPaths} = mergePhotoDraft({...latest.spec,name:current.name},draft.spec,latest.estimatedPaths);
+          const version = {id:uid('v'),label:'Photo estimate',note:'Estimated from a photo; existing recorded fields retained. No measured mesh was reconstructed.',source:'photo' as const,createdAt:new Date().toISOString(),spec:merged,estimatedPaths:[...new Set(estimatedPaths)],...(latest.planned ? {planned:true} : {})};
+          const error = writeStore(GARAGE_KEY,all.map((robot) => robot.id === targetId ? {...robot,versions:[...robot.versions,version]} : robot));
+          if (error) throw new Error(error);
+          pushNote(<p>Added the photo draft to <strong>{current.name}</strong> as a new version. Known values were kept; newly inferred dimensions remain estimates. <Link href={'/garage/#robot='+encodeURIComponent(targetId)+'&tab=overview'}>Open robot</Link></p>);
+          checksStage(merged);
+        } else specPipeline(draft.spec, 'photo-draft.json');
       } catch (e) {
           liveFailed(e);
         setStageBody(
@@ -1010,7 +1032,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
               </span>
             </div>
             <p className="intro">
-              Your photo was not stored anywhere. The recorded photo run still
+              No live photo draft was saved. Any photo already attached to your robot stays in this browser. The recorded photo run still
               shows the shape of a draft:
             </p>
           </>,
@@ -1018,7 +1040,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         sampleOffer('photo', 'Play the recorded photo run (SAMPLE)');
       }
     },
-    [beginRun, pushUser, pushNote, choosePhotoMode, runPhotoDocument, pushStage, setStageBody, specPipeline, sampleOffer],
+    [beginRun, pushUser, pushNote, choosePhotoMode, runPhotoDocument, pushStage, setStageBody, specPipeline, checksStage, sampleOffer],
   );
 
   /* ---------------- input flow: parts list ---------------- */
@@ -1297,6 +1319,74 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     }
   }, [pushNote, runScan]);
 
+  const workshopMedia = async (file: File, kind: 'photo' | 'scan', noteText: string, photos: File[] = [file]) => {
+    const context = readWorkshopContext();
+    const before = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const target = intakeTarget(before, context);
+    const builtinOmega = context?.robotName === 'Omega1' && !context.robotId;
+    const id = target?.id ?? (builtinOmega && !before.some((r) => r.id === OMEGA1_ROBOT_ID) ? OMEGA1_ROBOT_ID : uid('robot'));
+    const at = new Date().toISOString();
+    const name = target?.name ?? (context?.robotName || file.name.replace(/\.[^.]+$/, '') || 'My robot');
+    const entry: GarageRobot = target ?? { id, name, createdAt: at, versions: [{id:uid('v'),label:'Capture draft',note:'Attached through Wrench; appearance only.',source:'upload',createdAt:at,spec:builtinOmega ? omega1SeedSpec() : {name,description:'Capture draft. Dimensions and physical properties have not been measured.'}}] };
+    let photo: string | undefined;
+    let photoSet: string[] | undefined;
+    let oldScan: ArrayBuffer | null = null;
+    if (kind === 'scan') {
+      const problem = scanProblem(file.name, file.size); if (problem) throw new Error(problem);
+      if (scanFormat(file.name) === 'ply' && /property\s+(?:float|double)\s+(?:f_dc_0|scale_0|rot_0)\b/.test(await file.slice(0,8192).text())) throw new Error('That looks like a Gaussian splat. Export a mesh as GLB or a regular PLY point cloud instead.');
+      oldScan = await readScanFile(id);
+      await saveScanFile(id, file);
+    } else {
+      if (photos.length > 36) throw new Error('Attach up to 36 photos at a time.');
+      photoSet = [];
+      for (const f of naturalOrder(photos)) { if (f.size > 20 * 1024 * 1024) throw new Error('Use photos under 20 MB each.'); photoSet.push(await spinFrame(f,1024,0.8)); }
+      photo = photoSet[0];
+    }
+    const fresh = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const current = target ? fresh.find((r) => r.id === id && !r.archivedAt) : entry;
+    const next = current && (kind === 'photo' ? {...current,photo,photoSet,photoAddedAt:at,...(photoSet && photoSet.length >= 8 && /360|walk.?around/i.test(noteText) ? {spin:{frames:photoSet,source:'photos' as const,addedAt:at}} : {})} : {...current,scan:{name:file.name,format:scanFormat(file.name)!,bytes:file.size,addedAt:at}});
+    const error = !next ? 'That robot was removed while the file was being read. Please select it again.' : writeStore(GARAGE_KEY, target ? fresh.map((r) => r.id === id ? next : r) : [...fresh,next]);
+    if (error) {
+      if (kind === 'scan') { if (oldScan) await saveScanFile(id,new Blob([oldScan])); else await removeScanFile(id); }
+      throw new Error(error);
+    }
+    pushUser(<><FileChip label={kind === 'photo' ? 'Robot photo' : '3D scan'} file={file} />{noteText && <p>{noteText}</p>}</>);
+    pushNote(<><p>{kind === 'photo' ? 'Photo' : '3D scan'} saved on <strong>{name}</strong> in this browser. {kind === 'scan' ? 'The file supplies appearance and geometry; no dimensions, mass or motor ratings were assumed.' : 'You can keep adding detail in words.'}</p><Link href={'/garage/#robot='+encodeURIComponent(id)+'&tab=overview'}>Open {name}</Link></>);
+    if (docked) window.location.hash = 'robot='+encodeURIComponent(id)+'&tab=overview';
+    if (kind === 'photo' && (!target || /\b(create|generate|draft|twin)\b/i.test(noteText))) await runPhoto(file,noteText,true,id);
+  };
+
+  const runConceptText = (value: string, regenerate: boolean) => {
+    if (/\b(humanoid|biped|quadruped|legged)\b/i.test(value)) throw new Error('The local concept engine supports rovers, robot arms and multirotors. This design needs a compatible generation service or an uploaded model.');
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const target = regenerate ? intakeTarget(all,readWorkshopContext()) : null;
+    if (regenerate && !target) throw new Error('Select a planned robot, then tell me how to regenerate it.');
+    if (target && !target.versions.at(-1)?.planned) throw new Error('This is a real-build record. Ask me to create a new concept instead, or describe a modification.');
+    const previous = target?.versions.at(-1)?.spec;
+    const brief = value;
+    const priorType: Record<string,ArchetypeId> = {differential:'differential_rover',skid_steer:'differential_rover',mecanum:'mecanum_rover',robotic_arm:'robotic_arm',multirotor:'multirotor'};
+    const parsed = parseBrief(brief);
+    if (previous) {
+      if (!/\b(rover|drone|multirotor|arm|mecanum)\b/i.test(value)) parsed.archetype = priorType[String(previous.drivetrain)] ?? parsed.archetype;
+      if (!/\b(compact|small|mini|tiny|desktop|large|big|heavy|outdoor|bigger|standard)\b/i.test(value)) parsed.size = previous.conceptSize || 'standard';
+      const priorSensors = Object.keys(previous.forge?.ids || {}).filter((key) => ['camera','depth_camera','lidar','imu','ultrasonic'].includes(key));
+      parsed.sensors = [...new Set([...parsed.sensors,...priorSensors])].filter((sensor) => !new RegExp(`(?:without|remove)(?: the| a)? ${sensor.replace('_',' ')}`, 'i').test(value));
+    }
+    const spec = generateRobot(parsed,intakeParts);
+    if (!spec?.forge?.bom?.length) throw new Error('I could not ground that idea in catalogue parts. Describe a rover, robot arm or multirotor.');
+    spec.conceptBrief = brief;
+    spec.conceptSize = parsed.size;
+    if (target) spec.name = target.name;
+    const at = new Date().toISOString();
+    const v = {id:uid('v'),label:regenerate ? 'Regenerated concept' : 'Generated concept',source:'generated' as const,createdAt:at,spec,planned:true,note:value};
+    const robot: GarageRobot = target ? {...target,versions:[...target.versions,v]} : {id:uid('robot'),name:spec.name || 'Robot concept',createdAt:at,versions:[v]};
+    const error = writeStore(GARAGE_KEY,target ? all.map((r) => r.id === robot.id ? robot : r) : [...all,robot]); if (error) throw new Error(error);
+    setInputMode('chat');
+    if (docked) window.location.hash = 'robot='+encodeURIComponent(robot.id)+'&tab=overview';
+    pushUser(<p>{value}</p>);
+    assistant.postCreateResult({pill:'FORGE ENGINE',text:`${regenerate ? 'Regenerated' : 'Created'} ${robot.name} as a planned concept from catalogue parts. Geometry and dimensions are estimates, not a measured twin. Describe another change to iterate.`,openAction:{robotId:robot.id,tab:'overview',label:'Open concept'}});
+  };
+
   /* ---------------- composer + init ---------------- */
   const attachLabel = (kind: AttachKind) =>
     kind === 'photo'
@@ -1304,7 +1394,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       : kind === 'doc'
         ? 'Parts list'
         : kind === 'scan'
-          ? 'Scan (.ply)'
+          ? '3D scan'
           : 'Spec file';
 
   const onSubmit = async (ev: FormEvent) => {
@@ -1315,11 +1405,14 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     if (!a && !value) return;
     setOpen(true); // chatting opens the conversation so the reply is visible
     busyRef.current = true;
+    setSubmitting(true);
     try {
       if (a && a.kind === 'spec') await runSpec(a.file);
+      else if (a && a.kind === 'photo' && docked && !/\b(part photo|this is a part|spec sheet|blueprint)\b/i.test(value)) await workshopMedia(a.file,'photo',value,a.files);
       else if (a && a.kind === 'photo') await runPhoto(a.file, value);
       else if (a && a.kind === 'doc') await runDoc(a.file, value);
-      else if (a && a.kind === 'scan') await runScan(a.file);
+      else if (a && a.kind === 'scan') await workshopMedia(a.file,'scan',value);
+      else if (conceptRequest(value)) runConceptText(value,conceptRequest(value) === 'regenerate');
       else if(inputMode==='design' && !repoLinkIn(value)){
         /* Small talk is not a spec: greetings and meta questions get
          * a conversational reply that steers back to describing a
@@ -1327,11 +1420,32 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
          * replayed as the recorded sample) as if they were one. */
         const conv=conversationalAnswer(value,'design',[]);
         if(conv){pushUser(<p>{value}</p>);pushNote(<div className="main-assistant-reply"><div dangerouslySetInnerHTML={{__html:conv.html}}/></div>);}
+        else if (docked) runConceptText(value,false);
         else await runText(value);
       }
-      else{pushUser(<p>{value}</p>);assistant.ask(value);}
+      else {
+        const context = readWorkshopContext();
+        const edit = friendlyEdit(value);
+        if (edit && context) {
+          const robot = intakeTarget(readStore<GarageRobot[]>(GARAGE_KEY,[]),context);
+          if (!robot) throw new Error('Select a saved robot before changing its measurements.');
+          pushUser(<p>{value}</p>); assistant.ask(`set "${robot.name}" ${edit.path} to ${edit.value}`,value);
+        } else {
+          const all = readStore<GarageRobot[]>(GARAGE_KEY,[]);
+          const target = context ? intakeTarget(all,context) : null;
+          const mod = target && modificationRequest(value) && applyModification(target.versions.at(-1)?.spec,value,intakeParts);
+          if (target && mod) {
+            const at = new Date().toISOString();
+            const version = {id:uid('v'),label:'Text modification',source:'generated' as const,createdAt:at,spec:mod.spec,planned:true,note:mod.summary};
+            const error = writeStore(GARAGE_KEY,all.map((r) => r.id === target.id ? {...r,versions:[...r.versions,version]} : r)); if (error) throw new Error(error);
+            pushUser(<p>{value}</p>); assistant.postCreateResult({pill:'FORGE ENGINE',text:mod.summary+' Saved as a planned version.',openAction:{robotId:target.id,tab:'overview',label:'Open modification'}});
+          } else {pushUser(<p>{value}</p>);assistant.ask(value);}
+        }
+      }
+    } catch (error) { pushNote(errMsg(error));
     } finally {
       busyRef.current = false;
+      setSubmitting(false);
       setAttach(null);
       setText('');
       if (inputRef.current) inputRef.current.focus();
@@ -1411,13 +1525,16 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     void (async () => {
       if (busyRef.current) return;
       busyRef.current = true;
+      setOpen(true); setSubmitting(true);
       try {
         if (h.kind === 'spec') await runSpec(h.file);
+        else if (h.kind === 'photo' && docked) await workshopMedia(h.file,'photo',h.text,h.files);
         else if (h.kind === 'photo') await runPhoto(h.file, h.text);
         else if (h.kind === 'doc') await runDoc(h.file, h.text);
-        else await runScan(h.file);
+        else await workshopMedia(h.file,'scan',h.text);
+      } catch (error) { pushNote(errMsg(error));
       } finally {
-        busyRef.current = false;
+        setSubmitting(false); busyRef.current = false;
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1566,16 +1683,9 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           <div className="wrench-panel-body" ref={panelBodyRef}>{panel}</div>
         </section>
       ) : panel}
-      {createOpen && (
-        <ComposerCreate
-          onResult={(r) => {
-            assistant.postCreateResult(r);
-            setOpen(true); // the result lands in the conversation — open it
-          }}
-        />
-      )}
       <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
-        <div className="g-tabs" aria-label="Message mode"><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button><button type="button" className="chip" aria-pressed={createOpen} onClick={()=>setCreateOpen(!createOpen)} aria-label="Create: generate a robot, acceptance tests, or a modification" title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)">✦ Create</button></div>
+        {submitting && <p className="faint g-small" role="status">{attach ? 'Adding your file…' : 'Working on your request…'}</p>}
+        <div className="g-tabs" aria-label="Message mode" hidden={docked && !open}><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>{setInputMode('design');setText('Generate a robot ');inputRef.current?.focus();}} aria-label="Create: generate a robot, acceptance tests, or a modification" title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)">✦ Create</button></div>
         {/* The assistant's suggestion chips belong to THIS surface on
             /garage: the bottom ChatBar that renders them on other
             pages returns null on /garage, /forge and /chat, so the
@@ -1584,8 +1694,8 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
             of #120 worked here (same hook), the chips half was
             invisible on its own page. Docked only: the full-page
             thread keeps its existing layout. */}
-        {docked && inputMode === 'chat' && assistant.chips.length > 0 && (
-          <div className="fc-chips" aria-label="Suggestions for the open Workshop tab" hidden={createOpen}>
+        {docked && open && inputMode === 'chat' && assistant.chips.length > 0 && (
+          <div className="fc-chips" aria-label="Suggestions for the open Workshop tab">
             {assistant.chips.map((c) => (
               <button
                 type="button"
@@ -1606,7 +1716,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           <span className="attach-chip">
             {attach ? (
               <span>
-                {attachLabel(attach.kind)}: {attach.file.name}
+                {attach.files && attach.files.length > 1 ? `${attach.files.length} photos` : `${attachLabel(attach.kind)}: ${attach.file.name}`}
               </span>
             ) : null}
           </span>
@@ -1638,7 +1748,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
             className="chat-bar-attach"
             onClick={() => fileRefs.any.current?.click()}
             aria-label="Attach a photo, parts list, spec file or scan"
-            title="Attach a photo, parts list (.txt/.csv), spec (.json) or scan (.ply). Files stay in your browser unless you run a live step."
+            title="Attach a photo, parts list (.txt/.csv), spec (.json) or scan (.glb/.obj/.ply). Files stay in your browser unless you run a live step."
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 11.5 12.6 19.9a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" />
@@ -1675,34 +1785,37 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
                 (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
               }
             }}
-            placeholder={inputMode === 'design' ? 'Describe a robot in plain words…' : `Message ${ASSISTANT_NAME}…`}
+            placeholder={inputMode === 'design' ? 'Describe a robot in plain words…' : (docked ? 'Describe a robot, attach photos, or ask for a change…' : `Message ${ASSISTANT_NAME}…`)}
           />
           <button
             type="submit"
             className="chat-bar-send"
-            disabled={!text.trim() && !attach}
+            disabled={submitting || (!text.trim() && !attach)}
             aria-label="Send message"
             title="Send"
           >
             ↑
           </button>
         </div>
-        <p className="faint composer-note">
-          Photos, parts lists (.txt/.csv), specs (.json) and scans (.ply) stay
+        <p className="faint composer-note" hidden={docked && !open}>
+          Photos, parts lists (.txt/.csv), specs (.json) and scans (.glb/.obj/.ply) stay
           in your browser unless you run a live step.
         </p>
         <input
           type="file"
           ref={fileRefs.any}
           accept={HANDOFF_ACCEPT}
+          multiple
           hidden
           onChange={(e) => {
-            const f = e.target.files && e.target.files[0];
+            const files = Array.from(e.target.files ?? []);
+            const f = files[0];
             e.target.value = '';
+            if (files.length > 1 && !files.every((file) => handoffKind(file) === 'photo')) { pushNote('Attach photos together, or one model, spec or parts-list file at a time.'); return; }
             if (!f) return;
             const kind = handoffKind(f);
-            if (kind) setAttach({ kind, file: f });
-            else pushNote(`${ASSISTANT_NAME} reads photos, .json specs, .txt/.csv parts lists and .ply scans. ${f.name} is none of those.`);
+            if (kind) setAttach({ kind, file: f, files });
+            else pushNote(`${ASSISTANT_NAME} reads photos, .json specs, .txt/.csv parts lists and GLB, OBJ or PLY scans. ${f.name} is none of those.`);
           }}
         />
       </form>

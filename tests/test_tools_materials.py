@@ -60,7 +60,7 @@ def test_ownership_store_gets_a_demo_twin_and_demo_seed():
 
 def test_workshop_has_the_tab_and_it_is_offline():
     garage = (WEB / "src/components/garage/Garage.tsx").read_text()
-    assert "'tools'" in garage and "Tools & Materials" in garage
+    assert "'tools'" in garage and "Tools & materials" in garage
     assert "ToolsMaterialsTab" in garage
     tab = (WEB / "src/components/garage/ToolsMaterialsTab.tsx").read_text()
     assert "OWNERSHIP_KEY" in tab and "OWNERSHIP_LABEL" in tab
