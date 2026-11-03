@@ -77,7 +77,7 @@ export function LandingFooter() {
       </div>
       <div className="wrap">
         <p>Built Oct 26 – Nov 4, 2026 for the Meta Global AI Developer Hackathon, Indie track, “Push the Frontier.” Earlier design exploration informed the project and is disclosed in the repository.</p>
-        <p>By Abel Mendoza · <Link href="/how-it-works/">How it works</Link> · <a href={REPO_URL}>GitHub</a> · Apache-2.0</p>
+        <p>By Abel Mendoza · <Link href="/how-it-works/">How it works</Link> · <a href={REPO_URL}>GitHub</a> · <Link href="/credits/">Credits</Link> · Apache-2.0</p>
       </div>
     </footer>
   );

@@ -1,0 +1,156 @@
+import type { Metadata } from "next";
+import AppShell from "@/components/shell/AppShell";
+
+/**
+ * Credits — who and what RobotForge builds on. Every line traces to
+ * the repo's own records: the catalogue's per-robot provenance
+ * (catalog/robots.json), the README's "Meta models inside" table,
+ * live/README.md, lib/omega1Twin.ts, and the submission package's
+ * contributors draft. Acknowledgment, not team membership — the
+ * only human contributor is named first.
+ */
+
+export const metadata: Metadata = {
+  // The layout template appends "· RobotForge".
+  title: "Credits",
+  description:
+    "The makers, models, workshops and services RobotForge builds on — credited.",
+};
+
+export default function CreditsPage() {
+  return (
+    <AppShell active="" gate={false} crumbs={[{ label: "Credits" }]}>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Fine print</div>
+          <h1>Credits</h1>
+          <p className="lede">
+            RobotForge is a solo project by Abel Mendoza, built for the
+            Meta Global AI Developer Hackathon. The people, projects
+            and services below are thanked for what RobotForge builds
+            on — acknowledgment, not team membership.
+          </p>
+        </div>
+      </div>
+
+      <section className="section">
+        <h2>Built by</h2>
+        <p>
+          Abel Mendoza is the only human contributor: design,
+          building, testing, gate runs and the submission. Everyone
+          and everything below is credited for what RobotForge builds
+          on, not listed as a contributor.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>AI inside</h2>
+        <p>
+          Muse Spark (Meta) is the model inside RobotForge: it drafts
+          robot specs from words and photos, answers in chat, and
+          proposes fixes. Its output is labelled with where it came
+          from, and it never assigns a pass/fail verdict — the
+          deterministic checks decide. In the command-line tools,
+          SAM 3.1 cross-checks what Muse Spark saw in a photo against
+          segmented regions.
+        </p>
+        <p>
+          Muse Spark — as &ldquo;Torque,&rdquo; Abel&apos;s agent — was
+          also the build assistant used during the hackathon for
+          research, coding and verification passes.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Workshops that shaped the design</h2>
+        <p>Three Meta hackathon workshops shaped how RobotForge is built:</p>
+        <ul className="credits-list">
+          <li>
+            <strong>Agents 101</strong> — the agent-loop discipline
+            behind the Forge&apos;s propose-and-check structure.
+          </li>
+          <li>
+            <strong>Agents 102 — Verifiable Agents</strong> —
+            &ldquo;deterministic first, judge second&rdquo;: the model
+            proposes, the checks decide.
+          </li>
+          <li>
+            <strong>Building Specialized Intelligence on Fireworks: Muse Open Models</strong>{" "}
+            — &ldquo;measure it&rdquo;: the fixed-corpus,
+            deterministic-grader method behind the provider
+            chain&apos;s measured order.
+          </li>
+        </ul>
+      </section>
+
+      <section className="section">
+        <h2>The robots in the catalogue</h2>
+        <p>
+          The Robodex catalogues real robots RobotForge did not
+          design. Each entry&apos;s spec was read from its
+          maker&apos;s published files, and each robot&apos;s page
+          carries its own provenance record and photo credit.
+        </p>
+        <ul className="credits-list">
+          <li><strong>Andino</strong> — Ekumen (open-source ROS 2 robot; official project: Ekumen-OS/andino)</li>
+          <li><strong>TurtleBot3 Burger</strong> — ROBOTIS</li>
+          <li><strong>TurtleBot3 Waffle Pi</strong> — ROBOTIS</li>
+          <li><strong>Pathfinder</strong> — RobotForge&apos;s own reference design, written for this project</li>
+          <li><strong>PX4 X500</strong> — the PX4 project (Gazebo model) and Holybro (the X500 V2 kit)</li>
+          <li><strong>Crazyflie 2.1</strong> — Bitcraze</li>
+          <li><strong>Unitree Go2</strong> — Unitree</li>
+          <li><strong>Mini Pupper</strong> — MangDang</li>
+          <li><strong>Unitree G1</strong> — Unitree</li>
+          <li><strong>ROBOTIS OP3</strong> — ROBOTIS</li>
+          <li><strong>OpenManipulator-X</strong> — ROBOTIS</li>
+        </ul>
+        <p>
+          Boston Dynamics Spot is not a catalogue entry: it appears
+          as a Spotter sighting, photographed at Cal Poly
+          Pomona&apos;s IRLab on October 28, 2026, and matched
+          against the Robodex from that photo.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Omega1 and its twin</h2>
+        <p>
+          Omega1 is Abel&apos;s own robot — a Freenove FNK0043 4WD
+          Raspberry Pi car. Its digital twin was generated by
+          ProjectSim (Kaedim) from a photo on November 1, 2026. The
+          twin&apos;s geometry and physics values are model
+          estimates, not measurements of the real robot, and they
+          are labelled ESTIMATED everywhere they appear.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Services</h2>
+        <p>
+          The site is hosted on Vercel, and the live endpoint is a
+          Cloudflare Worker. Live answers run on a provider chain —
+          Meta&apos;s Muse Spark API and Baseten, with Fireworks as
+          a further route when it is switched on.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Open source</h2>
+        <p>
+          The web app is built on Next.js and React, with Three.js
+          for 3D, Rapier for the physics sandbox, and urdf-loader
+          for robot models. RobotForge itself is released under
+          Apache-2.0.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Photos</h2>
+        <p>
+          Robot and part photos are credited on their own pages,
+          next to the photo they belong to.
+        </p>
+      </section>
+    </AppShell>
+  );
+}

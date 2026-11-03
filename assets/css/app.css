@@ -60,6 +60,7 @@ body.app{min-height:100vh}
 .section > h2{font-size:var(--fs-lg);letter-spacing:-.015em}
 .section > .sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:6px;max-width:66ch}
 .section > h2 + .sub + *, .section > h2 + *{margin-top:var(--s4)}
+.credits-list{margin:0;padding-left:18px;display:grid;gap:6px}
 .state-box{border:1px dashed var(--border-strong);border-radius:var(--r);padding:var(--s5);color:var(--text-muted);font-size:var(--fs-sm)}
 
 /* ---------- forge ---------- */
