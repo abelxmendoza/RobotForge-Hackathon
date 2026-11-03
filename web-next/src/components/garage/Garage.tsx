@@ -16,6 +16,7 @@ const WiringBench3D = dynamic(() => import('@/components/wiring/WiringBench3D'),
 import { isWiring } from '@/lib/wiring';
 import { parts as catalogParts, robots as dexRobots } from '@/lib/data';
 import { applyModification, generateRobot, parseBrief, type ArchetypeId, type ForgeSize } from '@/lib/forgeEngine';
+import { forgeTestTally, generateForgeTests, type ForgeTest } from '@/lib/forgeTests';
 import { assetPath } from '@/components/home/asset';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { liveHealth, postJSON, routeOn, LiveOffReason } from '@/components/forge/live';
@@ -523,6 +524,57 @@ function ForgeChecks({ spec }: { spec: Spec }) {
   );
 }
 
+/* Forge Tests (lib/forgeTests): a generated acceptance-test plan for
+ * the draft spec, rendered in the Simulate tab. The plan is stored on
+ * the spec itself (spec.forgeTests, the spec.forge pattern), so it
+ * persists with whichever version the draft is saved as. A FAIL whose
+ * fix is a recognised Forge Engine modification gets a button wired
+ * to the same applyMod handler the Modify box uses — on generated
+ * robots only; everywhere else the fix renders as guidance text. */
+function ForgeTestsSection({ spec, onGenerate, onModify }: { spec: Spec; onGenerate: () => void; onModify: (text: string) => string | null }) {
+  const [msg, setMsg] = useState('');
+  const plan = spec?.forgeTests;
+  const cls: Record<string, string> = { PASS: 'pass', FAIL: 'fail', NOT_CHECKED: 'norun' };
+  const applyFix = (text: string) => {
+    const r = onModify(text);
+    setMsg(r ?? 'That fix could not be applied — nothing was changed.');
+  };
+  return (
+    <section className="forge-block" aria-label="Forge Tests">
+      <h3>Forge Tests <span className="fbadge local">ACCEPTANCE PLAN</span></h3>
+      <p className="faint g-small">Acceptance tests generated from this spec: procedures you can run, with predicted numbers computed from the spec’s own recorded fields (the lib/rover.ts formulas the Simulate and Checks tabs use). Predictions are estimates, not measurements or a physics run; thresholds are the plan’s own, stated on each test. A test whose inputs the spec does not record is NOT_CHECKED and names the missing field. The plan is stored on the spec — save a version to keep it with this robot.</p>
+      <button type="button" className="btn btn-primary" onClick={onGenerate}>{plan ? 'Regenerate acceptance tests' : 'Generate acceptance tests'}</button>
+      {msg && <p className="g-small" role="status">{msg}</p>}
+      {plan?.tests?.length > 0 && (
+        <>
+          <p className="g-small"><strong>{forgeTestTally(plan)}</strong>{plan.generatedAt ? ` · generated ${new Date(plan.generatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}<br /><span className="faint">{plan.model}</span></p>
+          <ul className="forge-list">
+            {plan.tests.map((t: ForgeTest, i: number) => (
+              <li key={i}>
+                <span className={'verdict ' + (cls[t.verdict] ?? 'norun')}>{t.verdict}</span> <strong>{t.name}</strong>{' '}
+                <span className="fbadge">{t.kind === 'fault_injection' ? 'FAULT INJECTION' : 'ACCEPTANCE'}</span>
+                {t.expected && <><br /><span className="faint">Expected:</span> {t.expected}</>}
+                {t.predicted && <><br /><span className="faint">Predicted:</span> {t.predicted}</>}
+                {!t.expected && t.basis && <><br />{t.basis}</>}
+                {t.procedure?.length > 0 && (
+                  <ol className="forge-list">{t.procedure.map((s: string, j: number) => <li key={j}>{s}</li>)}</ol>
+                )}
+                {t.inputs?.length > 0 && <><br /><span className="faint">Inputs: {t.inputs.join(' · ')}</span></>}
+                {t.expected && t.basis && <><br /><span className="faint">Basis: {t.basis}</span></>}
+                {t.suggestedFix && (t.suggestedFix.kind === 'modification' && spec?.forge ? (
+                  <><br /><button type="button" className="btn btn-sm" onClick={() => applyFix(t.suggestedFix!.text)}>Apply fix: {t.suggestedFix.text}</button> <span className="faint">saves as a new version, like the Modify box</span></>
+                ) : (
+                  <><br /><span className="faint">Suggested fix:</span> {t.suggestedFix.text}{t.suggestedFix.kind === 'modification' ? ' (a Forge Engine modification — the Apply button appears on generated robots; otherwise use Fix with Muse Spark in the Checks tab.)' : ''}</>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
 function ModifyBox({ spec, onModify }: { spec: Spec; onModify: (text: string) => string | null }) {
   const [text, setText] = useState('');
   const [msg, setMsg] = useState('');
@@ -690,6 +742,15 @@ export default function Garage() {
     setDraft(JSON.parse(JSON.stringify(mod.spec)));
     setBaseId(v.id);
     return `${mod.summary} Saved as a new version (${rows} spec field${rows === 1 ? '' : 's'} differ).`;
+  };
+
+  /* Forge Tests: generate (or regenerate) the acceptance-test plan
+   * for the current draft and store it on the draft spec, following
+   * the spec.forge pattern — it persists with the version the draft
+   * is saved as, and re-running replaces the plan. */
+  const generateTests = () => {
+    if (!draft) return;
+    setDraft({ ...draft, forgeTests: generateForgeTests(draft, new Date().toISOString()) });
   };
 
   /* Save a copy: the save-as-new half of the chat's save choice,
@@ -1244,7 +1305,10 @@ export default function Garage() {
             )}
 
             {tab === 'simulate' && (
-              <SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} />
+              <>
+                <SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} />
+                <ForgeTestsSection spec={draft} onGenerate={generateTests} onModify={applyMod} />
+              </>
             )}
 
             {tab === 'bom' && (
