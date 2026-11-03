@@ -1,8 +1,10 @@
 """The /credits page exists, is linked from the landing footer, and
 credits only what the repo's own records support: every name traces
-to catalog provenance, the README model table, omega1Twin.ts, or the
-submission package's contributors draft. Acknowledgment is pinned as
-distinct from contributor status, and no non-contributor is named."""
+to catalog provenance, the parts catalogue's source records, the
+live Worker's web and sign-in routes, the README model table,
+omega1Twin.ts, or the submission package's contributors draft.
+Acknowledgment is pinned as distinct from contributor status, and
+no non-contributor is named."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -82,6 +84,31 @@ def test_open_source_and_photos_credited():
                   "urdf-loader", "Apache-2.0"):
         assert piece in PAGE, piece
     assert "credited on their own pages" in PAGE
+
+
+def test_sources_we_cite_credited():
+    # The "Sources we cite" section names only sources the repo's
+    # own records actually use: Firecrawl runs the Worker's /web
+    # route, the parts catalogue's records name Pololu / Toshiba
+    # for the TB6612FNG and polymaker.com for the filament prices,
+    # and the Worker exposes Google and Meta sign-in.
+    parts = (ROOT / "catalog/parts.json").read_text()
+    worker = (ROOT / "live/worker.js").read_text()
+    assert "Sources we cite" in PAGE
+    assert "Firecrawl" in worker and "Firecrawl" in PAGE
+    assert "grounds live chat answers in real pages" in PAGE
+    assert "source URL and the time it was fetched" in PAGE
+    assert "WEB-SOURCED — UNVERIFIED" in PAGE
+    for name in ("Pololu", "Toshiba", "TB6612FNG"):
+        assert name in parts, name  # really in the catalogue data
+        assert name in PAGE, name  # and credited on the page
+    assert "polymaker.com" in parts
+    assert "Polymaker" in PAGE
+    # Sign-in routes the endpoint actually exposes.
+    assert "googleLogin" in worker and "metaLogin" in worker
+    assert "Google or Meta" in PAGE
+    # Planned but never used — not credited.
+    assert "Roboflow" not in PAGE
 
 
 def test_no_foreign_project_provenance_leaks_in():
