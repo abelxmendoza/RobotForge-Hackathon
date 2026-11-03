@@ -9,22 +9,19 @@
  * part's Real / Sim only label. */
 import { partSection, type InventoryPart } from './inventory';
 
-export const SUBSYSTEMS = [
-  { id: 'drive', label: 'Drive', categories: ['motor', 'motor_driver', 'wheel', 'servo'] },
-  { id: 'power', label: 'Power', categories: ['battery', 'power'] },
-  { id: 'compute', label: 'Compute', categories: ['controller', 'computer', 'radio'] },
-  { id: 'sensing', label: 'Sensing', categories: ['sensor'] },
-  { id: 'frame', label: 'Frame and wiring', categories: ['frame', 'cable', 'other'] },
-] as const;
-export type SubsystemId = (typeof SUBSYSTEMS)[number]['id'] | 'tools';
+import { PART_GROUPS, partGroup, type PartGroupId } from './partTaxonomy';
 
-export function subsystemOf(p: Pick<InventoryPart, 'category' | 'section'>): SubsystemId {
+export const SUBSYSTEMS = PART_GROUPS.map((g) => ({ id: g.id, label: g.label }));
+export type SubsystemId = PartGroupId | 'tools';
+
+export function subsystemOf(p: Pick<InventoryPart, 'category' | 'section' | 'name'>): SubsystemId {
   if (partSection(p) === 'tools') return 'tools';
-  return SUBSYSTEMS.find((s) => (s.categories as readonly string[]).includes(p.category))?.id ?? 'frame';
+  return partGroup(p.category, p.name);
 }
 export const SUBSYSTEM_LABEL: Record<SubsystemId, string> = {
-  drive: 'Drive', power: 'Power', compute: 'Compute', sensing: 'Sensing', frame: 'Frame and wiring', tools: 'Tools',
-};
+  ...Object.fromEntries(PART_GROUPS.map((g) => [g.id, g.label])),
+  tools: 'Tools',
+} as Record<SubsystemId, string>;
 
 /* One index per inventory array: effective parent, children and
  * descendant counts, built in a single pass and cached by the array
