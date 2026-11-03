@@ -4,10 +4,12 @@ import AppShell from "@/components/shell/AppShell";
 /**
  * Credits — who and what RobotForge builds on. Every line traces to
  * the repo's own records: the catalogue's per-robot provenance
- * (catalog/robots.json), the README's "Meta models inside" table,
- * live/README.md, lib/omega1Twin.ts, and the submission package's
- * contributors draft. Acknowledgment, not team membership — the
- * only human contributor is named first.
+ * (catalog/robots.json), the parts catalogue's source and
+ * price-estimate records (catalog/parts.json), the live endpoint's
+ * web and sign-in routes (live/worker.js), the README's "Meta
+ * models inside" table, live/README.md, lib/omega1Twin.ts, and the
+ * submission package's contributors draft. Acknowledgment, not
+ * team membership — the only human contributor is named first.
  */
 
 export const metadata: Metadata = {
@@ -131,6 +133,53 @@ export default function CreditsPage() {
           Cloudflare Worker. Live answers run on a provider chain —
           Meta&apos;s Muse Spark API and Baseten, with Fireworks as
           a further route when it is switched on.
+        </p>
+        <p>
+          Sign-in runs through the endpoint&apos;s own email
+          accounts, or with Google or Meta — both are live sign-in
+          routes on the endpoint.
+        </p>
+      </section>
+
+      <section className="section">
+        <h2>Sources we cite</h2>
+        <p>
+          RobotForge cites what it reads. When a live chat answer
+          relies on a web page, the answer names that page. When a
+          part, a spec or a price comes from the web, its record
+          keeps the source URL and the time it was fetched, so
+          anyone can check it — and a web-sourced record stays
+          labelled WEB-SOURCED — UNVERIFIED until a datasheet or a
+          measurement confirms it.
+        </p>
+        <ul className="credits-list">
+          <li>
+            <strong>Firecrawl</strong> — the web search and
+            page-reading service behind the live endpoint&apos;s
+            /web route. It grounds live chat answers in real pages
+            and supplies the pages that web-sourced parts and CAD
+            proposals are read from; every page it fetches is cited
+            where it is used.
+          </li>
+          <li>
+            <strong>Pololu</strong> — the TB6612FNG dual motor
+            driver&apos;s product page and datasheet, the source
+            for that part&apos;s gathered specs, its photo and its
+            price estimate. The TB6612FNG chip itself is made by{" "}
+            <strong>Toshiba</strong>.
+          </li>
+          <li>
+            <strong>Polymaker</strong> — the product pages behind
+            the catalogue&apos;s PLA and PETG filament price
+            estimates. Like every price here, those are fetched,
+            dated estimates — never RobotForge&apos;s own prices.
+          </li>
+        </ul>
+        <p>
+          The catalogue carries its own citations too: each Robodex
+          entry names where its spec was read from, each part
+          record keeps its source, and robot and part photos are
+          credited on their own pages, next to the photo.
         </p>
       </section>
 
