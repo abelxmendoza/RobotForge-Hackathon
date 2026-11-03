@@ -94,6 +94,6 @@ def test_unnamed_driver_board_was_not_generated():
 def test_garage_wires_the_builtin_specimen():
     assert "import Omega1Twin from './Omega1Twin'" in GARAGE
     assert "Built-in specimen" in GARAGE
-    assert "{twinOpen && <Omega1Twin />}" in GARAGE
+    assert "{twinOpen && <Omega1Twin tab={omegaTab} />}" in GARAGE
     # the twin view replaces the workshop; it never renders alongside it
     assert "{!twinOpen && !adding && robot && draft" in GARAGE
