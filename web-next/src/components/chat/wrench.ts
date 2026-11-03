@@ -423,6 +423,224 @@ export function isDemoRequest(question: string): boolean {
   return demoIntent(tokens(String(question || "")));
 }
 
+/* ---------------- Omega1, RobotForge's own robot ---------------- */
+
+/* Omega1 is the team's real rover and the Workshop's built-in
+ * specimen. It is not a Robodex entry, so the engine alone answered
+ * "do you know Omega1?" with the fallback (2026-11-03 demo
+ * transcript). Every fact below comes from the records only:
+ * lib/omega1Twin.ts (OMEGA1_FACTS) and docs/omega1/omega1.extracted.json
+ * (Omega-Code @ 1d7bb60). Size and mass are not measured, and no gate
+ * has ever run on Omega1, so nothing here claims either. This file
+ * imports only ./engine (the eval harness compiles it standalone), so
+ * the facts are restated here; tests/test_chat_omega1_wrench.py keeps
+ * them in step with OMEGA1_FACTS. */
+
+export const OMEGA1_SLUG = "omega1";
+const OMEGA1_NAME = "Omega1";
+const OMEGA1_MEM: TurnMemory = { robotName: OMEGA1_NAME, robotSlug: OMEGA1_SLUG };
+
+const PERSON_REF = ["he", "him", "his", "hes", "she", "her", "hers", "shes"];
+
+function workshopRoute(root: string): string {
+  const base = root ? root.replace(/\/?$/, "/") : "/";
+  return base + "garage/";
+}
+
+function omega1Named(qt: string[]): boolean {
+  if (qt.indexOf("omega1") !== -1 || qt.indexOf("omega") !== -1) return true;
+  return phraseIn(qt, "built in specimen") || qt.indexOf("specimen") !== -1;
+}
+
+/* The ask is about something the Workshop's how-to topics already
+ * answer step by step (improve the twin, scans, measuring, wiring):
+ * the engine's topic answer is the better reply. */
+function omega1HowTo(qt: string[]): boolean {
+  const how = qt.indexOf("how") !== -1 || qt.indexOf("can") !== -1;
+  return (
+    ["improve", "scan", "scans", "scanned", "upload", "adopt", "wiring", "wire", "wires"].some(
+      (w) => qt.indexOf(w) !== -1
+    ) ||
+    (how && ["measure", "measuring", "twin", "add"].some((w) => qt.indexOf(w) !== -1))
+  );
+}
+
+type Omega1Aspect =
+  | "broken" | "power" | "sensors" | "drive" | "compute"
+  | "control" | "size" | "gate" | "specimen" | "overview" | "unknown";
+
+/* Words that make an ask an introduction ("do you know Omega1?",
+ * "tell me about Omega1", or just "Omega1?"). Any other Omega1 ask
+ * the aspects above do not cover is a fact the records do not hold. */
+const INTRO_WORDS = ["know", "about", "who", "tell", "describe", "introduce", "overview", "summary", "explain", "more"];
+const FILLER = ["omega", "omega1", "1", "what", "whats", "is", "s", "the", "a", "an", "this", "that", "he", "him", "hes", "it", "its", "and", "so", "ok", "okay", "hey", "wrench"];
+
+function omega1Intro(qt: string[]): boolean {
+  if (INTRO_WORDS.some((w) => qt.indexOf(w) !== -1)) return true;
+  return qt.every((t) => FILLER.indexOf(t) !== -1);
+}
+
+/* An explicit list or catalogue ask ("show me robots that passed")
+ * is not about the remembered robot, even when it says "that". */
+function listAsk(qt: string[]): boolean {
+  return ["robots", "which", "list", "show", "all", "any", "every", "parts", "catalogue", "catalog"].some(
+    (w) => qt.indexOf(w) !== -1
+  );
+}
+
+function omega1Aspect(qt: string[]): Omega1Aspect {
+  const has = (ws: string[]) => ws.some((w) => qt.indexOf(w) !== -1);
+  if (has(["broken", "broke", "wrong", "repair", "repairs", "fix", "fixed", "fixes", "problem", "problems", "issue", "issues", "damaged"]))
+    return "broken";
+  if (has(["gate", "gated", "pass", "passed", "fail", "failed", "verdict", "simulation", "sim", "gazebo", "tested", "test"]))
+    return "gate";
+  if (has(["battery", "batteries", "power", "voltage", "volts", "18650", "cells"])) return "power";
+  if (has(["sensor", "sensors", "camera", "cameras", "ultrasonic", "lidar", "see", "sees"])) return "sensors";
+  if (has(["wheel", "wheels", "motor", "motors", "drive", "drives", "track", "steer", "steering", "servo", "servos"]))
+    return "drive";
+  if (has(["computer", "compute", "pi", "raspberry", "jetson", "brain", "cpu"])) return "compute";
+  if (has(["control", "controlled", "remote", "autonomous", "itself", "xbox", "controller", "teleop"]))
+    return "control";
+  if (has(["size", "big", "small", "weight", "weigh", "weighs", "heavy", "mass", "dimensions", "long", "wide", "tall"]))
+    return "size";
+  if (has(["specimen", "workshop", "looking", "see", "seeing", "here", "garage", "twin", "model"])) return "specimen";
+  return omega1Intro(qt) ? "overview" : "unknown";
+}
+
+const OMEGA1_OVERVIEW =
+  "<ul>" +
+  "<li><strong>Base kit:</strong> Freenove FNK0043 4WD Raspberry Pi car.</li>" +
+  "<li><strong>Drive:</strong> skid-steer, four driven wheels.</li>" +
+  "<li><strong>Control:</strong> manual remote control (an Xbox controller in its code). It does not drive itself.</li>" +
+  "<li><strong>Compute:</strong> Raspberry Pi 4B (4 GB). A Jetson Orin is planned, not fitted.</li>" +
+  "<li><strong>Sensors:</strong> HC-SR04 ultrasonic and a camera, both at the front, plus three IR line-tracking sensors.</li>" +
+  "<li><strong>Battery:</strong> 2× 18650 cells in series, 7.4 V nominal.</li>" +
+  "<li><strong>Right now:</strong> off the bench, waiting for repair parts.</li>" +
+  "</ul>";
+
+const OMEGA1_REPAIRS =
+  "<ul>" +
+  "<li><strong>Loose camera pitch servo.</strong> Its code narrows the servo to 1300–1700 µs because of loose hardware. That is a real repair item.</li>" +
+  "<li><strong>Track width disagrees.</strong> The motor code assumes a 0.20 m track, but the Freenove kit is only 0.15 m wide overall, so its turning maths is off until the track is measured.</li>" +
+  "<li><strong>Two wheel sizes in the code.</strong> 0.05 m and 0.04 m radius. The real wheel has to be measured to settle it.</li>" +
+  "</ul>";
+
+const OMEGA1_NOT_RECORDED =
+  "<p>Not recorded yet: its real size and mass. They still need a tape " +
+  "measure and a scale. No gate has run on Omega1, so it has no " +
+  "verdict.</p>";
+
+function omega1Answer(qt: string[], root: string): AnswerResult {
+  const aspect = omega1Aspect(qt);
+  const lead = "<strong>Omega1</strong>";
+  let html = "";
+  switch (aspect) {
+    case "specimen":
+      html =
+        "<p>That&rsquo;s " + lead + ", RobotForge&rsquo;s own robot. " +
+        "The built-in specimen in the Workshop is its digital twin: a 3D " +
+        "model generated from a photo of the real rover, so its shape and " +
+        "size are <strong>estimates</strong>, not measurements. The Checks " +
+        "pane lists only what the records say, and the twin has no gate " +
+        "verdict.</p>" +
+        "<p>To edit it or add your own scans and measurements, tap " +
+        "<strong>Add Omega1 to your Garage</strong> if you haven&rsquo;t " +
+        "yet. That makes a stored copy seeded from the records only.</p>";
+      break;
+    case "broken":
+      html =
+        "<p>" + lead + " is off the bench waiting for repair parts. What " +
+        "its records show needs fixing:</p>" + OMEGA1_REPAIRS +
+        "<p>No gate has run on Omega1 yet, so none of this is a gate " +
+        "result. It comes from its code and its kit documents.</p>";
+      break;
+    case "gate":
+      html =
+        "<p>No gate has run on " + lead + ", so it has no verdict, and I " +
+        "won&rsquo;t make one up. A gate needs measured geometry, and its " +
+        "size and mass are not measured yet. The repairs it is waiting " +
+        "on:</p>" + OMEGA1_REPAIRS;
+      break;
+    case "power":
+      html =
+        "<p>" + lead + " runs on 2× 18650 cells in series, 7.4 V nominal. " +
+        "Capacity and runtime are not recorded.</p>";
+      break;
+    case "sensors":
+      html =
+        "<p>" + lead + " has an HC-SR04 ultrasonic sensor and a camera " +
+        "(OV5647), both at the front, plus three IR line-tracking sensors " +
+        "underneath. The camera sits on a pitch servo that is loose, which " +
+        "is one of its repair items.</p>";
+      break;
+    case "drive":
+      html =
+        "<p>" + lead + " is skid-steer: four driven wheels on a Freenove " +
+        "FNK0043 4WD kit. Its code drives the motors through a PCA9685 PWM " +
+        "hat. Two " +
+        "things in its records disagree with the real robot:</p>" +
+        OMEGA1_REPAIRS;
+      break;
+    case "compute":
+      html =
+        "<p>" + lead + " runs on a Raspberry Pi 4B (4 GB). A Jetson Orin is " +
+        "planned in its code but not fitted.</p>";
+      break;
+    case "control":
+      html =
+        "<p>" + lead + " is driven by hand with remote control (an Xbox " +
+        "controller in its code). It does not drive itself.</p>";
+      break;
+    case "size":
+      html =
+        "<p>" + lead + "&rsquo;s size and mass are not measured yet, so I " +
+        "won&rsquo;t guess them. The Freenove kit is 0.15 m wide overall, but its code " +
+        "assumes a 0.20 m track, which is why measuring comes first. The " +
+        "Workshop&rsquo;s Improve this twin steps take a RealSense scan for " +
+        "true size and a short tape-measure form for the rest.</p>";
+      break;
+    case "unknown":
+      /* Same honesty contract as the engine's fallback: say it is not
+       * recorded, and flag it so a live model may take it when on. */
+      return {
+        html:
+          "<p>That isn&rsquo;t in " + lead + "&rsquo;s records, so I&rsquo;d " +
+          "rather say so than guess. What is recorded about it:</p>" +
+          OMEGA1_OVERVIEW,
+        chips: omega1Chips(aspect),
+        hits: [{ kind: "route", label: "Workshop — Omega1", route: workshopRoute(root) }],
+        fallback: true,
+      };
+    default:
+      html =
+        "<p>" + (qt.indexOf("know") !== -1 ? "Yes. " : "") + lead + " is RobotForge&rsquo;s own robot: a real " +
+        "rover on its builder&rsquo;s bench, and the built-in specimen in " +
+        "the Workshop. It is the robot the demo is tested on.</p>" +
+        OMEGA1_OVERVIEW;
+  }
+  if (aspect === "overview" || aspect === "specimen") html += OMEGA1_NOT_RECORDED;
+  return {
+    html: html,
+    chips: omega1Chips(aspect),
+    hits: [{ kind: "route", label: "Workshop — Omega1", route: workshopRoute(root) }],
+  };
+}
+
+function omega1Chips(aspect: Omega1Aspect): string[] {
+  const all = [
+    "What's wrong with Omega1?",
+    "Has Omega1 been gated?",
+    "How do I improve my Omega1 twin?",
+    "What sensors does Omega1 have?",
+  ];
+  const skip: Partial<Record<Omega1Aspect, string>> = {
+    broken: all[0],
+    gate: all[1],
+    sensors: all[3],
+  };
+  return all.filter((c) => c !== skip[aspect]).slice(0, 3);
+}
+
 /* ---------------- contextual chips ---------------- */
 
 function chipsForRobot(robot: RobotData): string[] {
@@ -502,6 +720,20 @@ export function createWrench(data: EngineData): Wrench {
       );
     }
 
+    /* Omega1: named, or carried over from the last turn by a
+     * pronoun ("he's in my workshop"). How-to asks still go to the
+     * engine's Workshop topics, which answer them step by step. */
+    const named = omega1Named(qt);
+    const carried =
+      !named &&
+      mem.robotSlug === OMEGA1_SLUG &&
+      !listAsk(qt) &&
+      (qt.some((t) => PERSON_REF.indexOf(t) !== -1) || isFollowUp(qt));
+    if ((named || carried) && !omega1HowTo(qt) && !matchRobot(qt, robots)) {
+      const oa = omega1Answer(qt, root);
+      return { ...finish(oa, mem), memory: OMEGA1_MEM };
+    }
+
     let ans = engine.answer(q);
 
     /* Session memory: a follow-up that names no robot resolves
@@ -511,7 +743,8 @@ export function createWrench(data: EngineData): Wrench {
      * follow-up did not itself resolve to the remembered robot —
      * and it only replaces the direct answer when it lands on
      * that robot, or when the direct answer was the fallback. */
-    if (mem.robotName && mem.robotSlug && isFollowUp(qt)) {
+    if (named) return { ...finish(ans, mem), memory: OMEGA1_MEM };
+    if (mem.robotName && mem.robotSlug && mem.robotSlug !== OMEGA1_SLUG && isFollowUp(qt)) {
       const resolvedToMem = (a: AnswerResult) =>
         (a.hits || []).some((h) => h.kind === "robot" && h.id === mem.robotSlug);
       if (!resolvedToMem(ans)) {
