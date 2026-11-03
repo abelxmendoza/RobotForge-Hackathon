@@ -12,12 +12,12 @@ export const PART_GROUPS = [
 export type PartGroupId = typeof PART_GROUPS[number]['id'];
 const map: Record<string, PartGroupId> = {
   computer: 'compute', controller: 'compute', microcontroller: 'compute', cpu: 'compute',
-  motor: 'motion', servo: 'motion', actuator: 'motion', wheel: 'motion', gearbox: 'motion',
+  drive: 'motion', motor: 'motion', servo: 'motion', actuator: 'motion', wheel: 'motion', gearbox: 'motion',
   sensor: 'sensing', lidar: 'sensing', camera: 'sensing', imu: 'sensing', gps: 'sensing',
   battery: 'energy', power: 'energy', bms: 'energy',
   frame: 'structure', chassis: 'structure', mechanical: 'structure', mount: 'structure',
   motor_driver: 'electronics', cable: 'electronics', radio: 'electronics', pcb: 'electronics', wiring: 'electronics',
-  gripper: 'tools', end_effector: 'tools', tool: 'tools',
+  safety: 'electronics', gripper: 'tools', end_effector: 'tools', tool: 'tools',
 };
 export function partGroup(category: string, name = ''): PartGroupId {
   const key = category.toLowerCase().replace(/[\s-]+/g, '_');
