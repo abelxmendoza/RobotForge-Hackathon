@@ -67,6 +67,7 @@ import { appendFreshBaseline, buildDexEntry, copyAsNew, parseSaveChoice, parseSa
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
 import { isDemoMode, useDemoMode } from "@/lib/demoMode";
+import { buildWebGrounding, detectWebIntent, webSourceCaption, type WebFetchResult } from "@/lib/webIntent";
 
 
 const DEFAULT_CHIPS = [
@@ -131,7 +132,7 @@ const PARTS_BY_ID = new Map<string, Part>(parts.map((p) => [p.id, p]));
 interface LiveHealth {
   ok?: boolean;
   mode?: string;
-  routes?: { chat?: boolean };
+  routes?: { chat?: boolean; web?: boolean };
   budget?: { exhausted?: boolean };
   [key: string]: unknown;
 }
@@ -361,8 +362,65 @@ export function useForgeAssistant() {
         !(h.budget && h.budget.exhausted)
     );
 
+  /* Web grounding (Firecrawl via the Worker's /web route): when the
+   * question carries an explicit web intent (lib/webIntent.ts — a
+   * pasted URL, or an opening "search the web for …"), fetch the
+   * page/search FIRST and hand the formatted, source-labelled block
+   * to liveChat as web_context. Every failure is silent by design:
+   * no intent, route off (health reports routes.web false — which
+   * includes the not-yet-configured 501 state), fetch failure or an
+   * empty fetch all resolve null, and the live answer then proceeds
+   * with NO web claim and no source caption. Demo mode never
+   * reaches here: the ask flow only calls this on the live path,
+   * after checkLive, and checkLive itself refuses in demo. */
+  const fetchWebGrounding = useCallback(
+    async (
+      q: string
+    ): Promise<{ context: string; caption: string } | null> => {
+      const intent = detectWebIntent(q);
+      if (!intent) return null;
+      const h = await checkLive();
+      if (!h || !h.routes || !h.routes.web) return null;
+      try {
+        const r = await fetch(liveBase() + "/web", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(sessionToken()
+              ? { Authorization: "Bearer " + sessionToken() }
+              : {}),
+          },
+          body: JSON.stringify(
+            intent.kind === "scrape"
+              ? { mode: "scrape", url: intent.url }
+              : { mode: "search", query: intent.query, limit: 5 }
+          ),
+        });
+        if (!r.ok) return null;
+        const body = (await r.json().catch(() => null)) as
+          | WebFetchResult
+          | null;
+        if (!body) return null;
+        const context = buildWebGrounding(body);
+        const caption = webSourceCaption(body);
+        if (!context || !caption) return null;
+        return { context, caption };
+      } catch {
+        return null;
+      }
+    },
+    [checkLive, liveBase]
+  );
+
   const liveChat = useCallback(
-    (q: string): Promise<{ answer: string; ws: WorkshopChatContext | null }> => {
+    (
+      q: string,
+      web?: { context: string; caption: string } | null
+    ): Promise<{
+      answer: string;
+      ws: WorkshopChatContext | null;
+      webCaption: string | null;
+    }> => {
       /* On the Workshop, the question carries the published snapshot
        * of the robot on screen (see lib/workshopContext), so the live
        * answer is about that robot. Anywhere else the snapshot is
@@ -392,6 +450,9 @@ export function useForgeAssistant() {
                 ),
               }
             : {}),
+          /* Optional and backward-compatible: present only when a
+           * /web fetch actually succeeded for this question. */
+          ...(web ? { web_context: web.context } : {}),
         }),
       }).then((r) =>
         r
@@ -409,7 +470,7 @@ export function useForgeAssistant() {
             if (!body || typeof body.answer !== "string") {
               throw new Error("endpoint returned no answer");
             }
-            return { answer: body.answer, ws };
+            return { answer: body.answer, ws, webCaption: web ? web.caption : null };
           })
       );
     },
@@ -1002,8 +1063,9 @@ export function useForgeAssistant() {
                 : m
             )
           );
-          liveChat(q)
-            .then(({ answer, ws }) => {
+          void fetchWebGrounding(q)
+            .then((web) => liveChat(q, web))
+            .then(({ answer, ws, webCaption }) => {
               done({
                 html:
                   '<p><span class="fc-live-badge">' +
@@ -1013,12 +1075,24 @@ export function useForgeAssistant() {
                   "</p>",
                 chips: ans.chips,
                 /* Grounding is earned only here: a live answer that
-                 * actually carried a Workshop snapshot. The fallback
-                 * paths below (and every recorded answer) call done
-                 * without it, so they render no caption. */
-                grounding: ws
-                  ? { caption: groundingCaption(ws), failing: workshopSnapshotFailing(ws) }
-                  : undefined,
+                 * actually carried a Workshop snapshot and/or a
+                 * successful web fetch. The caption names exactly
+                 * what was sent — the Workshop robot, the web
+                 * source, or both. The fallback paths below (and
+                 * every recorded answer) call done without it, so
+                 * they render no caption. */
+                grounding:
+                  ws || webCaption
+                    ? {
+                        caption: [
+                          ws ? groundingCaption(ws) : "",
+                          webCaption || "",
+                        ]
+                          .filter(Boolean)
+                          .join(" · "),
+                        failing: ws ? workshopSnapshotFailing(ws) : false,
+                      }
+                    : undefined,
               });
             })
             .catch((e: Error & { code?: string }) => {
@@ -1037,7 +1111,7 @@ export function useForgeAssistant() {
         });
       }, 0);
     },
-    [appendMsg, autoAction, checkLive, doNav, engine, liveBase, liveChat, pathname, proposeViaLive, runCommands, setChips, wrench, noteBubble, router]
+    [appendMsg, autoAction, checkLive, doNav, engine, fetchWebGrounding, liveBase, liveChat, pathname, proposeViaLive, runCommands, setChips, wrench, noteBubble, router]
   );
 
   /* The fix handoff: a failing robot's recorded spec goes into the

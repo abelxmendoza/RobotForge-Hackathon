@@ -150,7 +150,10 @@ def test_action_messages_are_their_own_kind():
         assert "openAction" in renderer
     # The grounding caption stays exactly where PR #122 put it: on
     # the live-success path only. The Create path never sets it.
-    assert "grounding: ws" in CHATDOCK
+    # (The Firecrawl PR widened the live-success condition to
+    # "ws || webCaption" — a successful web fetch earns the same
+    # caption slot; recorded/Create paths still never set it.)
+    assert "grounding:" in CHATDOCK and "ws || webCaption" in CHATDOCK
     create_post = CHATDOCK.split("const postCreateResult")[1].split(");")[0]
     assert "grounding" not in create_post
 

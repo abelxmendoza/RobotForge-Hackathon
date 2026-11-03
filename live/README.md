@@ -23,6 +23,7 @@ one constant lights the live steps up.
 | `POST /part-chat` | `{part, message, history?}` → `{reply, update, confirmed}`: talk a part through until its owner confirms it | any one chain key |
 | `POST /photo` | `{image_data_url, note?, mode?}` → photo draft spec (Meta Model API vision, `muse-spark-1.3`). `mode` omitted/`"photo"`: an ESTIMATED draft from a robot photo. `mode: "document"`: a TRANSCRIBED draft from a spec-sheet/blueprint photo (below) | `META_API_KEY` (**optional**) |
 | `POST /transcribe` | `{audio_b64}` → `{transcript, model}`: one spoken description transcribed by Muse Voice Transcribe (`muse-voice-transcribe-1.0`). WAV only — the batch endpoint rejects MP3/WebM containers (verified 2026-10-31), so the site encodes recordings to WAV in the browser | `META_API_KEY` (**optional**) |
+| `POST /web` | `{mode: "scrape", url}` → one public page as bounded markdown, or `{mode: "search", query, limit?}` → up to 5 web results (Firecrawl API v2). Powers the chat's web search / page reading (below) | `FIRECRAWL_API_KEY` (**optional**) |
 
 `/photo` without the Meta key answers `501 photo_not_configured`
 and the site falls back to its recorded photo sample — that is the
@@ -119,6 +120,57 @@ preserve the existing secret bindings (`keep_bindings`), or
 `AUTH_JWT_SECRET` (every session) and `BASETEN_API_KEY` (the
 live demo) are lost.
 
+## Web search + scrape for the chat (`/web`, Firecrawl)
+
+The chat can read the live web through Firecrawl (API v2:
+`POST /v2/scrape`, `POST /v2/search`), proxied by this Worker so
+the key stays a Worker secret. The flow is deliberately narrow:
+
+- The site detects an **explicit** web intent only (a pasted URL,
+  or a message opening with "search the web for …" / "look up
+  online …" — `web-next/src/lib/webIntent.ts`), and only on the
+  live path, after the recorded engine's honest fallback. Demo
+  mode never calls `/web` (it makes no Worker calls at all).
+- The client calls `/web` first, formats the result into a bounded
+  block that names its source URL(s), and passes it to `/chat` as
+  the optional `web_context` field. The Worker re-caps it and
+  instructs the model that it is **UNTRUSTED external data** —
+  never RobotForge recorded data, never a catalogue fact — and
+  the answer carries a "Web source: …" caption through the same
+  grounding mechanism as Workshop answers. A failed or
+  unconfigured fetch degrades silently: the chat answers with no
+  web claim and no caption.
+- Scrape URLs must be public http(s): no embedded credentials,
+  localhost, `.local` or private/loopback IPs. Search queries cap
+  at 300 chars, `limit` clamps to 1–5, scraped markdown truncates
+  at 12,000 chars (flagged `truncated`), and search excerpts cap
+  at 2,000 chars per result. Upstream failures are a plain 502;
+  the upstream body is never forwarded.
+
+**To switch it on (the site owner's step):**
+
+1. Create an API key in your own Firecrawl dashboard at
+   <https://www.firecrawl.dev> (sign in → API Keys). The key
+   value is yours alone — never paste it into chat, a file or a
+   commit.
+2. Add it as a Worker secret, the same way as the other optional
+   secrets: `wrangler secret put FIRECRAWL_API_KEY` — paste the
+   key at Wrangler's prompt. (Dashboard path: the Worker's
+   Settings → Variables and Secrets → add `FIRECRAWL_API_KEY` as
+   an encrypted secret.)
+3. **Redeploy the Worker** (`wrangler deploy` from this folder,
+   or the dashboard deploy) — the `/web` route exists only once
+   the new `worker.js` is deployed. A redeploy must preserve the
+   existing secret bindings (`keep_bindings`), like every deploy
+   of this Worker, or the other secrets are lost.
+4. Verify: `/health` should report `routes.web: true` (and
+   `providers.firecrawl: true`).
+
+Until the secret exists, `/web` answers
+`501 firecrawl_not_configured` and `/health` reports
+`routes.web: false` — the designed off state, not an error: the
+chat simply answers without the web, exactly as before.
+
 ## Document mode (`/photo` with `mode: "document"`)
 
 For a photo of a spec sheet, datasheet or blueprint, the same route
@@ -187,6 +239,10 @@ never paste it into chat, a file, or a commit).
      `wrangler secret put META_API_KEY` — your Meta Model API key.
    - Optional, for the text-route fallback:
      `wrangler secret put FIREWORKS_API_KEY` — your Fireworks key.
+   - Optional, for chat web search/scrape:
+     `wrangler secret put FIRECRAWL_API_KEY` — your Firecrawl key
+     (from your firecrawl.dev dashboard; see "Web search + scrape
+     for the chat" above).
 5. **Deploy:** from this folder, `wrangler deploy`.
    Note the URL it prints, e.g.
    `https://robotforge-live.<your-subdomain>.workers.dev`.

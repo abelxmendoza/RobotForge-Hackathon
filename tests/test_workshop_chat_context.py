@@ -211,8 +211,11 @@ def test_worker_sanitizes_and_renders_the_snapshot():
 def test_grounding_comes_from_the_snapshot_livechat_captured():
     # liveChat captures the snapshot at ask time and returns it with
     # the answer; the caption/failing are derived from THAT object.
-    assert "Promise<{ answer: string; ws: WorkshopChatContext | null }>" in DOCK
-    assert "return { answer: body.answer, ws };" in DOCK
+    # liveChat's return gained webCaption in the Firecrawl PR: the
+    # web caption rides back with the answer the same way ws does,
+    # and is null unless a /web fetch actually succeeded.
+    assert "webCaption: string | null" in DOCK
+    assert "return { answer: body.answer, ws, webCaption: web ? web.caption : null };" in DOCK
     assert "groundingCaption(ws)" in DOCK
     assert "workshopSnapshotFailing(ws)" in DOCK
     # The live-failure fallback renders the recorded answer: it must
