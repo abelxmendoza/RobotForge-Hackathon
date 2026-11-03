@@ -236,6 +236,28 @@
 .chat-bar-full{flex:none;white-space:nowrap;margin-left:auto;margin-right:8px;font-size:var(--fs-xs);color:var(--text-muted);text-decoration:none;align-self:center}
 .chat-bar-full:hover{color:var(--accent)}
 
+/* Create panel (ComposerCreate): the Forge Engine's generation
+   actions inside the composer, on both chat surfaces. The toggle is
+   a labelled pill in the oval composer; the panel itself is a sheet
+   above the composer, in the chat-bar panel's shape. */
+.chat-bar-create{
+  flex:none;display:inline-flex;align-items:center;gap:5px;height:38px;
+  padding:0 12px;border-radius:999px;cursor:pointer;
+  background:transparent;border:1px solid var(--border);color:var(--text-muted);
+  font:500 var(--fs-sm)/1 var(--font);
+}
+.chat-bar-create:hover{color:var(--accent);border-color:var(--accent)}
+.chat-bar-create[aria-expanded="true"]{color:var(--accent);border-color:var(--accent)}
+.composer-create{
+  background:var(--surface);border:1px solid var(--border-strong);
+  border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.6);
+  padding:14px 16px;margin-bottom:8px;
+  max-height:min(56dvh,560px);overflow-y:auto;
+}
+.composer-create-group{padding:10px 0;border-top:1px solid var(--border)}
+.composer-create-group:first-child{border-top:0;padding-top:0}
+.composer-create-group h4{margin:0 0 6px;display:flex;align-items:center;gap:8px}
+
 /* Copy: one response, or the whole conversation */
 .copy-btn{
   display:inline-flex;align-items:center;gap:5px;margin-top:8px;
