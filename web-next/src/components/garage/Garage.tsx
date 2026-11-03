@@ -22,7 +22,7 @@ import { LiveProgress, ModeBanner, useLiveMode } from '@/components/shell/LiveSt
 import type { LiveHealth, RobotSpec } from '@/components/forge/model';
 import { downloadJSON, readStore, uid, useStore } from '@/lib/store';
 import { promptWrench } from '@/lib/wrenchPrompt';
-import { publishWorkshopContext, summarizeSpec } from '@/lib/workshopContext';
+import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_FIX_EVENT } from '@/lib/workshopContext';
 import { checkRover, isRover, TERRAINS, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import OverviewTurntable from './OverviewTurntable';
@@ -675,6 +675,23 @@ export default function Garage() {
     }
     return () => publishWorkshopContext(null);
   }, [robot, draft, base, tab, draftLines, wsVerdict.label]);
+
+  /* One-tap Fix from a grounded chat answer (lib/workshopContext):
+   * the chat's "Fix this" button on a FAIL-grounded answer asks for
+   * the Checks tab of the selected robot, where the "Fix with Muse
+   * Spark" loop lives. Consumed on the event and once on mount, so a
+   * request that landed just before Garage mounted is not lost. */
+  useEffect(() => {
+    const goChecks = () => {
+      if (!consumeWorkshopFixRequest()) return;
+      setTab('checks');
+      setTwinOpen(false);
+      setAdding(false);
+    };
+    goChecks();
+    window.addEventListener(WORKSHOP_FIX_EVENT, goChecks);
+    return () => window.removeEventListener(WORKSHOP_FIX_EVENT, goChecks);
+  }, []);
 
   if (!ready) return <p className="muted">Loading your garage…</p>;
 

@@ -13,14 +13,19 @@ export interface ChatMsg {
   text?: string;
   hits?: Hit[];
   sources?: SourceRef[];
+  /* Live answers grounded in a Workshop snapshot only (set in
+   * ChatDock at ask time). Recorded answers never carry this. */
+  grounding?: { caption: string; failing: boolean };
 }
 
 export default function ChatMessages({
   messages,
   onHitClick,
+  onFixClick,
 }: {
   messages: ChatMsg[];
   onHitClick: (h: Hit) => void;
+  onFixClick?: () => void;
 }) {
   return (
     <>
@@ -39,6 +44,14 @@ export default function ChatMessages({
         <div key={m.id} className={"fc-msg " + m.who}>
           {m.html && <div dangerouslySetInnerHTML={{ __html: m.html }} />}
           {m.text && <p style={{ whiteSpace: "pre-wrap" }}>{m.text}</p>}
+          {m.grounding && (
+            <p className="fc-grounding">{m.grounding.caption}</p>
+          )}
+          {m.grounding && m.grounding.failing && onFixClick && (
+            <button type="button" className="fc-fix-btn" onClick={onFixClick}>
+              Fix this
+            </button>
+          )}
           {m.hits && m.hits.length > 0 && (
             <div className="fc-hits">
               {m.hits.map((hit, i) => (
