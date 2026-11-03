@@ -9,7 +9,8 @@
   "How does RobotForge work?",
   "Show me 4S batteries",
   "Is the Go2 stable?",
-  "Plan a differential rover build"
+  "Plan a differential rover build",
+  "How do I improve my Omega1 twin?"
  ],
  "topics": [
   {
@@ -371,6 +372,107 @@
    "samples": [
     "Help",
     "What can I ask you?"
+   ]
+  },
+  {
+   "answer": "RobotForge, in one pass:\n\n• Robodex — 11 real robots, each with a recorded gate verdict.\n• The Workshop (the Garage) — your own stored robots, each with nine tabs: Overview, Build, Wiring, Specs, Simulate, Checks, BOM, Tools & Materials, History.\n• ✦ Create, in the chat composer — generate a robot from a short brief (the Forge Engine: catalogue parts only, marked PLANNED), generate acceptance tests for a robot (Forge Tests), or modify a robot in words.\n• The Omega1 twin — a built-in specimen. Add Omega1 to your Garage gives you a stored copy with a guided Improve this twin flow: your own scans, measured dimensions and a wiring map you confirm yourself.\n• Accounts — sign in for live AI answers; demo mode answers from recorded data only, and says so. My recorded answers never carry a Grounded-in caption; that caption belongs to live answers.",
+   "id": "app_overview",
+   "keywords": [
+    "what can this app do",
+    "what can i do here",
+    "what does this app do",
+    "what can robotforge do",
+    "what can this site do",
+    "app features",
+    "what are the features",
+    "tour of the app",
+    "everything the app can do"
+   ],
+   "samples": [
+    "What can this app do?"
+   ]
+  },
+  {
+   "answer": "Open your Omega1 in the Garage → its Overview starts with the Improve this twin card: four steps, one action each.\n\n1. Add your scans — three slots: Scaniverse (.ply) for the photoreal look, RealSense (.ply) for true scale, and a photo model (.glb) for a textured mesh. The slot you pick is the label the scan gets.\n2. Measure from your RealSense scan — one tap writes that scan's size into the spec as measured dimensions.\n3. Add the tape-measure numbers — one short form for the numbers no scan can take (mass, clearance, wheel size), saved as a single version badged Measured.\n4. Check the wiring map — the connections seeded from Omega1's repo records; tap Confirm on each as you check it on the bench.\n\nNo stored Omega1 yet? Tap Add Omega1 to your Garage — on the Garage robot list, or on the twin page. The copy is seeded from the records only: no sizes, no mass, nothing invented.",
+   "id": "omega1_improve",
+   "keywords": [
+    "improve my omega1",
+    "improve my twin",
+    "improve the twin",
+    "improve this twin",
+    "how do i improve",
+    "add a scan",
+    "add scans",
+    "add my scan",
+    "attach a scan",
+    "upload a scan",
+    "omega1 twin",
+    "make my twin accurate",
+    "scan my omega1",
+    "add omega1 to my garage"
+   ],
+   "samples": [
+    "How do I improve my Omega1 twin?",
+    "How do I add a scan?"
+   ]
+  },
+  {
+   "answer": "Three tiers, and RobotForge keeps them apart:\n\n• A RealSense depth scan carries true metric size. Its point cloud is read as metres — if the largest extent comes out over 20, the file is read as millimetres and converted, and the scan card says which rule was applied. Step 2 of Improve this twin writes that size into the spec as a measured dimension.\n• Scaniverse captures and photo models are relative scale: the shape is right, the size is not, until the model is calibrated against a dimension you already know. On their own they are never written into a spec as measurements.\n• Tape measure, calipers and a scale are the measured record: type them into step 3 of Improve this twin and they save as one version badged Measured, with the date. Mass only ever comes from a scale — no scan weighs anything.",
+   "id": "measure_how",
+   "keywords": [
+    "how do measurements work",
+    "how do i measure",
+    "measure my robot",
+    "how are dimensions measured",
+    "how do you measure",
+    "measurements work",
+    "true scale",
+    "scan accuracy",
+    "how accurate is the scan"
+   ],
+   "samples": [
+    "How do measurements work?",
+    "How do I measure my robot?"
+   ]
+  },
+  {
+   "answer": "No — and nothing in RobotForge claims it can. A camera or a scan sees surfaces: shells, boards, the outside of cable runs. It cannot see which pin a wire lands on, so a photo or a scan can never produce a wiring map.\n\nWhere the wiring map actually comes from: the robot's own records. A stored Omega1 is seeded with the connections documented in its repo — which PWM channel drives which motor, which GPIO pins the ultrasonic sensor uses. Step 4 of Improve this twin (Check the wiring map) then asks you to Confirm each connection against the real robot, and anything you add or edit is badged as your own record. Records plus your confirmation — never a guess from a picture.",
+   "id": "wiring_detection",
+   "keywords": [
+    "detect my wiring",
+    "detect the wiring",
+    "detect wiring",
+    "wiring from a photo",
+    "wiring from a scan",
+    "figure out the wiring",
+    "detect connections",
+    "detect the connections",
+    "can it detect",
+    "can a scan show the wiring",
+    "does the scan show wires"
+   ],
+   "samples": [
+    "Can it detect my wiring from a photo?",
+    "Can a scan show the wiring?"
+   ]
+  },
+  {
+   "answer": "In this browser, and nowhere else. Scan files are stored in the browser's own database (IndexedDB) on this device — they are not uploaded to RobotForge and not synced to your account.\n\nTwo consequences: a scan you attach here does not appear on your other devices or in another browser, and clearing this browser's site data removes the files. The robot's record keeps each scan's name, kind and date, so you can always see what was attached, even on a device where the file itself is not.",
+   "id": "scan_storage",
+   "keywords": [
+    "where do my scans live",
+    "where are my scans",
+    "where are scans stored",
+    "scan storage",
+    "are my scans uploaded",
+    "scans uploaded",
+    "are scans synced",
+    "where do scans go",
+    "indexeddb"
+   ],
+   "samples": [
+    "Where do my scans live?",
+    "Are my scans uploaded?"
    ]
   }
  ],
