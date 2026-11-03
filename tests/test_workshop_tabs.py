@@ -83,8 +83,10 @@ def test_checks_dot_in_twin_mode_is_omega1s_own_state():
 def test_omega1_has_a_pane_for_every_tab():
     for tab_id in TAB_IDS:
         assert f"tab === '{tab_id}'" in TWIN, f"Omega1Twin has no {tab_id} pane"
-    assert "{ tab = 'overview' }: { tab?: TwinTab }" in TWIN
-    assert "{twinOpen && <Omega1Twin tab={omegaTab} />}" in GARAGE
+    # PR (omega1-garage-twin): props signature + render string gained
+    # the Garage link props — pins updated, disclosed in the PR body.
+    assert "{ tab = 'overview', garageScans = null, onOpenGarage, onAdopt }" in TWIN
+    assert "{twinOpen && <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />}" in GARAGE
 
 
 def test_omega1_panes_stand_on_the_records_only():
