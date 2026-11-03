@@ -11,7 +11,7 @@ def test_wrench_intake_helpers(tmp_path):
     (tmp_path/'run.mjs').write_text('''
 import assert from 'node:assert/strict';
 import {handoffKind,HANDOFF_ACCEPT} from './handoff.ts';
-import {intakeTarget,friendlyEdit,conceptRequest,mergePhotoDraft} from './wrenchIntake.ts';
+import {intakeTarget,friendlyEdit,conceptRequest,mergePhotoDraft,modificationRequest} from './wrenchIntake.ts';
 for(const name of ['robot.GLB','scan.obj','depth.ply']){
  assert.equal(handoffKind({name,type:'application/octet-stream'}),'scan');
  assert.ok(HANDOFF_ACCEPT.includes('.'+name.split('.').pop().toLowerCase()));
@@ -31,6 +31,9 @@ assert.equal(conceptRequest('generate a compact rover'),'new');
 assert.equal(conceptRequest('regenerate it with a camera'),'regenerate');
 assert.equal(conceptRequest('how do I generate a rover?'),null);
 assert.equal(conceptRequest('generate a twin from my photo'),null);
+assert.equal(modificationRequest('Would a bigger battery help?'),false);
+assert.equal(modificationRequest("Don't add a camera"),false);
+assert.equal(modificationRequest('Add a camera'),true);
 const merged=mergePhotoDraft({name:'My robot',mass_kg:1.2,wheel:{count:4},ground_clearance_m:0},{name:'Guess',mass_kg:9,wheel:{count:2,diameter_m:0.1},height_m:0.3});
 assert.equal(merged.spec.mass_kg,1.2);
 assert.equal(merged.spec.name,'My robot');

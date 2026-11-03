@@ -9,20 +9,21 @@ THREAD = (WEB / "components/forge/ForgeThread.tsx").read_text()
 PROMPT = (WEB / "lib/wrenchPrompt.ts").read_text()
 
 
-def test_panel_points_at_the_composer_and_names_repos():
-    panel = GARAGE.split("<h2>Bring a robot in</h2>", 1)[1].split("</details>", 1)[0]
-    assert "GitHub repo link" in panel
-    assert "promptWrench({ mode: 'chat', text: 'https://github.com/' })" in panel
-    assert "promptWrench({ attach: true })" in panel
-    assert "promptWrench({ mode: 'design'" in panel
-    assert "ESTIMATED" in panel  # photo drafts stay labelled honestly
-    assert 'className="g-other-ways"' in panel
+def test_panel_points_at_the_composer_and_names_optional_scans():
+    panel = (WEB / "components/garage/WrenchStart.tsx").read_text()
+    assert "promptWrench({mode:'chat'" in panel
+    assert "attach:true" in panel
+    assert "promptWrench({mode:'design'" in panel
+    assert "estimated draft" in panel
+    assert "Scaniverse" in panel and "RealSense" in panel
 
 
-def test_manual_ways_in_are_kept_but_the_photo_form_is_gone():
-    assert "'robodex', 'From the Robodex'" in GARAGE
-    assert "'file', 'Spec file'" in GARAGE and "'paste', 'Paste JSON'" in GARAGE
+def test_manual_forms_are_replaced_by_wrench_intake():
+    # User requested all input through Wrench, including photos and specs.
+    assert "'robodex', 'From the Robodex'" not in GARAGE
+    assert "'paste', 'Paste JSON'" not in GARAGE
     assert "Take or choose a photo" not in GARAGE
+    assert "<WrenchStart" in GARAGE
 
 
 def test_composer_listens_and_repo_links_win_over_design_mode():

@@ -51,3 +51,9 @@ export function mergePhotoDraft(known: Spec, inferred: Spec, previousEstimates: 
   }
   return {spec,estimatedPaths:[...estimatedPaths]};
 }
+
+// Only an explicit command may mutate a generated concept locally.
+export function modificationRequest(text: string): boolean {
+  return !/[?]/.test(text) && !/\b(don't|dont|do not|never|without|not)\b/i.test(text)
+    && /^(please\s+)?(add|make|swap|replace|remove|change|set)\b/i.test(text.trim());
+}
