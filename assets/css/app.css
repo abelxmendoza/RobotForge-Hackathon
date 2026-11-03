@@ -1817,3 +1817,57 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .forge-map{position:relative;height:220px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);margin:8px 0}
 .forge-map-front{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:var(--fs-xs);color:var(--text-faint)}
 .forge-dot{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
+/* Take apart / Assemble (Build tab): 2D parts diagram + 3D turntable */
+.ta-panel .ta-3dbar{margin:8px 0}
+.ta-turntable{margin:8px 0 14px}
+.ta-nomodel{margin:8px 0}
+.ta-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.ta-controls .btn{min-height:44px}
+.ta-step{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:10px 0;background:var(--surface-2)}
+.ta-step p{margin:0 0 8px}
+.ta-step-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ta-step-btns .btn{min-height:44px}
+.ta-progress{margin:8px 0}
+.ta-canvas{position:relative;width:100%;aspect-ratio:100/84;max-height:560px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);overflow:hidden;touch-action:none}
+.ta-lines{position:absolute;inset:0;width:100%;height:100%}
+.ta-line{stroke:var(--text-faint);stroke-width:1.5;stroke-dasharray:5 4;opacity:.65}
+.ta-line.on{stroke:var(--pass);stroke-dasharray:none;opacity:.9}
+.ta-line.hot{stroke:var(--accent);stroke-width:2.5;stroke-dasharray:none;opacity:1}
+.ta-part{position:absolute;transform:translate(-50%,-50%);min-width:76px;max-width:150px;min-height:48px;padding:7px 9px;display:flex;flex-direction:column;gap:1px;align-items:flex-start;text-align:left;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2);color:inherit;font-size:var(--fs-sm);line-height:1.3;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;z-index:2}
+.ta-part:active{cursor:grabbing}
+.ta-part strong{font-size:var(--fs-sm)}
+.ta-part.home{border-color:var(--pass)}
+.ta-part.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.ta-part.hot{border-color:var(--accent)}
+.ta-part-state{font-size:var(--fs-xs);color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em}
+.ta-part.home .ta-part-state{color:var(--pass)}
+.ta-smallprint{margin-top:10px}
+.ta-empty{margin-top:10px}
+.ta-twin-note{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:14px;background:var(--surface-2)}
+.ta-twin-note h4{margin:0 0 6px}
+.ta-twin-note p{margin:0 0 10px}
+@media (max-width:640px){.ta-part{min-width:64px;max-width:118px;padding:6px 7px}.ta-canvas{aspect-ratio:100/96}}
+/* Wiring views (Wiring tab): switcher, kind-filtered connection map, photo board */
+.wv-switch{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.wv-switch .btn{min-height:44px}
+.wv-kinds{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.wv-kinds .btn{min-height:44px}
+.wv-canvas{margin:8px 0}
+.wv-line{stroke-width:2;opacity:.85}
+.wv-line.k-power{stroke:var(--marginal)}
+.wv-line.k-comms{stroke:var(--link)}
+.wv-line.k-gpio{stroke:var(--accent)}
+.wv-line.k-csi{stroke:var(--pass)}
+.wv-line.k-other{stroke:var(--text-faint)}
+.wv-line.hot{stroke-width:3.5;opacity:1}
+.wv-hit{stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer}
+.wv-list{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.wv-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;text-align:left;padding:10px 12px;min-height:44px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:inherit;font:inherit;cursor:pointer}
+.wv-row.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.wv-detail{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.wv-board{margin:10px 0}
+.wv-callouts h4{margin:14px 0 4px}
+.fbadge.k-power{border-color:var(--marginal)}
+.fbadge.k-comms{border-color:var(--link)}
+.fbadge.k-gpio{border-color:var(--accent)}
+.fbadge.k-csi{border-color:var(--pass)}

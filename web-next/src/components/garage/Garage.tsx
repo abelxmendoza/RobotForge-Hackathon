@@ -35,6 +35,8 @@ import ToolsMaterialsTab from './ToolsMaterialsTab';
 import Omega1Twin from './Omega1Twin';
 import ConnectionsSection from './ConnectionsSection';
 import ImproveTwin from './ImproveTwin';
+import TakeApartPanel from './TakeApartPanel';
+import WiringViews from './WiringViews';
 import type { ScanKind, SlotScan } from '@/lib/scan3d';
 import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, TWIN_LABEL } from '@/lib/omega1Twin';
 import { OMEGA1_ROBOT_ID, OMEGA1_SEED_NOTE, OMEGA1_SEED_SOURCE, omega1SeedSpec, type SpecConnection } from '@/lib/omega1Garage';
@@ -1331,6 +1333,7 @@ export default function Garage() {
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
                 <ConnectionsSection connections={draft.connections} onSave={saveConnections} />
+                <WiringViews robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} />
                 {isWiring(draft.wiring) ? <><WiringBench3D wiring={draft.wiring} /><WiringView wiring={draft.wiring} spec={draft as unknown as RobotSpec} /></> : (
                   <div className="ws-empty">
                     <svg viewBox="0 0 120 60" width="140" aria-hidden="true"><rect x="6" y="20" width="30" height="20" rx="4" fill="var(--surface-3)" /><rect x="84" y="8" width="30" height="18" rx="4" fill="var(--surface-3)" /><rect x="84" y="34" width="30" height="18" rx="4" fill="var(--surface-3)" /><path d="M36 30 C60 30 60 17 84 17" stroke="var(--marginal)" strokeWidth="2" fill="none" /><path d="M36 30 C60 30 60 43 84 43" stroke="var(--link)" strokeWidth="2" strokeDasharray="5 4" fill="none" /></svg>
@@ -1343,6 +1346,10 @@ export default function Garage() {
             )}
 
             {tab === 'build' && <ForgeBuild spec={draft} />}
+
+            {tab === 'build' && (
+              <TakeApartPanel key={robot.id} robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} />
+            )}
 
             {/* One bench instance for Build and the Wiring planner, so picking a
                 planned cable in Build keeps its selection when it opens Wiring. */}
