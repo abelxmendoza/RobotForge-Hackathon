@@ -144,9 +144,6 @@ export default function PartsCatalogue() {
             </details>
           );
         })}
-            </div>
-          </details>
-        ))}
       </div>
       <p className="state-box" id="parts-empty" hidden={shownTotal > 0}>
         No parts match that search.
