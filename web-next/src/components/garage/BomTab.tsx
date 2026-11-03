@@ -24,6 +24,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import SourcingLinks from '@/components/robots/SourcingLinks';
 import { bomToCsv, type BomLine } from '@/lib/bom';
+import { PART_GROUPS, partGroup } from '@/lib/partTaxonomy';
 import { partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { isWiring, role } from '@/lib/wiring';
 import type { Spec } from '@/lib/garage';
@@ -255,7 +256,10 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
             <span className={'verdict ' + (counts.need ? 'fail' : 'pass')}>{counts.need} to get</span>
           </div>
           <ul className="bom-list">
-            {rows.map((r) => {
+            {PART_GROUPS.flatMap((group) => {
+              const groupRows = rows.filter((r) => partGroup(r.category, r.line.name) === group.id);
+              if (!groupRows.length) return [];
+              return [<li key={'group-' + group.id} className="bom-category"><strong>{group.label} ({groupRows.length})</strong></li>, ...groupRows.map((r) => {
               /* A verified photo belongs to a catalogue part, and the
                * only honest route from a spec-derived line to one is
                * the matched shelf part's recorded catalogue id —
@@ -311,6 +315,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
                 </span>
               </li>
               );
+            })];
             })}
           </ul>
           {totals.known > 0 ? (
