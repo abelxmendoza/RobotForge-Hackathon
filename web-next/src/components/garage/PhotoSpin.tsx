@@ -12,6 +12,7 @@ import {
 } from '@/lib/photoSpin';
 import type { ScanMeta } from '@/lib/scan3d';
 import ScanEditor from './ScanEditor';
+import ScanMeasure, { type ScanDims } from './ScanMeasure';
 
 const ScanView = dynamic(() => import('./ScanView'), {
   ssr: false,
@@ -180,7 +181,7 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
  * one (with a switch to the 3D model), otherwise the model, with ways
  * to add either. */
 type View = 'photos' | 'scan' | 'model';
-export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScanSave }: {
+export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScanSave, onApplyScanSize }: {
   robotId: string;
   spin: Spin | undefined;
   scan: ScanMeta | undefined;
@@ -188,6 +189,9 @@ export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScan
   model: ReactNode;
   onSave: (next: Spin | null) => string | null;
   onScanSave: (next: ScanMeta | null) => string | null;
+  /* Turn the scan's measured size into spec dimensions (Garage saves
+   * it as a new version). Optional: without it the scan is view-only. */
+  onApplyScanSize?: (dims: ScanDims, scanName: string, unitNote: string) => void;
 }) {
   const [pick, setPick] = useState<View | null>(null);
   const view: View = pick === 'photos' && spin ? 'photos'
@@ -221,6 +225,9 @@ export function OverviewMedia({ robotId, spin, scan, name, model, onSave, onScan
         <summary>{scan ? 'Change the 3D scan' : 'Add a 3D scan (Scaniverse, RealSense)'}</summary>
         <ScanEditor robotId={robotId} scan={scan} onSave={(next) => { const err = onScanSave(next); if (!err && next) setPick('scan'); return err; }} />
       </details>
+      {scan && onApplyScanSize && (
+        <ScanMeasure key={scan.addedAt} robotId={robotId} scan={scan} onApply={onApplyScanSize} />
+      )}
     </div>
   );
 }
