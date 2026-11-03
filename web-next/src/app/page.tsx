@@ -4,6 +4,7 @@ import RunDemoLink from "@/components/shell/RunDemoLink";
 import { robots } from "@/lib/data";
 import RobotCard from "@/components/home/RobotCard";
 import { AiInsideCards } from "@/components/home/AiInside";
+import StatusCards from "@/components/home/StatusCards";
 import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
@@ -425,98 +426,7 @@ export default function HomePage() {
             <h2>What&apos;s live right now.</h2>
             <p>Checked on the served site, Nov 1, 2026.</p>
           </div>
-          <div className="ai-cards">
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Wrench, the workshop operator</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                Wrench runs the workshop with you — it is not a tour
-                guide. Describe a robot and it drafts the spec with
-                Muse Spark; tell it to add a part or change a number
-                and it does the work in the chat, every edit previewed
-                and checked before it lands. Its answers come from
-                recorded data and carry their sources, and when a
-                robot fails, Wrench names the check that went over
-                and sends the robot to the fix loop.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Accounts</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                Sign up with an email, or continue with Meta — both
-                live today, and live AI in the app runs on your
-                account. GitHub and Google sign-in join when those
-                providers are switched on; their buttons appear on
-                the sign-in card by themselves.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Robodex</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                11 catalogued robots plus your own sightings, grouped
-                by how they move. Gate badges come only from recorded
-                runs — never from a model&apos;s say-so.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Physics checks</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                A robot page can run its real URDF through a physics
-                engine in your browser: a mass audit, a stability
-                check, and a short drop test — does it stand? Robots
-                whose record isn&apos;t a URDF say so, with the
-                reason, instead of faking a result.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Build with parts</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                The catalogue&apos;s 50 parts carry datasheet specs
-                and vendor search links — no prices are shown,
-                because none are verified. Drag parts onto the kit
-                stage or add them by chat; each robot&apos;s BOM tab
-                in the Workshop exports a CSV. Every kit part is
-                parametric CAD: OpenSCAD on the kit page, with a
-                build123d back end in the project&apos;s tooling.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Inventory</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                Your shelf, kept honest: the parts and tools you really
-                own, with sim-only entries kept visibly separate.
-              </p>
-            </article>
-            <article className="card ai-card">
-              <div className="ai-card-head">
-                <h3>Live endpoint</h3>
-                <span className="fbadge live">LIVE</span>
-              </div>
-              <p>
-                Muse Spark is answering now — describing robots, chat,
-                and reading robot and part photos. If a route ever goes
-                down, answers are labeled RECORDED and replay a real
-                earlier run instead.
-              </p>
-            </article>
-          </div>
+          <StatusCards />
         </div>
       </section>
 
