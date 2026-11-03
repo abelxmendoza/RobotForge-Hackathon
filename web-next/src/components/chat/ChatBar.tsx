@@ -17,6 +17,7 @@ import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
 import ComposerCreate from "./ComposerCreate";
 import AttachButton from "./AttachButton";
+import VoiceButton from "./VoiceButton";
 import CopyButton from "./CopyButton";
 import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
@@ -159,6 +160,19 @@ export default function ChatBar() {
           Create
         </button>
         <AttachButton text={text} onSent={() => setText("")} />
+        <VoiceButton
+          onText={(t) => {
+            /* The transcript joins what's already typed (same
+             * append semantics as the ForgeThread composer) and
+             * waits in the box for review — never auto-sent. */
+            setText((prev) => (prev.trim() ? prev.replace(/\s+$/, "") + " " + t : t));
+            const ta = taRef.current;
+            if (ta) {
+              ta.focus();
+              requestAnimationFrame(grow);
+            }
+          }}
+        />
         <textarea
           ref={taRef}
           rows={1}

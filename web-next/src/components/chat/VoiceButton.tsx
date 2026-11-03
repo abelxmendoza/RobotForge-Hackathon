@@ -1,50 +1,32 @@
 'use client';
-/* Voice describe — a mic button for the Forge composer.
+/* Voice input — one shared mic button for both chat composers
+ * (the ForgeThread composer on /forge and docked in the Workshop,
+ * and the global ChatBar's bottom bar).
  *
  * Records with MediaRecorder, decodes/resamples the clip to a
  * 24 kHz mono WAV in the browser (the Meta batch transcription
  * endpoint rejects browser containers like WebM/MP3 — verified
- * 2026-10-31 — so the browser encodes WAV), and sends it to the
- * live endpoint's /transcribe route (Muse Voice Transcribe).
+ * 2026-10-31 — so the browser encodes WAV with the pure encoder
+ * in lib/wavEncode.ts), and sends it to the live endpoint's
+ * /transcribe route (Muse Voice Transcribe).
  * The transcript lands in the composer for review — it is never
  * auto-sent, so the user sees exactly what was heard before it
  * becomes a design or a message.
  *
  * The button renders only when the browser can record AND the
  * endpoint reports the transcribe route on (Meta key present).
+ * The route itself is account-gated: a signed-out visitor who
+ * records gets the endpoint's own "sign in first" refusal back
+ * as the error line. In demo mode the health probe never runs,
+ * so the button stays hidden — the demo makes no Worker calls.
  * Audio goes to the endpoint only; nothing is stored anywhere. */
 import { useEffect, useRef, useState } from 'react';
 import { liveHealth, postJSON, routeOn } from '../forge/live';
 import type { LiveHealth } from '../forge/model';
+import { encodeWavPcm16 } from '@/lib/wavEncode';
 
 const TARGET_RATE = 24000;
 const MAX_SECONDS = 60;
-
-function encodeWav(samples: Float32Array, sampleRate: number): Blob {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
-  const writeStr = (off: number, s: string) => {
-    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
-  };
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // mono
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-  for (let i = 0; i < samples.length; i++) {
-    const v = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(44 + i * 2, v * (v < 0 ? 0x8000 : 0x7fff), true);
-  }
-  return new Blob([buffer], { type: 'audio/wav' });
-}
 
 async function blobToBase64(blob: Blob): Promise<string> {
   const url = await new Promise<string>((resolve, reject) => {
@@ -120,7 +102,10 @@ export default function VoiceButton({
       src.connect(offline.destination);
       src.start();
       const rendered = await offline.startRendering();
-      const wav = encodeWav(rendered.getChannelData(0), TARGET_RATE);
+      const wav = new Blob(
+        [encodeWavPcm16(rendered.getChannelData(0), TARGET_RATE)],
+        { type: 'audio/wav' },
+      );
       const audio_b64 = await blobToBase64(wav);
       const reply = await postJSON<{ transcript?: string }>('/transcribe', {
         audio_b64,
@@ -169,7 +154,7 @@ export default function VoiceButton({
         }
       }, 250);
     } catch {
-      setError('Microphone access was denied — voice describe needs the mic. Typing still works.');
+      setError('Microphone access was denied — voice input needs the mic. Typing still works.');
       setPhase('idle');
     }
   };
@@ -189,14 +174,14 @@ export default function VoiceButton({
         aria-label={
           phase === 'recording'
             ? 'Stop recording'
-            : 'Describe by voice (Muse Voice Transcribe)'
+            : 'Voice input (Muse Voice Transcribe)'
         }
         title={
           phase === 'recording'
             ? `Recording… ${seconds}s — tap to stop (max ${MAX_SECONDS}s)`
             : phase === 'transcribing'
               ? 'Transcribing…'
-              : 'Describe by voice — Muse Voice Transcribe writes it into the box for you to check before sending'
+              : 'Speak instead of typing — Muse Voice Transcribe writes it into the box for you to check before sending'
         }
         style={phase === 'recording' ? { color: '#e5484d' } : undefined}
       >
