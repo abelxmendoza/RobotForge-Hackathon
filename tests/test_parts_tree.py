@@ -44,7 +44,7 @@ out.shelves = shelves.map((s) => s.label);
 const r1 = T.partsOnShelf(parts, shelves[0], [{ id: "r1" }, { id: "r2" }]);
 out.r1 = r1.map((p) => p.id).sort();
 out.r1Sensing = T.rootParts(r1, parts, "sensing").map((p) => p.id);
-out.r1Frame = T.rootParts(r1, parts, "frame").map((p) => p.id);
+out.r1Electronics = T.rootParts(r1, parts, "electronics").map((p) => p.id);
 out.underLidar = T.childrenOf(parts, "lidar").map((p) => p.id);
 out.motorQty = parts.find((p) => p.id === "motor").quantity;
 const w = T.withAncestors(parts, [parts.find((p) => p.id === "encoder")]);
@@ -65,7 +65,8 @@ def run(tmp_path: Path) -> dict:
     inv = (lib / "inventory.ts").read_text()
     tree = (lib / "partsTree.ts").read_text().replace("from './inventory'", "from './inventory.ts'")
     (tmp_path / "inventory.ts").write_text(inv)
-    (tmp_path / "partsTree.ts").write_text(tree)
+    (tmp_path / "partsTree.ts").write_text(tree.replace("from './partTaxonomy'", "from './partTaxonomy.ts'"))
+    (tmp_path / "partTaxonomy.ts").write_text((lib / "partTaxonomy.ts").read_text())
     (tmp_path / "package.json").write_text('{"type": "module"}')
     (tmp_path / "run.mjs").write_text(RUN)
     proc = subprocess.run(["node", "--experimental-strip-types", "run.mjs"],
@@ -76,7 +77,7 @@ def run(tmp_path: Path) -> dict:
 
 def test_tree_rules(tmp_path: Path) -> None:
     out = run(tmp_path)
-    assert out["sub"][:5] == ["sensing", "frame", "drive", "sensing", "tools"]
+    assert out["sub"][:5] == ["sensing", "electronics", "motion", "sensing", "tools"]
     # A child moves to its parent's robot and keeps its own label.
     assert out["usbRobot"] == "r1" and out["usbReality"] == "real"
     assert out["loop"] == "refused"
@@ -88,7 +89,7 @@ def test_tree_rules(tmp_path: Path) -> None:
     assert out["orphanParent"] is None and out["loopParent"] is None
     assert out["shelves"] == ["Omega1", "Rover", "Shared shelf", "Tools"]
     assert out["r1"] == ["lidar", "usb"]
-    assert out["r1Sensing"] == ["lidar"] and out["r1Frame"] == []
+    assert out["r1Sensing"] == ["lidar"] and out["r1Electronics"] == []
     assert out["underLidar"] == ["usb"]
     assert out["motorQty"] == 2  # quantities are never summed
     # A filter match keeps its parent visible, marked as context.

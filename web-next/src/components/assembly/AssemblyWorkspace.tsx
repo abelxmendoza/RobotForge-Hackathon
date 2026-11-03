@@ -9,7 +9,8 @@ import {
   mountedCenterZ,
   normalizeYawDeg,
 } from '@/lib/spatial';
-import { COMPONENTS, componentById, type ComponentCategory, type ComponentDefinition } from '@/lib/components';
+import { COMPONENTS, componentById, type ComponentDefinition } from '@/lib/components';
+import { PART_GROUPS, partGroup, type PartGroupId } from '@/lib/partTaxonomy';
 import {
   ASSEMBLY_KEY,
   applyAssembly,
@@ -199,13 +200,9 @@ function PoseEditor({
   );
 }
 
-const CATEGORY_LABELS: { id: 'all' | ComponentCategory; label: string }[] = [
+const CATEGORY_LABELS: { id: 'all' | PartGroupId; label: string }[] = [
   { id: 'all', label: 'All parts' },
-  { id: 'compute', label: 'Compute' },
-  { id: 'power', label: 'Power' },
-  { id: 'sensor', label: 'Sensors' },
-  { id: 'drive', label: 'Drive' },
-  { id: 'safety', label: 'Safety' },
+  ...PART_GROUPS.map((g) => ({ id: g.id, label: g.label })),
 ];
 
 const STATUS_BADGE: Record<'pass' | 'warn' | 'fail', string> = {
@@ -234,7 +231,7 @@ export default function AssemblyWorkspace({
     setTabState(t);
     onView?.(t);
   };
-  const [categoryFilter, setCategoryFilter] = useState<'all' | ComponentCategory>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | PartGroupId>('all');
   const [componentId, setComponentId] = useState(COMPONENTS[0].id);
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedWire, setSelectedWire] = useState<string | null>(null);
@@ -490,7 +487,7 @@ export default function AssemblyWorkspace({
     ) : null;
 
   const visibleParts = COMPONENTS.filter(
-    (c) => categoryFilter === 'all' || c.category === categoryFilter,
+    (c) => categoryFilter === 'all' || partGroup(c.category, c.name) === categoryFilter,
   );
 
   const wiringOrParts =
@@ -513,11 +510,14 @@ export default function AssemblyWorkspace({
         <label className="g-field">
           <span>Add a 3D component by name</span>
           <select value={componentId} onChange={(e) => setComponentId(e.target.value)}>
-            {COMPONENTS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({Math.round(c.sizeM[0] * 1000)}×{Math.round(c.sizeM[1] * 1000)}×
-                {Math.round(c.sizeM[2] * 1000)} mm · {c.mounting.fastener})
-              </option>
+            {PART_GROUPS.map((g) => (
+              <optgroup key={g.id} label={g.label}>
+                {COMPONENTS.filter((c) => partGroup(c.category, c.name) === g.id).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({Math.round(c.sizeM[0] * 1000)}×{Math.round(c.sizeM[1] * 1000)}×{Math.round(c.sizeM[2] * 1000)} mm · {c.mounting.fastener})
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>

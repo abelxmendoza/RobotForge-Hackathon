@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { parts } from "@/lib/data";
+import { PART_GROUPS, partGroup } from "@/lib/partTaxonomy";
 import { partSearchQuery } from "@/lib/sourcing";
 import type { Part } from "@/lib/types";
 import SourcingLinks from "./SourcingLinks";
@@ -123,28 +124,26 @@ export default function PartsCatalogue() {
         />
       </div>
       <div id="parts-list">
-        {rendered.map(({ g, any }) => (
-          /* Groups fold to their name and count; a search or a deep
-             link to one part opens the groups that hold a match. */
-          <details className="parts-group fold" key={g.cls} hidden={!any}
-            open={Boolean(q) || g.items.some((p) => p.id === highlightId)}>
-            <summary><h3>{g.label} <span>({g.items.length})</span></h3></summary>
-            <div className="part-list">
-              {g.items.map((p) => (
-                <PartCard
-                  key={p.id}
-                  part={p}
-                  query={q}
-                  highlight={highlightId === p.id}
-                  cardRef={(el) => {
-                    if (el) cardRefs.current.set(p.id, el);
-                    else cardRefs.current.delete(p.id);
-                  }}
-                />
+        {PART_GROUPS.map((top) => {
+          const sections = rendered.filter(({ g, any }) => any && g.items.some((p) => partGroup(p.part_class, p.name) === top.id));
+          if (!sections.length) return null;
+          return (
+            <details className="parts-group fold" key={top.id} open={Boolean(q)}>
+              <summary><h3>{top.label} ({sections.reduce((n, section) => n + section.g.items.filter((p) => partGroup(p.part_class, p.name) === top.id).length, 0)})</h3></summary>
+              {sections.map(({ g }) => (
+                <details className="parts-group fold" key={g.cls} open={Boolean(q) || g.items.some((p) => p.id === highlightId)}>
+                  <summary><h3>{g.label}</h3></summary>
+                  <div className="part-list">
+                    {g.items.filter((p) => partGroup(p.part_class, p.name) === top.id).map((p) => (
+                      <PartCard key={p.id} part={p} query={q} highlight={highlightId === p.id}
+                        cardRef={(el) => { if (el) cardRefs.current.set(p.id, el); else cardRefs.current.delete(p.id); }} />
+                    ))}
+                  </div>
+                </details>
               ))}
-            </div>
-          </details>
-        ))}
+            </details>
+          );
+        })}
       </div>
       <p className="state-box" id="parts-empty" hidden={shownTotal > 0}>
         No parts match that search.

@@ -6,6 +6,7 @@
  * on: ports exist only where the catalogue records them, and the
  * 3D routing is a diagram, not a measurement. Styling rides the
  * kit page's scoped stylesheet (.kitpage in KitViewer). */
+import { PART_GROUPS, partGroup } from '@/lib/partTaxonomy';
 import type { BuildEntry, PaletteItem } from '@/lib/palette';
 import type { Part } from '@/lib/types';
 import {
@@ -58,8 +59,6 @@ export default function WiringPanel({
   const rows = wiringRows(entries, wiring, partsById, nameOf);
   const checks = wiringChecks(entries, wiring, partsById, nameOf);
   const resolved = resolveConnections(entries, wiring, partsById);
-  const withPorts = entries.filter((e) => (byUid.get(e.uid) ?? []).length > 0);
-  const portless = entries.filter((e) => (byUid.get(e.uid) ?? []).length === 0);
 
   return (
     <div className="box wire-panel" style={{ marginTop: 14 }}>
@@ -95,19 +94,28 @@ export default function WiringPanel({
           (or ask in chat), then wire them here.
         </p>
       )}
-      {withPorts.map((e) => (
-        <p key={e.uid} className="wire-device">
-          <b>{nameOf(e)}</b>{' '}
-          <span className="dim">
-            {(byUid.get(e.uid) ?? []).map((p) => p.label).join(' · ')}
-          </span>
-        </p>
-      ))}
-      {portless.map((e) => (
-        <p key={e.uid} className="wire-device dim">
-          <b>{nameOf(e)}</b> — no ports: {noPortReason(e, partsById)}.
-        </p>
-      ))}
+      {PART_GROUPS.map((group) => {
+        const devices = entries.filter((e) => {
+          const item = byKey.get(`${e.kind}:${e.refId}`);
+          return partGroup(item?.part?.part_class ?? '', item?.name ?? e.refId) === group.id;
+        });
+        if (!devices.length) return null;
+        return (
+          <details key={group.id} open>
+            <summary><strong>{group.label} ({devices.length})</strong></summary>
+            {devices.map((e) => (
+              <p key={e.uid} className="wire-device">
+                <b>{nameOf(e)}</b>{' '}
+                {(byUid.get(e.uid) ?? []).length ? (
+                  <span className="dim">{(byUid.get(e.uid) ?? []).map((p) => p.label).join(' · ')}</span>
+                ) : (
+                  <span className="dim">no ports: {noPortReason(e, partsById)}</span>
+                )}
+              </p>
+            ))}
+          </details>
+        );
+      })}
       {rows.length > 0 && (
         <table className="wire-table">
           <thead>
