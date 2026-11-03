@@ -7,7 +7,7 @@ ground truth. If the design doesn't add up, you find out before you buy parts.
 
 **Try it:** https://robot-forge-hackathon.vercel.app ·
 **One-click demo:** https://robot-forge-hackathon.vercel.app/demo/ ·
-**Demo video:** _(link added at submission)_
+**Demo video:** [Watch the trailer on the live site](https://robot-forge-hackathon.vercel.app/#trailer)
 
 ## Why I built this
 
