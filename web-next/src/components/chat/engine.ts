@@ -2006,9 +2006,15 @@ const CAPABILITIES_SET = new Set([
   "where do i begin", "get started", "getting started",
   "how does this work", "i m new", "i am new", "im new",
   "new here", "i m new here",
+  "what else can you do", "what else do you do", "what else can i do",
+  "what else can you help with", "what else can you help me with",
+  "what can you help with", "what can you help me with",
+  "what else can i ask", "what else can i ask you", "what else",
+  "anything else", "what are you able to do", "what are your skills",
 ]);
 
 const CHIP_PICKS = [
+  "Tell me about Omega1",
   "Which robots passed the gate?",
   "Tell me about Andino",
   "Plan a differential rover build",
@@ -2016,7 +2022,9 @@ const CHIP_PICKS = [
 
 function convChips(suggestions: string[]): string[] {
   const pool = suggestions && suggestions.length ? suggestions : CHIP_PICKS;
-  const out = CHIP_PICKS.filter((p) => pool.indexOf(p) >= 0);
+  /* The Omega1 chip is answered by the wrench layer (wrench.ts), not
+   * the intents table, so it is kept whatever the pool holds. */
+  const out = CHIP_PICKS.filter((p) => p === CHIP_PICKS[0] || pool.indexOf(p) >= 0);
   return (out.length ? out : CHIP_PICKS).slice(0, 3);
 }
 
@@ -2081,10 +2089,11 @@ function convReply(
   const chips = convChips(suggestions);
   const byKind: Record<ConvKind, string> = {
     greeting:
-      "<p>" + hi + "I&rsquo;m Wrench, RobotForge&rsquo;s guide. I answer " +
-      "from the recorded data — Robodex gate verdicts, the parts " +
+      "<p>" + hi + "I&rsquo;m Wrench, RobotForge&rsquo;s workshop " +
+      "operator. I answer from the recorded data — Robodex gate " +
+      "verdicts, Omega1 (RobotForge&rsquo;s own robot), the parts " +
       "catalogue, build planning — and I say so when something " +
-      "isn&rsquo;t recorded.</p><p>Try one of these:</p>",
+      "isn&rsquo;t recorded. Try one of the suggestions below.</p>",
     phone:
       "<p>" + hi + "phones are fine here. RobotForge runs in your " +
       "browser, and Ask Wrench works the same on a phone as on a " +
@@ -2092,8 +2101,8 @@ function convReply(
       "catalogue, or a build plan:</p>",
     testing:
       "<p>Go ahead and test — asking me questions changes nothing, and " +
-      "anything that would change a saved robot asks you first.</p>" +
-      "<p>Try one of these:</p>",
+      "anything that would change a saved robot asks you first. Try " +
+      "one of the suggestions below.</p>",
     thanks:
       "<p>Any time. If you want to keep going — a gate verdict, a part " +
       "lookup, or a build plan — just say the word.</p>",
@@ -2104,18 +2113,24 @@ function convReply(
       "<p>Glad to hear it. Want to keep going — a gate verdict, a " +
       "part, or a build plan?</p>",
     identity:
-      "<p>I&rsquo;m Wrench, RobotForge&rsquo;s guide. I answer from " +
+      "<p>I&rsquo;m Wrench, RobotForge&rsquo;s workshop operator. I answer from " +
       "the recorded data — Robodex gate verdicts, the parts catalogue, " +
       "build plans, and how the gate works — and I say so when " +
       "something isn&rsquo;t in it. Questions the data can&rsquo;t " +
       "answer can go to a live model when the endpoint is on; those " +
       "answers are badged LIVE MODEL.</p>",
     capabilities:
-      "<p>Here&rsquo;s what I can do from the recorded data: pull up " +
-      "any Robodex robot and its gate verdict, find parts in the " +
-      "catalogue, plan a build from a starter kind and list what " +
-      "you&rsquo;d need, and explain how the gate works and its " +
-      "thresholds.</p><p>Pick one to start:</p>",
+      "<p>Here&rsquo;s what I can do from the recorded data:</p><ul>" +
+      "<li>Tell you about Omega1, RobotForge&rsquo;s own robot and the " +
+      "Workshop&rsquo;s built-in specimen: what it is, what is wrong " +
+      "with it, and what still needs measuring.</li>" +
+      "<li>Pull up any Robodex robot and its gate verdict, and explain " +
+      "why a robot failed.</li>" +
+      "<li>Find parts in the catalogue, and plan a build from a starter " +
+      "kind with the parts you&rsquo;d need.</li>" +
+      "<li>In the Workshop, change a saved robot for you: every change " +
+      "is previewed and checked, and you tap Apply.</li>" +
+      "<li>Explain how the gate works and its thresholds.</li></ul>",
   };
   const noChips: ConvKind[] = ["bye"];
   return noChips.indexOf(kind) >= 0
