@@ -73,10 +73,13 @@ def test_create_panel_has_the_three_actions():
 
 def test_create_panel_calls_the_real_engines():
     assert "parseBrief(prompt" in CREATE
-    assert "generateRobot(brief, catalogParts)" in CREATE
+    assert "generateRobot(brief, engineCatalogue())" in CREATE
     assert "generateForgeTests(latest.spec as Spec" in CREATE
-    assert "applyModification(spec, text, catalogParts)" in CREATE
-    # The catalogue it grounds in is the app's own, as the Garage used.
+    assert "applyModification(spec, text, engineCatalogue())" in CREATE
+    # The catalogue it grounds in is the app's own, as the Garage
+    # used — since the web knowledge loop (2026-11-03), through the
+    # merged view: built-in parts plus the visitor's confirmed web
+    # parts, web entries flagged UNVERIFIED (lib/webParts).
     assert "parts as catalogParts" in CREATE
 
 

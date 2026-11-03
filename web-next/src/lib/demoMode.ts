@@ -28,6 +28,7 @@ export const DEMO_DATA_KEYS: ReadonlySet<string> = new Set([
   'rf.assemblies.v1',
   'rf.buildplan.v1',
   'rf.ownership.v1',
+  'rf.webparts.v1',
   'robotforge.dex.sightings.v1',
 ]);
 

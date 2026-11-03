@@ -76,3 +76,14 @@ export function downloadJSON(name: string, data: unknown) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/* The same blob-download pattern for plain text (e.g. a generated
+ * .scad file handed over in chat). */
+export function downloadText(name: string, text: string, mime = 'text/plain') {
+  const blob = new Blob([text], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}

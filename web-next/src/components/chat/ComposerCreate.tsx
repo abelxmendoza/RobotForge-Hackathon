@@ -4,7 +4,10 @@
  * the main chatbot; the Garage's standalone Generate panel is gone).
  *
  * Three deterministic, local actions — no Worker or model calls, so
- * they all work in demo mode:
+ * they all work in demo mode. The catalogue the engine grounds in
+ * is the built-in catalogue merged with the visitor's confirmed
+ * web parts (engineCatalogue below; demo reads the empty demo
+ * twin, so the demo's catalogue is the built-in one exactly):
  *   1. Generate a robot from a brief (lib/forgeEngine.generateRobot),
  *      saved to the Garage store with the exact record shape the
  *      Garage's own addGenerated used: a PLANNED first version,
@@ -26,8 +29,9 @@ import { useEffect, useState } from 'react';
 import { parts as catalogParts } from '@/lib/data';
 import {
   applyModification, generateRobot, parseBrief,
-  type ArchetypeId, type ForgeSize,
+  type ArchetypeId, type CataloguePart, type ForgeSize,
 } from '@/lib/forgeEngine';
+import { mergeCatalogue, WEB_PARTS_KEY, type WebPartRecord } from '@/lib/webParts';
 import { generateForgeTests, forgeTestTally } from '@/lib/forgeTests';
 import {
   GARAGE_KEY, diffSpecs,
@@ -50,7 +54,21 @@ const ARCH_LABEL: Record<string, string> = {
   multirotor: 'Multirotor',
 };
 
-const MOD_EXAMPLES = 'add a camera · add lidar · make it wider · swap in a bigger battery';
+const MOD_EXAMPLES = 'add a camera · add lidar · make it wider · swap in a bigger battery · add a part by name';
+
+/* The engine's catalogue view: the built-in catalogue merged with
+ * the visitor's confirmed web parts (lib/webParts.ts) — web entries
+ * ride in flagged WEB-SOURCED — UNVERIFIED and the engine's checks
+ * flag any build that uses one. A local store read only (no Worker
+ * or model call), so the panel stays fully local; in demo mode the
+ * store layer reads the demo twin, which holds no web parts, so
+ * demo generation grounds in exactly the built-in catalogue. */
+function engineCatalogue(): CataloguePart[] {
+  return mergeCatalogue(
+    catalogParts as unknown as CataloguePart[],
+    readStore<WebPartRecord[]>(WEB_PARTS_KEY, []),
+  ) as unknown as CataloguePart[];
+}
 
 /* The robot the Create panel most recently made this session: the
  * "current robot" fallback between the Workshop's selection and the
@@ -110,7 +128,7 @@ export default function ComposerCreate({ onResult }: { onResult: (r: CreateResul
       size,
       ...(sensors.length ? { sensors } : {}),
     });
-    const spec = generateRobot(brief, catalogParts);
+    const spec = generateRobot(brief, engineCatalogue());
     if (!spec?.forge?.bom?.length) {
       setGenError('The engine could not ground that brief in catalogue parts — nothing was generated.');
       return;
@@ -178,7 +196,7 @@ export default function ComposerCreate({ onResult }: { onResult: (r: CreateResul
     if (!text) return;
     const latest = current.versions[current.versions.length - 1];
     const spec = latest?.spec as Spec;
-    const mod = applyModification(spec, text, catalogParts);
+    const mod = applyModification(spec, text, engineCatalogue());
     if (!mod) {
       onResult({
         pill: 'FORGE ENGINE',
