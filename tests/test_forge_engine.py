@@ -210,7 +210,7 @@ def test_ui_wiring_and_generated_source():
     assert "planned: true" in CREATE_TSX
     assert "label: 'Generated plan'" in CREATE_TSX
     # The Garage no longer carries a standalone Generate panel.
-    assert "Generate a robot" not in GARAGE_TSX
+    assert "Generate a robot" in GARAGE_TSX  # sends a prompt to Wrench; no separate form
     assert "source: 'generated'" in GARAGE_TSX
     assert "planned: true" in GARAGE_TSX
     assert "'generated'" in GARAGE_LIB

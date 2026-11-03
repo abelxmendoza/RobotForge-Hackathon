@@ -17,7 +17,7 @@ export default function AttachButton({ text, className, onSent }: { text: string
         className={className ?? "chat-bar-attach"}
         onClick={() => ref.current?.click()}
         aria-label="Attach a photo, document, spec file or scan"
-        title="Attach a photo, parts list, spec (.json) or scan (.ply)"
+        title="Attach a photo, parts list, spec (.json) or scan (.glb/.obj/.ply)"
       >
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 11.5 12.6 19.9a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" />
@@ -28,18 +28,21 @@ export default function AttachButton({ text, className, onSent }: { text: string
         ref={ref}
         type="file"
         accept={HANDOFF_ACCEPT}
+        multiple
         hidden
         onChange={(e) => {
-          const f = e.target.files && e.target.files[0];
+          const files = Array.from(e.target.files ?? []);
+          const f = files[0];
           e.target.value = "";
           if (!f) return;
+          if (files.length > 1 && !files.every((file) => handoffKind(file) === 'photo')) { setErr('Attach photos together, or one model, spec or parts list at a time.'); return; }
           const kind = handoffKind(f);
           if (!kind) {
-            setErr("Wrench reads photos, .json specs, .txt/.csv parts lists and .ply scans.");
+            setErr("Wrench reads photos, .json specs, .txt/.csv parts lists and GLB, OBJ or PLY scans.");
             return;
           }
           setErr("");
-          setHandoff({ kind, file: f, text: text.trim() });
+          setHandoff({ kind, file: f, files, text: text.trim() });
           onSent?.();
           router.push("/garage/#wrench");
         }}

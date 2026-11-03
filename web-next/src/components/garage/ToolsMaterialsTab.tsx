@@ -141,6 +141,8 @@ export default function ToolsMaterialsTab({ spec, robotName }: { spec: Spec; rob
     <section className="ws-pane ws-tools" aria-label="Tools and materials">
       <div className="ws-history-head">
         <h3>Tools &amp; materials {demo && <span className="fbadge">DEMO</span>}</h3>
+        <p className="faint">Mark what you own. Simulated items are available for planning only.</p>
+        <details className="g-small faint"><summary>What these states mean</summary>
         <p className="faint">
           Everything a build consumes, in two states. <strong>On hand</strong> means owned — a record
           says so, or you mark it here. <strong>Simulated</strong> means the app holds the item&apos;s real
@@ -148,7 +150,8 @@ export default function ToolsMaterialsTab({ spec, robotName }: { spec: Spec; rob
           yet, spec a build around a filament you haven&apos;t bought — but it never makes a build step
           read as doable now: build plans check against on-hand gear only.
           {demo && ' In demo mode these are the demo sandbox&rsquo;s states; the catalogue records every item below as simulated until a record or your own mark says otherwise.'}
-        </p>
+        </p>        </details>
+
       </div>
       {note && <p className="g-small" role="alert">{note}</p>}
       {fitBlock && (

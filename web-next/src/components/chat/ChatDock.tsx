@@ -1152,10 +1152,10 @@ export function useForgeAssistant() {
   /* ---------------- asking ---------------- */
 
   const ask = useCallback(
-    (question: string) => {
+    (question: string, displayText?: string) => {
       const q = String(question || "").trim();
       if (!q) return;
-      appendMsg({ who: "user", text: q });
+      appendMsg({ who: "user", text: displayText || q });
       setProposal(null);
       setAssemblyProposal(null);
       setInventoryProposal(null);
@@ -1470,10 +1470,12 @@ export function useForgeAssistant() {
             const candidate = applyOperation(saved, op, 'preview', 'preview');
             checks = forgeValidateSpec(candidate.find(r => r.id === op.robotId)!.versions.at(-1)!.spec).lines;
           } catch (e) { checks = [(e as Error).message]; }
+          const field = FIELD_GROUPS.flatMap((group) => group.fields).find((field) => field.path === op.path);
+          const show = (value: unknown) => typeof value === 'number' ? fmtValue(Number((value * (field?.scale ?? 1)).toFixed(4))) : fmtValue(value);
           return <div className="fc-msg bot" role="region" aria-label="Operation preview">
-            <strong>Change {op.path}</strong>
-            <p>{fmtValue(proposal.before)} → {fmtValue(proposal.after)}</p>
-            <p>Spec units: m, kg, V, mAh. Creates a saved version; does not replace your open editor draft.</p>
+            <strong>Change {field?.label ?? op.path}</strong>
+            <p>{show(proposal.before)} → {show(proposal.after)} {field?.unit}</p>
+            <p>Apply saves a new version. Any separate unsaved draft is kept.</p>
             <details><summary>Browser checks (subset)</summary>{checks.map((line, i) => <p key={i}>{line}</p>)}{!checks.length && <p>No findings in the browser subset.</p>}</details>
             <button type="button" className="btn btn-primary btn-sm" onClick={() => {
               if (proposalRef.current !== proposal) return;

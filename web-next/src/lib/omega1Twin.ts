@@ -48,6 +48,7 @@ export interface TwinSubject {
 }
 
 const MEDIA = 'assets/omega1-twin';
+export const OMEGA1_PHOTO = { url: `${MEDIA}/omega1-real-photo.png`, caption: 'Real Omega1 on its workbench · photo from Omega-Code.', source: 'https://github.com/abelxmendoza/Omega-Code/blob/1d7bb60d68520639578917b9fbb2a70cc903dd0a/image/README/1719168223539.png', position: 'center bottom' };
 
 export const TWIN_LABEL = 'ProjectSim twin — ESTIMATED geometry';
 export const TWIN_ESTIMATE_NOTE =

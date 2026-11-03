@@ -59,13 +59,13 @@ function Marked({ text, g }: { text: string; g: Record<string, string> | null })
 
 type Sel = { type: 'node'; id: string } | { type: 'conn'; i: number } | null;
 
-export default function WiringView({ wiring: w, spec }: { wiring: Wiring; spec?: RobotSpec }) {
+export default function WiringView({ wiring: w, spec, compact = false }: { wiring: Wiring; spec?: RobotSpec; compact?: boolean }) {
   const g = useGlossary();
   const L = useMemo(() => layout(w), [w]);
   const bad = useMemo(() => badConns(w), [w]);
   const nodes = useMemo(() => nodeMap(w), [w]);
   const [mode, setMode] = useState<'simple' | 'full'>('simple');
-  const [show3D, setShow3D] = useState(true);
+  const [show3D, setShow3D] = useState(!compact);
   const [explode3D, setExplode3D] = useState(0);
   const [failed3D, setFailed3D] = useState(false);
   const [sel, setSel] = useState<Sel>(null);
@@ -293,7 +293,7 @@ export default function WiringView({ wiring: w, spec }: { wiring: Wiring; spec?:
         </div>
         <aside className="card ta-detail wv-detail" aria-live="polite">{detail}</aside>
       </div>
-      <h3 className="wv-table-title">Cut list</h3>
+      <details className="ws-disclosure" open={!compact}><summary>Cable cut list</summary>
       <div className="wv-tablewrap">
         <table className="wv-table">
           <thead><tr><th>From</th><th>To</th><th>Type</th><th>Volts</th><th>Gauge</th><th>Connector</th><th>Length</th></tr></thead>
@@ -317,6 +317,7 @@ export default function WiringView({ wiring: w, spec }: { wiring: Wiring; spec?:
             : `Lengths are recorded for ${known.length} of ${w.connections.length} cables, so no total is shown.`}
         </p>
       </div>
+      </details>
     </div>
   );
 }

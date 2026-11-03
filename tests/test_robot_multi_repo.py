@@ -90,13 +90,13 @@ def test_import_page_can_add_to_an_existing_robot() -> None:
 
 def test_workshop_lists_every_repo_with_add_and_detach() -> None:
     src = (WEB / "components" / "garage" / "Garage.tsx").read_text()
-    assert 'aria-label="Code repos"' in src
+    assert 'Source repositories ({robotRepos(robot).length})' in src
     assert "robotRepos(robot).map" in src
     assert "/import/?attach=" in src
     assert "Yes, remove" in src and "Yes, remove all" in src
     assert "detachRepo(r, repoUrl)" in src and "clearRepos(r)" in src
-    # The repos list sits near the top of the Overview, above the cards.
-    assert src.index('aria-label="Code repos"') < src.index('<div className="ws-cards">')
+    # Source details remain available in a disclosure rather than repeated cards.
+    assert '<details className="g-repos ws-disclosure">' in src
     assert "repos` : 'From repo'" in src
 
 

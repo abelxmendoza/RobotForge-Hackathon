@@ -45,19 +45,26 @@ def test_one_tab_bar_rendered_unconditionally_at_top():
     # ...and it sits at the top of .garage-main, before every pane
     main_at = GARAGE.index('<div className="garage-main">')
     bar_at = GARAGE.index("{tabBar}")
-    assert main_at < bar_at < GARAGE.index("{twinOpen && <Omega1Twin")
+    assert main_at < bar_at < GARAGE.index("{twinOpen && (omegaTab")
     # both old conditional renders are gone for good
     assert "(twinOpen || adding) && tabBar" not in GARAGE
     assert "const tabBar = robot && draft ? (" not in GARAGE
 
 
-def test_work_tabs_single_source_all_nine_labels():
-    for tab_id, label in zip(TAB_IDS, TAB_LABELS):
-        assert f"{{ id: '{tab_id}', label: '{label}'" in GARAGE
+def test_work_tabs_five_main_destinations_with_grouped_sections():
+    nav = GARAGE.split('const WORK_TABS:', 1)[1].split('];', 1)[0]
+    for tab_id, label in [('overview', 'Overview'), ('build', 'Build'), ('wiring', 'Wiring'), ('checks', 'Test'), ('history', 'History')]:
+        assert f"{{ id: '{tab_id}', label: '{label}'" in nav
+    for tab_id in ['specs', 'simulate', 'bom', 'tools']:
+        assert f"id: '{tab_id}'" not in nav
+    assert "if (tab === 'bom' || tab === 'tools') return 'build'" in GARAGE
+    assert "if (tab === 'simulate') return 'checks'" in GARAGE
+    assert 'BUILD_SECTIONS' in GARAGE and 'TEST_SECTIONS' in GARAGE
+    assert '<SpecsDialog' in GARAGE
 
 
 def test_empty_state_bar_is_present_but_disabled():
-    assert "const barDisabled = !twinOpen && !(robot && draft);" in GARAGE
+    assert "const barDisabled = !twinOpen && (adding || !(robot && draft));" in GARAGE
     assert "disabled={barDisabled} aria-disabled={barDisabled}" in GARAGE
 
 
@@ -71,7 +78,7 @@ def test_twin_mode_tab_switch_never_closes_the_twin():
     assert "setTwinOpen(true); setAdding(false); setOmegaTab('overview');" in GARAGE
     # the bar's selected state follows the mode's own tab state
     assert "const barTab = twinOpen ? omegaTab : tab;" in GARAGE
-    assert "aria-selected={barTab === t.id}" in GARAGE
+    assert "aria-selected={mainTab(barTab) === t.id}" in GARAGE
 
 
 def test_checks_dot_in_twin_mode_is_omega1s_own_state():
@@ -86,7 +93,7 @@ def test_omega1_has_a_pane_for_every_tab():
     # PR (omega1-garage-twin): props signature + render string gained
     # the Garage link props — pins updated, disclosed in the PR body.
     assert "{ tab = 'overview', garageScans = null, onOpenGarage, onAdopt }" in TWIN
-    assert "{twinOpen && <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />}" in GARAGE
+    assert "<Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />" in GARAGE
 
 
 def test_omega1_panes_stand_on_the_records_only():
@@ -126,3 +133,48 @@ def test_twin_snapshot_is_omega1s_not_a_stored_robots():
     assert "versionLabel: TWIN_LABEL" in GARAGE
     assert "checksVerdict: 'Not gated'" in GARAGE
     assert "OMEGA1_FACTS.map((f) => `${f.label}: ${f.value}`)" in GARAGE
+
+
+def test_secondary_controls_do_not_repeat_across_tabs():
+    checks = GARAGE.split("{tab === 'checks' && (", 1)[1]
+    assert '<summary>Compare with a saved version</summary>' in checks
+    assert '<ol className="ws-timeline"' in checks
+    assert '<summary>Robot actions</summary>' in GARAGE
+    overview = GARAGE.split("tab === 'overview' && (", 1)[1].split("tab === 'wiring' && (", 1)[0]
+    assert '<ForgePlacement' not in overview
+    assert '<summary>Source repositories' in overview
+    assert '<WiringView compact' in GARAGE
+    assert 'Describe a connection to Wrench' in GARAGE
+    assert '<summary>Take apart and assemble</summary>' in GARAGE
+
+
+def test_twin_overview_does_not_repeat_specs_and_parts():
+    overview = TWIN.split("tab === 'overview' && (", 1)[1].split("tab === 'build' && (", 1)[0]
+    assert 'OMEGA1_FACTS.map' not in overview
+    assert 'subject.physics.map' not in overview
+    assert 'omega1Parts.map' not in overview
+
+
+def test_drafts_are_separate_from_history_and_bound_to_robot_and_baseline():
+    assert 'robotforge.workshop.draft.${id}' in GARAGE
+    assert 'cached?.baseline === v.id' in GARAGE
+    assert 'draftOwner !== robot.id' in GARAGE
+    assert 'writeStore(draftKey(robot.id), value)' in GARAGE
+    assert 'Draft not saved:' in GARAGE
+    assert 'Version details</summary>' not in GARAGE
+    assert '<input id="garage-label"' not in GARAGE
+    assert '`Version ${robot.versions.length + 1}`' in GARAGE
+    save = GARAGE.split("const saveVersion =", 1)[1].split("const togglePlanned", 1)[0]
+    assert "setPlannedDraft(false)" not in save
+
+
+def test_specs_dialog_and_task_controls_are_accessible():
+    dialog = (ROOT / 'web-next/src/components/garage/SpecsDialog.tsx').read_text()
+    assert 'showModal()' in dialog and 'onCancel={onClose}' in dialog
+    assert 'aria-labelledby="ws-specs-title"' in dialog
+    assert "e.key === 'ArrowRight'" in GARAGE and "e.key === 'ArrowLeft'" in GARAGE
+    assert 'setTab(specsReturn.current.stored)' in GARAGE
+    assembly = (ROOT / 'web-next/src/components/assembly/AssemblyWorkspace.tsx').read_text()
+    assert '<summary>Add a component</summary>' in assembly
+    assert 'assembly-part-gallery' not in assembly
+    assert '<details className="assembly-tools" open>' not in assembly

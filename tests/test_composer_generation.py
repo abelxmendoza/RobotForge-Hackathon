@@ -123,20 +123,15 @@ def test_create_panel_is_local_and_honest():
 
 # --- Mounting on both composer surfaces -------------------------------
 
-def test_both_composers_mount_the_shared_panel():
-    for surface in (CHATBAR, FORGE_THREAD):
-        assert "ComposerCreate" in surface
-        assert "postCreateResult(r)" in surface
-        assert "setCreateOpen" in surface
-    # One component, one import path — the logic is not forked.
-    assert CHATBAR.count("components/chat/ComposerCreate") + CHATBAR.count("./ComposerCreate") == 1
-    assert "components/chat/ComposerCreate" in FORGE_THREAD
-    # The Create toggle is labelled on both surfaces.
-    assert "chat-bar-create" in CHATBAR
+def test_both_composers_use_the_main_wrench_input():
+    assert "ComposerCreate" not in CHATBAR
+    assert "ComposerCreate" not in FORGE_THREAD
+    assert "promptWrench({mode:'design'" in CHATBAR
+    assert "router.push('/garage/#wrench')" in CHATBAR
+    assert 'runConceptText' in FORGE_THREAD
+    assert 'assistant.postCreateResult' in FORGE_THREAD
     assert "✦ Create" in FORGE_THREAD
-    # The docked per-tab chips hide while the panel is open (PR #121's
-    # row, hidden on createOpen); the chips themselves are untouched.
-    assert "hidden={createOpen}" in FORGE_THREAD
+    assert 'setCreateOpen' not in FORGE_THREAD
 
 
 # --- Action messages: pill, no grounding ------------------------------
@@ -176,7 +171,7 @@ def test_open_in_workshop_routing():
 
 def test_garage_panel_removed_hint_and_keeps():
     assert "GeneratePanel" not in GARAGE
-    assert "Generate a robot" not in GARAGE
+    assert "Generate a robot" in GARAGE  # prompt text sent to Wrench, no form
     # None of the standalone panel's form may remain in Garage: no
     # Brief/Type/Size/Sensors controls, no sensor checkbox set, no
     # Generate robot button, and no generation calls in this file.

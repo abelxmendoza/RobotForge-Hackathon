@@ -11,8 +11,8 @@ export default function ScanView({ robotId, scan, name }: { robotId: string; sca
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
   const [error, setError] = useState('');
   const [points, setPoints] = useState(false);
-  const [turning, setTurning] = useState(true);
-  const turnRef = useRef(true);
+  const [turning, setTurning] = useState(false);
+  const turnRef = useRef(false);
   turnRef.current = turning;
 
   useEffect(() => {

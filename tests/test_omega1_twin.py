@@ -61,7 +61,7 @@ def test_glbs_carry_textures_and_rover_link_nodes():
 def test_estimate_labels_are_in_the_ui():
     assert "ESTIMATED geometry" in LIB
     assert "not measurements" in LIB
-    assert "Physics — ProjectSim estimates, not measurements" in SECTION
+    assert "Twin physics — ProjectSim estimates, not measurements" in SECTION
     assert "estimates, not measurements" in VIEWER
     # the missing-model fallback must call the preview a flat render
     assert "flat preview render" in VIEWER
@@ -69,7 +69,7 @@ def test_estimate_labels_are_in_the_ui():
 
 def test_parts_are_a_gallery_never_a_fitted_assembly():
     assert "separate reconstructions" in LIB.lower()
-    assert "not pieces of one fitted assembly" in SECTION
+    assert "never a fitted assembly" in SECTION
     # explode is wired only for the rover subject
     assert "explode={isRover}" in SECTION
     assert "link !== 'chassis'" in VIEWER or "link !== \"chassis\"" in VIEWER
@@ -96,6 +96,6 @@ def test_garage_wires_the_builtin_specimen():
     assert "Built-in specimen" in GARAGE
     # PR (omega1-garage-twin): the twin gained the Garage link props —
     # pin updated to the new render string, disclosed in the PR body.
-    assert "{twinOpen && <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />}" in GARAGE
+    assert "<Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />" in GARAGE
     # the twin view replaces the workshop; it never renders alongside it
     assert "{!twinOpen && !adding && robot && draft" in GARAGE

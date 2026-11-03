@@ -63,10 +63,10 @@ def test_adopt_action_and_fixed_id():
     assert "id: OMEGA1_ROBOT_ID, name: 'Omega1'" in GARAGE
     assert "omega1SeedSpec()" in GARAGE
     assert "source: OMEGA1_SEED_SOURCE" in GARAGE
-    # shown only when no stored Omega1 exists: list entry + twin panel
-    assert "Add Omega1 to your Garage" in GARAGE
+    # Adoption has one entry point in the twin, not a duplicate sidebar button.
+    assert "Add Omega1 to your Garage" not in GARAGE
     assert "Add Omega1 to your Garage" in TWIN
-    assert "{!storedOmega1 && (" in GARAGE
+    assert "onAdopt={adoptOmega1}" in GARAGE
     # VersionSource choice: 'repo' — the seed's fields were extracted
     # from Abel's Omega-Code repository; no other union member is true
     assert "OMEGA1_SEED_SOURCE: VersionSource = 'repo'" in OMEGA_LIB
@@ -125,7 +125,7 @@ def test_connections_render_editor_and_badges():
     assert "Confirm" in CONNECTIONS
     assert "verify on the bench" in CONNECTIONS
     # mounted at the top of the Wiring tab for any robot with the field
-    assert "<ConnectionsSection connections={draft.connections} onSave={saveConnections} />" in GARAGE
+    assert "Describe a connection to Wrench" in GARAGE
     assert "const saveConnections = (next: SpecConnection[]) => {" in GARAGE
     # a robot whose spec has no connections renders nothing
     assert "if (!Array.isArray(connections)) return null;" in CONNECTIONS
@@ -134,9 +134,9 @@ def test_connections_render_editor_and_badges():
 # ---------------------------------------------------------- twin ↔ garage
 
 def test_twin_garage_link_panel():
-    for bit in ("Your Omega1 in the Garage", "scan(s) attached",
-                "Open your Omega1", "Improve this twin",
-                "This twin is a built-in specimen"):
+    for bit in ("Your Omega1", "scan(s)",
+                "Open your Omega1", "Add your own copy",
+                "Estimated twin"):
         assert bit in TWIN, f"twin Garage panel missing: {bit}"
     assert "garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null}" in GARAGE
     assert "onOpenGarage={openStoredOmega1}" in GARAGE
@@ -156,7 +156,8 @@ def test_scan_measure_apply_path():
     assert "showPreviewNote" in SCAN_MEASURE and "slotKind" in SCAN_MEASURE
     # mounted on the stored-robot scan card (generic path)
     assert "onApplyScanSize" in PHOTOSPIN
-    assert "<ScanMeasure" in PHOTOSPIN
+    assert "<ScanMeasure" not in PHOTOSPIN
+    assert "Add a scan through Wrench" in PHOTOSPIN
     # Garage saves it as ONE new version: measured dims, source
     # 'upload' (dimensions derived from an uploaded file), note
     # naming the scan and the unit rule that was applied
@@ -171,7 +172,8 @@ def test_scan_measure_apply_path():
 def test_guided_flow_shape():
     # card on the stored Omega1's Overview only, overall progress
     assert "robot.id === OMEGA1_ROBOT_ID" in GARAGE
-    assert "<ImproveTwin" in GARAGE
+    assert "<ImproveTwin" not in GARAGE
+    assert "<WrenchStart" in GARAGE
     assert "Improve this twin" in IMPROVE
     assert "{st.done} of 4 done" in IMPROVE
     for step in ("Step 1 · Add your scans",
