@@ -54,7 +54,7 @@ import kindsDoc from "@/data/kinds.json";
 import intentsDoc from "@/data/chat-intents.json";
 import InventoryProposal from './InventoryProposal';
 import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,type InventoryOperation} from '@/lib/inventory';
-import { buildWsContext, readWorkshopContext, workshopTabChips, WORKSHOP_CONTEXT_EVENT } from "@/lib/workshopContext";
+import { buildWsContext, groundingCaption, readWorkshopContext, requestWorkshopFix, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, type GarageRobot, type Spec } from '@/lib/garage';
@@ -143,6 +143,12 @@ interface Msg {
   text?: string;
   hits?: Hit[];
   sources?: SourceRef[];
+  /* Set ONLY on a live answer that was grounded in the Workshop
+   * snapshot actually sent with that question (captured in liveChat
+   * at ask time, never re-read at render). Recorded answers — and
+   * live attempts that fell back to one — carry no grounding, so
+   * they never show a caption or a Fix button they did not earn. */
+  grounding?: { caption: string; failing: boolean };
 }
 
 let nextId = 1;
@@ -322,11 +328,14 @@ export function useForgeAssistant() {
     );
 
   const liveChat = useCallback(
-    (q: string): Promise<string> => {
+    (q: string): Promise<{ answer: string; ws: WorkshopChatContext | null }> => {
       /* On the Workshop, the question carries the published snapshot
        * of the robot on screen (see lib/workshopContext), so the live
        * answer is about that robot. Anywhere else the snapshot is
-       * empty and the call is exactly what it was before. */
+       * empty and the call is exactly what it was before. The snapshot
+       * is captured HERE, at ask time, and returned with the answer:
+       * the grounding caption on the rendered answer names the robot
+       * that was actually sent, not whatever is on screen later. */
       const ws = readWorkshopContext();
       return fetch(liveBase() + "/chat", {
         method: "POST",
@@ -366,7 +375,7 @@ export function useForgeAssistant() {
             if (!body || typeof body.answer !== "string") {
               throw new Error("endpoint returned no answer");
             }
-            return body.answer;
+            return { answer: body.answer, ws };
           })
       );
     },
@@ -887,10 +896,10 @@ export function useForgeAssistant() {
         who: "bot",
         html: '<p class="fc-dim">Checking the recorded data&hellip;</p>',
       });
-      const done = (ans: AnswerResult & { sources?: SourceRef[] }) => {
+      const done = (ans: AnswerResult & { sources?: SourceRef[]; grounding?: Msg["grounding"] }) => {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits, sources: ans.sources } : m
+            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits, sources: ans.sources, grounding: ans.grounding } : m
           )
         );
         setChips(
@@ -960,7 +969,7 @@ export function useForgeAssistant() {
             )
           );
           liveChat(q)
-            .then((answer) => {
+            .then(({ answer, ws }) => {
               done({
                 html:
                   '<p><span class="fc-live-badge">' +
@@ -969,6 +978,13 @@ export function useForgeAssistant() {
                   esc(answer).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>") +
                   "</p>",
                 chips: ans.chips,
+                /* Grounding is earned only here: a live answer that
+                 * actually carried a Workshop snapshot. The fallback
+                 * paths below (and every recorded answer) call done
+                 * without it, so they render no caption. */
+                grounding: ws
+                  ? { caption: groundingCaption(ws), failing: workshopSnapshotFailing(ws) }
+                  : undefined,
               });
             })
             .catch((e: Error & { code?: string }) => {
@@ -1050,6 +1066,22 @@ export function useForgeAssistant() {
     [noteBubble, router]
   );
 
+  /* One-tap Fix on a FAIL-grounded live answer. Docked in the
+   * Workshop, the button asks Garage (through the workshopContext
+   * bridge — neither side imports the other) to switch the selected
+   * robot to its Checks tab, where the "Fix with Muse Spark" loop
+   * lives. Anywhere else the honest move is to route to the Workshop
+   * and say, in a bubble, to open the robot's Checks tab — the chat
+   * cannot switch another page's tab and never pretends it did. */
+  const fixGroundedAnswer = useCallback(() => {
+    if ((pathname || "").startsWith("/garage")) {
+      requestWorkshopFix();
+    } else {
+      noteBubble("Opening the Workshop — open that robot's Checks tab there to run “Fix with Muse Spark” on its failing checks.");
+      router.push("/garage/");
+    }
+  }, [noteBubble, pathname, router]);
+
   const onHitClick = (h: Hit) => {
     if (h.kind === "action") {
       if (h.id && h.id.indexOf("fix:") === 0) {
@@ -1083,7 +1115,7 @@ export function useForgeAssistant() {
     setChipsState(chipsFor({}));
   }, [pathname, wrench]);
 
-  return {ask,messages,chips,onHitClick,subText,resetConversation,actions: <div className="main-chat-actions">
+  return {ask,messages,chips,onHitClick,fixGroundedAnswer,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
           onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}

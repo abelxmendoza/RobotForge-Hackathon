@@ -104,7 +104,7 @@ export default function ChatBar() {
             </button>
           </div>
           <div className="fc-msgs" ref={msgsRef} aria-live="polite">
-            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} />
+            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} />
           </div>
           <div className="chat-bar-actions">{assistant.actions}</div>
           <div className="fc-chips">

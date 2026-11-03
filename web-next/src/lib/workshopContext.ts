@@ -40,6 +40,45 @@ export function readWorkshopContext(): WorkshopChatContext | null {
   return current;
 }
 
+/* Whether the snapshot's robot is FAILING its checks. The signal is
+ * the same one Garage's own verdict uses (its counts()/severityOf
+ * helpers): a check line starting with "[ERROR]". Warnings alone are
+ * not a failure, and "Checks pass" never is. */
+export function workshopSnapshotFailing(ctx: WorkshopChatContext): boolean {
+  return ctx.checkLines.some((l) => l.startsWith('[ERROR]'));
+}
+
+/* The caption a live answer carries when it was grounded in a
+ * snapshot: which robot, which version, which tab — captured from
+ * the snapshot that was actually sent with the question. */
+export function groundingCaption(ctx: WorkshopChatContext): string {
+  return ['Grounded in: ' + ctx.robotName, ctx.versionLabel, ctx.tabLabel, 'just now']
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/* One-tap Fix bridge (chat → Garage), mirroring the publish/event
+ * pattern above: the chat asks for the Workshop's Checks tab, Garage
+ * listens and switches. Neither imports the other. The request is
+ * also kept as a pending value so a Garage that mounts just after
+ * the tap can still consume it on mount. */
+export const WORKSHOP_FIX_EVENT = 'rf-workshop-fix';
+
+let fixPending = false;
+
+export function requestWorkshopFix(): void {
+  fixPending = true;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(WORKSHOP_FIX_EVENT));
+  }
+}
+
+export function consumeWorkshopFixRequest(): boolean {
+  const was = fixPending;
+  fixPending = false;
+  return was;
+}
+
 /* The draft spec as short "Group · Label: value unit" lines, in the same
  * units the Specs tab shows (the field scale applied). Empty fields are
  * skipped — the snapshot shows what the robot HAS; the check lines

@@ -400,6 +400,8 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       const node=<div className="main-assistant-reply">
         {message.html&&<div dangerouslySetInnerHTML={{__html:message.html}}/>}
         {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
+        {message.grounding&&<p className="fc-grounding">{message.grounding.caption}</p>}
+        {message.grounding&&message.grounding.failing&&<button type="button" className="fc-fix-btn" onClick={()=>assistantRef.current.fixGroundedAnswer()}>Fix this</button>}
         {message.hits&&<div className="g-tabs">{message.hits.map((hit,i)=><button type="button" className="chip" key={i} onClick={()=>assistantRef.current.onHitClick(hit)}>{hit.label}</button>)}</div>}
       </div>;
       const entryId=assistantEntryIds.current.get(message.id);

@@ -142,6 +142,19 @@
   border-left:3px solid var(--accent);padding-left:10px;
 }
 
+/* Grounding caption on live answers that carried a Workshop
+   snapshot, and the one-tap Fix button on FAIL-grounded ones. */
+.fc-grounding{
+  color:var(--text-muted);font:600 var(--fs-xs)/1.4 var(--mono);
+  letter-spacing:.02em;margin:6px 0 0;
+}
+.fc-fix-btn{
+  background:var(--surface-2);color:var(--text);border:1px solid var(--accent);
+  border-radius:999px;font:600 var(--fs-xs)/1.2 var(--font);
+  padding:6px 12px;cursor:pointer;margin-top:8px;
+}
+.fc-fix-btn:hover{color:var(--accent)}
+
 /* ---------- mobile hardening (2026-10-28) ---------- */
 @media (max-width:720px){
   .fc-close{min-width:40px;min-height:40px}
