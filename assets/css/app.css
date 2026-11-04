@@ -550,6 +550,10 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .g-table{border-collapse:collapse;width:100%;font-size:var(--fs-sm);min-width:480px}
 .g-table th,.g-table td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
 .g-table th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);font-weight:600}
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s3)}
+.admin-stat{display:flex;flex-direction:column;gap:2px;padding:var(--s4)}
+.admin-stat-n{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.admin-stat-l{color:var(--text-faint);font-size:var(--fs-xs);letter-spacing:.05em;text-transform:uppercase}
 .g-table tr:last-child td{border-bottom:0}
 .g-table .verdict{margin-bottom:6px}
 

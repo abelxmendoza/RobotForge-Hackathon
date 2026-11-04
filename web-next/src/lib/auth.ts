@@ -14,6 +14,11 @@ export interface AuthUser {
   provider?: string;
   providerId?: string;
   createdAt?: string;
+  /* Stamped by the endpoint at every successful sign-in (register
+   * counts as the first). Absent/null on records that predate
+   * stamping — the admin console reads that as "not since". */
+  lastLoginAt?: string | null;
+  loginCount?: number;
 }
 
 export interface AuthSession {

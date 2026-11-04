@@ -294,6 +294,11 @@ export default function AccountControl() {
             <div className="acct-founder">
               <h3>{user.role === "founder" ? "Founder" : "Admin"}</h3>
               <p>{healthLine || "Checking the endpoint…"}</p>
+              {user.role === "founder" && (
+                <p>
+                  <a href="/admin">Admin console — everyone who has logged in</a>
+                </p>
+              )}
               <p>
                 <a href={HEALTH_URL} target="_blank" rel="noreferrer">
                   Endpoint health (raw)
