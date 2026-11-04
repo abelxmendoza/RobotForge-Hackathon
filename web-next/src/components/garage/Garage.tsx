@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import RobodexPicker from './RobodexPicker';
-import RealSenseModal from './RealSenseModal';
 import RobotAvatar from './RobotAvatar';
 import SpecsDialog from './SpecsDialog';
 import WrenchStart from './WrenchStart';
@@ -147,7 +146,6 @@ const SCANIVERSE_URL = 'https://scaniverse.com';
 function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean; onOpenRobot: (id: string) => void }) {
   const [dexOpen, setDexOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
-  const [rsOpen, setRsOpen] = useState(false);
   return (
     <div className="garage-add">
       {firstRobot && <EmptyBench />}
@@ -159,7 +157,7 @@ function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spe
         <button type="button" className="btn btn-sm" onClick={() => setDexOpen(true)}>Add from Robodex</button>
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
-        <button type="button" className="btn btn-sm" onClick={() => setRsOpen(true)}>Connect Intel RealSense camera</button>
+        <Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>
       </div>
       {scanOpen && (
         <div className="garage-scan-how">
@@ -174,7 +172,6 @@ function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spe
         </div>
       )}
       <RobodexPicker open={dexOpen} onClose={() => setDexOpen(false)} onAdded={(id) => { setDexOpen(false); onOpenRobot(id); }} />
-      <RealSenseModal open={rsOpen} onClose={() => setRsOpen(false)} />
     </div>
   );
 }

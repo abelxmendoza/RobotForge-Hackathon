@@ -3,8 +3,8 @@ import pytest
 from robotforge.simulator import allowed_request, normalize_job, platform_status
 
 def test_origin_and_host_are_exact():
-    assert allowed_request('127.0.0.1:8765','http://localhost:3100',{'http://localhost:3100'},'workshop')
-    for host,origin,client in [('evil.test:8765','http://localhost:3100','workshop'),('127.0.0.1:8765','https://evil.test','workshop'),('127.0.0.1:8765',None,'workshop'),('127.0.0.1:8765','http://localhost:3100','')]:
+    assert allowed_request('127.0.0.1:8766','http://localhost:3100',{'http://localhost:3100'},'workshop')
+    for host,origin,client in [('evil.test:8766','http://localhost:3100','workshop'),('127.0.0.1:8766','https://evil.test','workshop'),('127.0.0.1:8766',None,'workshop'),('127.0.0.1:8766','http://localhost:3100','')]:
         assert not allowed_request(host,origin,{'http://localhost:3100'},client)
 
 def test_only_bounded_spec_jobs_are_accepted():

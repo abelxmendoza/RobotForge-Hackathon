@@ -39,7 +39,7 @@ python -m robotforge.simulator --origin http://localhost:3100
 ```
 
 Use the exact origin shown in Workshop's “Set up on this computer” instructions
-when the app is hosted elsewhere. The companion listens only on 127.0.0.1:8765,
+when the app is hosted elsewhere. The companion listens only on 127.0.0.1:8766,
 accepts the configured browser origin and requires a client header. It accepts
 bounded robot data, not shell commands, uploaded XML or filesystem paths. A
 browser may require local-network access before a hosted page can connect.

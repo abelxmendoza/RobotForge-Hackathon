@@ -174,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
         except KeyError:self.reply(404,{'error':'No such run.'})
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--origin',action='append');parser.add_argument('--port',type=int,default=8765);parser.add_argument('--job',help=argparse.SUPPRESS);args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--origin',action='append');parser.add_argument('--port',type=int,default=8766);parser.add_argument('--job',help=argparse.SUPPRESS);args=parser.parse_args()
     if args.job:
         def stop(*_):raise SystemExit(1)
         signal.signal(signal.SIGTERM,stop)
