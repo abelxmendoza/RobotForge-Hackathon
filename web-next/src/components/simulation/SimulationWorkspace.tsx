@@ -5,7 +5,7 @@ import {SIM_COMMAND_EVENT,SIM_RUNS_KEY,SCENARIOS,runFingerprint,simulationIssues
 import {readStore,writeStore,uid,useStore} from '@/lib/store';
 import {promptWrench} from '@/lib/wrenchPrompt';
 import DriveScene from './DriveScene';
-const LOCAL='http://127.0.0.1:8765';
+const LOCAL='http://127.0.0.1:8766';
 async function local<T>(path:string,method='GET',body?:unknown):Promise<T>{const response=await fetch(LOCAL+path,{method,headers:{'X-RobotForge-Client':'workshop',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(6000)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Local simulator request failed.');return data;}
 type Health={protocol:number;status:'available'|'setup-needed'|'unsupported';platform:string;version:string|null;validation:string};
 export default function SimulationWorkspace({spec,robot,robotId,versionId}:{spec:Spec;robot?:GarageRobot;robotId:string;versionId:string}){

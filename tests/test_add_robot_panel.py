@@ -20,10 +20,8 @@ Guards:
     (recorded in the asset itself) equals the plain link's target
     equals the URL named in the code — scaniverse.com, Niantic
     Spatial's official site, verified live 2026-11-03.
- 6. The RealSense modal is an honest live view: getUserMedia +
-    device enumeration, every track stopped on close, copy that
-    says plainly it is NOT a depth scan and points measured scans
-    at RealSense Viewer + .ply through the scan route.
+ 6. RealSense opens Scan Studio, the local depth-scan bridge, instead
+    of the retired colour-only camera modal.
  7. Demo mode: neither new surface touches localStorage directly;
     all storage flows through lib/store (demo twins) or the
     shared bring-in.
@@ -34,7 +32,6 @@ REPO = Path(__file__).resolve().parent.parent
 WEB = REPO / "web-next" / "src"
 GARAGE = (WEB / "components/garage/Garage.tsx").read_text()
 PICKER = (WEB / "components/garage/RobodexPicker.tsx").read_text()
-REALSENSE = (WEB / "components/garage/RealSenseModal.tsx").read_text()
 DEX = (WEB / "components/robots/DexSources.tsx").read_text()
 QR_SVG = REPO / "assets" / "img" / "scaniverse-qr.svg"
 
@@ -128,25 +125,12 @@ def test_scaniverse_qr_and_link_encode_the_verified_url():
 
 # ------------------------------------------------------- 6. RealSense
 
-def test_realsense_modal_is_an_honest_live_view():
-    assert "Intel RealSense" in REALSENSE
-    # live view wiring: open the camera, list devices for the picker
-    assert "navigator.mediaDevices.getUserMedia" in REALSENSE
-    assert "enumerateDevices" in REALSENSE
-    assert "videoinput" in REALSENSE
-    # closing stops every track — the camera is released
-    assert "getTracks().forEach((t) => t.stop())" in REALSENSE
-    # no-camera / denied states say what to check
-    assert "No camera found" in REALSENSE and "USB cable" in REALSENSE
-    assert "camera permission" in REALSENSE
-    # honesty: the view is colour video, NOT a depth scan, and the
-    # measured path is RealSense Viewer -> .ply -> the scan route
-    assert "not a depth scan" in REALSENSE
-    assert "nothing here is measured" in REALSENSE
-    assert "RealSense Viewer" in REALSENSE and ".ply" in REALSENSE
-    # the panel opens it as its own option
-    assert ">Connect Intel RealSense camera</button>" in GARAGE
-    assert "<RealSenseModal" in GARAGE
+def test_realsense_opens_scan_studio_instead_of_colour_only_modal():
+    panel = GARAGE.split("function AddRobot")[1].split("function EmptyBench")[0]
+    assert '<Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>' in panel
+    assert "RealSenseModal" not in GARAGE
+    assert "rsOpen" not in panel
+    assert (WEB / "app/scan/page.tsx").exists()
 
 
 # --------------------------------------------------------- 7. demo mode
@@ -155,4 +139,3 @@ def test_new_surfaces_never_touch_storage_directly():
     # lib/store resolves visitor keys to their demo twins; a direct
     # localStorage call would bypass the sandbox.
     assert "localStorage" not in PICKER
-    assert "localStorage" not in REALSENSE
