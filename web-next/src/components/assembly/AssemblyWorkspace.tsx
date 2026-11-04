@@ -14,11 +14,12 @@ import { COMPONENTS, componentById, type ComponentDefinition } from '@/lib/compo
 import { PART_GROUPS, partGroup } from '@/lib/partTaxonomy';
 import {
   ASSEMBLY_KEY,
-  applyAssembly,
+  commitAssemblyVersion,
+  effectiveAssemblies,
   currentAssembly,
   operationFor,
   previewAssembly,
-  undoAssembly,
+  undoVersionedAssembly,
   type Assemblies,
   type AssemblyOperation,
   type ComponentInstance,
@@ -26,11 +27,12 @@ import {
 } from '@/lib/assembly';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { activeRecords } from '@/lib/lifecycle';
-import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 import { downloadJSON, readStore, uid, useStore, writeStore } from '@/lib/store';
 import type { RobotSpec } from '@/components/forge/model';
 import { taBuildParts } from '@/components/kit/takeapart';
 import { teardownSteps } from '@/lib/teardown';
+import BuildArtifacts from './BuildArtifacts';
+import SavedUpgrade from './SavedUpgrade';
 
 const Robot3D = dynamic(() => import('@/components/kit/Robot3D'), {
   ssr: false,
@@ -219,7 +221,8 @@ export default function AssemblyWorkspace({
 }) {
   const [storedRobots] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const robots = useMemo(() => activeRecords(storedRobots), [storedRobots]);
-  const [all, , ready] = useStore<Assemblies>(ASSEMBLY_KEY, {});
+  const [legacy, , ready] = useStore<Assemblies>(ASSEMBLY_KEY, {});
+  const all = useMemo(() => effectiveAssemblies(storedRobots, legacy), [storedRobots, legacy]);
   /* The Workshop's Build and Wiring tabs pick the view; standalone, the
    * workbench keeps its own sub-tabs. */
   const [tabState, setTabState] = useState<'components' | 'wiring'>(view ?? 'components');
@@ -344,16 +347,16 @@ export default function AssemblyWorkspace({
     const op = proposal;
     setProposal(null);
     try {
-      const freshRobots = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
+      const freshRobots = readStore<GarageRobot[]>(GARAGE_KEY, []);
       const fresh = readStore<Assemblies>(ASSEMBLY_KEY, {});
-      const next = applyAssembly(
+      const next = commitAssemblyVersion(
         freshRobots,
         fresh,
         op,
         uid('assembly'),
         new Date().toISOString(),
       );
-      const error = writeStore(ASSEMBLY_KEY, next);
+      const error = writeStore(GARAGE_KEY, next);
       if (error) throw new Error(error);
       if (op.kind === 'add') setSelected(op.instanceId);
       setNotice('Assembly saved as a new version.');
@@ -639,14 +642,16 @@ export default function AssemblyWorkspace({
           onClick={() => {
             try {
               const fresh = readStore<Assemblies>(ASSEMBLY_KEY, {});
-              const next = undoAssembly(
+              const next = undoVersionedAssembly(
+                readStore<GarageRobot[]>(GARAGE_KEY, []),
                 fresh,
                 robotId,
+                robot!.versions.at(-1)!.id,
                 saved.id,
                 uid('assembly'),
                 new Date().toISOString(),
               );
-              const error = writeStore(ASSEMBLY_KEY, next);
+              const error = writeStore(GARAGE_KEY, next);
               if (error) throw new Error(error);
               setProposal(null);
               setNotice('Previous assembly restored as a new version.');
@@ -926,6 +931,24 @@ export default function AssemblyWorkspace({
             Retry 3D
           </button>
         </div>
+      )}
+
+      {spec.upgradePlan && <SavedUpgrade plan={spec.upgradePlan} artifacts={spec.upgradeArtifacts ?? []} versionId={robot!.versions.at(-1)!.id} wiring={spec.wiring} />}
+      {tab === 'components' && (
+        <>
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => promptWrench({mode: 'chat', text: `Plan a Raspberry Pi 5 upgrade for "${robot!.name}"`})}>Plan a Raspberry Pi 5 upgrade</button>
+        <label className="g-field"><span>Design a printable part for</span>
+          <select value={(definition ?? activePartDef).id} onChange={e => { setSelected(null); setSelectedWire(null); setComponentId(e.target.value); }}>
+            {PART_GROUPS.map(g => <optgroup key={g.id} label={g.label}>{COMPONENTS.filter(c => partGroup(c.category,c.name) === g.id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
+          </select>
+        </label>
+        <BuildArtifacts
+          key={robotId + ':' + (definition ?? activePartDef).id}
+          robotId={robotId}
+          robotVersionId={robot!.versions.at(-1)!.id}
+          part={definition ?? activePartDef}
+        />
+        </>
       )}
 
       {/* Placement, Orientation & Mounting Intelligence Summary */}

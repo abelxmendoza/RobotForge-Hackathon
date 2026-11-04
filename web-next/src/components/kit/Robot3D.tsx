@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
 import type { ComponentInstance, Connection } from '@/lib/assembly';
 import { addComponentSkin } from './componentSkin';
+import { assetPath } from '@/components/home/asset';
 import { snapPlacement, shortestYaw, terminalWorldPoint, evaluatePlacementIntelligence } from '@/lib/spatial';
 import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
@@ -145,6 +146,26 @@ export default function Robot3D({
           import('three/addons/geometries/RoundedBoxGeometry.js'),
         ]);
         if (disposed) return;
+        // Reuse the exact Burger sensor, with its original dimensions. Other
+        // robots keep schematic geometry; a familiar shape is not an SKU match.
+        let lidarGeometry: THREE_NS.BufferGeometry | null = null;
+        if (/^turtlebot3[ -]burger(?: \(demo\))?$/i.test(spec.name ?? '')) {
+          try {
+            const { STLLoader } = await import('three/addons/loaders/STLLoader.js');
+            lidarGeometry = await new STLLoader().loadAsync(assetPath('models/turtlebot3/lds.stl'));
+            lidarGeometry.scale(0.001, 0.001, 0.001);
+            lidarGeometry.computeBoundingBox();
+            // Native XY origin retained. This top alignment is a schematic
+            // placement, not a measured assembly joint or a geometry rescale.
+            lidarGeometry.translate(0, 0, -lidarGeometry.boundingBox!.max.z + 0.005);
+            lidarGeometry.rotateX(-Math.PI / 2);
+            lidarGeometry.computeVertexNormals();
+          } catch {
+            lidarGeometry?.dispose();
+            lidarGeometry = null; // Keep the interactive fallback on asset failure.
+          }
+        }
+        if (disposed) { lidarGeometry?.dispose(); return; }
         const studio=quality==='high';
         const built = taBuildParts(spec);
         const units = taGeom3d(spec, built.parts, built.pos);
@@ -177,6 +198,9 @@ export default function Robot3D({
         scene.background=new THREE.Color(0x081321);
         const pmrem=new THREE.PMREMGenerator(renderer);
         const room=new RoomEnvironment();
+        // The procedural room is Y-up; this viewer uses Z-up.
+        room.rotation.x=Math.PI/2;
+        room.updateMatrixWorld(true);
         const environment=pmrem.fromScene(room,0.04);
         scene.environment=environment.texture;
         room.dispose();pmrem.dispose();
@@ -209,13 +233,13 @@ export default function Robot3D({
         key.shadow.camera.left=-span*1.5;key.shadow.camera.right=span*1.5;
         key.shadow.camera.top=span*1.5;key.shadow.camera.bottom=-span*1.5;
         key.shadow.camera.near=0.01;key.shadow.camera.far=span*8;
-        key.shadow.normalBias=0.001;key.shadow.bias=-0.0001;
+        key.shadow.normalBias=span*0.002;key.shadow.bias=-0.0001;
         key.shadow.camera.updateProjectionMatrix();
         scene.add(key);
-        const rim = new THREE.DirectionalLight(0x3fe4db, 1.4);
+        const rim = new THREE.DirectionalLight(0xe5f2ff, 1.4);
         rim.position.set(-span, span, span * 0.6);
         scene.add(rim);
-        const fill=new THREE.DirectionalLight(0x7d9bff,0.8);
+        const fill=new THREE.DirectionalLight(0xffeadb,0.8);
         fill.position.set(-span,-span,span*0.5);scene.add(fill);
 
         const ground = new THREE.Mesh(
@@ -263,9 +287,9 @@ export default function Robot3D({
           if (!materials[u.part]) {
             materials[u.part] = new THREE.MeshPhysicalMaterial({
               color: PALETTE[u.part] || 0x167f83,
-              roughness: u.part==='wheel'?0.9:0.38,
-              metalness: u.part==='wheel'?0.05:0.45,
-              clearcoat:0.25,
+              roughness: /wheel|lidar|rotor/.test(u.part)?0.82:0.42,
+              metalness: /wheel|lidar|rotor/.test(u.part)?0:0.45,
+              clearcoat: /wheel|lidar|rotor/.test(u.part)?0:0.12,
               clearcoatRoughness:0.3,
             });
           }
@@ -276,7 +300,10 @@ export default function Robot3D({
             else if (m.kind === 'cyl')
               geo = new THREE.CylinderGeometry(m.size[0], m.size[0], m.size[1], 28);
             else geo = new THREE.SphereGeometry(m.size[0], 24, 18);
+            const realLidar = Boolean(lidarGeometry && u.part === 'lidar' && m.kind === 'cyl' && m.size[1] === 0.010);
+            if (realLidar) { geo.dispose(); geo = lidarGeometry!; }
             const mesh = new THREE.Mesh(geo, materials[u.part]);
+            if (realLidar) mesh.userData.visualSource = 'ROBOTIS TurtleBot3 LDS · Apache-2.0';
             if (m.kind === 'cyl' && m.axis === 'z')
               mesh.rotation.x = Math.PI / 2;
             if (m.rot) mesh.rotation.set(m.rot[0], m.rot[1], m.rot[2]);
@@ -292,7 +319,7 @@ export default function Robot3D({
              * Gripper fingers record their home offset for the
              * recorded-limits travel. Nothing else is tagged:
              * untagged meshes never move. */
-            if (m.kind === 'cyl' && (u.part === 'wheel' || u.part === 'lidar')) {
+            if (m.kind === 'cyl' && (u.part === 'wheel' || (u.part === 'lidar' && !lidarGeometry))) {
               mesh.userData.spin = u.part;
               mesh.userData.spinDir = 1;
             }

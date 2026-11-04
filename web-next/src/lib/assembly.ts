@@ -1,4 +1,5 @@
 import type { GarageRobot } from './garage';
+import type { WireNode, WireConn } from './wiring';
 import { componentById, resolveComponent } from './components';
 export const ASSEMBLY_KEY = 'rf.assemblies.v1';
 export type Pose = [number, number, number];
@@ -110,4 +111,65 @@ export function parseAssemblyCommand(text: string, robots: GarageRobot[], all: A
   if (move) return operationFor(robots,all,robot.id,{kind:'move',instanceId:resolveInstance(move[1]),positionM:[Number(move[3])/1000,Number(move[4])/1000,Number(move[5])/1000],yawDeg:Number(move[6]??0)});
   if (connect) return operationFor(robots,all,robot.id,{kind:'connect',instanceId:resolveInstance(connect[1]),targetId:resolveInstance(connect[2])});
   return operationFor(robots,all,robot.id,{kind:'remove',instanceId:resolveInstance(remove![1])});
+}
+
+/** Once a robot has a snapshot, the legacy store can never override it. */
+export function effectiveAssemblies(robots: GarageRobot[], legacy: Assemblies): Assemblies {
+  const all = { ...legacy };
+  for (const robot of robots) {
+    const snapshots = robot.versions.flatMap(v => v.spec?.assembly ? [v.spec.assembly as AssemblyVersion] : []);
+    if (snapshots.length) all[robot.id] = snapshots;
+  }
+  return all;
+}
+function editableRobot(robots: GarageRobot[], robotId: string, expected: string): GarageRobot {
+  safeId(robotId);
+  const robot = robots.find(r => r.id === robotId);
+  if (!robot || robot.versions.at(-1)?.id !== expected) throw new Error('Robot spec changed. Make a fresh proposal.');
+  if (robot.archivedAt && Number.isFinite(Date.parse(robot.archivedAt))) throw new Error('Robot is archived. Restore it before editing.');
+  return robot;
+}
+export function commitAssemblyVersion(robots: GarageRobot[], legacy: Assemblies, op: AssemblyOperation, versionId: string, createdAt: string): GarageRobot[] {
+  const robot = editableRobot(robots, op.robotId, op.expectedRobotVersionId);
+  safeId(versionId);
+  const assembly = { ...previewAssembly(robots, effectiveAssemblies(robots, legacy), op), id: versionId, createdAt };
+  const base = robot.versions.at(-1)!;
+  const spec = JSON.parse(JSON.stringify(base.spec));
+  spec.assembly = assembly;
+  if (spec.wiring && Array.isArray(spec.wiring.nodes) && Array.isArray(spec.wiring.connections)) {
+    if (op.kind === 'remove') {
+      spec.wiring.nodes = spec.wiring.nodes.filter((node: WireNode) => node.id !== op.instanceId);
+      spec.wiring.connections = spec.wiring.connections.filter((edge: WireConn) => edge.from !== op.instanceId && edge.to !== op.instanceId);
+    } else if (op.kind === 'disconnect') {
+      const link = currentAssembly(effectiveAssemblies(robots, legacy), op.robotId).connections.find(c => c.id === op.instanceId);
+      // A pair-only assembly link can represent the coordinated power feed.
+      // Preserve data/unknown interfaces and ambiguous parallel power feeds.
+      const powerEdges = spec.wiring.connections.filter((edge: WireConn) => link && edge.from === link.from && edge.to === link.to && edge.kind === 'power');
+      if (powerEdges.length === 1) spec.wiring.connections = spec.wiring.connections.filter((edge: WireConn) => edge !== powerEdges[0]);
+    }
+  }
+  for (const key of ['gate_status', 'gate_report', 'gateReport', 'simulation_results', 'simulationResults', 'test_results', 'testResults', 'forgeTests']) delete spec[key];
+  spec.simulation_status = 'incomplete: assembly changed; recheck hardware mass, inertia and interfaces';
+  // Assembly geometry changed: prior upgrade evidence and generated files are
+  // version-bound. Keep their history on the previous version only.
+  delete spec.upgradePlan;
+  delete spec.upgrade;
+  delete spec.upgradeReport;
+  delete spec.upgradeArtifacts;
+  const next = { ...base, id: versionId, createdAt, label: assembly.note, note: assembly.note, source: 'edit' as const, planned: true, spec };
+  return robots.map(r => r === robot ? { ...r, versions: [...r.versions, next] } : r);
+}
+export function undoVersionedAssembly(robots: GarageRobot[], legacy: Assemblies, robotId: string, expectedRobotVersionId: string, expectedAssemblyRevision: string | null, versionId: string, createdAt: string): GarageRobot[] {
+  const robot = editableRobot(robots, robotId, expectedRobotVersionId);
+  safeId(versionId);
+  const all = effectiveAssemblies(robots, legacy);
+  if ((currentAssembly(all, robotId).id || null) !== expectedAssemblyRevision) throw new Error('Assembly changed. Cannot undo a stale operation.');
+  const latest = robot.versions.at(-1)!;
+  const previous = latest.spec?.assembly ? robot.versions.at(-2) : latest;
+  if (!previous) throw new Error('No previous robot snapshot to restore.');
+  const spec = JSON.parse(JSON.stringify(previous.spec));
+  const before = spec.assembly ?? (latest.spec?.assembly ? currentAssembly(legacy, robotId) : (legacy[robotId]?.at(-2) ?? currentAssembly({},robotId)));
+  spec.assembly = { ...JSON.parse(JSON.stringify(before)), id: versionId, createdAt, note: 'Undo previous assembly change' };
+  const next = { ...previous, id: versionId, createdAt, label: 'Undo previous assembly change', note: 'Restored previous complete robot snapshot', source: 'edit' as const, spec };
+  return robots.map(r => r === robot ? { ...r, versions: [...r.versions, next] } : r);
 }
