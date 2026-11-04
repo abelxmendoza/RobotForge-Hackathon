@@ -37,6 +37,7 @@ import ToolsMaterialsTab from './ToolsMaterialsTab';
 import Omega1Twin from './Omega1Twin';
 import TwinView from './TwinView';
 import ConnectionsSection from './ConnectionsSection';
+import PlannedUpgrades from './PlannedUpgrades';
 import ImproveTwin from './ImproveTwin';
 import TakeApartPanel from './TakeApartPanel';
 import WiringViews from './WiringViews';
@@ -1455,6 +1456,7 @@ export default function Garage() {
                   <button type="button" className="btn btn-sm" aria-pressed={benchWires} onClick={() => setBenchWires(true)}>Plan in 3D</button>
                 </div>
                 {!benchWires && <>
+                  <PlannedUpgrades spec={draft} />
                   {!isWiring(draft.wiring) && <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot.name}"`})}>Describe a connection to Wrench</button>}
                   {isWiring(draft.wiring) && <details className="ws-disclosure"><summary>Connection notes</summary><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot.name}"`})}>Describe a connection to Wrench</button></details>}
                   {isWiring(draft.wiring) ? <WiringView compact wiring={draft.wiring} spec={draft as unknown as RobotSpec} /> : <p className="ws-empty">No wiring diagram yet. Record your connections above or plan them in 3D.</p>}

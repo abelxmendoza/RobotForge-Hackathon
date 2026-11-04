@@ -12,6 +12,7 @@ const BADGE: Record<SpecConnection['evidence'], string> = {
   DOCUMENTED: 'fbadge live',
   CODE_DEFAULT: 'fbadge planned',
   OWNER: 'fbadge recorded',
+  PLANNED: 'fbadge planned',
 };
 
 export default function ConnectionsSection({ connections, onSave }: {

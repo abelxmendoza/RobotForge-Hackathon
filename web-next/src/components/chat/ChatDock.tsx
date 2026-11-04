@@ -63,6 +63,8 @@ import {OMEGA1_ROBOT_ID} from '@/lib/omega1Garage';
 import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseWorkshopAction, snapshotAnswer, readWorkshopContext, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
 import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNotes";
 import AssemblyProposal from './AssemblyProposal';
+import UpgradeProposalCard from './UpgradeProposalCard';
+import { buildUpgradeProposal, parseUpgradeAsk, type UpgradeProposal } from '@/lib/upgradeProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, getPath, partToChanges, setPath, type GarageRobot, type Spec } from '@/lib/garage';
 import { downloadText, readStore, writeStore, uid } from '@/lib/store';
@@ -223,9 +225,10 @@ const carry: {
   inventoryProposal: InventoryOperation | null;
   dexMoveProposal: DexMovePlan | null;
   assemblyProposal: AssemblyOperation | null;
+  upgradeProposal: UpgradeProposal | null;
   lastApplied: Applied;
   memory: TurnMemory;
-} = { messages: [], chips: null, proposal: null, inventoryProposal: null, dexMoveProposal: null, assemblyProposal: null, lastApplied: null, memory: {} };
+} = { messages: [], chips: null, proposal: null, inventoryProposal: null, dexMoveProposal: null, assemblyProposal: null, upgradeProposal: null, lastApplied: null, memory: {} };
 
 export function useForgeAssistant() {
   const router = useRouter();
@@ -289,6 +292,7 @@ export function useForgeAssistant() {
   const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(() => carry.inventoryProposal);
   const [dexMoveProposal,setDexMoveProposal]=useState<DexMovePlan|null>(() => carry.dexMoveProposal);
   const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(() => carry.assemblyProposal);
+  const [upgradeProposal, setUpgradeProposal] = useState<UpgradeProposal | null>(() => carry.upgradeProposal);
   const lastApplied = useRef<Applied>(carry.lastApplied);
   useEffect(() => {
     carry.messages = messages;
@@ -297,7 +301,8 @@ export function useForgeAssistant() {
     carry.inventoryProposal = inventoryProposal;
     carry.dexMoveProposal = dexMoveProposal;
     carry.assemblyProposal = assemblyProposal;
-  }, [messages, chips, proposal, inventoryProposal, dexMoveProposal, assemblyProposal]);
+    carry.upgradeProposal = upgradeProposal;
+  }, [messages, chips, proposal, inventoryProposal, dexMoveProposal, assemblyProposal, upgradeProposal]);
   /* lastApplied is a ref, so copy it out when this instance unmounts. */
   useEffect(() => () => { carry.lastApplied = lastApplied.current; }, []);
   const proposalRef = useRef<Preview | null>(null);
@@ -1011,6 +1016,25 @@ export function useForgeAssistant() {
         }catch(e){noteBubble((e as Error).message);}
         return true;
       }
+      /* "Wrench, add a Raspberry Pi 5 to this rover": one upgrade
+       * proposal (lib/upgradeProposal.ts) for the robot named in the
+       * ask, else the Workshop robot on screen. A quoted robot name is
+       * the assembly grammar below, so it is left to that. */
+      const upgradeAsk = q.includes('"') ? null : parseUpgradeAsk(q);
+      if (upgradeAsk) {
+        const saved = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
+        const lower = q.toLowerCase();
+        const named = saved.filter((r) => r.name && new RegExp('\\b' + r.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(lower));
+        const ws = (pathname || '').startsWith('/garage') ? readWorkshopContext() : null;
+        const target = named.length === 1 ? named[0] : saved.find((r) => r.id === ws?.robotId);
+        if (!target) { noteBubble('Which robot? Open it in the Workshop, or name it: “add a Raspberry Pi 5 to Omega1”.'); return true; }
+        try {
+          const plan = buildUpgradeProposal(target, upgradeAsk.componentId);
+          setUpgradeProposal(plan);
+          noteBubble(`Here is one proposal for the whole upgrade on ${target.name}: the part, its power and converter, wiring, a mount, and what I checked. ${plan.summary} Review it below; approving saves it as one version.`);
+        } catch (e) { noteBubble((e as Error).message); }
+        return true;
+      }
       try {
         const saved = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
         const assemblies = readStore<Assemblies>(ASSEMBLY_KEY, {});
@@ -1112,7 +1136,7 @@ export function useForgeAssistant() {
           const allSaved = readStore<GarageRobot[]>(GARAGE_KEY, []);
           const saved = activeRecords(allSaved);
           if (command.kind === 'help') {
-            noteBubble('Submit a robot: paste its GitHub repo link (https://github.com/owner/repo) and I open the repo importer with it, or attach a photo, parts list or spec file with the paperclip. Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Robodex filing: move "Spot" to sighted; put "Andino" under from photos; recategorize "TurtleBot3 Waffle Pi" as researched; reset categorization for "Spot". Filing only changes where the Robodex shows a robot — except moving one to my robots, which brings it into your Workshop from its recorded spec first. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Navigation: open "TurtleBot3 Burger"; go to wiring; show the legged robots. Free-form operation requests (for example “make Omega1’s wheels bigger”) go to the live model when it is available: it proposes a command in this same grammar, the app validates it, and you still tap Apply. Mount generation and simulation jobs remain planned.');
+            noteBubble('Submit a robot: paste its GitHub repo link (https://github.com/owner/repo) and I open the repo importer with it, or attach a photo, parts list or spec file with the paperclip. Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Robodex filing: move "Spot" to sighted; put "Andino" under from photos; recategorize "TurtleBot3 Waffle Pi" as researched; reset categorization for "Spot". Filing only changes where the Robodex shows a robot — except moving one to my robots, which brings it into your Workshop from its recorded spec first. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Upgrades: add a Raspberry Pi 5 to this rover (one proposal with power, converter, wiring, mount and checks; Approve saves one version). Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Navigation: open "TurtleBot3 Burger"; go to wiring; show the legged robots. Free-form operation requests (for example “make Omega1’s wheels bigger”) go to the live model when it is available: it proposes a command in this same grammar, the app validates it, and you still tap Apply. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
             noteBubble(saved.length ? saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') : 'No robots saved in this browser yet. Add one in My robots.');
           } else if (command.kind === 'undo') {
@@ -1608,6 +1632,7 @@ export function useForgeAssistant() {
     pendingLibraryImport.current = null;
     setProposal(null);
     setAssemblyProposal(null);
+    setUpgradeProposal(null);
     setInventoryProposal(null);
     setDexMoveProposal(null);
     lastApplied.current = null;
@@ -1617,6 +1642,7 @@ export function useForgeAssistant() {
     carry.inventoryProposal = null;
     carry.dexMoveProposal = null;
     carry.assemblyProposal = null;
+    carry.upgradeProposal = null;
     carry.memory = {};
     setChipsState(chipsFor({}));
   }, [pathname, wrench]);
@@ -1629,6 +1655,9 @@ export function useForgeAssistant() {
   return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,saveGroundedNote,workingOn,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {dexMoveProposal&&<DexMoveProposal key={JSON.stringify(dexMoveProposal)} plan={dexMoveProposal} onDone={text=>{setDexMoveProposal(null);noteBubble(text);}} onCancel={()=>{setDexMoveProposal(null);noteBubble('Cancelled. Robodex filing unchanged.');}}/>}
+        {upgradeProposal && <UpgradeProposalCard key={upgradeProposal.expectedVersionId + upgradeProposal.component.id} proposal={upgradeProposal}
+          onDone={(text, versionId) => { if (versionId) lastApplied.current = { robotId: upgradeProposal.robotId, versionId }; setUpgradeProposal(null); noteBubble(text); }}
+          onCancel={() => { setUpgradeProposal(null); noteBubble('Cancelled. Nothing changed.'); }} />}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}
           onApplied={versionId => { lastApplied.current = {robotId: assemblyProposal.robotId,versionId,scope:'assembly'}; setAssemblyProposal(null); noteBubble('Assembly saved. Open this robot in My robots to see it in 3D. Type “undo” to restore the previous assembly.'); }}
           onCancel={() => {setAssemblyProposal(null); noteBubble('Cancelled. Assembly unchanged.');}}
