@@ -27,10 +27,12 @@ const records = [{ name: 'Spot', tab: 'Sighted' }, { name: 'Panda Arm', tab: 'Re
 const who = (name, match = 'loose') => classifyRobot(name, { active: [rover], archived: [old], records, match });
 
 // Parsing: robots and lists match, assembly edits do not.
-assert.deepEqual(parseOwnershipAsk('delete my robot My Rover'), { kind: 'delete', name: 'My Rover', explicit: true, match: 'loose' });
+assert.deepEqual(parseOwnershipAsk('delete my robot My Rover'), { kind: 'delete', name: 'My Rover', explicit: true, match: 'loose', fullName: 'my robot My Rover' });
 assert.deepEqual(parseOwnershipAsk('remove Spot from my robots.'), { kind: 'delete', name: 'Spot', explicit: true, match: 'loose' });
 assert.deepEqual(parseOwnershipAsk('delete "My Rover"'), { kind: 'delete', name: 'My Rover', explicit: false, match: 'word' });
 assert.deepEqual(parseOwnershipAsk('remove arm'), { kind: 'delete', name: 'arm', explicit: false, match: 'exact' });
+// "My Rover" keeps its full name so an exact saved name can win over "Rover".
+assert.deepEqual(parseOwnershipAsk('delete My Rover'), { kind: 'delete', name: 'Rover', explicit: false, match: 'word', fullName: 'My Rover' });
 assert.deepEqual(parseOwnershipAsk('is Omega1 mine?'), { kind: 'whose', name: 'Omega1' });
 assert.deepEqual(parseOwnershipAsk('do I own Spot?'), { kind: 'whose', name: 'Spot' });
 assert.equal(parseOwnershipAsk('remove the battery from Omega1'), null);
@@ -104,6 +106,12 @@ def test_every_delete_goes_through_one_path() -> None:
     assert "deleteRobotInStore" not in GARAGE
     for cleanup in ("forgetRobotScans", "forgetRobotNotes", "workshopDraftKey", "garageKey"):
         assert cleanup in DELETE
+
+
+def test_current_robot_is_found_by_id_and_full_names_win() -> None:
+    # "delete this robot" uses the Workshop's robotId, not the (draft) name
+    assert "allRobots.find(r=>r.id===ctx.robotId)" in CHAT
+    assert "ownershipAsk.fullName" in CHAT
 
 
 def test_wrench_refuses_before_it_previews() -> None:

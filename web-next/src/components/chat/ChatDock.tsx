@@ -1023,11 +1023,26 @@ export function useForgeAssistant() {
         const allRobots=readStore<GarageRobot[]>(GARAGE_KEY,[]);
         const active=activeRecords(allRobots);
         const archived=allRobots.filter(r=>!active.includes(r));
-        const current=isCurrentRobotName(ownershipAsk.name)?readWorkshopContext()?.robotName:null;
-        if(isCurrentRobotName(ownershipAsk.name)&&!current){
+        /* "this robot" is the robot open in the Workshop, found by its id:
+         * the published name can be an unsaved draft rename. */
+        const ctx=isCurrentRobotName(ownershipAsk.name)?readWorkshopContext():null;
+        const currentRobot=ctx?.robotId?allRobots.find(r=>r.id===ctx.robotId)??null:null;
+        /* A saved robot whose exact name is the whole phrase ("My Rover")
+         * wins before "my"/"the"/"robot" are read as command words. */
+        const norm=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+        const fullMatch=ownershipAsk.kind==='delete'&&ownershipAsk.fullName
+          ?allRobots.filter(r=>norm(r.name)===norm(ownershipAsk.fullName!)):[];
+        if(isCurrentRobotName(ownershipAsk.name)&&!currentRobot){
           if(ownershipAsk.kind==='whose'||ownershipAsk.explicit){noteBubble('Which robot? Open it in the Workshop, or name it.');return true;}
+        }else if(ownershipAsk.kind==='delete'&&(currentRobot||fullMatch.length===1)){
+          setRobotDeleteProposal((currentRobot??fullMatch[0])!);
+          noteBubble('Review the delete below. Nothing is deleted until you confirm.');
+          return true;
+        }else if(isCurrentRobotName(ownershipAsk.name)&&currentRobot){
+          noteBubble(ownershipAnswer(currentRobot.name,{kind:active.includes(currentRobot)?'mine':'archived',robots:[currentRobot]}));
+          return true;
         }else{
-          const name=current??ownershipAsk.name;
+          const name=ownershipAsk.name;
           const overrides=readStore<DexOverrides>(DEX_OVERRIDES_KEY,{});
           const records=buildDexEntities({catalog:robots,isPhotoDraft,sightings:allDexSightings(),garage:[],overrides}).map(e=>({name:e.name,tab:DEX_TAB_LABEL[e.currentTab]}));
           const ownership=classifyRobot(name,{active,archived,records,match:ownershipAsk.kind==='whose'?'loose':ownershipAsk.match});

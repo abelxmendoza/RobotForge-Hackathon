@@ -17,7 +17,7 @@ export interface RobotRecord { name: string; tab: string }
 export type NameMatch = 'exact' | 'word' | 'loose';
 
 export type OwnershipAsk =
-  | { kind: 'delete'; name: string; explicit: boolean; match: NameMatch }
+  | { kind: 'delete'; name: string; explicit: boolean; match: NameMatch; fullName?: string }
   | { kind: 'whose'; name: string };
 
 export type Ownership =
@@ -50,12 +50,17 @@ export function parseOwnershipAsk(text: string): OwnershipAsk | null {
   const list = /\s+from\s+(?:my robots|my workshop|the workshop|the robodex|robodex|my garage)$/i;
   let explicit = list.test(rest);
   rest = rest.replace(list, '');
+  /* The words before any "my"/"the"/"robot" stripping: a robot can be
+   * named "My Rover", and its exact name must win over "Rover". */
+  const fullName = clean(rest);
   if (/^(?:my robot|the robot|robot)\s+/i.test(rest)) explicit = true;
   rest = rest.replace(/^(?:my robot|the robot|robot|my|the)\s+/i, '');
   const name = clean(rest);
   if (!name || /\s(?:from|on|to|in|of)\s/i.test(name)) return null;
   const match: NameMatch = explicit ? 'loose' : /^delete/i.test(del[0].replace(/^please\s+/i, '')) ? 'word' : 'exact';
-  return { kind: 'delete', name, explicit, match };
+  return fullName && fullName !== name
+    ? { kind: 'delete', name, explicit, match, fullName }
+    : { kind: 'delete', name, explicit, match };
 }
 
 function matching<T extends { name: string }>(name: string, items: T[], match: NameMatch): T[] {
