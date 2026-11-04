@@ -31,5 +31,8 @@ def test_omega1_uses_recorded_photo_and_keeps_estimates_labelled():
 
 def test_garage_wires_the_twin_as_omega1s_model():
     garage = (G / 'Garage.tsx').read_text()
-    assert 'modelReady={robot.id === OMEGA1_ROBOT_ID || hasBody(draft)}' in garage
+    # Omega1 identity is the canonical id OR an Omega1 name match
+    # (feat/omega1-identity-pi4b): a photo import renamed "Omega1" gets
+    # the twin too. The id-only pin was updated for that fix.
+    assert 'modelReady={isOmegaRobot || hasBody(draft)}' in garage
     assert 'Omega1 digital twin' in garage

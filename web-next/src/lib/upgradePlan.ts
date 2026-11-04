@@ -1,4 +1,4 @@
-/** Pure coordinated Pi 5 proposal. No storage, network or hardware side effects. */
+/** Pure coordinated Raspberry Pi proposal (Pi 5 or Pi 4B). No storage, network or hardware side effects. */
 import type { GarageRobot } from './garage';
 import { currentAssembly, effectiveAssemblies, type Assemblies, type AssemblyVersion } from './assembly';
 import { componentById } from './components';
@@ -9,21 +9,43 @@ import type { Wiring } from './wiring';
 
 export interface UpgradeInputs { supplyMinV?:number; supplyMaxV?:number; loadCurrentA?:number; qualifiedConverterCurrentA?:number; powerInterfaceConfirmed?:boolean; loadMinV?:number; loadMaxV?:number; qualificationSource?:string; thermalConditions?:string; interfaceEvidence?:string }
 export interface UpgradePlan {
-  robotId:string; expectedRobotVersionId:string; expectedAssemblyRevision:string|null;
+  robotId:string; expectedRobotVersionId:string; expectedAssemblyRevision:string|null; boardId:string;
   inputs:UpgradeInputs; componentName:string; summary:string; blockers:string[]; missing:string[]; warnings:string[];
   checks:HarnessCheck[]; assembly:AssemblyVersion; wiring:Wiring; artifacts:{filename:string;source:string}[];
   candidate:{name:string;url:string;note:string}|null;
 }
 const copy = <T>(v:T):T => structuredClone(v);
-const PI = 'raspberry-pi-5-sbc';
-export function planUpgrade(robot:GarageRobot, assembly:AssemblyVersion, inputs:UpgradeInputs):UpgradePlan {
+/* Board-specific facts for the coordinated upgrade. Power figures are the
+ * maker's recommended supply (not measured consumption), quoted in the
+ * warnings so they are never mistaken for a measured load. Everything else
+ * in the plan (converter candidate, harness checks, CAD) is board-agnostic;
+ * the candidate converter is a 5 V part either way, and any remaining
+ * board-specific assumption is named in the warnings below. */
+export const UPGRADE_BOARDS = {
+  'raspberry-pi-5-sbc': {
+    short: 'Pi 5', fileTag: 'pi5', instanceId: 'upgrade-pi5',
+    labelRe: /raspberry\s*pi\s*5/i,
+    supplyWarning: 'Raspberry Pi recommends a 5.1 V supply and 5 A USB-PD capacity; this is not measured bare-board consumption. https://www.raspberrypi.com/documentation/computers/raspberry-pi.html',
+    extraWarnings: [] as string[],
+  },
+  'raspberry-pi-4b-sbc': {
+    short: 'Pi 4B', fileTag: 'pi4b', instanceId: 'upgrade-pi4b',
+    labelRe: /raspberry\s*pi\s*4/i,
+    supplyWarning: 'Raspberry Pi recommends a 5 V supply with 3 A USB-C capacity for the Pi 4B (the official supply is 5.1 V / 3 A); this is not measured bare-board consumption. https://www.raspberrypi.com/documentation/computers/raspberry-pi.html',
+    extraWarnings: ['Pi 4B note: the plan reuses the same 5 V converter candidate and harness checks as the Pi 5 path. The Pi 4B has no USB-PD negotiation — its USB-C input is a plain 5 V / 3 A input — so the power-interface evidence below must describe the actual 5 V feed, not a PD contract.'],
+  },
+} as const;
+export type UpgradeBoardId = keyof typeof UPGRADE_BOARDS;
+export function planUpgrade(robot:GarageRobot, assembly:AssemblyVersion, inputs:UpgradeInputs, boardId:UpgradeBoardId='raspberry-pi-5-sbc'):UpgradePlan {
+  const board = UPGRADE_BOARDS[boardId];
   const version=robot.versions.at(-1);
   if (!version) throw new Error('Save a robot first.');
-  const spec=version.spec ?? {}, part=componentById(PI)!;
+  const spec=version.spec ?? {}, part=componentById(boardId)!;
   const wiring:Wiring=copy(spec.wiring ?? {nodes:[],connections:[]});
   const next=copy(assembly), blockers:string[]=[], missing:string[]=[], warnings:string[]=[
     'PLANNED / UNVERIFIED: not ready for power. User-entered electrical values are unverified.',
-    'Raspberry Pi recommends a 5.1 V supply and 5 A USB-PD capacity; this is not measured bare-board consumption. https://www.raspberrypi.com/documentation/computers/raspberry-pi.html',
+    board.supplyWarning,
+    ...board.extraWarnings,
     'Cable routing and component placement are planning estimates. Pinouts, ampacity, protection, thermal clearance and physical fit need verification.',
     'Simulation is incomplete: added hardware mass and inertia have not been calibrated; prior version results do not apply.',
   ];
@@ -65,14 +87,14 @@ export function planUpgrade(robot:GarageRobot, assembly:AssemblyVersion, inputs:
       missing.push('Battery geometry is an illustrative placeholder: exact identity, dimensions, mass, retention, connectors and protection remain unverified.');
     }
   }
-  const piId='upgrade-pi5', converterId='upgrade-pi5-converter';
-  if(next.components.some(c=>c.componentId===PI)||wiring.nodes.some(n=>n.id===piId||/raspberry\s*pi\s*5/i.test(n.label))) blockers.push('A Raspberry Pi 5 is already present; resolve the existing instance first.');
+  const piId=board.instanceId, converterId=board.instanceId+'-converter';
+  if(next.components.some(c=>c.componentId===boardId)||wiring.nodes.some(n=>n.id===piId||board.labelRe.test(n.label))) blockers.push(`A Raspberry ${board.short} is already present; resolve the existing instance first.`);
   if([...next.components,...wiring.nodes].some(n=>n.id===converterId||n.id===piId)) blockers.push('Upgrade instance ID already exists.');
   const clearance=valid(spec.ground_clearance_m)?spec.ground_clearance_m:0;
-  next.components.push({id:piId,componentId:PI,positionM:[0,0,clearance+0.003+part.mounting.standoffHeightMm/1000+part.sizeM[2]/2],yawDeg:0});
+  next.components.push({id:piId,componentId:boardId,positionM:[0,0,clearance+0.003+part.mounting.standoffHeightMm/1000+part.sizeM[2]/2],yawDeg:0});
   wiring.nodes.push({id:piId,label:part.name,...(inputs.loadCurrentA?{current_a:inputs.loadCurrentA}:{}),...(inputs.loadMinV?{rated_min_v:inputs.loadMinV}:{}),...(inputs.loadMaxV?{rated_max_v:inputs.loadMaxV}:{})});
   let candidate:UpgradePlan['candidate']=null;
-  if(valid(hi)&&hi>5.2) warnings.push('Direct supply is incompatible with the Pi 5 V power input; do not connect the battery directly.');
+  if(valid(hi)&&hi>5.2) warnings.push(`Direct supply is incompatible with the ${board.short} 5 V power input; do not connect the battery directly.`);
   if(valid(lo)&&valid(hi)&&lo<=hi) {
     if(hi>38) blockers.push('Supply exceeds the candidate converter 38 V maximum. Choose and qualify another converter.');
     else if(lo>=6.5) {
@@ -89,15 +111,15 @@ export function planUpgrade(robot:GarageRobot, assembly:AssemblyVersion, inputs:
       next.connections.push({id:converterId+'--'+piId,from:converterId,to:piId});
     } else missing.push('No qualified power topology: full supply range must support regulation and load-dependent dropout; buck/boost selection remains unresolved.');
   }
-  next.note='Planned incomplete Raspberry Pi 5 coordinated upgrade';
+  next.note=`Planned incomplete Raspberry ${board.short} coordinated upgrade`;
   const mount=generateMount(mountDefaults(part),part);
   const enclosure=generateCad({template:'enclosure',params:{length_mm:part.sizeM[0]*1000+20,width_mm:part.sizeM[1]*1000+20,height_mm:part.sizeM[2]*1000+part.mounting.standoffHeightMm+part.orientation.thermalClearanceTopMm+8,wall_mm:2}});
-  const header='// Pi 5 planning enclosure from '+part.source+'\n// UNVERIFIED: cooler/ports/thermal airflow and standoff attachment require redesign and physical verification.\n';
-  const artifacts=[{filename:'pi5-mount.scad',source:mount.source},...(enclosure.files??[{filename:enclosure.filename,source:enclosure.source}]).map(f=>({filename:'pi5-'+f.filename,source:header+f.source}))];
+  const header='// '+board.short+' planning enclosure from '+part.source+'\n// UNVERIFIED: cooler/ports/thermal airflow and standoff attachment require redesign and physical verification.\n';
+  const artifacts=[{filename:board.fileTag+'-mount.scad',source:mount.source},...(enclosure.files??[{filename:enclosure.filename,source:enclosure.source}]).map(f=>({filename:board.fileTag+'-'+f.filename,source:header+f.source}))];
   const checks=harnessPlan(wiring).checks;
   // Preserve and surface any known conflict in the base graph as well.
   for(const check of checks) if(check.severity==='ERROR') blockers.push(check.subject+': '+check.detail);
-  return {robotId:robot.id,expectedRobotVersionId:version.id,expectedAssemblyRevision:assembly.id||null,inputs:copy(inputs),componentName:part.name,summary:'Planned incomplete Pi 5 upgrade with coordinated assembly, wiring and printable CAD proposals. Not ready for power.',blockers:[...new Set(blockers)],missing,warnings,checks,assembly:next,wiring,artifacts,candidate};
+  return {robotId:robot.id,expectedRobotVersionId:version.id,expectedAssemblyRevision:assembly.id||null,boardId,inputs:copy(inputs),componentName:part.name,summary:`Planned incomplete ${board.short} upgrade with coordinated assembly, wiring and printable CAD proposals. Not ready for power.`,blockers:[...new Set(blockers)],missing,warnings,checks,assembly:next,wiring,artifacts,candidate};
 }
 export function applyUpgrade(robots:GarageRobot[],legacy:Assemblies,plan:UpgradePlan,versionId:string,createdAt:string):GarageRobot[] {
   const robot=robots.find(r=>r.id===plan.robotId);
@@ -107,7 +129,7 @@ export function applyUpgrade(robots:GarageRobot[],legacy:Assemblies,plan:Upgrade
   const assembly=currentAssembly(effectiveAssemblies(robots,legacy),robot.id);
   if((assembly.id||null)!==plan.expectedAssemblyRevision) throw new Error('Assembly changed. Make a fresh proposal.');
   if(!versionId||robot.versions.some(v=>v.id===versionId)) throw new Error('Choose a new version ID.');
-  const fresh=planUpgrade(robot,assembly,plan.inputs);
+  const fresh=planUpgrade(robot,assembly,plan.inputs,(plan.boardId as UpgradeBoardId|undefined)??'raspberry-pi-5-sbc');
   if(fresh.blockers.length) throw new Error(fresh.blockers.join(' '));
   const spec=copy(robot.versions.at(-1)!.spec);
   spec.assembly={...fresh.assembly,id:versionId,createdAt}; spec.wiring=fresh.wiring;
@@ -115,5 +137,5 @@ export function applyUpgrade(robots:GarageRobot[],legacy:Assemblies,plan:Upgrade
   spec.upgradeArtifacts=fresh.artifacts;
   for(const key of ['gate_status','gate_report','gateReport','simulation_results','simulationResults','test_results','testResults']) delete spec[key];
   spec.simulation_status='incomplete: added hardware mass and inertia require calibration';
-  return robots.map(r=>r.id!==robot.id?r:{...r,versions:[...r.versions,{id:versionId,label:'Planned incomplete Pi 5 upgrade',note:fresh.summary,source:'edit',createdAt,planned:true,spec}]});
+  return robots.map(r=>r.id!==robot.id?r:{...r,versions:[...r.versions,{id:versionId,label:`Planned incomplete ${UPGRADE_BOARDS[fresh.boardId as UpgradeBoardId].short} upgrade`,note:fresh.summary,source:'edit',createdAt,planned:true,spec}]});
 }

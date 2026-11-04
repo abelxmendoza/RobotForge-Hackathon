@@ -13,6 +13,17 @@ export const SPIN_MIN_FRAMES = 8;
 export const SPIN_MAX_FRAMES = 36;
 export const SPIN_VIDEO_FRAMES = 24;
 
+/* Removing one photo from a robot's still-photo set: the set is the
+ * record (GarageRobot.photoSet, with photo === photoSet[0]). Returns
+ * the next set, or null when nothing is left — the caller then clears
+ * photo, photoSet and photoAddedAt together so no orphan photo stays
+ * behind. An out-of-range index changes nothing. */
+export function removePhotoFromSet(photos: string[], index: number): string[] | null {
+  if (index < 0 || index >= photos.length) return [...photos];
+  const next = photos.filter((_, i) => i !== index);
+  return next.length ? next : null;
+}
+
 /* Camera files are numbered (IMG_0001, IMG_0002 … IMG_0010): sort by
  * name with numbers compared as numbers, so 10 comes after 9. */
 export function naturalOrder<T extends { name: string }>(files: T[]): T[] {

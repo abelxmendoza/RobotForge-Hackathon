@@ -27,6 +27,12 @@ assert.throws(()=>parseUpgradeRequest('add a Pi 5 to "Missing"',robots),/unique|
 assert.equal(parseUpgradeRequest('How do I add a Pi 5?',robots,'r1'),null);
 assert.equal(parseUpgradeRequest('do not add a Pi 5',robots,'r1'),null);
 assert.equal(parseUpgradeRequest('add a camera to "Omega1"',robots,'r1'),null);
+assert.deepEqual(parseUpgradeRequest('Plan a Raspberry Pi 4B upgrade for "Omega1"',robots),{robotId:'r1',boardId:'raspberry-pi-4b-sbc'});
+assert.deepEqual(parseUpgradeRequest('add a Raspberry Pi 4B to this rover',robots,'r2'),{robotId:'r2',boardId:'raspberry-pi-4b-sbc'});
+assert.deepEqual(parseUpgradeRequest('add a pi 4 to "Runt"',robots),{robotId:'r2',boardId:'raspberry-pi-4b-sbc'});
+assert.deepEqual(parseUpgradeRequest('add a Raspberry Pi 5 to "Omega1"',robots),{robotId:'r1',boardId:'raspberry-pi-5-sbc'});
+assert.equal(parseUpgradeRequest('add a pi camera to "Omega1"',robots,'r1'),null);
+assert.equal(parseUpgradeRequest('add a servo to "Omega1"',robots,'r1'),null);
 assert.throws(()=>parseUpgradeRequest('add a Pi 5 to "Omega1"',[...robots,{id:'r3',name:'Omega1'}]),/unique/i);
 ''')
     r=subprocess.run([shutil.which('node') or 'node','--experimental-strip-types',str(tmp_path/'run.mjs')],capture_output=True,text=True)
