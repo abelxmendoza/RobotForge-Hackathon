@@ -88,6 +88,7 @@ export default function ChatBar() {
             <div>
               <strong>{ASSISTANT_NAME}</strong>
               <span className="fc-sub">{assistant.subText}</span>
+              {assistant.workingOn && <span className="fc-working-on" role="status">{assistant.workingOn}</span>}
             </div>
             {assistant.messages.length > 0 && (
               <CopyButton
@@ -121,7 +122,7 @@ export default function ChatBar() {
             </button>
           </div>
           <div className="fc-msgs" ref={msgsRef} aria-live="polite">
-            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} onOpenRobot={(a) => assistant.openRobot(a.robotId, a.tab)} />
+            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} onOpenRobot={(a) => assistant.openRobot(a.robotId, a.tab)} onSaveNote={assistant.saveGroundedNote} />
           </div>
           <div className="chat-bar-actions">{assistant.actions}</div>
           <div className="fc-chips">

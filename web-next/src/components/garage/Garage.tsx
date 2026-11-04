@@ -25,7 +25,7 @@ import { LiveProgress, useLiveMode } from '@/components/shell/LiveStatus';
 import type { LiveHealth, RobotSpec } from '@/components/forge/model';
 import { downloadJSON, readStore, writeStore, uid, useStore } from '@/lib/store';
 import { promptWrench } from '@/lib/wrenchPrompt';
-import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_FIX_EVENT } from '@/lib/workshopContext';
+import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_ACTION_EVENT, WORKSHOP_FIX_EVENT, type WorkshopAction } from '@/lib/workshopContext';
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
@@ -55,6 +55,8 @@ import { archiveRobotInStore, deleteRobotInStore, replaceRobotInStore, restoreRo
 import { forgetRobotScans } from '@/lib/scanStore';
 import { attachRealsenseScan } from '@/lib/scanBridge';
 import ScanStudioModal from '@/components/scan/ScanStudioModal';
+import { forgetRobotNotes, noteContextLines, notesFor, removeRobotNote, ROBOT_NOTES_KEY, type RobotNote } from '@/lib/robotNotes';
+import { SCAN_SLOTS } from '@/lib/scan3d';
 
 const now = () => new Date().toISOString();
 
@@ -493,6 +495,7 @@ export default function Garage() {
   const activeRobots = useMemo(() => activeRecords(robots), [robots]);
   const archivedRobots = useMemo(() => archivedRecords(robots), [robots]);
   const [inventory] = useStore<InventoryPart[]>(INVENTORY_KEY, []);
+  const [allNotes] = useStore<RobotNote[]>(ROBOT_NOTES_KEY, []);
   const [selected, setSelected] = useState<string | null>(null);
   const [baseId, setBaseId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Spec | null>(null);
@@ -843,6 +846,7 @@ export default function Garage() {
     setConfirmDelete(null);
     if (!result.ok) { setSaveError(result.error); return; }
     void forgetRobotScans(archived.id).catch(() => undefined);
+    forgetRobotNotes(archived.id);
     writeStore(draftKey(archived.id), null);
     if (archived.id === selected) {
       const next = activeRecords(readStore<GarageRobot[]>(GARAGE_KEY, []));
@@ -1040,12 +1044,30 @@ export default function Garage() {
         specLines: summarizeSpec(draft),
         checksVerdict: wsVerdict.label,
         checkLines: draftLines,
+        factLines: [
+          ...(robot.scans ?? []).map((s) => `Scan on file · ${SCAN_SLOTS.find((k) => k.kind === s.kind)?.label ?? s.kind}: ${s.name}, added ${s.addedAt.slice(0, 10)}`),
+          ...noteContextLines(notesFor(allNotes, robot.id)),
+        ],
       });
     } else {
       publishWorkshopContext(null);
     }
     return () => publishWorkshopContext(null);
-  }, [twinOpen, omegaTab, robot, draft, base, tab, adding, draftLines, wsVerdict.label]);
+  }, [twinOpen, omegaTab, robot, draft, base, tab, adding, draftLines, wsVerdict.label, allNotes]);
+
+  /* Wrench's one-tap Workshop actions (lib/workshopContext): open the
+   * RealSense camera window for the robot on screen, or switch tabs. */
+  useEffect(() => {
+    const onAction = (e: Event) => {
+      const detail = (e as CustomEvent<{ action: WorkshopAction; handled: boolean }>).detail;
+      if (!detail || twinOpen || adding || !robot) return;
+      detail.handled = true;
+      if (detail.action.kind === 'realsense') { setTab('overview'); setRealsenseFor({ id: robot.id, name: robot.name }); }
+      else setTab(detail.action.tab as WorkTab);
+    };
+    window.addEventListener(WORKSHOP_ACTION_EVENT, onAction);
+    return () => window.removeEventListener(WORKSHOP_ACTION_EVENT, onAction);
+  }, [twinOpen, adding, robot]);
 
   /* One-tap Fix from a grounded chat answer (lib/workshopContext):
    * the chat's "Fix this" button on a FAIL-grounded answer asks for
@@ -1301,6 +1323,27 @@ export default function Garage() {
                   ))}
                 </div>
                 <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode: 'chat', text: 'I want to modify this robot: '})}>Describe a change to Wrench</button>
+                {(() => {
+                  const notes = notesFor(allNotes, robot.id);
+                  return (
+                    <section className="ws-notes" aria-label={`What Wrench knows about ${robot.name}`}>
+                      <h3>What Wrench knows about {robot.name}</h3>
+                      {notes.length ? (
+                        <ul>
+                          {notes.map((n) => (
+                            <li key={n.id}>
+                              <span>{n.text}</span>
+                              <span className="faint g-small"> · {n.source === 'you' ? 'you told Wrench' : n.source} · {n.addedAt.slice(0, 10)}</span>
+                              <button type="button" className="btn btn-sm ws-note-del" onClick={() => removeRobotNote(n.id)} aria-label={`Delete the note: ${n.text}`}>Delete</button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="faint g-small">Nothing yet. Tell Wrench &ldquo;remember that &hellip;&rdquo;, or save a web-sourced answer to these notes. Wrench uses them, along with the spec and scans, whenever you ask about {robot.name}.</p>
+                      )}
+                    </section>
+                  );
+                })()}
                 <details className="g-repos ws-disclosure"><summary>Source repositories ({robotRepos(robot).length})</summary>
                   <h3>Code repos{robotRepos(robot).length > 0 && <span className="faint"> · {robotRepos(robot).length}</span>}</h3>
                   {robotRepos(robot).length === 0 ? (

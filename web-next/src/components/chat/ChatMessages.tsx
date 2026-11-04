@@ -15,7 +15,7 @@ export interface ChatMsg {
   sources?: SourceRef[];
   /* Live answers grounded in a Workshop snapshot only (set in
    * ChatDock at ask time). Recorded answers never carry this. */
-  grounding?: { caption: string; failing: boolean };
+  grounding?: { caption: string; failing: boolean; note?: { robotId: string; robotName: string; text: string; source: string } };
   /* Local Create-panel action results only (ComposerCreate): a
    * FORGE ENGINE / FORGE TESTS pill and an Open-in-Workshop action.
    * Never set on recorded or live answers, and never combined with
@@ -29,11 +29,13 @@ export default function ChatMessages({
   onHitClick,
   onFixClick,
   onOpenRobot,
+  onSaveNote,
 }: {
   messages: ChatMsg[];
   onHitClick: (h: Hit) => void;
   onFixClick?: () => void;
   onOpenRobot?: (a: { robotId: string; tab?: string; label: string }) => void;
+  onSaveNote?: (note: { robotId: string; robotName: string; text: string; source: string }) => void;
 }) {
   return (
     <>
@@ -68,6 +70,11 @@ export default function ChatMessages({
           )}
           {m.grounding && (
             <p className="fc-grounding">{m.grounding.caption}</p>
+          )}
+          {m.grounding?.note && onSaveNote && (
+            <button type="button" className="btn btn-sm fc-note-btn" onClick={() => onSaveNote(m.grounding!.note!)}>
+              Save to {m.grounding.note.robotName}&apos;s notes
+            </button>
           )}
           {m.grounding && m.grounding.failing && onFixClick && (
             <button type="button" className="fc-fix-btn" onClick={onFixClick}>

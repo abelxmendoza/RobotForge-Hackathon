@@ -21,6 +21,9 @@ export interface WorkshopChatContext {
   specLines: string[];
   checksVerdict: string;
   checkLines: string[];
+  /* What else is recorded about this robot: its scans and the owner's
+   * notes (lib/robotNotes). Sent ahead of the spec lines. */
+  factLines?: string[];
 }
 
 let current: WorkshopChatContext | null = null;
@@ -64,6 +67,36 @@ export function groundingCaption(ctx: WorkshopChatContext): string {
  * also kept as a pending value so a Garage that mounts just after
  * the tap can still consume it on mount. */
 export const WORKSHOP_FIX_EVENT = 'rf-workshop-fix';
+
+/* Other one-tap Workshop actions Wrench can ask for, same pattern:
+ * open the RealSense camera window for the robot on screen, or switch
+ * to a tab. Garage listens; the chat says so if nothing was listening. */
+export type WorkshopAction = { kind: 'realsense' } | { kind: 'tab'; tab: string };
+export const WORKSHOP_ACTION_EVENT = 'rf-workshop-action';
+
+export function requestWorkshopAction(action: WorkshopAction): boolean {
+  if (typeof window === 'undefined') return false;
+  const detail = { action, handled: false };
+  window.dispatchEvent(new CustomEvent(WORKSHOP_ACTION_EVENT, { detail }));
+  return detail.handled;
+}
+
+const TAB_WORDS: Record<string, string> = {
+  overview: 'overview', build: 'build', wiring: 'wiring', bom: 'bom', 'parts list': 'bom', parts: 'bom',
+  test: 'checks', tests: 'checks', checks: 'checks', history: 'history', simulate: 'simulate', simulation: 'simulate',
+};
+
+/* Typed or chip text → a Workshop action, else null. Conservative:
+ * whole-message phrases only, never a question. */
+export function parseWorkshopAction(q: string): WorkshopAction | null {
+  const t = String(q || '').trim().replace(/[.!]+$/, '').toLowerCase();
+  if (!t || t.includes('?')) return null;
+  if (/^(?:scan|3d scan) (?:it|this robot|my robot|[\w -]{1,40}) with (?:the |my |a )?(?:intel )?realsense(?: camera)?$/.test(t)
+    || /^(?:open|start|use) (?:the |my )?(?:intel )?realsense(?: camera| scan| scanner)?$/.test(t)) return { kind: 'realsense' };
+  const m = t.match(/^(?:open|show|go to|switch to) (?:the )?(overview|build|wiring|bom|parts list|parts|tests?|checks|history|simulate|simulation)(?: tab)?$/);
+  if (m) return { kind: 'tab', tab: TAB_WORDS[m[1]] };
+  return null;
+}
 
 let fixPending = false;
 
@@ -110,22 +143,24 @@ export function buildWsContext(
     robot: ctx.robotName,
     version: ctx.versionLabel,
     tab: ctx.tabLabel,
-    spec: ctx.specLines,
+    // The Worker reads at most 40 spec lines: scans and notes go first.
+    spec: [...(ctx.factLines ?? []).slice(0, 12), ...ctx.specLines].slice(0, 40),
     checks: { verdict: ctx.checksVerdict, lines: ctx.checkLines },
     inventory,
   };
 }
 
-/* Starter chips for the Workshop, keyed by the open tab. Wording is
- * deliberate: every chip is a question, and none starts with an
- * operation verb (add / set / save / …) — the chat routes those to the
- * command translator, and these are meant for the answer path that now
- * carries the Workshop context. */
+/* Starter chips for the Workshop, keyed by the open tab. Each tab leads
+ * with its job: an action chip where the chat has a grammar for it
+ * (RealSense window: parseWorkshopAction; Simulate: parseSimCommand),
+ * then questions, which ride out with the Workshop context. A question
+ * chip must not start with an operation verb (add / set / save / …),
+ * or the chat routes it to the command translator instead. */
 const TAB_CHIPS: Record<string, string[]> = {
   overview: [
+    'Scan it with the RealSense',
     'Summarize this robot',
     'What should I work on next on this robot?',
-    'Which checks matter most for this robot?',
   ],
   build: [
     'Walk me through building this robot',
@@ -133,8 +168,8 @@ const TAB_CHIPS: Record<string, string[]> = {
     'Which build steps need parts I don’t have?',
   ],
   wiring: [
-    'Does the battery match the motors on this robot?',
     'Sanity-check this robot’s wiring',
+    'Does the battery match the motors on this robot?',
     'What powers the motor driver on this robot?',
   ],
   specs: [
@@ -143,14 +178,14 @@ const TAB_CHIPS: Record<string, string[]> = {
     'Is this robot’s battery big enough for its motors?',
   ],
   simulate: [
-    'What will the simulation check on this robot?',
+    'Run the simulation',
+    'Try the ramp',
     'Which acceptance tests would this robot fail?',
-    'Which acceptance tests can’t be checked for this robot yet?',
   ],
   checks: [
     'Why is this robot failing its checks?',
-    'Explain the failing checks on this robot',
     'How do I fix this robot’s failing checks?',
+    'Which checks matter most for this robot?',
   ],
   bom: [
     'What do I still need to buy for this robot?',
@@ -170,5 +205,13 @@ const TAB_CHIPS: Record<string, string[]> = {
 };
 
 export function workshopTabChips(ctx: WorkshopChatContext): string[] {
-  return TAB_CHIPS[ctx.tab] ?? TAB_CHIPS.checks;
+  const chips = [...(TAB_CHIPS[ctx.tab] ?? TAB_CHIPS.checks)];
+  // A stored robot can be researched; the answer can then be kept as a note.
+  if (ctx.tab === 'overview' && ctx.robotId) chips.push(`Search the web for ${ctx.robotName} robot`);
+  return chips;
+}
+
+/* The "Working on" line Wrench shows while a Workshop robot is open. */
+export function workingOnLabel(ctx: WorkshopChatContext | null): string {
+  return ctx ? `Working on: ${ctx.robotName} · ${ctx.tabLabel}` : '';
 }
