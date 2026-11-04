@@ -2,15 +2,15 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { componentById } from '@/lib/components';
-import { ASSEMBLY_KEY, applyAssembly, previewAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
+import { ASSEMBLY_KEY, commitAssemblyVersion, effectiveAssemblies, previewAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { readStore, uid, useStore, writeStore } from '@/lib/store';
 import { activeRecords } from '@/lib/lifecycle';
-import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 export default function AssemblyProposal({operation,onApplied,onCancel,onError}: {operation: AssemblyOperation; onApplied:(id:string)=>void; onCancel:()=>void; onError:(text:string)=>void}) {
   const [storedRobots] = useStore<GarageRobot[]>(GARAGE_KEY,[]);
   const robots = activeRecords(storedRobots);
-  const [all,,ready] = useStore<Assemblies>(ASSEMBLY_KEY,{});
+  const [legacy,,ready] = useStore<Assemblies>(ASSEMBLY_KEY,{});
+  const all=effectiveAssemblies(storedRobots,legacy);
   const consumed=useRef(false);
   let note='',error='';
   try {note=previewAssembly(robots,all,operation).note;} catch(e) {error=(e as Error).message;}
@@ -24,8 +24,8 @@ export default function AssemblyProposal({operation,onApplied,onCancel,onError}:
       if(consumed.current) return; consumed.current=true;
       try {
         const versionId=uid('assembly');
-        const next=applyAssembly(readActiveRobots(()=>readStore<GarageRobot[]>(GARAGE_KEY,[])),readStore<Assemblies>(ASSEMBLY_KEY,{}),operation,versionId,new Date().toISOString());
-        const failure=writeStore(ASSEMBLY_KEY,next); if(failure) throw new Error(failure);
+        const next=commitAssemblyVersion(readStore<GarageRobot[]>(GARAGE_KEY,[]),readStore<Assemblies>(ASSEMBLY_KEY,{}),operation,versionId,new Date().toISOString());
+        const failure=writeStore(GARAGE_KEY,next); if(failure) throw new Error(failure);
         onApplied(versionId);
       } catch(e) {onError((e as Error).message);}
     }}>Apply assembly change</button>{' '}

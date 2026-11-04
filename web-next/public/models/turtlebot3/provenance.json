@@ -1,0 +1,14 @@
+{
+  "asset": "lds.stl",
+  "source": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/sensors/lds.stl",
+  "revision": "fc817ce3073af1d6032397c64504134882af5e9a",
+  "copyright": "ROBOTIS",
+  "license": "Apache-2.0",
+  "licenseFile": "LICENSE",
+  "sha256": "98f0bd7046159f83caab9509293112ef13534368535669124b91b5114c3132f6",
+  "sourceUnits": "millimetres",
+  "scaleToMetres": 0.001,
+  "boundsMm": [93.84819412231445, 68.88481903076172, 39.20000076293945],
+  "modifications": "Original STL bytes unchanged. Viewer scales to metres and aligns its top to the schematic sensor height; this is a visual fit, not an assembly joint measurement.",
+  "usage": "Matching TurtleBot3 Burger kit only. This sensor mesh does not establish precision for the surrounding procedural kit geometry."
+}

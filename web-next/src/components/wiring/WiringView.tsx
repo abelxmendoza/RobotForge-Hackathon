@@ -7,6 +7,8 @@
  * "if this part dies" test; click a cable to read it. */
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import HarnessReport from './HarnessReport';
+import WiringFactsEditor from './WiringFactsEditor';
 import { assetPath } from '@/components/home/asset';
 import type { RobotSpec } from '@/components/forge/model';
 import {
@@ -59,7 +61,7 @@ function Marked({ text, g }: { text: string; g: Record<string, string> | null })
 
 type Sel = { type: 'node'; id: string } | { type: 'conn'; i: number } | null;
 
-export default function WiringView({ wiring: w, spec, compact = false }: { wiring: Wiring; spec?: RobotSpec; compact?: boolean }) {
+export default function WiringView({ wiring: w, spec, compact = false, onWiringChange }: { wiring: Wiring; spec?: RobotSpec; compact?: boolean; onWiringChange?: (w: Wiring) => void }) {
   const g = useGlossary();
   const L = useMemo(() => layout(w), [w]);
   const bad = useMemo(() => badConns(w), [w]);
@@ -217,6 +219,8 @@ export default function WiringView({ wiring: w, spec, compact = false }: { wirin
         {(tr || dead) && <button type="button" className="btn btn-sm btn-ghost" onClick={showAll}>Show all</button>}
         <button type="button" className="btn btn-sm btn-ghost" onClick={print}>Print harness sheet</button>
       </div>
+      {onWiringChange && <WiringFactsEditor wiring={w} onChange={onWiringChange} />}
+      <HarnessReport wiring={w} />
       {w.note && <details className="g-howto wv-notebox"><summary>About this harness</summary><p className="wv-note"><Marked text={w.note} g={g} /></p></details>}
       {show3D && !failed3D && (
         <div className="card" style={{ marginBottom: 14, padding: 12 }}>
