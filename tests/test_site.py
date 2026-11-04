@@ -162,3 +162,19 @@ def test_next_landing_shows_exactly_one_video():
     assert "DemoVideoCard" not in page
     assert page.count("<video") == 1
     assert 'id="trailer"' in page
+
+
+def test_landing_builder_video_player():
+    # Abel, 2026-11-04: his "Why I built RobotForge" video sits in its own
+    # framed player above the trailer. It loads nothing until play, has a
+    # volume slider and keyboard keys, and starting it pauses the trailer.
+    page = (REPO / "web-next/src/app/page.tsx").read_text()
+    assert page.count("<FounderVideo") == 1
+    assert 'id="why-video"' in page
+    assert (REPO / "assets/video/why-i-built-robotforge.mp4").stat().st_size < 12_000_000
+    assert (REPO / "assets/video/why-i-built-robotforge-poster.jpg").exists()
+    player = (REPO / "web-next/src/components/home/FounderVideo.tsx").read_text()
+    assert 'preload="none"' in player and "playsInline" in player
+    assert 'aria-label="Volume"' in player
+    assert 'addEventListener("play", onAnyPlay, true)' in player
+    assert "onKeyDown={onKey}" in player
