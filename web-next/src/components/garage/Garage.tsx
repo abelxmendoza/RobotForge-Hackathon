@@ -51,7 +51,7 @@ import {
 import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { activeRecords, activeSelection, archivedRecords, recordSnapshot } from '@/lib/lifecycle';
-import { archiveRobotInStore, deleteArchivedRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
+import { archiveRobotInStore, deleteRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
 import { forgetRobotScans } from '@/lib/scanStore';
 
 const now = () => new Date().toISOString();
@@ -822,17 +822,25 @@ export default function Garage() {
     setSelected(next[0]?.id ?? null);
     setLifecycleNotice(`Archived ${robot.name}. You can restore it below.`);
   };
-  /* Delete forever: only for an archived robot, and it asks first. */
+  /* Delete forever: from the active "Your robots" list or from
+   * Archived, and it asks first (the first click only arms the inline
+   * confirmation). Deleting also drops the robot's cached editor
+   * draft, so re-adding a robot with the same id starts clean. */
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const deleteForever = (archived: GarageRobot) => {
     if (confirmDelete !== archived.id) { setConfirmDelete(archived.id); return; }
-    const result = deleteArchivedRobotInStore(
+    const result = deleteRobotInStore(
       () => readStore<GarageRobot[]>(GARAGE_KEY, []), saveRobots,
       archived.id, recordSnapshot(archived),
     );
     setConfirmDelete(null);
     if (!result.ok) { setSaveError(result.error); return; }
     void forgetRobotScans(archived.id).catch(() => undefined);
+    writeStore(draftKey(archived.id), null);
+    if (archived.id === selected) {
+      const next = activeRecords(readStore<GarageRobot[]>(GARAGE_KEY, []));
+      setSelected(next[0]?.id ?? null);
+    }
     setLifecycleNotice(archived.id === OMEGA1_ROBOT_ID
       ? 'Deleted your Omega1 copy. The built-in Omega1 is still here: open it under Built-in specimen to add a fresh copy from the records.'
       : `Deleted ${archived.name} for good.`);
@@ -1073,6 +1081,15 @@ export default function Garage() {
                   {' · '}
                   <Link href={`/import/?robot=${r.id}`}>import details</Link>
                 </span>
+              )}
+              {confirmDelete === r.id ? (
+                <span className="g-remove-confirm" role="alert">
+                  Delete {r.name} and its {r.versions.length} version{r.versions.length === 1 ? '' : 's'} for good? This can&apos;t be undone. If you saved it to your account, press Save afterwards to remove it there too.{' '}
+                  <button type="button" className="btn btn-sm" onClick={() => deleteForever(r)}>Yes, delete</button>{' '}
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                </span>
+              ) : (
+                <button type="button" className="btn btn-sm btn-ghost" onClick={() => deleteForever(r)}>Delete</button>
               )}
             </li>
           ))}

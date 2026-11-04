@@ -1,5 +1,5 @@
 import type { GarageRobot } from './garage';
-import { activeRecords, archiveRecord, deleteArchivedRecord, replaceRecord, restoreRecord } from './lifecycle';
+import { activeRecords, archiveRecord, deleteArchivedRecord, deleteRecord, replaceRecord, restoreRecord } from './lifecycle';
 
 export type RobotLifecycleResult = { ok: true } | { ok: false; error: string };
 type ReadRobots = () => GarageRobot[];
@@ -47,6 +47,17 @@ export function deleteArchivedRobotInStore(
   expected: string,
 ): RobotLifecycleResult {
   return commit(() => deleteArchivedRecord(read(), id, expected), write);
+}
+
+/* Direct permanent delete from the active list (the Garage confirms
+ * inline first). Works for active and archived robots alike. */
+export function deleteRobotInStore(
+  read: ReadRobots,
+  write: WriteRobots,
+  id: string,
+  expected: string,
+): RobotLifecycleResult {
+  return commit(() => deleteRecord(read(), id, expected), write);
 }
 
 export function replaceRobotInStore(
