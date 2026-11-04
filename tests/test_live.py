@@ -189,7 +189,10 @@ def test_worker_mock_suite():
     r = subprocess.run([NODE, str(REPO / "tests" / "worker_mock.mjs")],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
-    for name in ("photo without the Meta key is a 501",
+    for name in ("photo without a Meta or Baseten key is a 501",
+                 "photo falls back to Baseten when Meta fails",
+                 "transcribe falls back to Baseten audio when Meta fails",
+                 "cut off at the length limit fails over",
                  "ESTIMATED framing",
                  "budget exhausted is a 503",
                  "list happy path sanitizes",

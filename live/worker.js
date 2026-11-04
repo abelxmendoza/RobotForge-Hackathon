@@ -102,10 +102,13 @@
  * may pin one provider with { "provider": "baseten"|"meta"|
  * "fireworks" } — the site never sends it; it exists so the sweep
  * can be re-measured through this endpoint. /photo and /part proxy
- * the Meta Model API vision model (key: META_API_KEY secret —
- * OPTIONAL: without it they answer 501 and the site falls back to
- * its recorded photo sample, by design). /transcribe uses the same
- * Meta key.
+ * the Meta Model API vision model (META_API_KEY) first, then Muse
+ * Spark Open on Baseten (BASETEN_API_KEY), which also takes images.
+ * /transcribe uses Meta's Muse Voice Transcribe first, then Muse
+ * Spark Open's audio input on Baseten. Both keys are OPTIONAL for
+ * these routes: with neither they answer 501 and the site falls
+ * back to its recorded photo sample / typing, by design. Every
+ * response names the model that actually answered.
  *
  * Guardrails (these spend the owner's API credits):
  *   - CORS locked to the site's origins (Vercel production, the
@@ -474,8 +477,13 @@ async function postChatCompletions(url, apiKey, payload, label) {
 }
 
 function messageContent(payload) {
-  const content = payload && payload.choices && payload.choices[0] &&
-    payload.choices[0].message && payload.choices[0].message.content;
+  const choice = payload && payload.choices && payload.choices[0];
+  /* A reply cut off at max_tokens is not an answer (and a cut-off
+   * JSON reply never parses): fail it, so the next provider tries. */
+  if (choice && choice.finish_reason === 'length') {
+    throw new Error('the reply was cut off at the length limit');
+  }
+  const content = choice && choice.message && choice.message.content;
   if (typeof content !== 'string' || !content.trim()) {
     throw new Error('the model returned an empty reply');
   }
@@ -538,29 +546,48 @@ async function callModel(env, messages, temperature, maxTokens, only) {
   throw lastError;
 }
 
-/* One Meta Model API vision call. mode 'photo' mirrors photo.py's
- * draft_spec_from_photo (ESTIMATED draft); mode 'document' mirrors
- * draft_spec_from_document (TRANSCRIBED draft from printed values). */
-async function callMetaVision(env, imageDataUrl, note, mode) {
+/* Vision runs Meta first (hosted muse-spark-1.3, the measured photo
+ * model), then Muse Spark Open on Baseten, which also accepts
+ * images. Returns { content, model } with the model that answered. */
+async function callVision(env, system, userContent, maxTokens) {
+  const messages = [
+    { role: 'system', content: system },
+    { role: 'user', content: userContent },
+  ];
+  const attempts = [];
+  if (env.META_API_KEY) attempts.push([META_URL, env.META_API_KEY, PHOTO_MODEL, 'The Meta Model API']);
+  if (env.BASETEN_API_KEY) attempts.push([BASETEN_URL, env.BASETEN_API_KEY, MODEL, 'Baseten']);
+  let lastError = new Error('no vision provider is configured');
+  for (const [url, key, model, label] of attempts) {
+    try {
+      const payload = await postChatCompletions(url, key,
+        { model, messages, temperature: 0.2, max_tokens: maxTokens }, label);
+      return { content: messageContent(payload), model };
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
+}
+
+function visionConfigured(env) {
+  return Boolean(env.META_API_KEY || env.BASETEN_API_KEY);
+}
+
+/* mode 'photo' mirrors photo.py's draft_spec_from_photo (ESTIMATED
+ * draft); mode 'document' mirrors draft_spec_from_document
+ * (TRANSCRIBED draft from printed values). */
+async function callPhotoVision(env, imageDataUrl, note, mode) {
   const doc = mode === 'document';
-  const payload = await postChatCompletions(META_URL, env.META_API_KEY, {
-    model: PHOTO_MODEL,
-    messages: [
-      { role: 'system', content: doc ? DOC_SYSTEM_PROMPT : PHOTO_SYSTEM_PROMPT },
-      { role: 'user', content: [
-        { type: 'text',
-          text: (doc
-            ? 'Transcribe the printed specification values in this ' +
-              'document into a robot specification draft.'
-            : 'Draft a robot specification from this photo.') +
-            (note ? ' The photographer adds: ' + note : '') },
-        { type: 'image_url', image_url: { url: imageDataUrl } },
-      ] },
-    ],
-    temperature: 0.2,
-    max_tokens: 4000,
-  }, 'The Meta Model API');
-  return messageContent(payload);
+  return callVision(env, doc ? DOC_SYSTEM_PROMPT : PHOTO_SYSTEM_PROMPT, [
+    { type: 'text',
+      text: (doc
+        ? 'Transcribe the printed specification values in this ' +
+          'document into a robot specification draft.'
+        : 'Draft a robot specification from this photo.') +
+        (note ? ' The photographer adds: ' + note : '') },
+    { type: 'image_url', image_url: { url: imageDataUrl } },
+  ], 4000);
 }
 
 /* ---------------- spec validation (mirrors schema.py) ---------------- */
@@ -918,7 +945,7 @@ const DOCUMENT_PREFIX =
  * mandatory, and a numeric spec value with no transcribed values[]
  * entry behind it is DROPPED (named in `dropped`), never passed
  * through. A partial spec is a valid result here. */
-function photoDocumentResult(request, parsed) {
+function photoDocumentResult(request, parsed, model) {
   const problem = validateSpecPartial(parsed.spec);
   if (problem) {
     return err(request, 502, 'bad_model_output',
@@ -985,7 +1012,7 @@ function photoDocumentResult(request, parsed) {
     },
     document_read: true,
     estimated: false,
-    model: PHOTO_MODEL,
+    model,
   });
 }
 
@@ -993,9 +1020,9 @@ async function handlePhoto(request, env) {
   /* The Meta key is OPTIONAL by design: without it this route is
    * simply off (501), and the site says so and offers its recorded
    * photo sample instead. Nothing about that is an error state. */
-  if (!env.META_API_KEY) {
+  if (!visionConfigured(env)) {
     return err(request, 501, 'photo_not_configured',
-      'Photo live mode is not configured on this endpoint (no Meta API key). The recorded photo sample still works.');
+      'Photo live mode is not configured on this endpoint (no Meta or Baseten key). The recorded photo sample still works.');
   }
   const { data, error } = await readJsonBody(request, PHOTO_MAX_BODY_BYTES);
   if (error) return err(request, 413, 'too_large', error);
@@ -1008,9 +1035,9 @@ async function handlePhoto(request, env) {
   const mode = data.mode === 'document' ? 'document' : 'photo';
   const gate = await gateBudget(env, request);
   if (gate) return gate;
-  let content;
+  let content, model;
   try {
-    content = await callMetaVision(env, image, note, mode);
+    ({ content, model } = await callPhotoVision(env, image, note, mode));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The photo model call failed (' + e.message + '). Your photo was not stored anywhere.');
@@ -1027,7 +1054,7 @@ async function handlePhoto(request, env) {
       'The photo model returned no spec object. Nothing was saved.');
   }
   if (mode === 'document') {
-    return photoDocumentResult(request, parsed);
+    return photoDocumentResult(request, parsed, model);
   }
   const problem = validateSpec(parsed.spec);
   if (problem) {
@@ -1062,7 +1089,7 @@ async function handlePhoto(request, env) {
     },
     estimated: true,
     document_read: false,
-    model: PHOTO_MODEL,
+    model,
   });
 }
 
@@ -1339,9 +1366,9 @@ function sanitizePartUpdate(raw) {
 }
 
 async function handlePart(request, env) {
-  if (!env.META_API_KEY) {
+  if (!visionConfigured(env)) {
     return err(request, 501, 'photo_not_configured',
-      'Part photos need the optional Meta key on the endpoint. You can still add the part by hand.');
+      'Part photos need the optional Meta or Baseten key on the endpoint. You can still add the part by hand.');
   }
   const { data, error } = await readJsonBody(request, PHOTO_MAX_BODY_BYTES);
   if (error) return err(request, 413, 'too_large', error);
@@ -1352,22 +1379,13 @@ async function handlePart(request, env) {
   const note = typeof data.note === 'string' ? data.note.slice(0, 500) : '';
   const gate = await gateBudget(env, request);
   if (gate) return gate;
-  let content;
+  let content, model;
   try {
-    const payload = await postChatCompletions(META_URL, env.META_API_KEY, {
-      model: PHOTO_MODEL,
-      messages: [
-        { role: 'system', content: PART_SYSTEM_PROMPT },
-        { role: 'user', content: [
-          { type: 'text', text: 'Identify this part.' +
-            (note ? ' The owner adds: ' + note : '') },
-          { type: 'image_url', image_url: { url: image } },
-        ] },
-      ],
-      temperature: 0.2,
-      max_tokens: 1500,
-    }, 'The Meta Model API');
-    content = messageContent(payload);
+    ({ content, model } = await callVision(env, PART_SYSTEM_PROMPT, [
+      { type: 'text', text: 'Identify this part.' +
+        (note ? ' The owner adds: ' + note : '') },
+      { type: 'image_url', image_url: { url: image } },
+    ], 1500));
   } catch (e) {
     return err(request, 502, 'upstream_error',
       'The photo model call failed (' + e.message + '). Your photo was not stored anywhere.');
@@ -1379,7 +1397,7 @@ async function handlePart(request, env) {
     return err(request, 502, 'bad_model_output',
       'The photo model returned something that is not JSON. Try another photo or add the part by hand.');
   }
-  return json(request, 200, { part: sanitizePart(parsed), model: PHOTO_MODEL });
+  return json(request, 200, { part: sanitizePart(parsed), model });
 }
 
 /* One Muse Voice Transcribe call. The batch endpoint takes
@@ -1392,9 +1410,9 @@ async function handlePart(request, env) {
 async function handleTranscribe(request, env) {
   /* Same optional-key posture as /photo: no Meta key -> the route
    * is off (501) and the site hides the mic. Not an error state. */
-  if (!env.META_API_KEY) {
+  if (!env.META_API_KEY && !env.BASETEN_API_KEY) {
     return err(request, 501, 'transcribe_not_configured',
-      'Voice transcription is not configured on this endpoint (no Meta API key). Typing still works.');
+      'Voice transcription is not configured on this endpoint (no Meta or Baseten key). Typing still works.');
   }
   const { data, error } = await readJsonBody(request, TRANSCRIBE_MAX_BODY_BYTES);
   if (error) return err(request, 413, 'too_large', error);
@@ -1422,6 +1440,35 @@ async function handleTranscribe(request, env) {
   }
   const gate = await gateBudget(env, request);
   if (gate) return gate;
+  /* Meta's Muse Voice Transcribe first (the measured path), then
+   * Muse Spark Open's audio input on Baseten as the backup. */
+  let lastError = new Error('no transcription provider is configured');
+  if (env.META_API_KEY) {
+    try {
+      return await transcribeOnMeta(request, env, bytes);
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  if (env.BASETEN_API_KEY) {
+    try {
+      return await transcribeOnBaseten(request, env, b64.replace(/\s+/g, ''));
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  return err(request, 502, lastError.code || 'upstream_error',
+    lastError.code === 'bad_model_output' ? lastError.message
+      : 'The transcription call failed (' + lastError.message + '). Your audio was not stored anywhere.');
+}
+
+function transcriptError(message) {
+  const e = new Error(message);
+  e.code = 'bad_model_output';
+  return e;
+}
+
+async function transcribeOnMeta(request, env, bytes) {
   const form = new FormData();
   form.append('request', new Blob(
     [JSON.stringify({ model: TRANSCRIBE_MODEL, audioEncoding: 'WAV' })],
@@ -1443,15 +1490,12 @@ async function handleTranscribe(request, env) {
         (detail ? ': ' + detail : ''));
     }
     payload = await res.json();
-  } catch (e) {
-    return err(request, 502, 'upstream_error',
-      'The transcription call failed (' + e.message + '). Your audio was not stored anywhere.');
   } finally {
     clearTimeout(timer);
   }
   const transcript = payload && payload.transcript;
   if (typeof transcript !== 'string' || !transcript.trim()) {
-    return err(request, 502, 'bad_model_output',
+    throw transcriptError(
       'The transcription came back empty. Nothing was saved; try again closer to the mic.');
   }
   return json(request, 200, {
@@ -1459,6 +1503,35 @@ async function handleTranscribe(request, env) {
     model: TRANSCRIBE_MODEL,
     audio_duration_ms: typeof payload.audioDurationMs === 'number'
       ? payload.audioDurationMs : null,
+  });
+}
+
+/* Backup: Muse Spark Open on Baseten takes audio as an audio_url
+ * content part (a base64 data URL works; WAV is accepted). */
+async function transcribeOnBaseten(request, env, b64) {
+  const payload = await postChatCompletions(BASETEN_URL, env.BASETEN_API_KEY, {
+    model: MODEL,
+    messages: [
+      { role: 'system', content: 'You transcribe speech. Reply with only the exact words spoken, with no commentary, labels or quotes. If nothing is said, reply with nothing.' },
+      { role: 'user', content: [
+        { type: 'text', text: 'Transcribe this recording.' },
+        { type: 'audio_url', audio_url: { url: 'data:audio/wav;base64,' + b64 } },
+      ] },
+    ],
+    temperature: 0,
+    max_tokens: 1000,
+  }, 'Baseten');
+  let transcript;
+  try {
+    transcript = messageContent(payload);
+  } catch (e) {
+    throw transcriptError(
+      'The transcription came back empty. Nothing was saved; try again closer to the mic.');
+  }
+  return json(request, 200, {
+    transcript: transcript.trim(),
+    model: MODEL,
+    audio_duration_ms: null,
   });
 }
 
@@ -2587,8 +2660,8 @@ async function handle(request, env) {
       budget,
       /* Which providers hold keys: the text routes run the
        * Baseten -> Meta -> Fireworks chain (any one key lights
-       * them); photo/part/transcribe need the Meta key, web needs
-       * the Firecrawl key. */
+       * them); photo/part/transcribe run Meta -> Baseten (either
+       * key lights them); web needs the Firecrawl key. */
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY),
         firecrawl: Boolean(env.FIRECRAWL_API_KEY) },
       /* Accounts: on when the JWT secret + KV exist. Each social
@@ -2601,8 +2674,8 @@ async function handle(request, env) {
       routes: {
         describe: textProvider, chat: textProvider, list: textProvider,
         fix: textProvider, part_chat: textProvider,
-        photo: Boolean(env.META_API_KEY), part: Boolean(env.META_API_KEY),
-        transcribe: Boolean(env.META_API_KEY),
+        photo: visionConfigured(env), part: visionConfigured(env),
+        transcribe: visionConfigured(env),
         /* Web search/scrape needs the Firecrawl key (optional). */
         web: Boolean(env.FIRECRAWL_API_KEY),
         /* The Parts API serves from KV: on when the namespace

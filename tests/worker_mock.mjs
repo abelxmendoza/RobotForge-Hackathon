@@ -115,8 +115,8 @@ const PART_CHAT_REPLY = {
   confirmed: true,
 };
 
-let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft | fix | part-chat
-let metaMode = 'photo';   // photo | junk | document | document-bad | part
+let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft | fix | part-chat | photo | part | transcript | cutoff
+let metaMode = 'photo';   // photo | junk | document | document-bad | part | http500
 let firecrawlMode = 'ok'; // ok | http500 | empty
 let githubMode = 'ok';    // ok | hidden | unverified
 let googleMode = 'ok';    // ok | unverified
@@ -125,6 +125,9 @@ globalThis.fetch = async (url, opts) => {
   upstreamCalls.push({ url: String(url), opts });
   const u = String(url);
   if (u.startsWith('https://api.meta.ai/')) {
+    if (metaMode === 'http500') {
+      return new Response('meta boom', { status: 500 });
+    }
     if (u.includes('/asr/transcribe')) {
       assert.ok(opts.body instanceof FormData, 'transcribe sends multipart');
       return new Response(JSON.stringify({
@@ -220,12 +223,20 @@ globalThis.fetch = async (url, opts) => {
   if (basetenMode === 'http500') {
     return new Response('upstream boom', { status: 500 });
   }
+  if (basetenMode === 'cutoff') {
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: '{"spec": {"name": "half' }, finish_reason: 'length' }],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
   const content = basetenMode === 'spec' ? JSON.stringify(GOOD_SPEC)
     : basetenMode === 'fenced' ? '```json\n' + JSON.stringify(GOOD_SPEC) + '\n```'
     : basetenMode === 'chat' ? 'A concise live answer.'
     : basetenMode === 'list' ? JSON.stringify(LIST_REPLY)
     : basetenMode === 'fix' ? JSON.stringify(FIX_REPLY)
     : basetenMode === 'part-chat' ? JSON.stringify(PART_CHAT_REPLY)
+    : basetenMode === 'photo' ? JSON.stringify(PHOTO_DRAFT)
+    : basetenMode === 'part' ? JSON.stringify(PART_REPLY)
+    : basetenMode === 'transcript' ? 'a small indoor rover with four wheels'
     : basetenMode === 'list-bad-draft'
       ? JSON.stringify({ ...LIST_REPLY, draft_spec: { name: 'half a spec' } })
     : 'this is not json at all';
@@ -474,15 +485,19 @@ await scenario('health reports which routes are configured', async () => {
   const plain = await call(makeEnv(), '/health');
   assert.deepStrictEqual(plain.body.routes,
     { describe: true, chat: true, list: true, fix: true, part_chat: true,
-      photo: false, part: false, transcribe: false, web: false, parts: true });
+      photo: true, part: true, transcribe: true, web: false, parts: true });
+  const noVision = await call(makeEnv({ BASETEN_API_KEY: undefined,
+    FIREWORKS_API_KEY: 'fw' }), '/health');
+  assert.strictEqual(noVision.body.routes.photo, false);
+  assert.strictEqual(noVision.body.routes.transcribe, false);
   const withMeta = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/health');
   assert.strictEqual(withMeta.body.routes.photo, true);
   assert.strictEqual(withMeta.body.routes.transcribe, true);
 });
 
-await scenario('photo without the Meta key is a 501, no call attempted', async () => {
+await scenario('photo without a Meta or Baseten key is a 501, no call attempted', async () => {
   const before = upstreamCalls.length;
-  const r = await call(makeEnv(), '/photo', {
+  const r = await call(makeEnv({ BASETEN_API_KEY: undefined }), '/photo', {
     method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA' },
   });
@@ -643,8 +658,8 @@ await scenario('fix malformed model output is a 502', async () => {
   assert.strictEqual(r.body.code, 'bad_model_output');
 });
 
-await scenario('part without the Meta key is a 501', async () => {
-  const r = await call(makeEnv(), '/part', { method: 'POST', auth: true,
+await scenario('part without a Meta or Baseten key is a 501', async () => {
+  const r = await call(makeEnv({ BASETEN_API_KEY: undefined }), '/part', { method: 'POST', auth: true,
     body: { image_data_url: 'data:image/jpeg;base64,AAAA' } });
   assert.strictEqual(r.status, 501);
 });
@@ -727,13 +742,74 @@ await scenario('transcribe happy path returns the transcript', async () => {
   assert.strictEqual(r.body.audio_duration_ms, 3000);
 });
 
-await scenario('transcribe without the Meta key is a 501', async () => {
+await scenario('transcribe without a Meta or Baseten key is a 501', async () => {
   const before = upstreamCalls.length;
-  const r = await call(makeEnv(), '/transcribe', { method: 'POST', auth: true,
+  const r = await call(makeEnv({ BASETEN_API_KEY: undefined }), '/transcribe', { method: 'POST', auth: true,
     body: { audio_b64: 'UklGRg==' } });
   assert.strictEqual(r.status, 501);
   assert.strictEqual(r.body.code, 'transcribe_not_configured');
   assert.strictEqual(upstreamCalls.length, before);
+});
+
+await scenario('photo falls back to Baseten when Meta fails, and says so', async () => {
+  metaMode = 'http500'; basetenMode = 'photo';
+  const env = makeEnv({ META_API_KEY: 'meta-key-456' });
+  const before = upstreamCalls.length;
+  const r = await call(env, '/photo', { method: 'POST', auth: true,
+    body: { image_data_url: 'data:image/jpeg;base64,AAAA' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.model, 'meta-models/muse-spark-open');
+  assert.strictEqual(r.body.estimated, true);
+  const sent = JSON.parse(upstreamCalls[upstreamCalls.length - 1].opts.body);
+  assert.ok(upstreamCalls[upstreamCalls.length - 1].url.startsWith('https://inference.baseten.co/'));
+  assert.strictEqual(sent.messages[1].content[1].image_url.url, 'data:image/jpeg;base64,AAAA');
+  assert.strictEqual(upstreamCalls.length - before, 2);
+  metaMode = 'photo';
+});
+
+await scenario('photo with only the Baseten key goes straight to Baseten', async () => {
+  basetenMode = 'photo';
+  const r = await call(makeEnv(), '/photo', { method: 'POST', auth: true,
+    body: { image_data_url: 'data:image/jpeg;base64,AAAA' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.model, 'meta-models/muse-spark-open');
+});
+
+await scenario('part photo falls back to Baseten when Meta fails', async () => {
+  metaMode = 'http500'; basetenMode = 'part';
+  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/part', {
+    method: 'POST', auth: true,
+    body: { image_data_url: 'data:image/jpeg;base64,AAAA' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.model, 'meta-models/muse-spark-open');
+  assert.strictEqual(r.body.part.name, '4S LiPo 5200 mAh');
+  metaMode = 'photo';
+});
+
+await scenario('transcribe falls back to Baseten audio when Meta fails', async () => {
+  metaMode = 'http500'; basetenMode = 'transcript';
+  const wav = new Uint8Array(48);
+  wav.set([0x52, 0x49, 0x46, 0x46], 0);
+  wav.set([0x57, 0x41, 0x56, 0x45], 8);
+  const b64 = Buffer.from(wav).toString('base64');
+  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/transcribe', {
+    method: 'POST', auth: true, body: { audio_b64: b64 } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.transcript, 'a small indoor rover with four wheels');
+  assert.strictEqual(r.body.model, 'meta-models/muse-spark-open');
+  const sent = JSON.parse(upstreamCalls[upstreamCalls.length - 1].opts.body);
+  assert.strictEqual(sent.messages[1].content[1].type, 'audio_url');
+  assert.strictEqual(sent.messages[1].content[1].audio_url.url, 'data:audio/wav;base64,' + b64);
+  metaMode = 'photo';
+});
+
+await scenario('a reply cut off at the length limit fails over to the next provider', async () => {
+  basetenMode = 'cutoff'; metaMode = 'chat';
+  const r = await call(makeEnv({ META_API_KEY: 'meta-key-456' }), '/chat', {
+    method: 'POST', auth: true, body: { message: 'hi' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.model, 'muse-spark-1.3');
+  metaMode = 'photo'; basetenMode = 'chat';
 });
 
 /* ---------------- Firecrawl web (/web) ---------------- */
