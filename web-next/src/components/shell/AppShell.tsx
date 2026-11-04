@@ -75,6 +75,7 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
         <div className="side-foot">
           <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
           <a href={REPO_URL}>GitHub</a>
+          <Link href="/credits/" aria-current={active === "credits" ? "page" : undefined}>Credits</Link>
         </div>
       </aside>
       <GateProvider enabled={gate}>

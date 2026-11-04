@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
+import { assetPath } from "@/components/home/asset";
+import { robots, robotSlug } from "@/lib/data";
+import { robotImage, imgSrc } from "@/components/robots/shared";
+import RobotPhoto from "@/components/robots/RobotPhoto";
 
 /**
  * Credits — who and what RobotForge builds on. Every line traces to
@@ -10,6 +14,15 @@ import AppShell from "@/components/shell/AppShell";
  * models inside" table, live/README.md, lib/omega1Twin.ts, and the
  * submission package's contributors draft. Acknowledgment, not
  * team membership — the only human contributor is named first.
+ *
+ * The pictures follow the same rule: the robot gallery renders
+ * each catalogue entry's own credited photo (the same image and
+ * credit line its Robodex page shows, via lib/data + the robots'
+ * shared robotImage helper), the part photos are the catalogue's
+ * own files, and the brand logos under assets/img/credits/ are
+ * the owners' marks (Simple Icons, CC0), shown only to say
+ * thank you. The remaining tiles are RobotForge illustrations
+ * drawn for this page.
  */
 
 export const metadata: Metadata = {
@@ -19,9 +32,55 @@ export const metadata: Metadata = {
     "The makers, models, workshops and services RobotForge builds on — credited.",
 };
 
+/* The maker line shown under each gallery photo. Mirrors the
+ * catalogue list below; the photo and its credit line come from
+ * the catalogue record itself. */
+const MAKERS: Record<string, string> = {
+  "Andino": "Ekumen",
+  "TurtleBot3 Burger": "ROBOTIS",
+  "TurtleBot3 Waffle Pi": "ROBOTIS",
+  "Pathfinder": "RobotForge's own reference design",
+  "PX4 X500": "the PX4 project and Holybro",
+  "Crazyflie 2.1": "Bitcraze",
+  "Unitree Go2": "Unitree",
+  "Mini Pupper": "MangDang",
+  "Unitree G1": "Unitree",
+  "ROBOTIS OP3": "ROBOTIS",
+  "OpenManipulator-X": "ROBOTIS",
+};
+
+/* One logo tile: a brand mark on a light stage (so dark marks
+ * stay readable on the app's navy), or a RobotForge illustration
+ * on a dark stage, or a plain wordmark when no mark exists. */
+function LogoTile({ logo, art, word, name, note }: {
+  logo?: string; art?: string; word?: string; name: string; note: string;
+}) {
+  return (
+    <figure className="credits-tile">
+      {art ? (
+        <span className="credits-tile-stage credits-tile-stage--art">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={assetPath(`assets/img/credits/${art}`)} alt="" loading="lazy" />
+        </span>
+      ) : word ? (
+        <span className="credits-tile-stage credits-tile-stage--word">{word}</span>
+      ) : (
+        <span className="credits-tile-stage">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={assetPath(`assets/img/credits/${logo}`)} alt={`${name} logo`} loading="lazy" />
+        </span>
+      )}
+      <figcaption>
+        <strong>{name}</strong>
+        <span>{note}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 export default function CreditsPage() {
   return (
-    <AppShell active="" gate={false} crumbs={[{ label: "Credits" }]}>
+    <AppShell active="credits" gate={false} crumbs={[{ label: "Credits" }]}>
       <div className="page-head">
         <div>
           <div className="eyebrow">Fine print</div>
@@ -37,12 +96,19 @@ export default function CreditsPage() {
 
       <section className="section">
         <h2>Built by</h2>
-        <p>
-          Abel Mendoza is the only human contributor: design,
-          building, testing, gate runs and the submission. Everyone
-          and everything below is credited for what RobotForge builds
-          on, not listed as a contributor.
-        </p>
+        <div className="credits-founder">
+          <figure>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={assetPath("assets/img/abel-founder.jpg")}
+              alt="Portrait of Abel Mendoza" loading="lazy" />
+          </figure>
+          <p>
+            Abel Mendoza is the only human contributor: design,
+            building, testing, gate runs and the submission. Everyone
+            and everything below is credited for what RobotForge builds
+            on, not listed as a contributor.
+          </p>
+        </div>
       </section>
 
       <section className="section">
@@ -61,11 +127,25 @@ export default function CreditsPage() {
           also the build assistant used during the hackathon for
           research, coding and verification passes.
         </p>
+        <div className="credits-tiles">
+          <LogoTile logo="logo-meta.svg" name="Meta"
+            note="Muse Spark, the model inside, and SAM 3.1" />
+          <LogoTile word="Torque" name="Torque"
+            note="Muse Spark as Abel's build assistant" />
+        </div>
       </section>
 
       <section className="section">
         <h2>Workshops that shaped the design</h2>
         <p>Three Meta hackathon workshops shaped how RobotForge is built:</p>
+        <div className="credits-tiles">
+          <LogoTile art="workshop-agents.svg" name="Agents 101"
+            note="The agent-loop discipline" />
+          <LogoTile art="workshop-verify.svg" name="Agents 102"
+            note="Verifiable Agents — deterministic first, judge second" />
+          <LogoTile art="workshop-measure.svg" name="Fireworks workshop"
+            note="Muse Open Models — measure it, with a fixed corpus" />
+        </div>
         <ul className="credits-list">
           <li>
             <strong>Agents 101</strong> — the agent-loop discipline
@@ -106,6 +186,24 @@ export default function CreditsPage() {
           <li><strong>ROBOTIS OP3</strong> — ROBOTIS</li>
           <li><strong>OpenManipulator-X</strong> — ROBOTIS</li>
         </ul>
+        <div className="credits-gallery">
+          {robots.map((r) => {
+            const image = robotImage(r);
+            if (!image) return null;
+            return (
+              <figure className="credits-shot" key={r.name}>
+                <span className="credits-shot-img">
+                  <RobotPhoto src={imgSrc(image.src)} alt={r.name}
+                    slug={robotSlug(r)} name={r.name} />
+                </span>
+                <figcaption>
+                  <strong>{r.name}</strong> — {MAKERS[r.name] ?? ""}
+                  <span>{image.caption}</span>
+                </figcaption>
+              </figure>
+            );
+          })}
+        </div>
         <p>
           Boston Dynamics Spot is not a catalogue entry: it appears
           as a Spotter sighting, photographed at Cal Poly
@@ -124,6 +222,38 @@ export default function CreditsPage() {
           estimates, not measurements of the real robot, and they
           are labelled ESTIMATED everywhere they appear.
         </p>
+        <div className="credits-duo">
+          <figure className="credits-shot">
+            <span className="credits-shot-img">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath("assets/omega1-twin/omega1-real-photo.png")}
+                alt="Omega1, Abel's real Freenove rover" loading="lazy" />
+            </span>
+            <figcaption>
+              <strong>The real Omega1</strong>
+              <span>Abel&apos;s Freenove FNK0043 rover, photographed on the bench.</span>
+            </figcaption>
+          </figure>
+          <figure className="credits-shot">
+            <span className="credits-shot-img">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath("assets/omega1-twin/omega1-rover-preview.jpg")}
+                alt="Omega1's generated digital twin" loading="lazy" />
+            </span>
+            <figcaption>
+              <strong>Its digital twin</strong>
+              <span>Generated by ProjectSim (Kaedim) from that photo — ESTIMATED geometry, not a measurement.</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div className="credits-tiles">
+          <LogoTile logo="logo-raspberrypi.svg" name="Raspberry Pi"
+            note="Omega1's onboard computer" />
+          <LogoTile word="Freenove" name="Freenove"
+            note="The FNK0043 4WD car kit Omega1 is built from" />
+          <LogoTile word="ProjectSim" name="ProjectSim (Kaedim)"
+            note="Generated the Omega1 twin from a photo" />
+        </div>
       </section>
 
       <section className="section">
@@ -139,6 +269,22 @@ export default function CreditsPage() {
           accounts, or with Google or Meta — both are live sign-in
           routes on the endpoint.
         </p>
+        <div className="credits-tiles">
+          <LogoTile logo="logo-vercel.svg" name="Vercel"
+            note="Hosts this site" />
+          <LogoTile logo="logo-cloudflare.svg" name="Cloudflare"
+            note="The live endpoint is a Cloudflare Worker" />
+          <LogoTile logo="logo-meta.svg" name="Meta"
+            note="Muse Spark API and Meta sign-in" />
+          <LogoTile logo="logo-google.svg" name="Google"
+            note="Google sign-in" />
+          <LogoTile art="glyph-baseten.svg" name="Baseten"
+            note="First route in the live provider chain" />
+          <LogoTile art="glyph-fireworks.svg" name="Fireworks"
+            note="A further provider route, when switched on" />
+          <LogoTile logo="logo-github.svg" name="GitHub"
+            note="Home of the public repository" />
+        </div>
       </section>
 
       <section className="section">
@@ -152,6 +298,41 @@ export default function CreditsPage() {
           labelled WEB-SOURCED — UNVERIFIED until a datasheet or a
           measurement confirms it.
         </p>
+        <div className="credits-cards">
+          <figure className="credits-tile">
+            <span className="credits-tile-stage credits-tile-stage--art">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath("assets/img/credits/glyph-firecrawl.svg")}
+                alt="" loading="lazy" />
+            </span>
+            <figcaption>
+              <strong>Firecrawl</strong>
+              <span>The web search and page-reading service behind the /web route.</span>
+            </figcaption>
+          </figure>
+          <figure className="credits-tile">
+            <span className="credits-tile-stage credits-tile-stage--photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath("assets/img/parts/driver_tb6612fng.jpg")}
+                alt="The TB6612FNG dual motor driver board" loading="lazy" />
+            </span>
+            <figcaption>
+              <strong>Pololu and Toshiba</strong>
+              <span>The TB6612FNG driver&apos;s product page and datasheet — the chip is Toshiba&apos;s, the board photo is the catalogue&apos;s.</span>
+            </figcaption>
+          </figure>
+          <figure className="credits-tile">
+            <span className="credits-tile-stage credits-tile-stage--photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assetPath("assets/img/parts/pla_filament.jpg")}
+                alt="A spool of PLA filament" loading="lazy" />
+            </span>
+            <figcaption>
+              <strong>Polymaker</strong>
+              <span>The product pages behind the PLA and PETG filament price estimates.</span>
+            </figcaption>
+          </figure>
+        </div>
         <ul className="credits-list">
           <li>
             <strong>Firecrawl</strong> — the web search and
@@ -175,6 +356,10 @@ export default function CreditsPage() {
             dated estimates — never RobotForge&apos;s own prices.
           </li>
         </ul>
+        <div className="credits-tiles">
+          <LogoTile logo="logo-toshiba.svg" name="Toshiba"
+            note="Maker of the TB6612FNG chip" />
+        </div>
         <p>
           The catalogue carries its own citations too: each Robodex
           entry names where its spec was read from, each part
@@ -191,13 +376,35 @@ export default function CreditsPage() {
           for robot models. RobotForge itself is released under
           Apache-2.0.
         </p>
+        <div className="credits-tiles">
+          <LogoTile logo="logo-nextjs.svg" name="Next.js"
+            note="The web app's framework" />
+          <LogoTile logo="logo-react.svg" name="React"
+            note="The interface library" />
+          <LogoTile logo="logo-threejs.svg" name="Three.js"
+            note="3D rendering" />
+          <LogoTile logo="logo-apache.svg" name="Apache-2.0"
+            note="RobotForge's own licence" />
+          <LogoTile word="Rapier" name="Rapier"
+            note="The physics sandbox" />
+          <LogoTile word="urdf-loader" name="urdf-loader"
+            note="Loads robot models" />
+        </div>
       </section>
 
       <section className="section">
         <h2>Photos</h2>
         <p>
           Robot and part photos are credited on their own pages,
-          next to the photo they belong to.
+          next to the photo they belong to — and in the gallery
+          above, under each robot&apos;s picture.
+        </p>
+        <p>
+          The brand logos on this page are the trademarks of their
+          owners, shown only to say thank you; the logo files come
+          from Simple Icons (CC0). The workshop, provider and
+          Firecrawl tiles are illustrations drawn for RobotForge,
+          not the companies&apos; own artwork.
         </p>
       </section>
     </AppShell>

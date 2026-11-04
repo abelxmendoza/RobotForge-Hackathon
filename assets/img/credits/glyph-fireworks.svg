@@ -1,0 +1,12 @@
+<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fireworks burst illustration">
+<ellipse cx="100" cy="116" rx="72" ry="7" fill="#0e1013" opacity=".55"/>
+<g stroke-linecap="round" stroke-width="5">
+<path d="M100 52V22" stroke="#f59e0b"/><path d="M100 82v24" stroke="#f59e0b"/>
+<path d="M79 57L58 36" stroke="#34d399"/><path d="M121 77l21 21" stroke="#34d399"/>
+<path d="M70 67H40" stroke="#f87171"/><path d="M130 67h30" stroke="#f87171"/>
+<path d="M79 77L58 98" stroke="#83b8ff"/><path d="M121 57l21-21" stroke="#83b8ff"/>
+</g>
+<circle cx="100" cy="67" r="9" fill="#f2bc66"/>
+<circle cx="52" cy="26" r="4" fill="#34d399"/><circle cx="152" cy="30" r="4" fill="#f59e0b"/>
+<circle cx="160" cy="104" r="4" fill="#f87171"/><circle cx="38" cy="108" r="4" fill="#83b8ff"/>
+</svg>
