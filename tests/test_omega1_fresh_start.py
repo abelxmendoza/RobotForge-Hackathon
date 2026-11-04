@@ -90,3 +90,10 @@ def test_forge_opens_the_built_in_omega1_instead_of_generating():
     i = FORGE.index("const runText = useCallback(")
     j = FORGE.index("postJSON<{ spec: RobotSpec }>('/describe'", i)
     assert FORGE.index("omega1Ask(value)", i) < j
+
+
+def test_start_over_drops_the_old_editor_draft():
+    i = GARAGE.index("const resetOmega1 = () => {")
+    body = GARAGE[i:GARAGE.index("const restoreRobot", i)]
+    assert "loadedSpec.current = null" in body
+    assert "writeStore(draftKey(OMEGA1_ROBOT_ID), null)" in body

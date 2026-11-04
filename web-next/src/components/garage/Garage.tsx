@@ -814,6 +814,11 @@ export default function Garage() {
     );
     setConfirmReset(false);
     if (!result.ok) { setSaveError(result.error); return; }
+    /* Drop the old editor draft too: forget the loaded spec so the load
+     * effect doesn't keep unsaved edits, and clear the cached draft so
+     * they aren't restored against the new Baseline. */
+    loadedSpec.current = null;
+    writeStore(draftKey(OMEGA1_ROBOT_ID), null);
     clearOmega1Scans();
     setSelected(OMEGA1_ROBOT_ID);
     setTab('overview');
