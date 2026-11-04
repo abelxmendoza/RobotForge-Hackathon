@@ -724,8 +724,25 @@ function myRobotsAnswer(owned: string[], root: string): AnswerResult {
   return { html, hits: [workshopHit(root), myRobotsHit(root)] };
 }
 
+/* The Robodex robot the WHOLE phrase names: its full name, or a
+ * trailing part of it ("Spot", "Waffle Pi"). A phrase that merely
+ * mentions a robot ("a battery for Andino") names none, so parts and
+ * tools questions keep their normal handling. */
+function namedDexRobot(name: string, robots: RobotData[]): RobotData | null {
+  const asked = tokens(name).join(" ");
+  if (!asked) return null;
+  return robots.find((r) => {
+    const toks = tokens(r.name);
+    for (let i = 0; i < toks.length; i++) {
+      const tail = toks.slice(i).join(" ");
+      if (tail === asked && (i === 0 || tail.length >= 3)) return true;
+    }
+    return false;
+  }) || null;
+}
+
 function isMineAnswer(name: string, owned: string[], robots: RobotData[], root: string): AnswerResult {
-  const dex = matchRobot(tokens(name), robots);
+  const dex = namedDexRobot(name, robots);
   if (ownsName(owned, name) || (dex && ownsName(owned, dex.name))) {
     const shown = owned.find((n) => slugify(n) === slugify(name)) || (dex ? dex.name : name);
     return {
@@ -807,7 +824,7 @@ export function createWrench(data: EngineData): Wrench {
       /* "do I have …" also asks about parts and tools: answer it here
        * only when it names a robot (yours, a Robodex one, or Omega1). */
       const namesRobot = (n: string) =>
-        ownsName(owned, n) || !!matchRobot(tokens(n), robots) || slugify(n) === OMEGA1_SLUG;
+        ownsName(owned, n) || !!namedDexRobot(n, robots) || slugify(n) === OMEGA1_SLUG;
       if (askedName && !/^(?:any|anything|robots?)$/i.test(askedName) &&
           (mine![1] ? true : namesRobot(askedName))) {
         return finish(isMineAnswer(askedName, owned, robots, root), mem);

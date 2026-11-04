@@ -58,6 +58,8 @@ CASES = [
     {"id": "own_unknown", "q": "is Zorbo mine?", "mine": ["Rover Two"]},
     {"id": "dex_answer", "q": f"Tell me about {DEX_NAME}", "mine": ["Rover Two"]},
     {"id": "part_not_robot", "q": "do I have a battery?", "mine": ["Rover Two"]},
+    {"id": "part_for_robot", "q": f"do I have a battery for {DEX_NAME}?", "mine": [DEX_NAME]},
+    {"id": "short_name", "q": f"is {DEX_NAME.split()[-1]} mine?", "mine": []},
 ]
 
 
@@ -123,3 +125,11 @@ def test_robodex_answers_say_whose_robot_it_is():
 
 def test_part_questions_are_not_ownership_questions():
     assert "isn't one of your robots" not in _text("part_not_robot")
+    # a parts question that only MENTIONS a robot is not an ownership ask
+    t = _text("part_for_robot")
+    assert "is in your Workshop, so it is one of your robots" not in t
+    assert "not one of yours: it isn't in your Workshop" not in t
+
+
+def test_short_robot_name_still_resolves():
+    assert "is a Robodex robot, not one of yours" in _text("short_name")
