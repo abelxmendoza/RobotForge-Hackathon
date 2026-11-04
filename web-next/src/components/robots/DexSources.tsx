@@ -44,10 +44,7 @@ import {
   type DexTab,
 } from "@/lib/dexOverrides";
 import { buildDexEntry } from "@/lib/saveRobot";
-import { recordSnapshot } from "@/lib/lifecycle";
-import { deleteRobotInStore } from "@/lib/robotLifecycleRepository";
-import { forgetRobotScans } from "@/lib/scanStore";
-import { forgetRobotNotes } from "@/lib/robotNotes";
+import { deleteOwnedRobot } from "@/lib/robotDelete";
 import { assetPath } from "@/components/home/asset";
 import RobotAvatar from "@/components/garage/RobotAvatar";
 import type { Robot } from "@/lib/types";
@@ -304,25 +301,6 @@ export async function bringDexRobotIntoWorkshop({ name, specFile, draftSpec }: {
   return { status: "added", entry };
 }
 
-/* The Workshop's Delete, from a Robodex card: the same store
- * operation (deleteRobotInStore, guarded by the record snapshot so a
- * robot edited meanwhile is never deleted blind) and the same
- * clean-up of its scans, notes and unsaved draft. Writes go through
- * lib/store, so demo mode deletes from the demo twin only. */
-const WORKSHOP_DRAFT_KEY = (id: string) => `robotforge.workshop.draft.${id}`;
-export function deleteGarageRobot(robot: GarageRobot): string | null {
-  const result = deleteRobotInStore(
-    () => readStore<GarageRobot[]>(GARAGE_KEY, []),
-    (next) => writeStore(GARAGE_KEY, next),
-    robot.id, recordSnapshot(robot),
-  );
-  if (!result.ok) return result.error;
-  void forgetRobotScans(robot.id).catch(() => undefined);
-  forgetRobotNotes(robot.id);
-  writeStore(WORKSHOP_DRAFT_KEY(robot.id), null);
-  return null;
-}
-
 /* A Workshop robot as a Robodex card — used for My robots and for
  * Workshop robots the owner filed under another tab. These are the
  * only Robodex cards with a Delete: they are your robots. */
@@ -332,9 +310,9 @@ export function GarageRobotCard({ robot, filedAs }: { robot: GarageRobot; filedA
   const [error, setError] = useState("");
   const remove = () => {
     if (!confirming) { setConfirming(true); return; }
-    const problem = deleteGarageRobot(robot);
+    const result = deleteOwnedRobot(robot);
     setConfirming(false);
-    setError(problem ?? "");
+    setError(result.ok ? "" : result.error);
   };
   return (
     <article className="robot-card dex-mine">

@@ -162,7 +162,8 @@ def test_twin_overview_does_not_repeat_specs_and_parts():
 
 
 def test_drafts_are_separate_from_history_and_bound_to_robot_and_baseline():
-    assert 'robotforge.workshop.draft.${id}' in GARAGE
+    assert 'const draftKey = workshopDraftKey;' in GARAGE
+    assert 'robotforge.workshop.draft.${id}' in (ROOT / "web-next/src/lib/robotOwnership.ts").read_text()
     assert 'cached?.baseline === v.id' in GARAGE
     assert 'draftOwner !== robot.id' in GARAGE
     assert 'writeStore(draftKey(robot.id), value)' in GARAGE

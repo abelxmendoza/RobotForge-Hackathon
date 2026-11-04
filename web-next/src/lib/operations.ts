@@ -51,7 +51,7 @@ export type Command = { kind: 'list' } | { kind: 'help' } | { kind: 'undo' } |
  * Schema paths use SI units, matching exported RobotForge specs. */
 export function parseCommand(text: string): Command | null {
   const q = text.trim();
-  if (/^(?:list|show) my robots[.!]?$/i.test(q)) return { kind: 'list' };
+  if (/^(?:(?:list|show) my robots|(?:which|what) robots (?:are mine|do i (?:own|have))|what are my robots)[.!?]?$/i.test(q)) return { kind: 'list' };
   if (/^(?:operations|what can you do|help with operations)[?!.]?$/i.test(q)) return { kind: 'help' };
   if (/^undo(?: last(?: chat)?(?: change| operation)?)?[.!]?$/i.test(q)) return { kind: 'undo' };
   const m = q.match(/^set "([^"\n]+)" ([a-z_][a-z_0-9.]*) to (.+)$/i);

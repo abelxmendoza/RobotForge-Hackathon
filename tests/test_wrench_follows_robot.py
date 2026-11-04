@@ -108,4 +108,5 @@ def test_wrench_is_wired_to_the_robot_on_screen() -> None:
     assert "window.addEventListener(WORKSHOP_ACTION_EVENT, onAction)" in GARAGE
     assert "setRealsenseFor({ id: robot.id, name: robot.name }); }" in GARAGE
     assert "What Wrench knows about {robot.name}" in GARAGE and "removeRobotNote(n.id)" in GARAGE
-    assert "forgetRobotNotes(archived.id);" in GARAGE
+    assert "deleteOwnedRobot(archived)" in GARAGE
+    assert "forgetRobotNotes(robot.id);" in (ROOT / "web-next/src/lib/robotDelete.ts").read_text()
