@@ -125,5 +125,6 @@ def test_each_robot_has_a_realsense_camera_window() -> None:
     # the live view and any recording on the bridge.
     assert "Save as ${fixed.name}'s RealSense scan" in STUDIO
     assert "if (onAttach)" in STUDIO
-    assert "live.current = false;\n    if (recordingRef.current) void fetch(baseRef.current + '/record/stop'" in STUDIO
+    assert "if (!mounted.current) { void fetch(base + '/record/stop'" in STUDIO
+    assert "mounted.current = false;\n    live.current = false;\n    if (recordingRef.current) void fetch(baseRef.current + '/record/stop'" in STUDIO
     assert "Scan {subject} with a RealSense" in STUDIO

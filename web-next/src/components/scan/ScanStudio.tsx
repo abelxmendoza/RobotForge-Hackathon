@@ -65,6 +65,7 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
   const pushRef = useRef<PushPoints | null>(null);
   const live = useRef(false);
   const recordingRef = useRef(false);
+  const mounted = useRef(true);
   const baseRef = useRef(DEFAULT_BRIDGE);
   const base = normalizeBridgeUrl(url);
   baseRef.current = base;
@@ -80,9 +81,13 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
   }, [result, fixed]);
   // Closing the window stops the live view, and stops a recording so the
   // bridge doesn't keep filling the disk with frames nobody will build.
-  useEffect(() => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+    mounted.current = false;
     live.current = false;
     if (recordingRef.current) void fetch(baseRef.current + '/record/stop', { method: 'POST' }).catch(() => undefined);
+  };
   }, []);
 
   const draw = (canvas: HTMLCanvasElement | null, b64: string, w: number, h: number) => {
@@ -149,7 +154,13 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
 
   const startRec = async () => {
     setMessage(''); setResult(null); setPly(null); setAttached(null);
-    try { await call(base, '/record/start', true); setRecording(true); setRecStart(Date.now()); setFrames(0); }
+    try {
+      await call(base, '/record/start', true);
+      // Closed while the start was in flight: stop it, nobody can see it.
+      if (!mounted.current) { void fetch(base + '/record/stop', { method: 'POST' }).catch(() => undefined); return; }
+      recordingRef.current = true;
+      setRecording(true); setRecStart(Date.now()); setFrames(0);
+    }
     catch (e) { setMessage((e as Error).message); }
   };
   const stopRec = async () => {

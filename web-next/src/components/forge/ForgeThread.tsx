@@ -344,6 +344,9 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   const dispatch = useDispatch();
   const assistant = useForgeAssistant();
   const assistantRef = useRef(assistant);
+  /* Set below once pushUser exists; lets the prompt listener post the
+   * user's bubble for a sent prompt. */
+  const pushUserRef = useRef<(text: string) => void>(() => undefined);
   assistantRef.current = assistant;
   const assistantEntryIds = useRef(new Map<number,number>());
   const [submitting, setSubmitting] = useState(false);
@@ -382,6 +385,11 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       if (busyRef.current) return;
       setOpen(true);
       if (p.mode) setInputMode(p.mode);
+      if (p.send && typeof p.text === 'string' && p.text.trim()) {
+        pushUserRef.current(p.text);
+        assistantRef.current.ask(p.text);
+        return;
+      }
       // A text-based intake replaces any file still waiting to be sent.
       if (typeof p.text === 'string') { setText(p.text); setAttach(null); }
       if (p.attach) { fileRefs.any.current?.click(); return; }
@@ -408,6 +416,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     (node: ReactNode) => push({ kind: 'user', node }),
     [push],
   );
+  pushUserRef.current = (text: string) => pushUser(<p>{text}</p>);
   const pushNote = useCallback(
     (node: ReactNode) => push({ kind: 'note', node }),
     [push],

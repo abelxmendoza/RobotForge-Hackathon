@@ -17,7 +17,7 @@ MSGS = (WEB / "components/chat/ChatMessages.tsx").read_text()
 RUN = r"""
 import assert from 'node:assert/strict';
 import { withNote, noteContextLines, notesFor, parseRememberCommand, cleanNoteText, NOTE_MAX_CHARS } from './robotNotes.ts';
-import { parseWorkshopAction, buildWsContext, workshopTabChips, workingOnLabel } from './workshopContext.ts';
+import { parseWorkshopAction, buildWsContext, workshopTabChips, workingOnLabel, isWorkshopRobotQuestion, snapshotAnswer } from './workshopContext.ts';
 
 // Remembering.
 assert.equal(parseRememberCommand('remember that the left motor stalls'), 'the left motor stalls');
@@ -60,6 +60,17 @@ assert.equal(chips[0], 'Scan it with the RealSense');
 assert.ok(chips.includes('Search the web for Omega1 robot'));
 assert.deepEqual(parseWorkshopAction(chips[0]), { kind: 'realsense' });
 assert.equal(workshopTabChips({ ...ctx, tab: 'simulate' })[0], 'Run the simulation');
+
+// Questions about the robot on screen skip the recorded catalogue's fuzzy match.
+assert.equal(isWorkshopRobotQuestion('What changed in this robot’s latest version?', ctx), true);
+assert.equal(isWorkshopRobotQuestion('is omega1 too heavy', ctx), true);
+assert.equal(isWorkshopRobotQuestion('What is a LiPo balance charger?', ctx), false);
+assert.equal(isWorkshopRobotQuestion('this robot', null), false);
+const ans = snapshotAnswer({ ...ctx, checkLines: ['[ERROR] battery too small'] });
+assert.match(ans[0], /on record for Omega1 \(v1\)/);
+assert.ok(ans.some((p) => p.includes('Owner note: the left motor stalls')));
+assert.ok(ans.some((p) => p.includes('[ERROR] battery too small')));
+assert.ok(ans.some((p) => p.includes('and 37 more on the Specs tab')));
 """
 
 STORE_STUB = "export const readStore = (k, f) => f; export const writeStore = () => null;\n"
@@ -85,6 +96,8 @@ def test_wrench_is_wired_to_the_robot_on_screen() -> None:
     i = DOCK.index("const runCommands = (q: string): boolean => {")
     assert DOCK.index("parseRememberCommand(q)", i) < DOCK.index("parseWorkshopAction(q)", i) < DOCK.index("parseSimCommand(q)", i)
     assert "addRobotNote(ws.robotId,remember)" in DOCK
+    assert "if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow)) {" in DOCK
+    assert "html: snapshotAnswer(wsNow)" in DOCK and "fallback: true," in DOCK
     # Web-sourced answers about a stored robot can be kept as a note, with their source.
     assert "note: { robotId: ws.robotId, robotName: ws.robotName, text: answer, source: webCaption }" in DOCK
     assert "onSaveNote" in MSGS and "Save to {m.grounding.note.robotName}&apos;s notes" in MSGS

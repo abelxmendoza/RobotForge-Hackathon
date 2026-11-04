@@ -57,6 +57,8 @@ import { attachRealsenseScan } from '@/lib/scanBridge';
 import ScanStudioModal from '@/components/scan/ScanStudioModal';
 import { forgetRobotNotes, noteContextLines, notesFor, removeRobotNote, ROBOT_NOTES_KEY, type RobotNote } from '@/lib/robotNotes';
 import { SCAN_SLOTS } from '@/lib/scan3d';
+import { tabFocus } from '@/lib/tabFocus';
+import { SIM_COMMAND_EVENT } from '@/lib/simulation';
 
 const now = () => new Date().toISOString();
 
@@ -1181,6 +1183,29 @@ export default function Garage() {
           </div>}
           <button type="button" className="btn btn-sm ws-edit-specs" onClick={() => goTab('specs')}>{twinOpen ? 'View specs' : 'Specs'}</button>
         </div>}
+        {!twinOpen && !adding && robot && draft && (() => {
+          const focus = tabFocus(tab, {
+            name: robot.name,
+            hasRealsense: Boolean(robot.scans?.some((s) => s.kind === 'realsense')),
+            hasScan: Boolean(robot.scan),
+            versions: robot.versions.length,
+            verdictLabel: wsVerdict.label,
+            verdictCls: wsVerdict.cls,
+          });
+          const act = () => {
+            const a = focus.action;
+            if (a.kind === 'realsense') setRealsenseFor({ id: robot.id, name: robot.name });
+            else if (a.kind === 'simRun') window.dispatchEvent(new CustomEvent(SIM_COMMAND_EVENT, { detail: { command: { action: 'run' }, handled: false, message: '' } }));
+            else promptWrench({ mode: 'chat', text: a.text, send: true });
+          };
+          return (
+            <div className="ws-focus" role="region" aria-label="What this tab is for">
+              <p className="ws-focus-job">{focus.job}</p>
+              <span className={'ws-focus-status ' + focus.tone}>{focus.status}</span>
+              <button type="button" className="btn btn-primary btn-sm ws-focus-go" onClick={act}>{focus.action.label}</button>
+            </div>
+          );
+        })()}
         {draftError && <p className="g-error" role="alert">Draft not saved: {draftError}</p>}
         {twinOpen && (omegaTab === 'specs'
           ? <SpecsDialog readOnly onClose={() => setOmegaTab(specsReturn.current.twin)}><Omega1Twin tab="specs" /></SpecsDialog>

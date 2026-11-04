@@ -2083,3 +2083,11 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .ws-notes ul{margin:0;padding:0;list-style:none;display:grid;gap:var(--s2)}
 .ws-notes li{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
 .ws-note-del{margin-left:auto}
+
+/* Each Workshop tab's job: purpose, status, one main button. */
+.ws-focus{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s3) 0;padding:var(--s3) var(--s4);border:1px solid var(--border);border-radius:var(--r-md,12px);background:var(--surface-2,transparent)}
+.ws-focus-job{margin:0;font-weight:600;flex:1 1 260px}
+.ws-focus-status{font:600 12px/1.2 var(--mono);padding:5px 8px;border-radius:999px;background:var(--surface-3);color:var(--text)}
+.ws-focus-status.pass{color:#3dd6a0}.ws-focus-status.marginal{color:#f2b84b}.ws-focus-status.fail{color:#ff6b6b}
+.ws-focus-go{white-space:nowrap}
+@media (max-width:600px){.ws-focus-go{width:100%}}

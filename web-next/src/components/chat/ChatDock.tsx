@@ -60,7 +60,7 @@ import {DEX_OVERRIDES_KEY,type DexOverrides} from '@/lib/dexOverrides';
 import {isPhotoDraft} from '@/lib/robotSource';
 import {allDexSightings} from '@/components/robots/DexSources';
 import {OMEGA1_ROBOT_ID} from '@/lib/omega1Garage';
-import { buildWsContext, groundingCaption, parseWorkshopAction, readWorkshopContext, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
+import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseWorkshopAction, snapshotAnswer, readWorkshopContext, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
 import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNotes";
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
@@ -1386,7 +1386,18 @@ export function useForgeAssistant() {
       window.setTimeout(() => {
         const turn = wrench.answerTurn(q, memoryRef.current);
         memoryRef.current = turn.memory || {};
-        const ans: AnswerResult & { sources?: SourceRef[] } = turn;
+        let ans: AnswerResult & { sources?: SourceRef[] } = turn;
+        /* A question about the Workshop robot on screen: the recorded
+         * catalogue can't answer it (its fuzzy match can land on an
+         * unrelated part), so it goes live with the snapshot, and the
+         * local answer is what the Workshop has on record. */
+        const wsNow = (pathname || "").startsWith("/garage") ? readWorkshopContext() : null;
+        if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow)) {
+          ans = {
+            html: snapshotAnswer(wsNow).map((para) => "<p>" + esc(para).replace(/\n/g, "<br>") + "</p>").join(""),
+            fallback: true,
+          };
+        }
         /* Recorded answers stay the default and stay instant: only
          * the engine's honest fallback may go live. In demo mode the
          * fallback stays recorded too, with the demo note attached —

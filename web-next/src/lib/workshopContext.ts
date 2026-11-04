@@ -215,3 +215,26 @@ export function workshopTabChips(ctx: WorkshopChatContext): string[] {
 export function workingOnLabel(ctx: WorkshopChatContext | null): string {
   return ctx ? `Working on: ${ctx.robotName} · ${ctx.tabLabel}` : '';
 }
+
+/* A question about the robot on screen ("this robot", "my robot", or its
+ * name). The recorded catalogue can't answer these, and its fuzzy match
+ * can land on an unrelated part, so the chat sends them to the live
+ * model with the snapshot, or answers from the snapshot itself. */
+export function isWorkshopRobotQuestion(q: string, ctx: WorkshopChatContext | null): boolean {
+  if (!ctx) return false;
+  const t = String(q || '').toLowerCase();
+  if (/\b(this|my|the) robot('s|’s)?\b|\bthis design\b|\bits (spec|wiring|battery|checks|motors?)\b/.test(t)) return true;
+  const name = ctx.robotName.toLowerCase().trim();
+  return name.length >= 3 && t.includes(name);
+}
+
+/* What the Workshop has on record for the robot, as plain paragraphs:
+ * the honest answer when the live model isn't available (demo mode,
+ * no endpoint). Never invents anything beyond the snapshot. */
+export function snapshotAnswer(ctx: WorkshopChatContext): string[] {
+  const out = [`Here is what the Workshop has on record for ${ctx.robotName}${ctx.versionLabel ? ' (' + ctx.versionLabel + ')' : ''}.`];
+  if (ctx.factLines?.length) out.push(ctx.factLines.slice(0, 6).join('\n'));
+  out.push('Checks: ' + (ctx.checksVerdict || 'not run') + (ctx.checkLines.length ? '\n' + ctx.checkLines.slice(0, 5).join('\n') : ''));
+  if (ctx.specLines.length) out.push('Spec:\n' + ctx.specLines.slice(0, 8).join('\n') + (ctx.specLines.length > 8 ? `\n…and ${ctx.specLines.length - 8} more on the Specs tab.` : ''));
+  return out;
+}
