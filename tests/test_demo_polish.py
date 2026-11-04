@@ -292,7 +292,7 @@ const assetPath = x => x;
 const compiled = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText;
 const data = new Map([['rf.garage.v1', 'real robots untouched'], ['rf.inventory.v1', 'real shelf untouched']]);
 global.window = {localStorage: {getItem: k => data.get(k) ?? null, setItem: (k,v) => data.set(k,v)}};
-global.fetch = async path => ({ok: true, json: async () => JSON.parse(fs.readFileSync(root + '/web-next/public/' + path))});
+global.fetch = async path => ({ok: true, json: async () => JSON.parse(fs.readFileSync(root + '/' + path))});
 const mod = {exports:{}};
 new Function('exports', 'module', compiled)(mod.exports,mod);
 (async () => {
