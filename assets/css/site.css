@@ -60,6 +60,17 @@ section{scroll-margin-top:80px}
 .section-head h2{font-size:clamp(28px,4vw,var(--fs-2xl));letter-spacing:-.03em;margin-top:var(--s3)}
 .section-head p{color:var(--text-muted);margin-top:var(--s4);font-size:var(--fs-md)}
 
+/* why I built RobotForge — founder photo + his own account */
+.why-built{display:grid;grid-template-columns:300px 1fr;gap:var(--s7);align-items:start}
+.why-photo{margin:0}
+.why-photo img{width:100%;height:auto;display:block;border-radius:var(--r);border:1px solid var(--border)}
+.why-photo figcaption{margin-top:10px;color:var(--text-faint);font-size:var(--fs-xs);line-height:1.5}
+.why-text{max-width:640px}
+.why-text p{color:var(--text-muted);font-size:var(--fs-md);line-height:1.65;margin-bottom:var(--s4)}
+.why-text p:first-child{color:var(--text);font-weight:600}
+.why-sign{color:var(--text)!important;font-weight:600}
+@media (max-width:720px){.why-built{grid-template-columns:1fr}.why-photo{max-width:300px}}
+
 /* workflow */
 .flow{list-style:none;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s3);counter-reset:step}
 .flow li{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--s5) var(--s4)}

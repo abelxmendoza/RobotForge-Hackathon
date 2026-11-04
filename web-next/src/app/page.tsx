@@ -448,6 +448,79 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ============ WHY I BUILT ROBOTFORGE — the founder's own
+           account, in his words (Abel Mendoza, Nov 3, 2026): the
+           Titan Rover gaps (CAD, harnessing, remote testing) this
+           app exists to close. Photo: Abel's own, from the LoreBook
+           About page (lorebookai.com/branding/mePro.JPG). */}
+      <section className="band" id="why">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">Why I built RobotForge</div>
+            <h2>I built the tool I needed on my rover team.</h2>
+          </div>
+          <div className="why-built">
+            <figure className="why-photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={assetPath("assets/img/abel-founder.jpg")}
+                width={1024}
+                height={1024}
+                alt="Abel Mendoza, builder of RobotForge"
+              />
+              <figcaption>Abel Mendoza — CSUF Titan Rover alumnus, B.S. Computer Science, Cal State Fullerton.</figcaption>
+            </figure>
+            <div className="why-text">
+              <p>
+                I built RobotForge because of what I couldn&apos;t do on my
+                college rover team.
+              </p>
+              <p>
+                I was on CSUF Titan Rover, and I wanted to help build, not
+                just write code. But I didn&apos;t know CAD. We needed
+                3D-printed mounts for different components, we wanted an
+                enclosure for the wire harness, we wanted to give the
+                smaller runt rovers an actual shape — and I didn&apos;t
+                know how to model any of it, or how to 3D print it.
+              </p>
+              <p>
+                I didn&apos;t know wire harnessing either, or how the parts
+                of a robot actually hook up to each other. I needed a DC
+                buck converter and didn&apos;t know why. Someone told me
+                about a whole Nvidia Jetson TX2 that got blown out just
+                trying to power it. That&apos;s how you learn in robotics
+                if nobody checks your work first: by breaking expensive
+                parts.
+              </p>
+              <p>
+                And when I worked remote, I couldn&apos;t test anything at
+                all. I didn&apos;t have a robot at home, so I couldn&apos;t
+                build software for one I couldn&apos;t touch. If I
+                wasn&apos;t in the shop, I wasn&apos;t contributing.
+              </p>
+              <p>
+                So I built the tool I needed back then. RobotForge lets
+                you describe a robot and generate its parts, its
+                3D-printable mounts and enclosures, and its wiring plan —
+                with the power math checked, a buck converter added where
+                the voltages require one — then program it and test it in
+                simulation, all before the robot is in front of you and
+                before you&apos;ve spent money on parts that might fry.
+              </p>
+              <p>
+                The AI proposes. RobotForge verifies. You approve.
+              </p>
+              <p>
+                I built this for rover teams and robotics teams like mine:
+                people learning as they build, working from wherever they
+                are, who can&apos;t afford to learn by breaking hardware.
+              </p>
+              <p className="why-sign">— Abel Mendoza</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
     <LandingFooter />
     <LandingChrome />
