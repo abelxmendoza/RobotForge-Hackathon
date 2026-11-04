@@ -1040,6 +1040,89 @@ await scenario('auth admin users lists public fields only', async () => {
   assert.ok(!JSON.stringify(r.body).includes('pbkdf2'), 'hash leaked via /admin/users');
 });
 
+await scenario('auth login stamps lastLoginAt and loginCount', async () => {
+  const env = makeEnv();
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'stamp@example.com', password: 'password-123', name: 'Stamp' } });
+  assert.strictEqual(reg.status, 201, JSON.stringify(reg.body));
+  /* Registration is the first sign-in: stamped, count 1. */
+  assert.strictEqual(reg.body.user.loginCount, 1);
+  assert.ok(reg.body.user.lastLoginAt, 'register must stamp lastLoginAt');
+  const login = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'stamp@example.com', password: 'password-123' } });
+  assert.strictEqual(login.status, 200);
+  assert.strictEqual(login.body.user.loginCount, 2);
+  assert.ok(Date.parse(login.body.user.lastLoginAt) >= Date.parse(reg.body.user.lastLoginAt));
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + login.body.token } });
+  assert.strictEqual(me.body.user.loginCount, 2);
+  assert.ok(!JSON.stringify(me.body).includes('passHash'), 'hash leaked via /auth/me');
+});
+
+await scenario('a sign-in in progress cannot undo a role change', async () => {
+  const env = makeEnv();
+  const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };
+  await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'race@example.com', password: 'password-123' } });
+  await call(env, '/admin/grant-role', { method: 'POST',
+    body: { email: 'race@example.com', role: 'admin' }, ...op });
+  /* Demote the account right after the login has read its record. */
+  const kv = env.RF_LIVE_KV;
+  const get = kv.get.bind(kv);
+  let armed = true;
+  kv.get = async (key, ...rest) => {
+    const value = await get(key, ...rest);
+    if (armed && key === 'auth:user:race@example.com') {
+      armed = false;
+      await kv.put(key, JSON.stringify({ ...JSON.parse(value), role: 'user' }));
+    }
+    return value;
+  };
+  const login = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'race@example.com', password: 'password-123' } });
+  kv.get = get;
+  assert.strictEqual(login.status, 200, JSON.stringify(login.body));
+  const stored = JSON.parse(await kv.get('auth:user:race@example.com'));
+  assert.strictEqual(stored.role, 'user', 'the login wrote back a stale role');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + login.body.token } });
+  assert.strictEqual(me.body.user.role, 'user');
+  assert.strictEqual(me.body.user.loginCount, 2);
+});
+
+await scenario('auth console users is founder-only and session-gated', async () => {
+  const env = makeEnv();
+  const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };
+  /* Anonymous: 401. The operator token is NOT a console credential:
+   * it must never work from a browser-shaped call either. */
+  const anon = await call(env, '/auth/admin/users');
+  assert.strictEqual(anon.status, 401);
+  const opTry = await call(env, '/auth/admin/users', { ...op });
+  assert.strictEqual(opTry.status, 401);
+  /* A regular account: 403 founder_only. */
+  const reg = await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'member@example.com', password: 'password-123' } });
+  const member = await call(env, '/auth/admin/users',
+    { headers: { Authorization: 'Bearer ' + reg.body.token } });
+  assert.strictEqual(member.status, 403);
+  assert.strictEqual(member.body.code, 'founder_only');
+  /* The founder: the full list, most recent login first, no hashes. */
+  await call(env, '/admin/seed-founder', { method: 'POST',
+    body: { password: 'founder-pass-123' }, ...op });
+  const founderLogin = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'abelxmendoza@gmail.com', password: 'founder-pass-123' } });
+  const r = await call(env, '/auth/admin/users',
+    { headers: { Authorization: 'Bearer ' + founderLogin.body.token } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.count, 2);
+  assert.deepStrictEqual(r.body.users.map(u => u.email),
+    ['abelxmendoza@gmail.com', 'member@example.com']);
+  assert.strictEqual(r.body.users[0].role, 'founder');
+  assert.ok(r.body.users.every(u => u.lastLoginAt), 'every user carries a login stamp');
+  assert.ok(!JSON.stringify(r.body).includes('passHash'), 'hash leaked via console route');
+  assert.ok(!JSON.stringify(r.body).includes('pbkdf2'), 'hash leaked via console route');
+});
+
 await scenario('auth grant role promotes and me reflects it at once', async () => {
   const env = makeEnv();
   const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };

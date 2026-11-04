@@ -75,6 +75,12 @@
  *        /admin/grant-role — operator routes, guarded by the
  *        OPERATOR_TOKEN secret (X-Operator-Token header). That is
  *        how Muse administers accounts for the owner.
+ *   GET  /auth/admin/users -> (Bearer, founder role only) =>
+ *        { users, count } for the founder's admin console: every
+ *        account with role, sign-in provider, sign-up time and —
+ *        stamped at every successful sign-in — lastLoginAt and
+ *        loginCount. Session-gated because the operator token
+ *        never goes to a browser.
  *
  *   ACCOUNT GATE: every model route (describe/chat/list/photo/
  *   fix/part/part-chat/transcribe/web) requires a signed-in account —
@@ -1741,6 +1747,7 @@ async function handlePartChat(request, env) {
  * Users live in the same KV as the budget counters:
  *   auth:user:<email-lowercase> -> { email, name, passHash, role,
  *     provider, providerId, createdAt }
+ *   auth:login:<email-lowercase> -> { lastLoginAt, loginCount }
  * providerId is the creating provider's stable user id (Meta id,
  * GitHub numeric id, Google sub); password accounts have none.
  * Because the store is keyed by email, a social login may only
@@ -2010,7 +2017,57 @@ function publicUser(u) {
     provider: u.provider || 'password',
     ...(u.providerId ? { providerId: u.providerId } : {}),
     createdAt: u.createdAt,
+    lastLoginAt: u.lastLoginAt || null,
+    loginCount: u.loginCount || 0,
   };
+}
+
+/* Every successful sign-in stamps it, so the founder's admin console
+ * can show who has actually logged in, and when — not just who
+ * registered. Registration counts as the first login.
+ *
+ * Stamps have their own key, auth:login:<email>. A sign-in must never
+ * write the account record: it read that record before verifying, so
+ * writing it back could undo a role change made in between. */
+function loginKey(email) { return 'auth:login:' + email; }
+
+async function readLogin(env, email) {
+  const raw = await env.RF_LIVE_KV.get(loginKey(email));
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+async function stampLogin(env, user) {
+  const prev = await readLogin(env, user.email);
+  user.lastLoginAt = new Date().toISOString();
+  user.loginCount = ((prev ? prev.loginCount : user.loginCount) || 0) + 1;
+  await env.RF_LIVE_KV.put(loginKey(user.email), JSON.stringify({
+    lastLoginAt: user.lastLoginAt, loginCount: user.loginCount,
+  }));
+}
+
+/* An account with its latest stamp applied, for showing it. */
+async function withLogin(env, user) {
+  const stamp = await readLogin(env, user.email);
+  return stamp ? { ...user, ...stamp } : user;
+}
+
+/* Every account record in the store, as public users. Shared by the
+ * operator route (token-gated, for Muse) and the founder console
+ * route (session-gated, for the founder in the browser) — the
+ * records are the same; only the guard differs. */
+async function listAllUsers(env) {
+  const users = [];
+  let cursor;
+  do {
+    const page = await env.RF_LIVE_KV.list({ prefix: 'auth:user:', cursor, limit: 256 });
+    for (const k of page.keys) {
+      const u = await getUser(env, k.name.slice('auth:user:'.length));
+      if (u) users.push(publicUser(await withLogin(env, u)));
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && users.length < 1000);
+  return users;
 }
 
 function cleanEmail(value) {
@@ -2075,6 +2132,7 @@ async function handleAuthRegister(request, env) {
     email, name: name || email.split('@')[0],
     passHash: await hashPassword(password),
     role: 'user', provider: 'password', createdAt: new Date().toISOString(),
+    lastLoginAt: new Date().toISOString(), loginCount: 1,
   };
   await putUser(env, user);
   const token = await signSession(env, user);
@@ -2099,6 +2157,7 @@ async function handleAuthLogin(request, env) {
   if (!user || !ok) {
     return err(request, 401, 'bad_credentials', 'Invalid email or password.');
   }
+  await stampLogin(env, user);
   const token = await signSession(env, user);
   return json(request, 200, { token, user: publicUser(user) });
 }
@@ -2107,7 +2166,7 @@ async function handleAuthMe(request, env) {
   if (!authConfigured(env)) return authOff(request);
   const user = await sessionUser(request, env);
   if (!user) return err(request, 401, 'unauthorized', 'Sign in first.');
-  return json(request, 200, { user: publicUser(user) });
+  return json(request, 200, { user: publicUser(await withLogin(env, user)) });
 }
 
 /* ---------------- account save (robots + parts) ----------------
@@ -2247,8 +2306,11 @@ async function handleOAuthCallback(id, request, env) {
         role: email === FOUNDER_EMAIL ? 'founder' : 'user',
         provider: id, providerId: profile.providerId || '',
         createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(), loginCount: 1,
       };
       await putUser(env, user);
+    } else {
+      await stampLogin(env, user);
     }
     const token = await signSession(env, user);
     return new Response(null, {
@@ -2279,17 +2341,28 @@ function operatorOff(request) {
 async function handleAdminUsers(request, env) {
   if (!operatorAuthorized(request, env)) return operatorOff(request);
   if (!env.RF_LIVE_KV) return authOff(request);
-  const users = [];
-  let cursor;
-  do {
-    const page = await env.RF_LIVE_KV.list({ prefix: 'auth:user:', cursor, limit: 256 });
-    for (const k of page.keys) {
-      const u = await getUser(env, k.name.slice('auth:user:'.length));
-      if (u) users.push(publicUser(u));
-    }
-    cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor && users.length < 1000);
+  const users = await listAllUsers(env);
   users.sort((a, b) => a.email.localeCompare(b.email));
+  return json(request, 200, { users, count: users.length });
+}
+
+/* The founder console's data route. Session-gated — the caller's own
+ * signed-in session, never the operator token (that secret must
+ * never reach a browser) — and founder-only: a regular account
+ * asking who else uses RobotForge gets a 403, an anonymous caller a
+ * 401. Most recent logins first; accounts that predate login
+ * stamping (or have never signed in since) sort by sign-up instead. */
+async function handleConsoleUsers(request, env) {
+  if (!authConfigured(env)) return authOff(request);
+  const me = await sessionUser(request, env);
+  if (!me) return err(request, 401, 'unauthorized', 'Sign in first.');
+  if (me.role !== 'founder') {
+    return err(request, 403, 'founder_only',
+      'The admin console is for the founder account.');
+  }
+  const users = await listAllUsers(env);
+  const when = (u) => Date.parse(u.lastLoginAt || u.createdAt || '') || 0;
+  users.sort((a, b) => when(b) - when(a) || a.email.localeCompare(b.email));
   return json(request, 200, { users, count: users.length });
 }
 
@@ -2726,6 +2799,9 @@ async function handle(request, env) {
   }
   if (url.pathname === '/auth/me' && request.method === 'GET') {
     return handleAuthMe(request, env);
+  }
+  if (url.pathname === '/auth/admin/users' && request.method === 'GET') {
+    return handleConsoleUsers(request, env);
   }
   if (url.pathname === '/auth/logout' && request.method === 'POST') {
     return handleAuthLogout(request);
