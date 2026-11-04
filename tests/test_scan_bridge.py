@@ -155,6 +155,9 @@ def test_only_known_sites_may_connect() -> None:
     assert not ok("https://evil.example", []) and not ok(None, [])
     assert not ok("https://robot-forge-hackathon.vercel.app.evil.example", [])
     assert ok("https://my.site", ["https://my.site"])
+    assert ok("https://robot-forge.vercel.app", [])
+    assert ok("https://robot-forge-git-claude-project-th-ff3be6-abel-mendozas-projects.vercel.app", [])
+    assert not ok("https://robot-forge-evil.vercel.app", [])
 
 
 # ----- the HTTP bridge, end to end -----------------------------------------

@@ -137,7 +137,7 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
     } catch {
       setConn(quiet ? 'idle' : 'offline');
       if (quiet) return;
-      setMessage(`No bridge answered at ${base}. Start it with python3 tools/scan_bridge.py (add --simulate to try it without a camera), then press Connect again. Safari blocks pages from reaching this computer: use Chrome or Edge, and allow local network access if asked.`);
+      setMessage(`No bridge answered at ${base}. Start it with python3 tools/scan_bridge.py (add --simulate to try it without a camera), then press Connect again. Safari blocks pages from reaching this computer: use Chrome or Edge, and allow local network access if asked. If the bridge is already running and says it is ready, it may not allow this page: restart it with --allow-origin ${window.location.origin}`);
     }
   };
 

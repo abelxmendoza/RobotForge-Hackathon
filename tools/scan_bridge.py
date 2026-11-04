@@ -53,6 +53,10 @@ import numpy as np
 DEFAULT_PORT = 8765
 ALLOWED_ORIGINS = [
     re.compile(r"^https://robot-forge-hackathon(-[a-z0-9-]+)?\.vercel\.app$"),
+    # The second Vercel project serves the same app: its production name,
+    # and its previews, which carry the owner's team suffix.
+    re.compile(r"^https://robot-forge\.vercel\.app$"),
+    re.compile(r"^https://robot-forge-[a-z0-9-]+-abel-mendozas-projects\.vercel\.app$"),
     re.compile(r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"),
 ]
 RANGE_ACCURACY = 0.02
