@@ -68,11 +68,14 @@ def test_delete_forever_and_start_over_in_the_store(tmp_path: Path) -> None:
 
 
 def test_built_in_omega1_is_always_offered():
-    # The specimen button is not gated on anything stored.
-    assert '<p className="faint g-small" style={{ marginTop: 14 }}>Built-in specimen</p>' in GARAGE
+    # Abel (2026-11-03): the built-in specimen is HIDDEN from the
+    # Workshop list — it shadowed the owner's own Omega1. The #omega1
+    # landing now adopts (or opens) the stored copy instead.
+    assert '<p className="faint g-small" style={{ marginTop: 14 }}>Built-in specimen</p>' not in GARAGE
     # Only an ACTIVE stored copy blocks a fresh adopt.
     assert "const storedOmega1 = activeRobots.find((r) => r.id === OMEGA1_ROBOT_ID)" in GARAGE
     assert "#omega1" in GARAGE
+    assert "if (window.location.hash === '#omega1') adoptOmega1();" in GARAGE
 
 
 def test_ui_asks_before_deleting_or_starting_over():

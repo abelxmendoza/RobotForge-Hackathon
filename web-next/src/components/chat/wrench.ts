@@ -538,14 +538,16 @@ function omega1Answer(qt: string[], root: string): AnswerResult {
     case "specimen":
       html =
         "<p>That&rsquo;s " + lead + ", RobotForge&rsquo;s own robot. " +
-        "The built-in specimen in the Workshop is its digital twin: a 3D " +
-        "model generated from a photo of the real rover, so its shape and " +
-        "size are <strong>estimates</strong>, not measurements. The Checks " +
-        "pane lists only what the records say, and the twin has no gate " +
+        "Its digital twin began as the built-in specimen: a 3D model " +
+        "generated from a photo of the real rover, so its shape and " +
+        "size are <strong>estimates</strong>, not measurements. The " +
+        "specimen is hidden now, so the Workshop holds one Omega1: " +
+        "your stored copy, and its Checks pane lists only what the " +
+        "records say. No gate has run on it, so it has no gate " +
         "verdict.</p>" +
-        "<p>To edit it or add your own scans and measurements, tap " +
-        "<strong>Add Omega1 to your Garage</strong> if you haven&rsquo;t " +
-        "yet. That makes a stored copy seeded from the records only.</p>";
+        "<p>Open Omega1 in the Workshop and it is added to your " +
+        "robots as a stored copy seeded from the records only, ready " +
+        "for your own scans and measurements.</p>";
       break;
     case "broken":
       html =
@@ -614,8 +616,8 @@ function omega1Answer(qt: string[], root: string): AnswerResult {
     default:
       html =
         "<p>" + (qt.indexOf("know") !== -1 ? "Yes. " : "") + lead + " is RobotForge&rsquo;s own robot: a real " +
-        "rover on its builder&rsquo;s bench, and the built-in specimen in " +
-        "the Workshop. It is the robot the demo is tested on.</p>" +
+        "rover on its builder&rsquo;s bench. It is the robot the demo " +
+        "is tested on.</p>" +
         OMEGA1_OVERVIEW;
   }
   if (aspect === "overview" || aspect === "specimen") html += OMEGA1_NOT_RECORDED;

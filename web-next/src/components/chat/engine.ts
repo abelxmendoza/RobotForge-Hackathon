@@ -2121,9 +2121,9 @@ function convReply(
       "answers are badged LIVE MODEL.</p>",
     capabilities:
       "<p>Here&rsquo;s what I can do from the recorded data:</p><ul>" +
-      "<li>Tell you about Omega1, RobotForge&rsquo;s own robot and the " +
-      "Workshop&rsquo;s built-in specimen: what it is, what is wrong " +
-      "with it, and what still needs measuring.</li>" +
+      "<li>Tell you about Omega1, RobotForge&rsquo;s own robot: " +
+      "what it is, what is wrong with it, and what still needs " +
+      "measuring.</li>" +
       "<li>Pull up any Robodex robot and its gate verdict, and explain " +
       "why a robot failed.</li>" +
       "<li>Find parts in the catalogue, and plan a build from a starter " +
