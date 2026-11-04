@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
+import {requireRobotVersion} from '@/lib/versionGuard';
 import RobodexPicker from './RobodexPicker';
 import RobotAvatar from './RobotAvatar';
 import SpecsDialog from './SpecsDialog';
@@ -688,6 +689,7 @@ export default function Garage() {
    * it stands, with the new list, under an 'edit' source. */
   const saveConnections = (next: SpecConnection[]) => {
     if (!robot || !draft) return;
+    if (baseId !== latest?.id) { setSaveError('A newer version exists. Export your draft and load the latest saved version first.'); return; }
     const spec = { ...draft, connections: next };
     const v: RobotVersion = {
       id: uid('v'), label: `Version ${robot.versions.length + 1}`,
@@ -720,6 +722,7 @@ export default function Garage() {
    * through the full Specs editor one field at a time. */
   const saveMeasured = (fields: { path: string; value: number }[]) => {
     if (!robot || !draft || fields.length === 0) return;
+    if (baseId !== latest?.id) { setSaveError('A newer version exists. Export your draft and load the latest saved version first.'); return; }
     let spec = draft;
     for (const f of fields) spec = setPath(spec, f.path, f.value);
     const v: RobotVersion = {
@@ -739,6 +742,7 @@ export default function Garage() {
    * Source 'upload': the dimensions came out of an uploaded file. */
   const applyScanSize = (dims: { length_m: number; width_m: number; height_m: number }, scanName: string, unitNote: string) => {
     if (!robot || !draft) return;
+    if (baseId !== latest?.id) { setSaveError('A newer version exists. Export your draft and load the latest saved version first.'); return; }
     const spec = { ...draft, length_m: dims.length_m, width_m: dims.width_m, height_m: dims.height_m };
     const v: RobotVersion = {
       id: uid('v'), label: `Version ${robot.versions.length + 1}`,
@@ -802,12 +806,15 @@ export default function Garage() {
 
   const saveVersion = (source: VersionSource) => {
     if (!robot || !draft) return;
+    const fresh = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    try { requireRobotVersion(fresh, robot.id, baseId); } catch(e) { setSaveError((e as Error).message); return; }
     const v: RobotVersion = {
       id: uid('v'), label: label.trim() || `Version ${robot.versions.length + 1}`,
       note: [note.trim(), ...draftNote].filter(Boolean).join(' · '), source, createdAt: now(), spec: draft,
       ...(plannedDraft ? { planned: true } : {}),
     };
-    if (persist(robots.map((r) => (r.id === robot.id ? { ...r, name: draft.name || r.name, versions: [...r.versions, v] } : r)))) return;
+    if (persist(fresh.map((r) => (r.id === robot.id ? { ...r, name: draft.name || r.name, versions: [...r.versions, v] } : r)))) return;
+    setBaseId(v.id);
     setLabel('');
     setNote('');
     setDraftNote([]);
@@ -1445,6 +1452,13 @@ export default function Garage() {
               </section>
             )}
 
+            {draft && baseId && latest && baseId !== latest.id && <div className="card" role="alert">
+              <strong>A newer saved robot version exists.</strong>
+              <p>Your unsaved draft was preserved. It cannot overwrite the newer assembly or wiring. Export it before replacing it with the latest saved version.</p>
+              <button type="button" className="btn btn-sm" onClick={() => downloadJSON('unsaved-robot-draft.json',draft)}>Export unsaved draft</button>{' '}
+              <button type="button" className="btn btn-sm" onClick={() => {setDraft(JSON.parse(JSON.stringify(latest.spec)));setBaseId(latest.id);setLabel('');setNote('');setDraftNote([]);setSaveError('');}}>Replace draft with latest saved version</button>
+            </div>}
+
             {tab === 'wiring' && (
               <section className="ws-pane" aria-label="Wiring">
                 <div className="ws-sections" role="group" aria-label="Wiring workspace">
@@ -1455,7 +1469,18 @@ export default function Garage() {
                   <PlannedUpgrades spec={draft} />
                   {!isWiring(draft.wiring) && <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot.name}"`})}>Describe a connection to Wrench</button>}
                   {isWiring(draft.wiring) && <details className="ws-disclosure"><summary>Connection notes</summary><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot.name}"`})}>Describe a connection to Wrench</button></details>}
-                  {isWiring(draft.wiring) ? <WiringView compact wiring={draft.wiring} spec={draft as unknown as RobotSpec} /> : <p className="ws-empty">No wiring diagram yet. Record your connections above or plan them in 3D.</p>}
+                  {isWiring(draft.wiring) ? <WiringView compact wiring={draft.wiring} spec={draft as unknown as RobotSpec} onWiringChange={(wiring) => {
+                    const fresh = readStore<GarageRobot[]>(GARAGE_KEY, []);
+                    requireRobotVersion(fresh, robot.id, baseId);
+                    const current = fresh.find(r => r.id === robot.id);
+                    if (!current || current.versions.at(-1)?.id !== latest?.id) throw new Error('Robot changed in another view. Reload before saving wiring facts.');
+                    const nextSpec = { ...draft, wiring };
+                    const version: RobotVersion = { id: uid('v'), label: `Version ${current.versions.length + 1}`, note: 'Electrical facts entered in Wiring; values remain user-entered and unverified.', source: 'edit', createdAt: now(), spec: nextSpec };
+                    const error = persist(fresh.map(r => r.id === robot.id ? { ...r, versions: [...r.versions, version] } : r));
+                    if (error) throw new Error(error);
+                    setDraft(JSON.parse(JSON.stringify(nextSpec)));
+                    setBaseId(version.id);
+                  }} /> : <p className="ws-empty">No wiring diagram yet. Record your connections above or plan them in 3D.</p>}
                   <details className="ws-disclosure"><summary>Photos and connection views</summary><WiringViews robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} /></details>
                   <details className="ws-disclosure"><summary>Generated wiring notes</summary><ForgeWiring spec={draft} /></details>
                 </>}

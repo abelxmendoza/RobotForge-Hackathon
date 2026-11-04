@@ -545,6 +545,12 @@
     }
     return null;
   }
+  var KIND_REPLY_FILLER = ['it','its','is','s','a','an','the','one','that','this','ok','okay','yes','please','lets','let','go','with','pick','choose','i','ll','take','want','my','robot'];
+  function namesOnlyKind(qt, kindId) {
+    var rest = qt.filter(function(t) { return KIND_REPLY_FILLER.indexOf(t) === -1; }).join(' ');
+    var entry = KIND_PHRASES.filter(function(k) { return k.id === kindId; })[0];
+    return !!entry && entry.phrases.some(function(p) { return tokens(p).filter(function(t) { return KIND_REPLY_FILLER.indexOf(t) === -1; }).join(' ') === rest; });
+  }
   function kindById(ctx, id) {
     var found = null;
     (ctx.data.kinds || []).forEach(function (k) {
@@ -748,7 +754,7 @@
         'building and I will diff what you have against its ' +
         'reference build. The starter kinds:');
     }
-    if (kind && (hasBuild || needPhrase)) return planAnswer(ctx, kind);
+    if (kind && (hasBuild || needPhrase || namesOnlyKind(qt, kind.id))) return planAnswer(ctx, kind);
     if (needPhrase && !kind) {
       /* "What motors do I need for a rover?" is a catalogue
        * question in planning clothes — the filter answers it. */
@@ -986,6 +992,9 @@
       /* 2.2 build planning: kinds + templates + have-vs-need.
        * "What do I need to build..." plans a build here instead
        * of falling through to word matches or the fallback. */
+      var namedKindId = findKindId(qt);
+      var namedKind = namedKindId && namesOnlyKind(qt, namedKindId) ? kindById(ctx, namedKindId) : null;
+      if (namedKind) return planAnswer(ctx, namedKind);
       var plan = planningAnswer(ctx, q, qt);
       if (plan) return plan;
 

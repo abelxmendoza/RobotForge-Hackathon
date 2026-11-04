@@ -112,7 +112,11 @@ def test_wrench_and_workshop_show_the_proposal() -> None:
     dock = (WEB / "components/chat/ChatDock.tsx").read_text()
     garage = (WEB / "components/garage/Garage.tsx").read_text()
     card = (WEB / "components/chat/UpgradeProposalCard.tsx").read_text()
-    assert "parseUpgradeAsk(q)" in dock and "<UpgradeProposalCard" in dock
+    # Coordinated proposals supersede the earlier standalone card.
+    assert "parseUpgradeRequest(q," in dock and "<UpgradeProposal key=" in dock
+    coordinated = (WEB / "components/chat/UpgradeProposal.tsx").read_text()
+    assert "applyUpgrade(" in coordinated
+    assert "<UpgradeProposalCard" not in dock
     assert "applyUpgrade(" in card and "recheckUpgrade(" in card
     assert "Approve and save as one version" in card
     assert "<PlannedUpgrades spec={draft} />" in garage

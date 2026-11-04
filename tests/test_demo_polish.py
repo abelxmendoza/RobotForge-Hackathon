@@ -144,8 +144,9 @@ def test_seed_garage_is_two_fresh_turtlebots():
     assert "planned: true" not in seed
     assert "demo-pathfinder" not in seed
     assert "ESTIMATED" in seed
-    # Every entry starts fresh.
-    assert "resetDemoSandbox()" in seed
+    # Re-entry preserves the demo account and all visitor changes.
+    assert "resetDemoSandbox()" not in seed
+    assert "writeIfAbsent(GARAGE_KEY + '.demo', robots)" in seed
 
 
 def test_seed_inventory_is_a_small_starter_shelf():
@@ -251,3 +252,71 @@ def test_demo_bar_dismissal_units_in_node(tmp_path):
         [node, "--experimental-strip-types", str(tmp_path / "run.mjs"), str(REPO)],
         capture_output=True, text=True, timeout=300)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_run_demo_opens_populated_workshop_even_with_account():
+    entry = (SHELL / "RunDemoLink.tsx").read_text()
+    assert 'to = "/garage/"' in entry
+    assert "loadSession" not in entry
+    assert entry.index("await seedDemoStores()") < entry.index("setDemoMode(true)")
+    acct = (SHELL / "AccountControl.tsx").read_text()
+    start = acct.split("const startDemo", 1)[1].split("}, [router])", 1)[0]
+    assert start.index("await seedDemoStores()") < start.index("setDemoMode(true)")
+
+
+def test_demo_turtlebots_share_workshop_and_my_robots_store():
+    source = (WEB / "src/components/robots/DexSources.tsx").read_text()
+    assert "useStore<GarageRobot[]>(GARAGE_KEY, [])" in source
+    assert 'overrides[garageKey(r.id)] ?? "mine"' in source
+    seed = _seed_source()
+    assert "GARAGE_KEY + '.demo'" in seed
+    assert "writeIfAbsent(GARAGE_KEY," not in seed
+
+
+def test_demo_seed_is_populated_persistent_and_isolated(tmp_path):
+    """Execute the actual seed with the catalogue and both recorded specs."""
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node unavailable")
+    script = r'''
+const fs = require('node:fs');
+const assert = require('node:assert/strict');
+const ts = require(process.argv[2] + '/web-next/node_modules/typescript');
+const root = process.argv[2];
+let source = fs.readFileSync(root + '/web-next/src/lib/demoSeed.ts', 'utf8');
+source = source.replace(/^import .*;\n/gm, '');
+source = `const parts = ${JSON.stringify(JSON.parse(fs.readFileSync(root + '/catalog/parts.json')).parts)};
+const GARAGE_KEY='rf.garage.v1', INVENTORY_KEY='rf.inventory.v1', OWNERSHIP_KEY='rf.ownership.v1';
+const assetPath = x => x;
+` + source;
+const compiled = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText;
+const data = new Map([['rf.garage.v1', 'real robots untouched'], ['rf.inventory.v1', 'real shelf untouched']]);
+global.window = {localStorage: {getItem: k => data.get(k) ?? null, setItem: (k,v) => data.set(k,v)}};
+global.fetch = async path => ({ok: true, json: async () => JSON.parse(fs.readFileSync(root + '/' + path))});
+const mod = {exports:{}};
+new Function('exports', 'module', compiled)(mod.exports,mod);
+(async () => {
+ await mod.exports.seedDemoStores();
+ const robots = JSON.parse(data.get('rf.garage.v1.demo'));
+ assert.deepEqual(robots.map(r=>r.id), ['demo-turtlebot3-burger','demo-turtlebot3-waffle-pi']);
+ assert.ok(robots.every(r=>r.versions[0].spec));
+ robots[0].name = 'My edited demo Burger';
+ data.set('rf.garage.v1.demo', JSON.stringify(robots));
+ await mod.exports.seedDemoStores();
+ assert.equal(JSON.parse(data.get('rf.garage.v1.demo'))[0].name, 'My edited demo Burger');
+ assert.equal(data.get('rf.garage.v1'), 'real robots untouched');
+ assert.equal(data.get('rf.inventory.v1'), 'real shelf untouched');
+ assert.ok([...data.keys()].filter(k=>!['rf.garage.v1','rf.inventory.v1'].includes(k)).every(k=>k.endsWith('.demo')));
+})().catch(e=>{console.error(e);process.exitCode=1});
+'''
+    runner = tmp_path / "seed.cjs"
+    runner.write_text(script)
+    result = subprocess.run([node, str(runner), str(REPO)], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_mounted_workshop_switches_stores_on_demo_entry_and_exit():
+    source = (LIB / "store.ts").read_text()
+    assert "const onDemoChange = () => setValue(readStore(key, fallback))" in source
+    assert "window.addEventListener(DEMO_EVENT, onDemoChange)" in source
+    assert "window.removeEventListener(DEMO_EVENT, onDemoChange)" in source

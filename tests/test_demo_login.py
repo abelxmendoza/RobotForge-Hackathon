@@ -238,7 +238,11 @@ assert.equal(window.localStorage.getItem('rf.auth.v1.demo'), null);
 assert.equal(A.loadSession().user.email, 'a@b.c');
 assert.equal(D.effectiveStorageKey('rf.garage.v1'), 'rf.garage.v1.demo');
 assert.equal(D.effectiveStorageKey('rf.auth.v1'), 'rf.auth.v1');
+A.saveSession(null);
+assert.equal(A.loadSession(), null);
+assert.equal(window.localStorage.getItem('rf.auth.v1'), null);
 D.setDemoMode(false);
+assert.equal(A.loadSession(), null, 'exiting demo must not restore the account');
 assert.equal(D.effectiveStorageKey('rf.garage.v1'), 'rf.garage.v1');
 
 console.log('demo login unit checks passed');
@@ -282,3 +286,16 @@ def test_no_worker_or_demo_chrome_regressions():
     assert "seedDemoStores" not in authed
     assert "saveSession(null)" not in authed
     assert re.search(r"switchToAccount\(\);\s*\}", authed) is not None
+
+
+def test_all_demo_entries_sign_out_without_deleting_account_data():
+    for name in ("RunDemoLink.tsx", "DemoEntryButton.tsx", "AccountControl.tsx"):
+        source = (SHELL / name).read_text()
+        entry = source.split("setDemoMode(true);", 1)[1]
+        assert "saveSession(null);" in entry.split("router.push", 1)[0], name
+        assert "authLogout(" not in entry.split("router.push", 1)[0], name
+    account = _acct()
+    assert "frag.token || loadSession()?.token === token" in account
+    gate = (SHELL / "AppGate.tsx").read_text()
+    assert "const sessionAtStart = loadSession()?.token" in gate
+    assert "if (superseded()) return;" in gate

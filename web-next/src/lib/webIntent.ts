@@ -81,6 +81,12 @@ export const RESEARCH_PATTERNS: readonly RegExp[] = [
 ];
 const SELF_REF = /\b(this|my|our|your|its)\b/i;
 
+/* Asking Wrench outright, anywhere in a message: "I have the parts, can't
+ * you look up freenove and search for it?" Asking "can you" and naming
+ * the lookup makes this as explicit as the anchored patterns above. */
+const ASKED_TO_LOOK_UP = /\b(?:can|could|would|will|can['’]?t|couldn['’]?t|won['’]?t)\s+(?:you|u)\s+(?:please\s+)?(?:look\s+up|search\s+(?:the\s+web|online|the\s+internet)\s+for|google|research)\s+(.+)$/i;
+const LOOK_UP_TAIL = /\s+(?:(?:and|then)\s+search\s+(?:for\s+)?(?:it|that|them)|online|on\s+the\s+(?:web|internet)|for\s+me|please)$/i;
+
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/i;
 
 /* The first http(s) URL in the text, with trailing sentence
@@ -108,6 +114,10 @@ export function detectSearchIntent(text: string): WebIntent | null {
     const query = m && m[1] ? m[1].trim() : '';
     if (query.length >= 3 && !SELF_REF.test(query)) return { kind: 'search', query };
   }
+  const m = asked.match(ASKED_TO_LOOK_UP);
+  let query = m ? m[1].trim() : '';
+  for (let before = ''; before !== query;) { before = query; query = query.replace(LOOK_UP_TAIL, '').trim(); }
+  if (query.length >= 3 && !SELF_REF.test(query)) return { kind: 'search', query };
   return null;
 }
 

@@ -50,6 +50,61 @@ illustrative placeholders. Placement and wiring are planning-only: added parts a
 not yet included in engineering checks or Gazebo, and planned connections remain
 NOT_CHECKED. See [the implementation plan](docs/CHAT-OPERATIONS.md).
 
+## Printable parts and recorded wiring facts
+
+In the Workshop **Build** tab, choose **Design a printable part for** to generate
+a component mounting plate or a harness enclosure. Mounts download as OpenSCAD
+and millimetre STL; the rotatable printable preview uses the same mesh as the STL.
+Enclosures download as a combined OpenSCAD layout or independent box and lid.
+The optional **YAPP enclosure export** uses the bundled, pinned MIT-licensed
+[YAPP_Box](https://github.com/mrWheel/YAPP_Box) generator; download its wrapper,
+generator and license together. Render enclosure parts in OpenSCAD to export STL.
+Mounting patterns and envelopes require physical confirmation. Enclosure fit
+reserves the lid-lip band but does not verify cooling, sealing or fastener fit.
+
+In **Wiring → Connections**, expand **Record electrical facts and connector pins**
+to enter documented voltage ranges, currents, wire size/length and pin endpoints.
+Saving facts creates a new robot version with user-entered/unverified provenance.
+**Inspect electrical report** checks recorded voltage bounds, current budgets and
+copper voltage drop, preserving missing-data states. Export JSON/CSV anytime;
+WireViz-compatible YAML requires documented pins on every connection. WireViz
+itself is not bundled. This report covers the saved spec wiring graph, not the
+separate planning-only workbench edges. Converter selection remains unavailable
+without sufficient exact-device electrical and thermal specifications.
+
+The assembly renderer uses neutral procedural studio lighting and a pinned
+Apache-2.0 ROBOTIS LDS mesh for the matching TurtleBot3 Burger specimen, with
+source/license records in `web-next/public/models/turtlebot3/`. Other schematic
+parts remain labeled approximations; this is not a full photorealistic CAD twin.
+Upstream YAPP and ROBOTIS notices ship alongside their assets. No external HDRI
+or WebGPU dependency is required for these improvements.
+
+### Coordinated Raspberry Pi 5 upgrade
+
+In the Workshop, ask Wrench **“Add a Raspberry Pi 5 to this rover”**, or use
+**Plan a Raspberry Pi 5 upgrade** in Build. Outside the selected Workshop,
+name the saved robot explicitly: `Plan a Raspberry Pi 5 upgrade for "Omega1"`.
+An open proposal accepts facts such as `battery voltage is 9 to 12.6 V`,
+`load is 2 A`, or `converter continuous current is 5 A`; these are recorded
+as user-entered and unverified. The same inputs can be entered in the card.
+
+The proposal combines component placement, wiring and mount/enclosure CAD.
+A documented supply range can identify the
+[Pololu D24V90F5](https://www.pololu.com/product/2866) as an electrical
+candidate, with load-dependent dropout, output tolerance, current/thermal
+conditions and power-interface gaps shown. Its headline 9 A is not treated
+as a guaranteed continuous rating, and a DC converter does not establish
+[Raspberry Pi 5 USB-PD compatibility](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html).
+
+Approval saves one **planned, incomplete** robot version containing the
+assembly, wiring, proposal evidence and printable files. Incompatible inputs
+block saving. Unknown pinouts, protection, physical fit, cooler dimensions
+and simulation calibration stay unresolved. These plans never authorize
+powering hardware. Wrench `undo` restores the previous complete robot snapshot
+as a new version. Older legacy assemblies are preserved and become versioned
+on their next edit; stale proposals and stale unsaved drafts cannot overwrite
+a newer saved version.
+
 ## Meta models inside
 
 | Model | Where | What it does |

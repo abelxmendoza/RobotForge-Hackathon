@@ -74,8 +74,13 @@ export function GateProvider({
   const expiredRef = useRef(false);
 
   const validate = useCallback(async (token: string) => {
+    const sessionAtStart = loadSession()?.token;
+    const demoAtStart = isDemoMode();
+    const superseded = () => isDemoMode() !== demoAtStart || loadSession()?.token !== sessionAtStart;
     try {
       const user = await authMe(token);
+      // A completed background refresh must not restore a signed-out account.
+      if (superseded()) return;
       validatedRef.current = token;
       expiredRef.current = false;
       const stored = loadSession();
@@ -85,6 +90,7 @@ export function GateProvider({
       }
       setState({ status: "open", via: "account" });
     } catch {
+      if (superseded()) return;
       validatedRef.current = null;
       expiredRef.current = true;
       saveSession(null);
