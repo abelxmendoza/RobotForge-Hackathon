@@ -52,6 +52,8 @@ QUESTIONS = [
     "How much would it cost to build a rover?",
     "What is a Coral Edge TPU?",
     "Tell me about TurtleBot3 Burger",
+    "Rc car",
+    "its an RC car",
 ]
 
 
@@ -133,3 +135,10 @@ def test_engine_plans_builds_in_node():
     assert answers["What is a Coral Edge TPU?"]["fallback"] is True
     robot = answers["Tell me about TurtleBot3 Burger"]
     assert robot["hits"] == ["robot:turtlebot3-burger"]
+
+
+def test_naming_a_kind_lays_out_its_build():
+    out = _ask()
+    for q in ("Rc car", "its an RC car"):
+        assert "kind:ackermann" in out[q]["hits"], out[q]
+

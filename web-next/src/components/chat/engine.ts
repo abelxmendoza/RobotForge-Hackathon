@@ -1273,6 +1273,15 @@ function findKindId(qt: string[]): string | null {
   }
   return null;
 }
+/* A reply that only names a kind: "RC car", "its an rc car", "the
+ * mecanum one". The picker says "Name a kind", so that alone has to
+ * lay out the build. Words beyond these make it a different question. */
+const KIND_REPLY_FILLER = ["it", "its", "is", "s", "a", "an", "the", "one", "that", "this", "ok", "okay", "yes", "please", "lets", "let", "go", "with", "pick", "choose", "i", "ll", "take", "want", "my", "robot"];
+function namesOnlyKind(qt: string[], kindId: string): boolean {
+  const rest = qt.filter((t) => KIND_REPLY_FILLER.indexOf(t) === -1).join(" ");
+  const entry = KIND_PHRASES.filter((k) => k.id === kindId)[0];
+  return !!entry && entry.phrases.some((p) => tokens(p).filter((t) => KIND_REPLY_FILLER.indexOf(t) === -1).join(" ") === rest);
+}
 function kindById(ctx: Ctx, id: string): KindData | null {
   let found: KindData | null = null;
   (ctx.data.kinds || []).forEach((k) => {
@@ -1651,7 +1660,7 @@ function planningAnswer(ctx: Ctx, q: string, qt: string[]): AnswerResult | null 
         "reference build. The starter kinds:"
     );
   }
-  if (kind && (hasBuild || needPhrase)) return planAnswer(ctx, kind);
+  if (kind && (hasBuild || needPhrase || namesOnlyKind(qt, kind.id))) return planAnswer(ctx, kind);
   if (needPhrase && !kind) {
     /* "What motors do I need for a rover?" is a catalogue
      * question in planning clothes — the filter answers it. */
@@ -2368,6 +2377,10 @@ export function createEngine(data: EngineData): Engine {
     /* 2.2 build planning: kinds + templates + have-vs-need.
      * "What do I need to build..." plans a build here instead
      * of falling through to word matches or the fallback. */
+    /* Uncorrected tokens: spelling correction can rewrite "rc". */
+    const namedKindId = findKindId(rawQt);
+    const namedKind = namedKindId && namesOnlyKind(rawQt, namedKindId) ? kindById(ctx, namedKindId) : null;
+    if (namedKind) return planAnswer(ctx, namedKind);
     const plan = planningAnswer(ctx, q, qt);
     if (plan) return plan;
 

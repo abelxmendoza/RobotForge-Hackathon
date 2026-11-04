@@ -55,6 +55,15 @@ const NOW = "2026-11-01T20:00:00Z";
 assert.deepEqual(S.parseSaveCommand("save this"), { kind: "save" });
 assert.deepEqual(S.parseSaveCommand("Save \\"Omega1\\""), { kind: "save", nameText: "Omega1" });
 assert.deepEqual(S.parseSaveCommand("save the import"), { kind: "save", importRef: true });
+assert.deepEqual(S.parseSaveCommand("spawn it in my workshop as a new robot"), { kind: "save" });
+assert.deepEqual(S.parseSaveCommand("spawn it"), { kind: "save" });
+assert.deepEqual(S.parseSaveCommand("put Omega1 in my garage"), { kind: "save", nameText: "Omega1" });
+assert.deepEqual(S.parseSaveCommand("add the Freenove robot to my workshop"), { kind: "save", nameText: "Freenove robot" });
+assert.equal(S.parseSaveCommand("add a battery to my workshop"), null);
+assert.equal(S.parseSaveCommand("create a new robot"), null);
+assert.equal(S.parseSaveCommand("make new robot"), null);
+assert.equal(S.parseSaveCommand("add the HC-SR04 to my Burger"), null);
+assert.ok(S.isOmega1Name("Omega1") && S.isOmega1Name("omega 1") && S.isOmega1Name("Freenove robot") && !S.isOmega1Name("TurtleBot3 Burger") && !S.isOmega1Name(undefined));
 assert.deepEqual(S.parseSaveCommand("add the HC-SR04 to my Burger and save it"),
   { kind: "add-and-save", partText: "HC-SR04", nameText: "Burger" });
 assert.deepEqual(S.parseSaveCommand("add the HC-SR04 and save it"),

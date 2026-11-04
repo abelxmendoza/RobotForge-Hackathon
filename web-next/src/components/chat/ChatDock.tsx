@@ -61,7 +61,7 @@ import {buildDexEntities,DEX_TAB_LABEL,normalizeDexName,parseDexMove,planDexMove
 import {DEX_OVERRIDES_KEY,type DexOverrides} from '@/lib/dexOverrides';
 import {isPhotoDraft} from '@/lib/robotSource';
 import {allDexSightings} from '@/components/robots/DexSources';
-import {OMEGA1_ROBOT_ID} from '@/lib/omega1Garage';
+import {buildOmega1SeedEntry,OMEGA1_ROBOT_ID} from '@/lib/omega1Garage';
 import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseWorkshopAction, snapshotAnswer, readWorkshopContext, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
 import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNotes";
 import AssemblyProposal from './AssemblyProposal';
@@ -85,7 +85,7 @@ import { activeRecords } from '@/lib/lifecycle';
 import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 import { REPO_IMPORT_EVENT, repoLinkIn } from '@/lib/repoLink';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
-import { appendFreshBaseline, buildDexEntry, copyAsNew, parseSaveChoice, parseSaveCommand, planSave, recordAddedPart, resolveCataloguePart, resolveSaveTarget, uniqueCopyName, type DexRobotRef } from '@/lib/saveRobot';
+import { appendFreshBaseline, buildDexEntry, copyAsNew, isOmega1Name, parseSaveChoice, parseSaveCommand, planSave, recordAddedPart, resolveCataloguePart, resolveSaveTarget, uniqueCopyName, type DexRobotRef } from '@/lib/saveRobot';
 import { forgeValidateSpec } from '@/components/forge/validate';
 import { LIVE_ENDPOINT, sessionToken } from "@/components/forge/live";
 import { isDemoMode, useDemoMode } from "@/lib/demoMode";
@@ -908,6 +908,23 @@ export function useForgeAssistant() {
     if (!pageName && (pathname || "").startsWith("/garage")) {
       const h = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)$/);
       if (h) pageName = saved.find((r) => r.id === h[1])?.name;
+    }
+    /* Omega1 comes from its own records, with the same record the
+     * Workshop writes, and "it" is the robot we were just talking about. */
+    if (req.kind === "save" && !req.importRef && isOmega1Name(req.nameText ?? (pageName ? undefined : memoryRef.current.robotName))) {
+      const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+      const existing = all.find((r) => r.id === OMEGA1_ROBOT_ID);
+      if (existing) {
+        noteBubble(existing.archivedAt
+          ? "Your Omega1 copy is in Archived robots. Restore it there, or delete it forever there to start fresh from its records."
+          : "Omega1 is already in your Workshop, so I didn't add a second copy.");
+        return true;
+      }
+      const error = writeStore(GARAGE_KEY, [...all, buildOmega1SeedEntry(new Date().toISOString(), uid("v"))]);
+      noteBubble(error
+        ? `I couldn't save Omega1 (${error}), so nothing was added.`
+        : "Omega1 is in your Workshop now, from its records, and it shows under My robots. Its real size and weight still need measuring.");
+      return true;
     }
     const target = resolveSaveTarget(req, {
       dex: robots.map((r) => ({ name: r.name, slug: robotSlug(r), specFile: r.spec_file })),

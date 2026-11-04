@@ -47,6 +47,11 @@ export type SaveRequest =
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
+/* Omega1 has no Robodex entry to save from: its copy comes from its own
+ * records (lib/omega1Garage). The kit's name means the same robot. */
+export const isOmega1Name = (name: string | undefined) =>
+  !!name && /\b(?:omega ?1|freenove|fnk0043)\b/i.test(norm(name));
+
 /* The save grammar. Deliberately narrow, like the other command
  * grammars: a shape this function doesn't own returns null and
  * the message falls through to the existing paths (including the
@@ -56,6 +61,14 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
  * "add X to my build…" belongs to the build-list grammar. */
 export function parseSaveCommand(text: string): SaveRequest | null {
   const q = text.trim().replace(/\s+/g, " ");
+  /* "spawn it in my workshop as a new robot", "put Omega1 in my garage". */
+  const into = q.match(/^(?:please )?(?:spawn|add|put|bring|create|make|save)(?: me)? (?:the |my )?(.+?)(?: (?:in|into|to) (?:my |the )?(?:workshop|garage|robots))?(?: as (?:a )?new robot)?[.!]?$/i);
+  const says = /\b(?:workshop|garage|my robots|new robot)\b/i.test(q) || /^(?:please )?spawn\b/i.test(q);
+  if (into && says && !/^(?:a|an|new)\s/i.test(into[1])) {
+    return /^(?:it|this|that|robot|this robot|that robot|this one|that one)$/i.test(into[1])
+      ? { kind: "save" }
+      : { kind: "save", nameText: into[1].replace(/^"|"$/g, "").trim() };
+  }
   let m = q.match(/^add (?:a |an |the )?(.+?) to (?:my )?(.+?)(?:,)? and save(?: it)?[.!]?$/i)
        || q.match(/^add (?:a |an |the )?(.+?) to (?:my )?(.+?)(?:,)? then save(?: it)?[.!]?$/i);
   if (m) {
