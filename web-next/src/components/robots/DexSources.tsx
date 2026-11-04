@@ -225,39 +225,10 @@ export function BringIntoWorkshop({ name, specFile, draftSpec }: {
     if (busy) return;
     setBusy(true);
     try {
-      let entry: GarageRobot;
-      const nowIso = new Date().toISOString();
-      if (specFile) {
-        const r = await fetch(assetPath(specFile));
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const spec = (await r.json()) as Spec;
-        entry = buildDexEntry(
-          { name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), specFile },
-          spec, nowIso, { robot: uid("robot"), version: uid("v") },
-        );
-      } else {
-        entry = {
-          id: uid("robot"),
-          name,
-          createdAt: nowIso,
-          versions: [{
-            id: uid("v"),
-            label: "Baseline",
-            note: `Started from the Robodex sighting of ${name} — its recorded photo-draft spec, unchanged. Photo-estimated: sizes came from a photograph, not measurements.`,
-            source: "photo",
-            createdAt: nowIso,
-            spec: JSON.parse(JSON.stringify(draftSpec)) as Spec,
-          }],
-        };
-      }
-      const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
-      if (current.some((x) => x.name.toLowerCase() === name.toLowerCase())) {
-        setNote("Already in your Workshop.");
-        return;
-      }
-      const error = writeStore(GARAGE_KEY, [...current, entry]);
-      if (error) throw new Error(error);
-      setNote("Brought into your Workshop — find it under My robots.");
+      const out = await bringDexRobotIntoWorkshop({ name, specFile, draftSpec });
+      setNote(out.status === "already"
+        ? "Already in your Workshop."
+        : "Brought into your Workshop — find it under My robots.");
     } catch (e) {
       setNote(`Couldn't bring it in (${(e as Error).message}). Nothing was saved.`);
     } finally {
@@ -272,6 +243,62 @@ export function BringIntoWorkshop({ name, specFile, draftSpec }: {
       {note && <span className="faint dex-local" role="status">{note}</span>}
     </span>
   );
+}
+
+/* The ONE bring-into-Workshop construction, shared by the Robodex
+ * cards above and the Workshop's "Add from Robodex" picker
+ * (components/garage/RobodexPicker.tsx) — there is no second
+ * Garage-writing path. A catalog robot saves its recorded Robodex
+ * spec (buildDexEntry); a sighting saves the draft spec its
+ * dossier recorded, as a photo-provenance Baseline. A robot with
+ * no recorded spec throws instead of inventing one — callers show
+ * the honest no-spec state and never reach here with one. The
+ * write re-checks the store by name, so repeat brings never
+ * duplicate. All storage goes through lib/store, so demo mode
+ * writes land on the demo twin like every other Garage write. */
+export type BringInOutcome =
+  | { status: "added"; entry: GarageRobot }
+  | { status: "already" };
+
+export async function bringDexRobotIntoWorkshop({ name, specFile, draftSpec }: {
+  name: string;
+  specFile?: string | null;
+  draftSpec?: Spec | null;
+}): Promise<BringInOutcome> {
+  let entry: GarageRobot;
+  const nowIso = new Date().toISOString();
+  if (specFile) {
+    const r = await fetch(assetPath(specFile));
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const spec = (await r.json()) as Spec;
+    entry = buildDexEntry(
+      { name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), specFile },
+      spec, nowIso, { robot: uid("robot"), version: uid("v") },
+    );
+  } else if (draftSpec) {
+    entry = {
+      id: uid("robot"),
+      name,
+      createdAt: nowIso,
+      versions: [{
+        id: uid("v"),
+        label: "Baseline",
+        note: `Started from the Robodex sighting of ${name} — its recorded photo-draft spec, unchanged. Photo-estimated: sizes came from a photograph, not measurements.`,
+        source: "photo",
+        createdAt: nowIso,
+        spec: JSON.parse(JSON.stringify(draftSpec)) as Spec,
+      }],
+    };
+  } else {
+    throw new Error("No recorded spec to bring in");
+  }
+  const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
+  if (current.some((x) => x.name.toLowerCase() === name.toLowerCase())) {
+    return { status: "already" };
+  }
+  const error = writeStore(GARAGE_KEY, [...current, entry]);
+  if (error) throw new Error(error);
+  return { status: "added", entry };
 }
 
 /* A Workshop robot as a Robodex card — used for My robots and for
