@@ -68,6 +68,8 @@ interface Session {
   explode: number;
   refresh?: () => void;
   applyExplode?: () => void;
+  resetParts?: () => void;
+  restorePart?: (id: string) => void;
 }
 
 export default function Robot3D({
@@ -88,6 +90,10 @@ export default function Robot3D({
   autoRotate = false,
   showSpecWiring = false,
   showComMarker = true,
+  partDrag = false,
+  resetNonce = 0,
+  restoreRequest = null,
+  onDetachedChange,
 }: {
   spec: RobotSpec;
   life?: RobotLife;
@@ -114,15 +120,24 @@ export default function Robot3D({
   autoRotate?: boolean;
   showSpecWiring?: boolean;
   showComMarker?: boolean;
+  /* Take-apart by hand: drag spec-built parts off the robot with the
+   * pointer and drop them where they land. View state only — the
+   * robot's record is never edited, so Reassemble (resetNonce) and
+   * per-part restore (restoreRequest) can always put a part back.
+   * onDetachedChange reports which parts are currently off. */
+  partDrag?: boolean;
+  resetNonce?: number;
+  restoreRequest?: { id: string; nonce: number } | null;
+  onDetachedChange?: (ids: string[]) => void;
 }) {
-  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker});
-  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker};
+  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag});
+  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag};
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<Session | null>(null);
-  const cbRef = useRef({ onSelect, onFail, onMove, onPlaybackEnd });
-  cbRef.current = { onSelect, onFail, onMove, onPlaybackEnd };
+  const cbRef = useRef({ onSelect, onFail, onMove, onPlaybackEnd, onDetachedChange });
+  cbRef.current = { onSelect, onFail, onMove, onPlaybackEnd, onDetachedChange };
   const stateRef = useRef({ explode, selected });
   stateRef.current = { explode, selected };
   /* The stage-life bundle rides its own ref (same pattern as
@@ -359,7 +374,7 @@ export default function Robot3D({
             g.add(mesh);
             pickMeshes.push(mesh);
           });
-          g.userData = { part: u.part, explode: u.explode, target: new THREE.Vector3() };
+          g.userData = { part: u.part, explode: u.explode, target: new THREE.Vector3(), userOffset: new THREE.Vector3() };
           const old = previous.find(p=>p.id===u.part);
           const current = renderInstances.find(p=>p.id===u.part);
           if(current){
@@ -637,7 +652,23 @@ export default function Robot3D({
         const fovGroup=new THREE.Group();fovGroup.add(fovMesh);scene.add(fovGroup);
         fovGroup.visible=false;
         let dragging:{id:string;group:THREE_NS.Group;start:THREE_NS.Vector3;plane:THREE_NS.Plane;grab:THREE_NS.Vector3;position:[number,number,number];pointerId:number}|null=null;
+        /* Hand take-apart drag (spec-built parts only): the part moves
+         * in a camera-facing plane and STAYS where it is dropped —
+         * its offset from home lives in userData.userOffset. */
+        let partDragging:{id:string;group:THREE_NS.Group;start:THREE_NS.Vector3;plane:THREE_NS.Plane;grabDelta:THREE_NS.Vector3;pointerId:number;moved:boolean}|null=null;
         const abortDrag=()=>{
+          if(partDragging){
+            partDragging.group.position.copy(partDragging.start);
+            (partDragging.group.userData.target as THREE_NS.Vector3).copy(partDragging.start);
+            const e = st.explode / 1000;
+            const v = partDragging.group.userData.explode as [number, number, number];
+            (partDragging.group.userData.userOffset as THREE_NS.Vector3).copy(partDragging.start).sub(new THREE.Vector3(v[0] * e, v[1] * e, v[2] * e));
+            syncDetached(partDragging.group);
+            reportDetached();
+            if(renderer.domElement.hasPointerCapture(partDragging.pointerId))renderer.domElement.releasePointerCapture(partDragging.pointerId);
+            partDragging=null;controls.enabled=true;
+            return;
+          }
           if(!dragging)return;
           dragging.group.position.copy(dragging.start);
           (dragging.group.userData.target as THREE_NS.Vector3).copy(dragging.start);
@@ -678,11 +709,52 @@ export default function Robot3D({
           const e = st.explode / 1000;
           st.groups.forEach((g) => {
             const v = g.userData.explode as [number, number, number];
-            (g.userData.target as THREE_NS.Vector3).set(v[0] * e, v[1] * e, v[2] * e);
+            const u = g.userData.userOffset as THREE_NS.Vector3;
+            (g.userData.target as THREE_NS.Vector3).set(v[0] * e + u.x, v[1] * e + u.y, v[2] * e + u.z);
           });
+        };
+        /* Take-apart by hand: a part counts as OFF once its hand-drag
+         * offset clears a small threshold (a click's jitter never
+         * counts). The set is reported to the parent, which owns the
+         * Reassemble button and the Wrench bridge. */
+        const detached = new Set<string>();
+        const OFF_THRESHOLD = Math.max(0.02, span * 0.06);
+        const reportDetached = () => cbRef.current.onDetachedChange?.([...detached]);
+        /* A part id can own several groups (two wheels, two casters):
+         * it counts as off while ANY of its groups is off, and putting
+         * it back restores every group it owns. */
+        const syncDetached = (g: THREE_NS.Group) => {
+          const id = g.userData.part as string;
+          const anyOff = st.groups.some((gr) => gr.userData.part === id
+            && (gr.userData.userOffset as THREE_NS.Vector3).length() > OFF_THRESHOLD);
+          if (anyOff) detached.add(id); else detached.delete(id);
+        };
+        const isInstanceGroup = (g: THREE_NS.Group) => Boolean(instances?.some((c) => c.id === g.userData.part));
+        const resetParts = () => {
+          st.groups.forEach((g) => {
+            if (isInstanceGroup(g)) return;
+            (g.userData.userOffset as THREE_NS.Vector3).set(0, 0, 0);
+          });
+          detached.clear();
+          applyExplode();
+          reportDetached();
+        };
+        const restorePart = (id: string) => {
+          let touched = false;
+          st.groups.forEach((g) => {
+            if (g.userData.part !== id || isInstanceGroup(g)) return;
+            (g.userData.userOffset as THREE_NS.Vector3).set(0, 0, 0);
+            touched = true;
+          });
+          if (!touched) return;
+          detached.delete(id);
+          applyExplode();
+          reportDetached();
         };
         st.refresh = refresh;
         st.applyExplode = applyExplode;
+        st.resetParts = resetParts;
+        st.restorePart = restorePart;
         applyExplode();
         refresh();
 
@@ -698,6 +770,24 @@ export default function Robot3D({
         };
         let downAt: [number, number] | null = null;
         const onMove = (ev: PointerEvent) => {
+          if(partDragging){
+            if(ev.pointerId!==partDragging.pointerId)return;
+            const rect=renderer.domElement.getBoundingClientRect();
+            ptr.set((ev.clientX-rect.left)/rect.width*2-1,-(ev.clientY-rect.top)/rect.height*2+1);
+            ray.setFromCamera(ptr,camera);
+            const point=new THREE.Vector3();
+            if(ray.ray.intersectPlane(partDragging.plane,point)){
+              const pos=point.sub(partDragging.grabDelta);
+              if(pos.length()>span*1.4)pos.setLength(span*1.4);
+              partDragging.group.position.copy(pos);
+              (partDragging.group.userData.target as THREE_NS.Vector3).copy(pos);
+              const e = st.explode / 1000;
+              const v = partDragging.group.userData.explode as [number, number, number];
+              (partDragging.group.userData.userOffset as THREE_NS.Vector3).copy(pos).sub(new THREE.Vector3(v[0] * e, v[1] * e, v[2] * e));
+              if(pos.distanceTo(partDragging.start)>0.004)partDragging.moved=true;
+            }
+            return;
+          }
           if(dragging&&ev.pointerId!==dragging.pointerId)return;
           if(dragging){
             const rect=renderer.domElement.getBoundingClientRect();
@@ -726,6 +816,35 @@ export default function Robot3D({
           refresh();
         };
         const onDown = (ev: PointerEvent) => {
+          if(motionRef.current.partDrag && !motionRef.current.dragMode && ev.button===0 && ev.isPrimary){
+            /* One raycast for both the part id and the hit mesh's own
+             * group — the left wheel and the right wheel share a part
+             * id but are separate pieces and come off separately. */
+            const rect=renderer.domElement.getBoundingClientRect();
+            ptr.x=((ev.clientX-rect.left)/rect.width)*2-1;
+            ptr.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+            ray.setFromCamera(ptr,camera);
+            const hit=ray.intersectObjects(pickMeshes,false)[0];
+            const id=hit?(hit.object.userData.part as string):null;
+            let group: THREE_NS.Group|undefined;
+            if(hit){
+              let obj: THREE_NS.Object3D|null=hit.object;
+              while(obj&&!(groups as THREE_NS.Object3D[]).includes(obj))obj=obj.parent;
+              group=(obj as THREE_NS.Group)??undefined;
+              if(group&&group.userData.part!==id)group=undefined;
+            }
+            if(id&&group&&!instances?.some(c=>c.id===id)){
+              const normal=new THREE.Vector3();
+              camera.getWorldDirection(normal);
+              const plane=new THREE.Plane().setFromNormalAndCoplanarPoint(normal,group.position.clone());
+              const point=new THREE.Vector3();
+              if(ray.ray.intersectPlane(plane,point)){
+                partDragging={id,group,start:group.position.clone(),plane,grabDelta:point.sub(group.position.clone()),pointerId:ev.pointerId,moved:false};
+                controls.enabled=false;renderer.domElement.setPointerCapture(ev.pointerId);
+                ev.stopImmediatePropagation();cbRef.current.onSelect(id);return;
+              }
+            }
+          }
           if(motionRef.current.dragMode && ev.button===0){
             const id=pick(ev);const item=instances?.find(c=>c.id===id);
             const group=groups.find(g=>g.userData.part===id);
@@ -742,6 +861,15 @@ export default function Robot3D({
           downAt = [ev.clientX, ev.clientY];
         };
         const onUp = (ev: PointerEvent) => {
+          if(partDragging){
+            if(ev.pointerId!==partDragging.pointerId)return;
+            const done=partDragging;partDragging=null;controls.enabled=true;
+            if(renderer.domElement.hasPointerCapture(ev.pointerId))renderer.domElement.releasePointerCapture(ev.pointerId);
+            ev.stopImmediatePropagation();
+            syncDetached(done.group);
+            reportDetached();
+            return;
+          }
           if(dragging&&ev.pointerId!==dragging.pointerId)return;
           if(dragging){
             const result=dragging;dragging=null;controls.enabled=true;
@@ -831,7 +959,7 @@ export default function Robot3D({
             if(camera.position.distanceTo(tdDolly)<span*0.002)tdDolly=null;
           }
           for(const g of groups){
-            if(dragging?.group===g)continue;
+            if(dragging?.group===g||partDragging?.group===g)continue;
             const target=(g.userData.target as THREE_NS.Vector3).clone();
             const current=renderInstances.find(c=>c.id===g.userData.part);
             const old=comparison?.find(c=>c.id===g.userData.part);
@@ -954,7 +1082,7 @@ export default function Robot3D({
             cable.pulse.visible=effects&&Boolean(endpointsVisible);
             if(effects) cable.pulse.position.copy(cable.curve.getPoint(animationPhase(clock.elapsedTime,cable.index)));
           }
-          controls.autoRotate=Boolean(settings.autoRotate)&&!reducedMotion.matches&&!dragging;
+          controls.autoRotate=Boolean(settings.autoRotate)&&!reducedMotion.matches&&!dragging&&!partDragging;
           controls.autoRotateSpeed=1.4;
           controls.update();
           if(composer)composer.render(delta);else renderer.render(scene, camera);
@@ -1014,6 +1142,14 @@ export default function Robot3D({
       if (st.refresh) st.refresh();
     }
   }, [selected]);
+
+  useEffect(() => {
+    if (resetNonce > 0) sessionRef.current?.resetParts?.();
+  }, [resetNonce]);
+
+  useEffect(() => {
+    if (restoreRequest) sessionRef.current?.restorePart?.(restoreRequest.id);
+  }, [restoreRequest]);
 
   return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" className="assembly-viewport" style={{minHeight:220}} />;
 }

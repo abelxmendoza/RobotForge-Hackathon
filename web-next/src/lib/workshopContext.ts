@@ -81,6 +81,34 @@ export function requestWorkshopAction(action: WorkshopAction): boolean {
   return detail.handled;
 }
 
+/* Reassemble bridge (chat → the Workshop's 3D model), same handled-
+ * detail pattern as the sim commands: the chat asks, whichever 3D
+ * take-apart view is on screen answers with what it did, and the
+ * chat reads the answer back verbatim. The view state (which parts
+ * are off) lives in the viewer, never in the chat. */
+export const WORKSHOP_REASSEMBLE_EVENT = 'rf-workshop-reassemble';
+
+export interface ReassembleResult { handled: boolean; message: string }
+
+export function requestReassemble(): ReassembleResult {
+  if (typeof window === 'undefined') return { handled: false, message: '' };
+  const detail: ReassembleResult = { handled: false, message: '' };
+  window.dispatchEvent(new CustomEvent(WORKSHOP_REASSEMBLE_EVENT, { detail }));
+  return detail;
+}
+
+/* Typed text → a reassemble ask, else null. Conservative like
+ * parseWorkshopAction: whole-message phrases only, never a question,
+ * and never a word that could mean an edit (rebuild, regenerate). */
+export function parseReassembleCommand(q: string): boolean {
+  const t = String(q || '').trim().replace(/[.!]+$/, '').toLowerCase();
+  if (!t || t.includes('?')) return false;
+  return /^(?:please )?(?:reassemble|re-assemble)(?: it| this| the robot| my robot| everything| all the parts)?$/.test(t)
+    || /^(?:please )?put (?:it|the robot|my robot|everything|all the parts|the parts) back together$/.test(t)
+    || /^(?:please )?put all the parts back$/.test(t)
+    || /^(?:please )?assemble (?:it|the robot|my robot)$/.test(t);
+}
+
 const TAB_WORDS: Record<string, string> = {
   overview: 'overview', build: 'build', wiring: 'wiring', bom: 'bom', 'parts list': 'bom', parts: 'bom',
   test: 'checks', tests: 'checks', checks: 'checks', history: 'history', simulate: 'simulate', simulation: 'simulate',

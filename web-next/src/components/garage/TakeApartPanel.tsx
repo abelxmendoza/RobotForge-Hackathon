@@ -15,10 +15,12 @@
  * this robot — resolved twin → attached scan/model → the site's
  * spec-built stage → none (lib/takeApart resolveModelSource) — by
  * reusing the twin viewer, the scan viewer and the Overview stage.
- * It is a viewing surface: rotation and orbit only, no per-part 3D
- * manipulation. Every reused viewer already honours
- * prefers-reduced-motion (it starts paused) and pauses its spin
- * behind its own control while the user orbits. */
+ * The twin and the scan stay view-only (rotation and orbit); the
+ * spec-built stage is the Overview stage itself, where parts can be
+ * clicked for their card and dragged off by hand, and put back with
+ * its Reassemble button or by asking Wrench. Every reused viewer
+ * already honours prefers-reduced-motion (it starts paused) and
+ * pauses its spin behind its own control while the user orbits. */
 import { useMemo, useRef, useState } from 'react';
 import TwinView from './TwinView';
 import ScanView from './ScanView';

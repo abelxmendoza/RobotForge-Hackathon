@@ -1796,6 +1796,20 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .ws-turntable-stage > div,.ws-turntable-stage canvas{width:100%;height:100%;display:block}
 .ws-turntable-toggle{position:absolute;right:10px;bottom:10px;z-index:2}
 .ws-turntable-wait{display:grid;place-items:center;height:100%;margin:0}
+/* Take-apart by hand: stage + the clicked part's card beside it */
+.ws-turntable-flex{display:flex;gap:var(--s3);align-items:stretch}
+.ws-turntable-flex .ws-turntable-stage{flex:1 1 auto;min-width:0}
+.ws-partbar{flex:0 0 248px;border:1px solid var(--border);border-radius:var(--r);padding:var(--s3);display:flex;flex-direction:column;gap:var(--s2);background:rgba(255,255,255,.02)}
+.ws-partbar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s2)}
+.ws-partbar-head h3{margin:0;font-size:1rem}
+.ws-partbar-state{margin:0;font-weight:600;color:#7ee2a8}
+.ws-partbar-state.is-off{color:#f5b04c}
+.ws-partbar p{margin:0}
+.ws-partbar-facts{display:grid;grid-template-columns:auto 1fr;gap:2px var(--s3);margin:0}
+.ws-partbar-facts dt{font-weight:600;opacity:.75}
+.ws-partbar-facts dd{margin:0}
+.ws-turntable-bar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);min-height:30px}
+@media (max-width:760px){.ws-turntable-flex{flex-direction:column}.ws-partbar{flex-basis:auto}}
 
 /* My Parts: full-width grid, details in a drawer, Finder-style columns */
 .inv-layout{display:block}
