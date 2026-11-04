@@ -29,7 +29,7 @@ import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKS
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
-import OverviewTurntable from './OverviewTurntable';
+import OverviewTurntable, { hasBody } from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
 import { cardImagesOf } from '@/lib/repoImport';
 import BomTab from './BomTab';
@@ -1322,6 +1322,11 @@ export default function Garage() {
                       onPhotoSave={(photo) => patchRobot(robot.id, (r) => { if (photo) return { ...r, photo }; const { photo: _removed, ...rest } = r; return rest; })}
                       scan={robot.scan}
                       name={robot.name}
+                      modelReady={robot.id === OMEGA1_ROBOT_ID || hasBody(draft)}
+                      modelNote={robot.id === OMEGA1_ROBOT_ID
+                        ? 'Omega1 digital twin · generated from a photo of the real rover, so its shape and size are estimates, not measurements. Drag to look around it, or use its Turn control for the full 360.'
+                        : latest?.planned ? undefined
+                        : 'Model built from this robot\u2019s recorded spec · approximate geometry, not a measured twin. Drag to look around it.'}
                       model={robot.id === OMEGA1_ROBOT_ID ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
                       onSave={(next) => patchRobot(robot.id, (r) => {
                         if (next) return { ...r, spin: next };

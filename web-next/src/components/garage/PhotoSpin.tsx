@@ -177,17 +177,24 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
   );
 }
 
-/* The Overview's picture: the real photo spin or 3D scan when there is
- * one (with a switch to the 3D model), otherwise the model, with ways
- * to add either. */
+/* The Overview's picture: the robot in 3D first — the owner's own 3D
+ * scan when there is one, otherwise the 3D model (Omega1's digital
+ * twin, or the stage built from the robot's spec) — with the photo
+ * views one switch away, and ways to add either. */
 export type ReferencePhoto = { url: string; caption: string; source?: string; position?: string };
 type View = 'photos' | 'scan' | 'model' | 'reference';
-export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onSave, onScanSave, onApplyScanSize, onRealsenseScan }: {
+export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = false, modelNote, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onSave, onScanSave, onApplyScanSize, onRealsenseScan }: {
   robotId: string;
   spin: Spin | undefined;
   scan: ScanMeta | undefined;
   name: string;
   model: ReactNode;
+  /* A real 3D model exists to open on (the twin, or a spec with a
+   * body). Without one the Overview keeps opening on the photo. */
+  modelReady?: boolean;
+  /* The honest label over the model view; defaults to the concept
+   * wording. Omega1 passes its digital-twin wording. */
+  modelNote?: string;
   concept?: boolean;
   photo?: string;
   photoSet?: string[];
@@ -212,14 +219,15 @@ export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSe
     : pick === 'photos' && spin ? 'photos'
     : pick === 'scan' && scan ? 'scan'
     : pick === 'reference' ? 'reference'
-    : photo && photoAddedAt && photoAddedAt > (scan?.addedAt ?? '') && photoAddedAt > (spin?.addedAt ?? '') ? 'reference' : spin ? 'photos' : scan ? 'scan' : concept && !photo && !referencePhoto ? 'model' : 'reference';
+    : scan ? 'scan' : modelReady ? 'model'
+    : photo && photoAddedAt && photoAddedAt > (spin?.addedAt ?? '') ? 'reference' : spin ? 'photos' : concept && !photo && !referencePhoto ? 'model' : 'reference';
   return (
     <div className="ps-overview">
       <div className="ps-switch" role="group" aria-label="Overview picture">
         <button type="button" className="btn btn-sm" aria-pressed={view === 'reference'} onClick={() => setPick('reference')}>{photo ? 'Your photo' : 'Reference photo'}</button>
         {spin && <button type="button" className="btn btn-sm" aria-pressed={view === 'photos'} onClick={() => setPick('photos')}>Photo 360</button>}
         {scan && <button type="button" className="btn btn-sm" aria-pressed={view === 'scan'} onClick={() => setPick('scan')}>Your 3D scan</button>}
-        <button type="button" className="btn btn-sm" aria-pressed={view === 'model'} onClick={() => setPick('model')}>Inspect concept model</button>
+        <button type="button" className="btn btn-sm" aria-pressed={view === 'model'} onClick={() => setPick('model')}>3D model</button>
       </div>
       {view === 'photos' && spin ? (
         <figure className="ps-figure">
@@ -230,7 +238,7 @@ export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSe
         </figure>
       ) : view === 'scan' && scan ? (
         <ScanView key={scan.addedAt} robotId={robotId} scan={scan} name={name} />
-      ) : view === 'model' ? <><p className="faint g-small">Concept model · approximate geometry, not a measured digital twin.</p>{model}</> : (
+      ) : view === 'model' ? <><p className="faint g-small">{modelNote ?? 'Concept model · approximate geometry, not a measured digital twin.'}</p>{model}</> : (
         image && failedPhoto !== image ? <figure className="ws-real-photo">
           <img src={image} alt={photo ? `Your photo of ${name}` : `Reference image for ${name}`} referrerPolicy="no-referrer" style={{objectPosition: photo ? 'center' : referencePhoto?.position}} onError={() => setFailedPhoto(image)} />
           <figcaption className="faint g-small">{photo ? 'Your uploaded photo.' : referencePhoto?.caption}{!photo && referencePhoto?.source && <> <a href={referencePhoto.source} target="_blank" rel="noreferrer">Source</a></>}</figcaption>
