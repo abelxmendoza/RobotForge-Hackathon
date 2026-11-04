@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import { assetPath } from "@/components/home/asset";
-import { robots, robotSlug } from "@/lib/data";
-import { robotImage, imgSrc } from "@/components/robots/shared";
-import RobotPhoto from "@/components/robots/RobotPhoto";
 
 /**
  * Credits — who and what RobotForge builds on. Every line traces to
@@ -15,14 +12,14 @@ import RobotPhoto from "@/components/robots/RobotPhoto";
  * submission package's contributors draft. Acknowledgment, not
  * team membership — the only human contributor is named first.
  *
- * The pictures follow the same rule: the robot gallery renders
- * each catalogue entry's own credited photo (the same image and
- * credit line its Robodex page shows, via lib/data + the robots'
- * shared robotImage helper), the part photos are the catalogue's
- * own files, and the brand logos under assets/img/credits/ are
- * the owners' marks (Simple Icons, CC0), shown only to say
- * thank you. The remaining tiles are RobotForge illustrations
- * drawn for this page.
+ * The pictures follow the same rule: the brand logos under
+ * assets/img/credits/ are the owners' own marks (Simple Icons,
+ * CC0; Freenove's from freenove.com), shown only to say thank
+ * you, the part photos in Sources we cite are the catalogue's
+ * own files, and the remaining tiles are RobotForge
+ * illustrations drawn for this page. The catalogue robots and
+ * Omega1 are credited in words — their photos live on the
+ * Robodex and the Workshop, and this page does not repeat them.
  */
 
 export const metadata: Metadata = {
@@ -32,28 +29,13 @@ export const metadata: Metadata = {
     "The makers, models, workshops and services RobotForge builds on — credited.",
 };
 
-/* The maker line shown under each gallery photo. Mirrors the
- * catalogue list below; the photo and its credit line come from
- * the catalogue record itself. */
-const MAKERS: Record<string, string> = {
-  "Andino": "Ekumen",
-  "TurtleBot3 Burger": "ROBOTIS",
-  "TurtleBot3 Waffle Pi": "ROBOTIS",
-  "Pathfinder": "RobotForge's own reference design",
-  "PX4 X500": "the PX4 project and Holybro",
-  "Crazyflie 2.1": "Bitcraze",
-  "Unitree Go2": "Unitree",
-  "Mini Pupper": "MangDang",
-  "Unitree G1": "Unitree",
-  "ROBOTIS OP3": "ROBOTIS",
-  "OpenManipulator-X": "ROBOTIS",
-};
-
 /* One logo tile: a brand mark on a light stage (so dark marks
- * stay readable on the app's navy), or a RobotForge illustration
- * on a dark stage, or a plain wordmark when no mark exists. */
-function LogoTile({ logo, art, word, name, note }: {
-  logo?: string; art?: string; word?: string; name: string; note: string;
+ * stay readable on the app's navy), a white mark like
+ * Freenove's on a dark stage, a RobotForge illustration, or a
+ * plain wordmark when no mark exists. */
+function LogoTile({ logo, art, word, dark, name, note }: {
+  logo?: string; art?: string; word?: string; dark?: boolean;
+  name: string; note: string;
 }) {
   return (
     <figure className="credits-tile">
@@ -65,7 +47,7 @@ function LogoTile({ logo, art, word, name, note }: {
       ) : word ? (
         <span className="credits-tile-stage credits-tile-stage--word">{word}</span>
       ) : (
-        <span className="credits-tile-stage">
+        <span className={dark ? "credits-tile-stage credits-tile-stage--dark" : "credits-tile-stage"}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={assetPath(`assets/img/credits/${logo}`)} alt={`${name} logo`} loading="lazy" />
         </span>
@@ -186,24 +168,6 @@ export default function CreditsPage() {
           <li><strong>ROBOTIS OP3</strong> — ROBOTIS</li>
           <li><strong>OpenManipulator-X</strong> — ROBOTIS</li>
         </ul>
-        <div className="credits-gallery">
-          {robots.map((r) => {
-            const image = robotImage(r);
-            if (!image) return null;
-            return (
-              <figure className="credits-shot" key={r.name}>
-                <span className="credits-shot-img">
-                  <RobotPhoto src={imgSrc(image.src)} alt={r.name}
-                    slug={robotSlug(r)} name={r.name} />
-                </span>
-                <figcaption>
-                  <strong>{r.name}</strong> — {MAKERS[r.name] ?? ""}
-                  <span>{image.caption}</span>
-                </figcaption>
-              </figure>
-            );
-          })}
-        </div>
         <p>
           Boston Dynamics Spot is not a catalogue entry: it appears
           as a Spotter sighting, photographed at Cal Poly
@@ -222,35 +186,11 @@ export default function CreditsPage() {
           estimates, not measurements of the real robot, and they
           are labelled ESTIMATED everywhere they appear.
         </p>
-        <div className="credits-duo">
-          <figure className="credits-shot">
-            <span className="credits-shot-img">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={assetPath("assets/omega1-twin/omega1-real-photo.png")}
-                alt="Omega1, Abel's real Freenove rover" loading="lazy" />
-            </span>
-            <figcaption>
-              <strong>The real Omega1</strong>
-              <span>Abel&apos;s Freenove FNK0043 rover, photographed on the bench.</span>
-            </figcaption>
-          </figure>
-          <figure className="credits-shot">
-            <span className="credits-shot-img">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={assetPath("assets/omega1-twin/omega1-rover-preview.jpg")}
-                alt="Omega1's generated digital twin" loading="lazy" />
-            </span>
-            <figcaption>
-              <strong>Its digital twin</strong>
-              <span>Generated by ProjectSim (Kaedim) from that photo — ESTIMATED geometry, not a measurement.</span>
-            </figcaption>
-          </figure>
-        </div>
         <div className="credits-tiles">
+          <LogoTile logo="logo-freenove.png" dark name="Freenove"
+            note="The FNK0043 4WD car kit Omega1 is built from" />
           <LogoTile logo="logo-raspberrypi.svg" name="Raspberry Pi"
             note="Omega1's onboard computer" />
-          <LogoTile word="Freenove" name="Freenove"
-            note="The FNK0043 4WD car kit Omega1 is built from" />
           <LogoTile word="ProjectSim" name="ProjectSim (Kaedim)"
             note="Generated the Omega1 twin from a photo" />
         </div>
@@ -396,13 +336,13 @@ export default function CreditsPage() {
         <h2>Photos</h2>
         <p>
           Robot and part photos are credited on their own pages,
-          next to the photo they belong to — and in the gallery
-          above, under each robot&apos;s picture.
+          next to the photo they belong to.
         </p>
         <p>
           The brand logos on this page are the trademarks of their
           owners, shown only to say thank you; the logo files come
-          from Simple Icons (CC0). The workshop, provider and
+          from Simple Icons (CC0), except Freenove&apos;s, which
+          comes from freenove.com. The workshop, provider and
           Firecrawl tiles are illustrations drawn for RobotForge,
           not the companies&apos; own artwork.
         </p>
