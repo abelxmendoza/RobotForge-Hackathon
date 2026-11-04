@@ -22,6 +22,7 @@ import {
   dimsError, normalizeBridgeUrl, rgbToRgba, scanFileName,
   type BridgeFrame, type BridgeStatus, type BuildResult,
 } from '@/lib/scanBridge';
+import type { SlotScan } from '@/lib/scan3d';
 
 type Conn = 'idle' | 'connecting' | 'connected' | 'offline';
 
@@ -36,7 +37,16 @@ async function call<T>(base: string, path: string, post = false): Promise<T> {
   return data as T;
 }
 
-export default function ScanStudio() {
+/* With `robot` the Studio scans that one robot (the Workshop's camera
+ * window): no robot picker, it connects on open, and the scan is handed
+ * to `onAttach` so the Workshop saves it through its own state. */
+export type StudioRobot = { id: string; name: string };
+export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false, onDone }: {
+  robot?: StudioRobot;
+  onAttach?: (meta: Omit<SlotScan, 'kind'>) => string | null;
+  autoConnect?: boolean;
+  onDone?: () => void;
+} = {}) {
   const [url, setUrl] = useState(DEFAULT_BRIDGE);
   const [conn, setConn] = useState<Conn>('idle');
   const [status, setStatus] = useState<BridgeStatus | null>(null);
@@ -54,15 +64,31 @@ export default function ScanStudio() {
   const depthRef = useRef<HTMLCanvasElement>(null);
   const pushRef = useRef<PushPoints | null>(null);
   const live = useRef(false);
+  const recordingRef = useRef(false);
+  const mounted = useRef(true);
+  const baseRef = useRef(DEFAULT_BRIDGE);
   const base = normalizeBridgeUrl(url);
+  baseRef.current = base;
+  recordingRef.current = recording;
+  const subject = fixed?.name ?? 'Omega1';
 
   useEffect(() => { setUrl(readUrl()); }, []);
   useEffect(() => {
+    if (fixed) { setRobots([{ id: fixed.id, name: fixed.name } as GarageRobot]); setTarget(fixed.id); return; }
     const active = readStore<GarageRobot[]>(GARAGE_KEY, []).filter((r) => !r.archivedAt);
     setRobots(active);
     setTarget((t) => t || (active.find((r) => r.id === OMEGA1_ROBOT_ID)?.id ?? active[0]?.id ?? ''));
-  }, [result]);
-  useEffect(() => () => { live.current = false; }, []);
+  }, [result, fixed]);
+  // Closing the window stops the live view, and stops a recording so the
+  // bridge doesn't keep filling the disk with frames nobody will build.
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+    mounted.current = false;
+    live.current = false;
+    if (recordingRef.current) void fetch(baseRef.current + '/record/stop', { method: 'POST' }).catch(() => undefined);
+  };
+  }, []);
 
   const draw = (canvas: HTMLCanvasElement | null, b64: string, w: number, h: number) => {
     if (!canvas) return;
@@ -94,7 +120,7 @@ export default function ScanStudio() {
     }
   }, []);
 
-  const connect = async () => {
+  const connect = async (quiet = false) => {
     const problem = bridgeUrlProblem(base);
     if (problem) { setMessage(problem); return; }
     setConn('connecting');
@@ -109,16 +135,32 @@ export default function ScanStudio() {
       live.current = true;
       void poll(base);
     } catch {
-      setConn('offline');
+      setConn(quiet ? 'idle' : 'offline');
+      if (quiet) return;
       setMessage(`No bridge answered at ${base}. Start it with python3 tools/scan_bridge.py (add --simulate to try it without a camera), then press Connect again. Safari blocks pages from reaching this computer: use Chrome or Edge, and allow local network access if asked.`);
     }
   };
+
+  // The camera window tries the bridge once on open, silently: if it isn't
+  // running yet, the steps to start it are already on screen.
+  const tried = useRef(false);
+  useEffect(() => {
+    if (!autoConnect || tried.current || url !== readUrl()) return;
+    tried.current = true;
+    void connect(true);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   const disconnect = () => { live.current = false; setConn('idle'); setStatus(null); };
 
   const startRec = async () => {
     setMessage(''); setResult(null); setPly(null); setAttached(null);
-    try { await call(base, '/record/start', true); setRecording(true); setRecStart(Date.now()); setFrames(0); }
+    try {
+      await call(base, '/record/start', true);
+      // Closed while the start was in flight: stop it, nobody can see it.
+      if (!mounted.current) { void fetch(base + '/record/stop', { method: 'POST' }).catch(() => undefined); return; }
+      recordingRef.current = true;
+      setRecording(true); setRecStart(Date.now()); setFrames(0);
+    }
     catch (e) { setMessage((e as Error).message); }
   };
   const stopRec = async () => {
@@ -160,8 +202,14 @@ export default function ScanStudio() {
       await saveSlotScanFile(robot.id, 'realsense', new Blob([ply]));
       // The record also becomes the Overview's primary scan, which reads its own key.
       await saveScanFile(robot.id, new Blob([ply]));
-      const next = attachRealsenseScan(readStore<GarageRobot[]>(GARAGE_KEY, []), robot.id,
-        { name, format: 'ply', bytes: ply.byteLength, addedAt: new Date().toISOString() });
+      const meta = { name, format: 'ply' as const, bytes: ply.byteLength, addedAt: new Date().toISOString() };
+      if (onAttach) {
+        const failed = onAttach(meta);
+        if (failed) { setMessage(failed); return; }
+        setAttached({ id: robot.id, name: robot.name });
+        return;
+      }
+      const next = attachRealsenseScan(readStore<GarageRobot[]>(GARAGE_KEY, []), robot.id, meta);
       if (!next) { setMessage(`${robot.name} was archived or removed meanwhile. Pick another robot.`); return; }
       const err = writeStore(GARAGE_KEY, next);
       if (err) { setMessage(err); return; }
@@ -199,8 +247,8 @@ export default function ScanStudio() {
       {message && <p className="g-error" role="alert">{message}</p>}
 
       {conn !== 'connected' && !result && (
-        <section className="studio-empty" aria-label="How to scan Omega1">
-          <h2>Scan Omega1 with a RealSense</h2>
+        <section className="studio-empty" aria-label={`How to scan ${subject}`}>
+          <h2>Scan {subject} with a RealSense</h2>
           <p className="faint">
             Browsers can&apos;t read a RealSense&apos;s depth stream, so a small open-source bridge runs on the
             computer the camera is plugged into. It only listens on this computer, and nothing is uploaded.
@@ -212,12 +260,12 @@ export default function ScanStudio() {
               <span className="faint g-small">No camera handy? <code>python3 tools/scan_bridge.py --simulate</code> streams a synthetic test rover with a known size, so you can try every step.</span></li>
             <li>Press <strong>Connect</strong> above (Chrome or Edge; allow local network access if asked).</li>
           </ol>
-          <h3>Walking around Omega1</h3>
+          <h3>Walking around {subject}</h3>
           <ul className="studio-steps">
-            <li>Set Omega1 on a table or the floor with clear space all round. Plain floor is fine: the bridge finds it and removes it.</li>
+            <li>Set {subject} on a table or the floor with clear space all round. Plain floor is fine: the bridge finds it and removes it.</li>
             <li>Hold the camera 40–80 cm away. Closer than 15 cm or farther than 1 m is ignored, which cuts the room out.</li>
             <li>Press <strong>Record</strong>, walk one slow loop at chassis height, then a second loop looking down from above. 30–60 seconds is plenty.</li>
-            <li>Even light helps tracking. Keep Omega1 in view the whole time.</li>
+            <li>Even light helps tracking. Keep {subject} in view the whole time.</li>
           </ul>
         </section>
       )}
@@ -280,6 +328,10 @@ export default function ScanStudio() {
             <button type="button" className="btn btn-sm" onClick={download}>Download PLY</button>
             {simulated ? (
               <span className="faint g-small">A simulated scan can&apos;t be added to a robot: it is not your robot.</span>
+            ) : fixed ? (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => { void attach(); }} disabled={Boolean(attached)}>
+                {attached ? `Saved to ${fixed.name}` : `Save as ${fixed.name}'s RealSense scan`}
+              </button>
             ) : robots.length ? (
               <>
                 <label className="g-small">Add to{' '}
@@ -293,10 +345,17 @@ export default function ScanStudio() {
               <span className="faint g-small">To keep it with a robot, first add one in the <Link href="/garage/#omega1">Workshop</Link> (Omega1 is built in).</span>
             )}
           </div>
-          {!simulated && robots.length > 0 && !robots.some((r) => r.id === OMEGA1_ROBOT_ID) && (
+          {!fixed && !simulated && robots.length > 0 && !robots.some((r) => r.id === OMEGA1_ROBOT_ID) && (
             <p className="faint g-small">Scanning Omega1? Add your copy first: <Link href="/garage/#omega1">open Omega1 in the Workshop</Link>.</p>
           )}
-          {attached && (
+          {attached && fixed && (
+            <p className="studio-done" role="status">
+              Saved. {fixed.name}&apos;s Overview now shows this scan under <strong>Your 3D scan</strong>. To put the measured
+              sizes into its spec, open <strong>Improve this twin → Step 2</strong>; that saves a new version, nothing is overwritten.{' '}
+              {onDone && <button type="button" className="btn btn-sm" onClick={onDone}>Done</button>}
+            </p>
+          )}
+          {attached && !fixed && (
             <p className="studio-done" role="status">
               Added to {attached.name} as its RealSense scan. Next: open{' '}
               <Link href={attached.id === OMEGA1_ROBOT_ID ? '/garage/#omega1' : '/garage/'}>{attached.name} in the Workshop</Link>

@@ -169,7 +169,21 @@ console.log(JSON.stringify({
   scrapeIntent: m.detectWebIntent('summarize https://example.com/x please'),
   searchIntent: m.detectWebIntent('search the web for tb6612fng current rating'),
   searchIntent2: m.detectSearchIntent('look up online: jetson orin nano power draw'),
+  research: [
+    'Research the Waveshare UGV02 chassis',
+    'look up TB6612FNG current rating',
+    'find a 2S LiPo with XT60 online',
+    'Where can I buy a PCA9685 board?',
+    'How much does a Raspberry Pi 5 cost?',
+    "what's the price of an RPLIDAR A1?",
+  ].map((t) => m.detectWebIntent(t)),
   negatives: [
+    'How much does this robot cost?',
+    'What does this robot cost to build?',
+    'research my robot',
+    'look up its battery',
+    'Where can I buy parts for my rover?',
+    'find a part in my inventory',
     'How does RobotForge work?',
     'Tell me about Andino',
     'Which robots passed the gate?',
@@ -226,7 +240,11 @@ def test_web_intent_detection_positive_and_negative():
     assert out["searchIntent"] == {"kind": "search", "query": "tb6612fng current rating"}
     assert out["searchIntent2"] == {"kind": "search", "query": "jetson orin nano power draw"}
     # A normal robot question must NOT trigger the web.
-    assert out["negatives"] == [None] * 6
+    assert out["negatives"] == [None] * 12
+    # Natural research asks name a thing in the world, so they search.
+    assert [r and r["query"] for r in out["research"]] == [
+        "the Waveshare UGV02 chassis", "TB6612FNG current rating", "a 2S LiPo with XT60",
+        "a PCA9685 board", "a Raspberry Pi 5", "an RPLIDAR A1"]
 
 
 def test_web_grounding_block_format_names_its_source():

@@ -344,6 +344,9 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   const dispatch = useDispatch();
   const assistant = useForgeAssistant();
   const assistantRef = useRef(assistant);
+  /* Set below once pushUser exists; lets the prompt listener post the
+   * user's bubble for a sent prompt. */
+  const pushUserRef = useRef<(text: string) => void>(() => undefined);
   assistantRef.current = assistant;
   const assistantEntryIds = useRef(new Map<number,number>());
   const [submitting, setSubmitting] = useState(false);
@@ -382,6 +385,11 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       if (busyRef.current) return;
       setOpen(true);
       if (p.mode) setInputMode(p.mode);
+      if (p.send && typeof p.text === 'string' && p.text.trim()) {
+        pushUserRef.current(p.text);
+        assistantRef.current.ask(p.text);
+        return;
+      }
       // A text-based intake replaces any file still waiting to be sent.
       if (typeof p.text === 'string') { setText(p.text); setAttach(null); }
       if (p.attach) { fileRefs.any.current?.click(); return; }
@@ -408,6 +416,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     (node: ReactNode) => push({ kind: 'user', node }),
     [push],
   );
+  pushUserRef.current = (text: string) => pushUser(<p>{text}</p>);
   const pushNote = useCallback(
     (node: ReactNode) => push({ kind: 'note', node }),
     [push],
@@ -430,6 +439,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
         {message.openAction&&<p><button type="button" className="btn btn-sm" onClick={()=>assistantRef.current.openRobot(message.openAction!.robotId, message.openAction!.tab)}>{message.openAction.label}</button></p>}
         {message.grounding&&<p className="fc-grounding">{message.grounding.caption}</p>}
+        {message.grounding?.note&&<button type="button" className="btn btn-sm fc-note-btn" onClick={()=>assistantRef.current.saveGroundedNote(message.grounding!.note!)}>Save to {message.grounding.note.robotName}&apos;s notes</button>}
         {message.grounding&&message.grounding.failing&&<button type="button" className="fc-fix-btn" onClick={()=>assistantRef.current.fixGroundedAnswer()}>Fix this</button>}
         {message.hits&&<div className="g-tabs">{message.hits.map((hit,i)=><button type="button" className="chip" key={i} onClick={()=>assistantRef.current.onHitClick(hit)}>{hit.label}</button>)}</div>}
       </div>;
@@ -1706,7 +1716,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       {docked ? (
         <section className="chat-bar-panel wrench-panel" aria-label={`${ASSISTANT_NAME} conversation`} hidden={!open}>
           <div className="fc-head">
-            <div><strong>{ASSISTANT_NAME}</strong></div>
+            <div><strong>{ASSISTANT_NAME}</strong>{assistant.workingOn&&<span className="fc-working-on" role="status">{assistant.workingOn}</span>}</div>
             <button type="button" className="fc-close" onClick={() => setOpen(false)} aria-label="Collapse conversation" title="Collapse conversation">▾</button>
           </div>
           <div className="wrench-panel-body" ref={panelBodyRef}>{panel}</div>

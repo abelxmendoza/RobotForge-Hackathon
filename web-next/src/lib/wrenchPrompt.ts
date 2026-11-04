@@ -8,6 +8,8 @@ export type WrenchPrompt = {
   mode?: "chat" | "design";
   text?: string;
   attach?: boolean;
+  /* Ask it straight away (a tab's main button), instead of prefilling. */
+  send?: boolean;
 };
 
 let pending: WrenchPrompt | null = null;

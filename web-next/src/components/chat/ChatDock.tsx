@@ -60,7 +60,8 @@ import {DEX_OVERRIDES_KEY,type DexOverrides} from '@/lib/dexOverrides';
 import {isPhotoDraft} from '@/lib/robotSource';
 import {allDexSightings} from '@/components/robots/DexSources';
 import {OMEGA1_ROBOT_ID} from '@/lib/omega1Garage';
-import { buildWsContext, groundingCaption, readWorkshopContext, requestWorkshopFix, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
+import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseWorkshopAction, snapshotAnswer, readWorkshopContext, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
+import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNotes";
 import AssemblyProposal from './AssemblyProposal';
 import { ASSEMBLY_KEY, parseAssemblyCommand, previewAssembly, undoAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, getPath, partToChanges, setPath, type GarageRobot, type Spec } from '@/lib/garage';
@@ -165,7 +166,7 @@ interface Msg {
    * at ask time, never re-read at render). Recorded answers — and
    * live attempts that fell back to one — carry no grounding, so
    * they never show a caption or a Fix button they did not earn. */
-  grounding?: { caption: string; failing: boolean };
+  grounding?: { caption: string; failing: boolean; note?: GroundedNote };
   /* Set ONLY on a local Create-panel action result (ComposerCreate:
    * Forge Engine generation / modification, Forge Tests): the pill
    * names the deterministic engine that ran, and openAction routes
@@ -174,6 +175,10 @@ interface Msg {
   pill?: string;
   openAction?: { robotId: string; tab?: string; label: string };
 }
+
+/* A web-sourced answer about a Workshop robot that can be kept in that
+ * robot's notes (lib/robotNotes) with one tap. */
+export type GroundedNote = { robotId: string; robotName: string; text: string; source: string };
 
 let nextId = 1;
 
@@ -247,10 +252,13 @@ export function useForgeAssistant() {
    * tab switch refreshes the chips, so editing a spec field does not
    * churn the suggestion row under a half-typed question. */
   const wsChipKey = useRef("");
+  /* "Working on: Omega1 · Build" while a Workshop robot is open. */
+  const [workingOn, setWorkingOn] = useState(() => ((pathname || "").startsWith("/garage") ? workingOnLabel(readWorkshopContext()) : ""));
   useEffect(() => {
     const onWs = () => {
-      if (!(pathname || "").startsWith("/garage")) return;
+      if (!(pathname || "").startsWith("/garage")) { setWorkingOn(""); return; }
       const ws = readWorkshopContext();
+      setWorkingOn(workingOnLabel(ws));
       const key = ws ? ws.robotName + "|" + ws.tab : "";
       if (key === wsChipKey.current) return;
       wsChipKey.current = key;
@@ -920,6 +928,25 @@ export function useForgeAssistant() {
    * so a model proposal gets exactly the validation a typed command gets,
    * and nothing applies until the user taps Apply on the preview. */
   const runCommands = (q: string): boolean => {
+      /* "remember that …": a note on the Workshop robot on screen. */
+      const remember=parseRememberCommand(q);
+      if(remember){
+        const ws=readWorkshopContext();
+        if(!ws?.robotId){noteBubble('Open one of your robots in the Workshop first, then tell me what to remember about it.');return true;}
+        const err=addRobotNote(ws.robotId,remember);
+        noteBubble(err??`Saved to ${ws.robotName}’s notes: “${cleanNoteText(remember)}”. I’ll use it when you ask about ${ws.robotName}, and you can delete it on its Overview.`);
+        return true;
+      }
+      /* One-tap Workshop actions: the RealSense camera window, a tab. */
+      const wsAction=parseWorkshopAction(q);
+      if(wsAction&&(wsAction.kind==='realsense'||(pathname||'').startsWith('/garage'))){
+        const handled=requestWorkshopAction(wsAction);
+        const ws=readWorkshopContext();
+        noteBubble(!handled?'Open one of your robots in the Workshop first, then ask me again.'
+          :wsAction.kind==='realsense'?`Opened the RealSense camera window for ${ws?.robotName??'this robot'}. Start the bridge on your computer if it isn’t running (the window shows how), then Record a slow walk-around.`
+          :`Opened the ${ws?.tabLabel??'requested'} tab.`);
+        return true;
+      }
       const simCommand=parseSimCommand(q);
       if(simCommand){const detail={command:simCommand,handled:false,message:''};window.dispatchEvent(new CustomEvent(SIM_COMMAND_EVENT,{detail}));noteBubble(detail.handled?detail.message:'Open the selected robot’s Simulate tab first, then ask me to run or change its scenario.');return true;}
       const libraryCommand=parseLibraryCommand(q);
@@ -1359,7 +1386,21 @@ export function useForgeAssistant() {
       window.setTimeout(() => {
         const turn = wrench.answerTurn(q, memoryRef.current);
         memoryRef.current = turn.memory || {};
-        const ans: AnswerResult & { sources?: SourceRef[] } = turn;
+        let ans: AnswerResult & { sources?: SourceRef[] } = turn;
+        /* A question about the Workshop robot on screen: the recorded
+         * catalogue can't answer it (its fuzzy match can land on an
+         * unrelated part), so it goes live with the snapshot, and the
+         * local answer is what the Workshop has on record. */
+        const wsNow = (pathname || "").startsWith("/garage") ? readWorkshopContext() : null;
+        /* An explicit web ask always goes live with the fetch: a recorded
+         * fuzzy match must not swallow "search the web for …". */
+        if (detectWebIntent(q) && !ans.fallback) ans = { ...ans, fallback: true };
+        if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow) && !detectWebIntent(q)) {
+          ans = {
+            html: snapshotAnswer(wsNow).map((para) => "<p>" + esc(para).replace(/\n/g, "<br>") + "</p>").join(""),
+            fallback: true,
+          };
+        }
         /* Recorded answers stay the default and stay instant: only
          * the engine's honest fallback may go live. In demo mode the
          * fallback stays recorded too, with the demo note attached —
@@ -1440,6 +1481,9 @@ export function useForgeAssistant() {
                           .filter(Boolean)
                           .join(" · "),
                         failing: ws ? workshopSnapshotFailing(ws) : false,
+                        ...(ws?.robotId && webCaption
+                          ? { note: { robotId: ws.robotId, robotName: ws.robotName, text: answer, source: webCaption } }
+                          : {}),
                       }
                     : undefined,
               });
@@ -1577,7 +1621,12 @@ export function useForgeAssistant() {
     setChipsState(chipsFor({}));
   }, [pathname, wrench]);
 
-  return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
+  const saveGroundedNote = (note: GroundedNote) => {
+    const err = addRobotNote(note.robotId, note.text, note.source);
+    noteBubble(err ?? `Saved to ${note.robotName}’s notes, with its source. I’ll use it when you ask about ${note.robotName}; delete it on its Overview any time.`);
+  };
+
+  return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,saveGroundedNote,workingOn,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {dexMoveProposal&&<DexMoveProposal key={JSON.stringify(dexMoveProposal)} plan={dexMoveProposal} onDone={text=>{setDexMoveProposal(null);noteBubble(text);}} onCancel={()=>{setDexMoveProposal(null);noteBubble('Cancelled. Robodex filing unchanged.');}}/>}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}

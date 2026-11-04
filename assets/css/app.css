@@ -2068,3 +2068,26 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .studio-dims th,.studio-dims td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
 .studio-done{border-left:3px solid var(--pass);padding:8px 12px;background:var(--surface-2);border-radius:var(--r)}
 @media(max-width:640px){.studio-dims{font-size:var(--fs-xs)}.studio-dims th,.studio-dims td{padding:6px 4px}}
+
+/* The Workshop's RealSense camera window (Scan Studio for one robot). */
+.studio-modal{width:min(1160px,calc(100vw - 24px))}
+.studio-modal-body{padding:var(--s4) var(--s5) var(--s5)}
+.studio-modal-body .studio{max-width:none}
+@media (max-width:600px){.studio-modal-body{padding:var(--s3)}}
+
+/* Wrench follows the robot: "Working on" line, notes on the Overview. */
+.fc-working-on{display:block;margin-top:2px;font:600 12px/1.3 var(--mono);color:var(--accent,#3dd6c6)}
+.fc-note-btn{margin:4px 0}
+.ws-notes{margin-top:var(--s4);padding:var(--s3) var(--s4);border:1px solid var(--border);border-radius:var(--r-md,12px);background:var(--surface-2,transparent)}
+.ws-notes h3{margin:0 0 var(--s2);font-size:var(--fs-md,1rem)}
+.ws-notes ul{margin:0;padding:0;list-style:none;display:grid;gap:var(--s2)}
+.ws-notes li{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.ws-note-del{margin-left:auto}
+
+/* Each Workshop tab's job: purpose, status, one main button. */
+.ws-focus{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s3) 0;padding:var(--s3) var(--s4);border:1px solid var(--border);border-radius:var(--r-md,12px);background:var(--surface-2,transparent)}
+.ws-focus-job{margin:0;font-weight:600;flex:1 1 260px}
+.ws-focus-status{font:600 12px/1.2 var(--mono);padding:5px 8px;border-radius:999px;background:var(--surface-3);color:var(--text)}
+.ws-focus-status.pass{color:#3dd6a0}.ws-focus-status.marginal{color:#f2b84b}.ws-focus-status.fail{color:#ff6b6b}
+.ws-focus-go{white-space:nowrap}
+@media (max-width:600px){.ws-focus-go{width:100%}}

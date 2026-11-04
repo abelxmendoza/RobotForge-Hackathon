@@ -14,7 +14,7 @@
  * - Anything else is NOT a web intent. A normal robot question must
  *   never trigger a web fetch — the patterns are deliberately
  *   explicit ("search the web for …", "look up online …"), and the
- *   full list lives in SEARCH_PATTERNS, nowhere else.
+ *   full lists live in SEARCH_PATTERNS and RESEARCH_PATTERNS, nowhere else.
  *
  * Fetched web content is UNTRUSTED external data. buildWebGrounding
  * wraps it in a bounded block that names its source URL(s) and
@@ -65,6 +65,20 @@ export const SEARCH_PATTERNS: readonly RegExp[] = [
   /^web\s+search\s*[:\-]?\s+(.+)$/i,
 ];
 
+/* Natural research asks, also anchored at the start. They name a thing
+ * to find out about in the world (a part, a price, a robot), so a query
+ * about the user's own robot ("this robot", "my rover") is NOT sent to
+ * the web: the Workshop snapshot answers that. */
+export const RESEARCH_PATTERNS: readonly RegExp[] = [
+  /^research\s+(.+)$/i,
+  /^look\s+up\s+(.+)$/i,
+  /^find\s+(.+?)\s+(?:online|on\s+the\s+web)$/i,
+  /^where\s+(?:can|do|should)\s+i\s+buy\s+(.+)$/i,
+  /^how\s+much\s+(?:does|do)\s+(.+?)\s+cost$/i,
+  /^what(?:'s|’s|\s+is)\s+the\s+price\s+of\s+(.+)$/i,
+];
+const SELF_REF = /\b(this|my|our|your|its)\b/i;
+
 const URL_RE = /https?:\/\/[^\s<>"')\]]+/i;
 
 /* The first http(s) URL in the text, with trailing sentence
@@ -85,6 +99,12 @@ export function detectSearchIntent(text: string): WebIntent | null {
     if (m && m[1] && m[1].trim()) {
       return { kind: 'search', query: m[1].trim() };
     }
+  }
+  const asked = t.replace(/[?.!]+$/, '').trim();
+  for (const re of RESEARCH_PATTERNS) {
+    const m = asked.match(re);
+    const query = m && m[1] ? m[1].trim() : '';
+    if (query.length >= 3 && !SELF_REF.test(query)) return { kind: 'search', query };
   }
   return null;
 }
