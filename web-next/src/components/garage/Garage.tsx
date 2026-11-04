@@ -53,6 +53,8 @@ import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/l
 import { activeRecords, activeSelection, archivedRecords, recordSnapshot } from '@/lib/lifecycle';
 import { archiveRobotInStore, deleteRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
 import { forgetRobotScans } from '@/lib/scanStore';
+import { attachRealsenseScan } from '@/lib/scanBridge';
+import ScanStudioModal from '@/components/scan/ScanStudioModal';
 
 const now = () => new Date().toISOString();
 
@@ -512,6 +514,7 @@ export default function Garage() {
   const [saveError, setSaveError] = useState('');
   const [lifecycleNotice, setLifecycleNotice] = useState('');
   const [adding, setAdding] = useState(false);
+  const [realsenseFor, setRealsenseFor] = useState<{ id: string; name: string } | null>(null);
   /* The built-in Omega1 twin specimen (lib/omega1Twin.ts): not a
    * stored robot — a fixed entry whose view replaces the workshop
    * while it is open. */
@@ -1065,6 +1068,18 @@ export default function Garage() {
 
   return (
     <>
+    {realsenseFor && (
+      <ScanStudioModal
+        robot={realsenseFor}
+        onClose={() => setRealsenseFor(null)}
+        onAttach={(meta) => {
+          // Saved through the Workshop's own state so the Overview shows the scan at once.
+          const next = attachRealsenseScan(readStore<GarageRobot[]>(GARAGE_KEY, []), realsenseFor.id, meta);
+          if (!next) return `${realsenseFor.name} was archived or removed meanwhile.`;
+          return saveRobots(next) ?? null;
+        }}
+      />
+    )}
     <div className="garage">
       <aside className="garage-list" aria-label="Your robots">
         <h2>Your robots</h2>
@@ -1272,6 +1287,7 @@ export default function Garage() {
                         return rest;
                       })}
                       onApplyScanSize={applyScanSize}
+                      onRealsenseScan={() => setRealsenseFor({ id: robot.id, name: robot.name })}
                     />
                   );
                 })()}

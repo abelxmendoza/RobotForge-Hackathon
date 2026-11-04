@@ -182,7 +182,7 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
  * to add either. */
 export type ReferencePhoto = { url: string; caption: string; source?: string; position?: string };
 type View = 'photos' | 'scan' | 'model' | 'reference';
-export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onSave, onScanSave, onApplyScanSize }: {
+export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onSave, onScanSave, onApplyScanSize, onRealsenseScan }: {
   robotId: string;
   spin: Spin | undefined;
   scan: ScanMeta | undefined;
@@ -199,6 +199,8 @@ export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSe
   /* Turn the scan's measured size into spec dimensions (Garage saves
    * it as a new version). Optional: without it the scan is view-only. */
   onApplyScanSize?: (dims: ScanDims, scanName: string, unitNote: string) => void;
+  /* Opens the RealSense camera window for this robot. */
+  onRealsenseScan?: () => void;
 }) {
   const [pick, setPick] = useState<View | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -237,7 +239,8 @@ export function OverviewMedia({ robotId, spin, scan, name, model, photo, photoSe
       {view === 'reference' && photoSet && photoSet.length > 1 && <div className="ws-photo-thumbs" role="group" aria-label="Your robot photos">{photoSet.map((src,i) => <button type="button" className="btn btn-sm" aria-pressed={photoIndex===i} key={i} onClick={() => setPhotoIndex(i)}><img src={src} alt={`Photo ${i+1}`} /></button>)}</div>}
       <div className="ps-actions">
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Update this robot with these photos.',attach:true})}>Add photos through Wrench</button>
-        <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add this 3D scan to my robot.',attach:true})}>Add a scan through Wrench</button>
+        <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add this 3D scan to my robot.',attach:true})}>Upload a scan file</button>
+        {onRealsenseScan && <button type="button" className="btn btn-sm btn-primary" onClick={onRealsenseScan}>Scan with RealSense camera</button>}
       </div>
     </div>
   );

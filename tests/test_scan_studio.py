@@ -104,3 +104,26 @@ def test_studio_is_honest_about_what_it_is() -> None:
     improve = (WEB / "components/garage/ImproveTwin.tsx").read_text()
     assert 'href="/scan/"' in improve
     assert (WEB / "app/scan/page.tsx").exists()
+
+
+def test_each_robot_has_a_realsense_camera_window() -> None:
+    # The Overview has its own camera button next to the file upload, so a
+    # scan no longer starts with a file picker.
+    photospin = (WEB / "components/garage/PhotoSpin.tsx").read_text()
+    garage = (WEB / "components/garage/Garage.tsx").read_text()
+    modal = (WEB / "components/scan/ScanStudioModal.tsx").read_text()
+    assert ">Upload a scan file</button>" in photospin
+    assert "Scan with RealSense camera" in photospin and "onRealsenseScan" in photospin
+    assert "onRealsenseScan={() => setRealsenseFor({ id: robot.id, name: robot.name })}" in garage
+    # The window is Scan Studio pinned to that robot, connecting on open.
+    assert "<ScanStudio robot={robot} onAttach={onAttach} autoConnect onDone={onClose} />" in modal
+    assert "showModal()" in modal and "onClose={onClose}" in modal
+    # Saved through the Workshop's own state (no stale overwrite), same slot rules.
+    assert "attachRealsenseScan(readStore<GarageRobot[]>(GARAGE_KEY, []), realsenseFor.id, meta)" in garage
+    assert "return saveRobots(next) ?? null;" in garage
+    # Pinned mode: no robot picker, a single save button, and closing stops
+    # the live view and any recording on the bridge.
+    assert "Save as ${fixed.name}'s RealSense scan" in STUDIO
+    assert "if (onAttach)" in STUDIO
+    assert "live.current = false;\n    if (recordingRef.current) void fetch(baseRef.current + '/record/stop'" in STUDIO
+    assert "Scan {subject} with a RealSense" in STUDIO

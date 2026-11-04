@@ -2068,3 +2068,9 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .studio-dims th,.studio-dims td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
 .studio-done{border-left:3px solid var(--pass);padding:8px 12px;background:var(--surface-2);border-radius:var(--r)}
 @media(max-width:640px){.studio-dims{font-size:var(--fs-xs)}.studio-dims th,.studio-dims td{padding:6px 4px}}
+
+/* The Workshop's RealSense camera window (Scan Studio for one robot). */
+.studio-modal{width:min(1160px,calc(100vw - 24px))}
+.studio-modal-body{padding:var(--s4) var(--s5) var(--s5)}
+.studio-modal-body .studio{max-width:none}
+@media (max-width:600px){.studio-modal-body{padding:var(--s3)}}
