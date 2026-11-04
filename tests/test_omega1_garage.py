@@ -141,8 +141,11 @@ def test_twin_garage_link_panel():
     assert "garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null}" in GARAGE
     assert "onOpenGarage={openStoredOmega1}" in GARAGE
     assert "onAdopt={adoptOmega1}" in GARAGE
-    # the twin stays the estimated specimen in its own copy
-    assert "ProjectSim reconstruction · estimated" in GARAGE
+    # Abel (2026-11-03): the specimen entry is hidden from the Workshop
+    # list, so its "ProjectSim reconstruction · estimated" subtitle no
+    # longer renders from Garage.tsx; the twin's own copy keeps the
+    # estimated labelling (asserted above via TWIN).
+    assert "ProjectSim reconstruction · estimated" not in GARAGE
 
 
 # ------------------------------------------------------- scan → measured

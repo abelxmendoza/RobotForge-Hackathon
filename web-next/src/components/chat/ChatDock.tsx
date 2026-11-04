@@ -951,7 +951,7 @@ export function useForgeAssistant() {
           const matches=resolveDexEntity(dexMove.name,entities);
           if(!matches.length){
             if(normalizeDexName(dexMove.name)==='omega1'&&!garage.some(r=>r.id===OMEGA1_ROBOT_ID)){
-              noteBubble('Omega1 is the built-in specimen: it already shows under My robots in the Robodex and the Workshop, but it has no Workshop entry of its own yet. Adopt it (Workshop or the Robodex My robots tab) and I can file it like any other robot.');
+              noteBubble('Omega1 has no copy in your Workshop yet, so I cannot file it there. Open the Workshop and it is added to your robots from its records — then I can file it like any other robot.');
             }else{
               noteBubble(`I couldn't find “${dexMove.name}” in the Robodex, the sightings or your Workshop, so nothing was filed. Names resolve against the catalog, the dex sightings and your saved robots.`);
             }

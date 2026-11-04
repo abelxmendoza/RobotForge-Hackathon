@@ -651,16 +651,17 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     async (value: string) => {
       beginRun('Words');
       pushUser(value);
-      /* Omega1 (a Freenove FNK0043 4WD car) is built into every account:
-       * asking for it by name opens the built-in copy, seeded from its
-       * real records, instead of generating a new guess. A description
-       * that changes it ("Omega1 with a lidar") still goes to the model. */
+      /* Omega1 (a Freenove FNK0043 4WD car) is RobotForge's own rover:
+       * asking for it by name puts the stored copy in your Workshop,
+       * seeded from its real records, instead of generating a new
+       * guess. A description that changes it ("Omega1 with a lidar")
+       * still goes to the model. */
       if (omega1Ask(value)) {
         pushNote(
           <p>
-            Omega1 is already built in, so there is nothing to generate. It is the <strong>Built-in specimen</strong> in the
-            Workshop, seeded from its real records (Freenove FNK0043 4WD kit, Raspberry Pi 4B, 2× 18650). Open it and tap{' '}
-            <strong>Add Omega1 to your Garage</strong> to get your own copy. <Link href="/garage/#omega1">Open Omega1</Link>
+            Omega1 is already built in, so there is nothing to generate. It is seeded from its real records
+            (Freenove FNK0043 4WD kit, Raspberry Pi 4B, 2× 18650), and opening the Workshop adds your own
+            copy to your robots. <Link href="/garage/#omega1">Open Omega1 in the Workshop</Link>
           </p>,
         );
         return;

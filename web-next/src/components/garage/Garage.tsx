@@ -563,18 +563,6 @@ export default function Garage() {
     return () => window.removeEventListener('hashchange', check);
   }, [activeRobots]);
 
-  /* #omega1 opens the built-in Omega1 specimen (Wrench and the Forge
-   * link here instead of generating Omega1 from scratch). */
-  useEffect(() => {
-    const check = () => {
-      if (window.location.hash === '#omega1') { setTwinOpen(true); setAdding(false); setOmegaTab('overview'); }
-    };
-    if (!ready) return;
-    check();
-    window.addEventListener('hashchange', check);
-    return () => window.removeEventListener('hashchange', check);
-  }, [ready]);
-
   useEffect(() => { liveHealth().then(setHealth); }, []);
   const lm = useLiveMode('fix', 'mock');
   /* Each Forge loop run gets a token; switching robots or editing the
@@ -667,6 +655,22 @@ export default function Garage() {
     setTwinOpen(false);
   };
   const openStoredOmega1 = () => { setSelected(OMEGA1_ROBOT_ID); setTwinOpen(false); setAdding(false); setTab('overview'); };
+
+  /* #omega1 puts Omega1 in the Workshop (Wrench and the Forge link
+   * here instead of generating Omega1 from scratch): landing here
+   * adopts the stored copy from the records, or opens it if it is
+   * already yours. The built-in specimen no longer opens — the
+   * stored copy is the Omega1 you edit, scan and re-run. */
+  useEffect(() => {
+    const check = () => {
+      if (window.location.hash === '#omega1') adoptOmega1();
+    };
+    if (!ready) return;
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, storedOmega1, archivedOmega1]);
 
   /* The wiring map (spec.connections): adding or removing a row
    * saves a NEW version, like every other spec edit — the draft as
@@ -842,7 +846,7 @@ export default function Garage() {
       setSelected(next[0]?.id ?? null);
     }
     setLifecycleNotice(archived.id === OMEGA1_ROBOT_ID
-      ? 'Deleted your Omega1 copy. The built-in Omega1 is still here: open it under Built-in specimen to add a fresh copy from the records.'
+      ? 'Deleted your Omega1 copy. Ask Wrench to make Omega1, or open this Workshop again, and a fresh copy is added from its records.'
       : `Deleted ${archived.name} for good.`);
   };
   /* Start Omega1 over: swap the stored copy for a fresh one seeded
@@ -1094,14 +1098,11 @@ export default function Garage() {
             </li>
           ))}
         </ul>
-        <p className="faint g-small" style={{ marginTop: 14 }}>Built-in specimen</p>
-        <button type="button" className="g-robot" aria-current={twinOpen ? 'true' : undefined} onClick={() => { setTwinOpen(true); setAdding(false); setOmegaTab('overview'); }}>
-          <RobotAvatar names={['Omega1']} size={36} />
-          <span className="g-robot-text"><strong>Omega1</strong>
-          <span className="fbadge live">Digital twin</span>
-          <span className="faint">ProjectSim reconstruction · estimated</span></span>
-        </button>
-
+        {/* The built-in Omega1 specimen is hidden (Abel, 2026-11-03):
+         * it shadowed the owner's own Omega1 in this list and split
+         * Wrench's answers between the twin and the stored copy. The
+         * stored copy is the only Omega1 here now; #omega1 adopts or
+         * opens it (see the hash effect below). */}
         {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
         <p className="faint g-small" style={{ marginTop: 14 }}>Tip: press <strong>Create</strong> in the chat to generate a robot, tests, or a modification.</p>

@@ -77,8 +77,11 @@ def test_twin_mode_tab_switch_never_closes_the_twin():
     # the twin branch comes first and returns before the stored path
     assert "if (twinOpen) { setOmegaTab(t); return; }" in go_body
     assert go_body.index("setOmegaTab(t)") < go_body.index("setTwinOpen(false)")
-    # entering the twin starts Omega1 at Overview
-    assert "setTwinOpen(true); setAdding(false); setOmegaTab('overview');" in GARAGE
+    # Abel (2026-11-03): the twin no longer opens from the Workshop —
+    # the #omega1 landing adopts/opens the stored copy instead. The
+    # twin-mode tab machinery above stays wired for the twin view.
+    assert "setTwinOpen(true); setAdding(false); setOmegaTab('overview');" not in GARAGE
+    assert "if (window.location.hash === '#omega1') adoptOmega1();" in GARAGE
     # the bar's selected state follows the mode's own tab state
     assert "const barTab = twinOpen ? omegaTab : tab;" in GARAGE
     assert "aria-selected={mainTab(barTab) === t.id}" in GARAGE

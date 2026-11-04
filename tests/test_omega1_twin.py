@@ -93,7 +93,11 @@ def test_unnamed_driver_board_was_not_generated():
 
 def test_garage_wires_the_builtin_specimen():
     assert "import Omega1Twin from './Omega1Twin'" in GARAGE
-    assert "Built-in specimen" in GARAGE
+    # Abel (2026-11-03): the specimen is hidden in the Workshop — the
+    # "Built-in specimen" label no longer renders from Garage.tsx
+    # (the badge survives inside Omega1Twin.tsx itself).
+    assert "Built-in specimen" not in GARAGE
+    assert "Built-in specimen" in SECTION
     # PR (omega1-garage-twin): the twin gained the Garage link props —
     # pin updated to the new render string, disclosed in the PR body.
     assert "<Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />" in GARAGE
