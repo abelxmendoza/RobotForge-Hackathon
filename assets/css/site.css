@@ -227,7 +227,11 @@ footer.site-footer p{max-width:60ch}
    A framed window in the app's navy + teal: chrome bar, the cropped
    screen recording, a big teal play button, and a slim control row. */
 .fv{max-width:1000px;margin:0 auto;border-radius:var(--r-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border-strong);box-shadow:0 0 0 1px rgba(66,214,196,.08),0 24px 60px -20px rgba(0,0,0,.65),0 0 80px -30px rgba(66,214,196,.35)}
-.fv:fullscreen{max-width:none;display:flex;flex-direction:column;justify-content:center;background:#000;border-radius:0}
+.fv:fullscreen{max-width:none;width:100vw;height:100vh;display:flex;flex-direction:column;background:#000;border-radius:0}
+/* fullscreen: the screen takes what the bar and controls leave, and the
+   video fits inside it at its own aspect ratio, so controls stay visible */
+.fv:fullscreen .fv-screen{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#000}
+.fv:fullscreen .fv-screen video{width:auto;height:auto;max-width:100%;max-height:100%}
 .fv-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
 .fv-dots{display:inline-flex;gap:6px}
 .fv-dots i{width:10px;height:10px;border-radius:50%;background:var(--surface-3);display:block}
