@@ -37,6 +37,7 @@ session folder so a heavier pass (e.g. COLMAP) can run on it later.
 from __future__ import annotations
 
 import argparse
+import errno
 import base64
 import json
 import math
@@ -53,6 +54,10 @@ import numpy as np
 DEFAULT_PORT = 8765
 ALLOWED_ORIGINS = [
     re.compile(r"^https://robot-forge-hackathon(-[a-z0-9-]+)?\.vercel\.app$"),
+    # The second Vercel project serves the same app: its production name,
+    # and its previews, which carry the owner's team suffix.
+    re.compile(r"^https://robot-forge\.vercel\.app$"),
+    re.compile(r"^https://robot-forge-[a-z0-9-]+-abel-mendozas-projects\.vercel\.app$"),
     re.compile(r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"),
 ]
 RANGE_ACCURACY = 0.02
@@ -801,7 +806,14 @@ def main(argv: list[str] | None = None) -> None:
     near, far = (0.15, 1.2) if a.simulate else (a.near, a.far)
     bridge = Bridge(source, Path(a.sessions).expanduser(), near, far)
     bridge.start()
-    httpd = serve(bridge, a.port, a.allow_origin)
+    try:
+        httpd = serve(bridge, a.port, a.allow_origin)
+    except OSError as e:
+        if getattr(e, "errno", None) in (errno.EADDRINUSE, 48):
+            sys.exit(f"Port {a.port} is already in use by another program (often a local web server). "
+                     f"Start the bridge on another port, e.g. --port {a.port + 2}, and enter "
+                     f"http://127.0.0.1:{a.port + 2} as the bridge address in Scan Studio.")
+        raise
     print(f"Scan bridge ready: {source.name}")
     print(f"  http://127.0.0.1:{a.port}  (only this computer can reach it)")
     print(f"  Sessions are saved in {Path(a.sessions).expanduser()}")

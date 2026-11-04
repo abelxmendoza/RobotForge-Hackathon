@@ -137,6 +137,15 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
     } catch {
       setConn(quiet ? 'idle' : 'offline');
       if (quiet) return;
+      /* Something listening but not answering as the bridge (another
+       * local web server on the port, or a bridge refusing this page)
+       * looks the same as nothing at all to a CORS fetch. An opaque
+       * no-cors probe tells them apart. */
+      const someone = await fetch(base + '/status', { mode: 'no-cors', cache: 'no-store' }).then(() => true, () => false);
+      if (someone) {
+        setMessage(`Something is answering at ${base}, but not as the scan bridge for this page. Either another program is using that port (a local web server often is): start the bridge with --port 8767 and change the address above to http://127.0.0.1:8767. Or the bridge is refusing this page: restart it with --allow-origin ${window.location.origin}`);
+        return;
+      }
       setMessage(`No bridge answered at ${base}. Start it with python3 tools/scan_bridge.py (add --simulate to try it without a camera), then press Connect again. Safari blocks pages from reaching this computer: use Chrome or Edge, and allow local network access if asked.`);
     }
   };
