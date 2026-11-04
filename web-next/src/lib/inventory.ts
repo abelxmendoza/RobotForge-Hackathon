@@ -26,6 +26,7 @@ export const SPEC_KEY_LABEL: Record<string, string> = {
   stall_torque_nm: 'Stall torque (N·m)', rpm: 'Speed (rpm)', diameter_mm: 'Diameter (mm)',
   width_mm: 'Width (mm)', mass_g: 'Mass (g)', cells: 'Cells', chemistry: 'Chemistry',
   interface: 'Interface', range_m: 'Range (m)', model_number: 'Model number',
+  length_mm: 'Length (mm)', height_mm: 'Height (mm)', diameter_m: 'Diameter (m)', width_m: 'Width (m)',
 };
 
 export interface ChatLine { role: 'user' | 'assistant'; text: string; live?: boolean }
@@ -39,6 +40,14 @@ export interface InventoryPart {
   origin?: 'catalogue' | 'web' | 'custom' | 'photo' | 'manual';
   web_record_id?: string;
   source_url?: string;
+  /* Pictures of the product from the web (store or maker photos),
+   * hot-linked by URL. Never the owner's own part. */
+  image_urls?: string[];
+  image_credit?: string;
+  /* The store the web page belongs to, and the $ figure that page
+   * stated (an estimate with its source and fetch date, not a quote). */
+  store?: string;
+  price_estimate?: {text: string; amountUsd: number; sourceUrl: string; fetchedAt: string};
   license?: string;
   robot_links?: {robot_id: string; kind: 'planned' | 'installed'}[];
   design?: {filename: string; versions: {source: string; createdAt: string; request: string}[]};
@@ -176,6 +185,10 @@ export function importedPart(raw: unknown): InventoryPart {
   safe.web_record_id=typeof p.web_record_id==='string'?p.web_record_id:undefined;
   safe.source_url=typeof p.source_url==='string'&&/^https?:\/\//.test(p.source_url)?p.source_url:undefined;
   safe.license=typeof p.license==='string'?p.license:undefined;
+  safe.image_urls=Array.isArray(p.image_urls)?p.image_urls.filter(u=>typeof u==='string'&&/^https?:\/\//.test(u)).slice(0,6):undefined;
+  safe.image_credit=typeof p.image_credit==='string'?p.image_credit.slice(0,120):undefined;
+  safe.store=typeof p.store==='string'?p.store.slice(0,60):undefined;
+  safe.price_estimate=p.price_estimate&&typeof p.price_estimate.text==='string'&&Number.isFinite(p.price_estimate.amountUsd)&&/^https?:\/\//.test(p.price_estimate.sourceUrl||'')&&typeof p.price_estimate.fetchedAt==='string'?{text:p.price_estimate.text.slice(0,24),amountUsd:p.price_estimate.amountUsd,sourceUrl:p.price_estimate.sourceUrl,fetchedAt:p.price_estimate.fetchedAt}:undefined;
   safe.robot_links=Array.isArray(p.robot_links)?p.robot_links.filter(l=>l&&typeof l.robot_id==='string'&&(l.kind==='planned'||l.kind==='installed')).map(l=>({robot_id:l.robot_id,kind:l.kind})):undefined;
   safe.design=p.design&&typeof p.design.filename==='string'&&Array.isArray(p.design.versions)&&p.design.versions.length>0&&p.design.versions.every(v=>v&&typeof v.source==='string'&&typeof v.createdAt==='string'&&typeof v.request==='string')?{filename:p.design.filename,versions:p.design.versions.map(v=>({source:v.source,createdAt:v.createdAt,request:v.request}))}:undefined;
 

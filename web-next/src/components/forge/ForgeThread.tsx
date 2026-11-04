@@ -52,6 +52,7 @@ import {
 import type { FormEvent, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useForgeAssistant } from '@/components/chat/ChatDock';
+import { WebFindCards, WebPics } from '@/components/chat/WebFinds';
 import { repoLinkIn } from '@/lib/repoLink';
 import { WRENCH_PROMPT_EVENT, takeWrenchPrompt, type WrenchPrompt } from '@/lib/wrenchPrompt';
 import { conversationalAnswer } from '@/components/chat/engine';
@@ -437,6 +438,8 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         {message.pill&&<p><span className="fbadge local">{message.pill}</span></p>}
         {message.html&&<div dangerouslySetInnerHTML={{__html:message.html}}/>}
         {message.text&&<p style={{whiteSpace:'pre-wrap'}}>{message.text}</p>}
+        {message.images&&<WebPics images={message.images}/>}
+        {message.finds&&<WebFindCards finds={message.finds} onAsk={(t)=>{pushUserRef.current(t);assistantRef.current.ask(t);}}/>}
         {message.openAction&&<p><button type="button" className="btn btn-sm" onClick={()=>assistantRef.current.openRobot(message.openAction!.robotId, message.openAction!.tab)}>{message.openAction.label}</button></p>}
         {message.grounding&&<p className="fc-grounding">{message.grounding.caption}</p>}
         {message.grounding?.note&&<button type="button" className="btn btn-sm fc-note-btn" onClick={()=>assistantRef.current.saveGroundedNote(message.grounding!.note!)}>Save to {message.grounding.note.robotName}&apos;s notes</button>}

@@ -4,6 +4,8 @@
 import type { Hit } from "./engine";
 import type { SourceRef } from "./wrench";
 import CopyButton from "./CopyButton";
+import { WebFindCards, WebPics } from "./WebFinds";
+import type { WebFind } from "@/lib/webParts";
 import { msgText } from "@/lib/copytext";
 
 export interface ChatMsg {
@@ -22,6 +24,8 @@ export interface ChatMsg {
    * a grounding caption. */
   pill?: string;
   openAction?: { robotId: string; tab?: string; label: string };
+  images?: string[];
+  finds?: WebFind[];
 }
 
 export default function ChatMessages({
@@ -30,12 +34,14 @@ export default function ChatMessages({
   onFixClick,
   onOpenRobot,
   onSaveNote,
+  onAsk,
 }: {
   messages: ChatMsg[];
   onHitClick: (h: Hit) => void;
   onFixClick?: () => void;
   onOpenRobot?: (a: { robotId: string; tab?: string; label: string }) => void;
   onSaveNote?: (note: { robotId: string; robotName: string; text: string; source: string }) => void;
+  onAsk?: (text: string) => void;
 }) {
   return (
     <>
@@ -57,6 +63,8 @@ export default function ChatMessages({
           )}
           {m.html && <div dangerouslySetInnerHTML={{ __html: m.html }} />}
           {m.text && <p style={{ whiteSpace: "pre-wrap" }}>{m.text}</p>}
+          {m.images && <WebPics images={m.images} />}
+          {m.finds && <WebFindCards finds={m.finds} onAsk={onAsk} />}
           {m.openAction && onOpenRobot && (
             <p>
               <button

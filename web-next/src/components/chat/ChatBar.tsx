@@ -122,7 +122,7 @@ export default function ChatBar() {
             </button>
           </div>
           <div className="fc-msgs" ref={msgsRef} aria-live="polite">
-            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} onOpenRobot={(a) => assistant.openRobot(a.robotId, a.tab)} onSaveNote={assistant.saveGroundedNote} />
+            <ChatMessages messages={assistant.messages} onHitClick={assistant.onHitClick} onFixClick={assistant.fixGroundedAnswer} onOpenRobot={(a) => assistant.openRobot(a.robotId, a.tab)} onSaveNote={assistant.saveGroundedNote} onAsk={assistant.ask} />
           </div>
           <div className="chat-bar-actions">{assistant.actions}</div>
           <div className="fc-chips">

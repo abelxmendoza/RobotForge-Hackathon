@@ -2100,3 +2100,49 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .ws-planned-upgrades{border:1px dashed var(--marginal);border-radius:12px;padding:10px 14px;margin:0 0 12px}
 .ws-planned-upgrades h3{margin:0 0 6px;font-size:15px}
 .ws-planned-upgrades ul{margin:4px 0 8px;padding-left:18px}
+
+/* ---- Part modal: 3D 360°, 3D CAD, 2D photo, specs, price, stores ---- */
+.inv-card-pic .inv-webphoto{object-fit:contain;background:#fff}
+.pl-detail{box-sizing:border-box;inset:0;margin:auto;width:min(1120px,calc(100vw - 32px));height:auto;max-height:calc(100dvh - 32px);border:1px solid var(--border);border-radius:18px;box-shadow:0 30px 120px #000a}
+.pl-modal-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:start}
+.pl-modal-media{position:sticky;top:0}
+.pl-modal-info h2{margin-top:0}
+.pv-tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface-2,#1a2029);margin-bottom:10px}
+.pv-tabs button{flex:1;border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:13px;font-weight:600;padding:9px 6px;border-radius:9px;cursor:pointer}
+.pv-tabs button.on{background:#f59e0b;color:#111}
+.pv-panel{border-radius:14px;overflow:hidden;background:#1a1f27}
+.pv3d-stage{position:relative;height:min(440px,52dvh);touch-action:none}
+.pv3d-stage canvas{display:block;width:100%!important;height:100%!important;cursor:grab}
+.pv3d-stage canvas:active{cursor:grabbing}
+.pv3d-dims{position:absolute;left:12px;top:10px;font:600 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:#7dd3fc;background:#0d1b2acc;padding:5px 8px;border-radius:6px;border:1px solid #35618f}
+.pv3d-failed{position:absolute;inset:0;display:grid;place-items:center;padding:20px;text-align:center;color:var(--text-muted)}
+.pv3d-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px;background:#141920;border-top:1px solid var(--border)}
+.pv3d-bar .btn[aria-pressed=true]{border-color:#f59e0b;color:#f59e0b}
+.pv3d-bar .faint{margin-left:auto}
+.pv-photo{background:#fff;display:grid;grid-template-rows:minmax(0,1fr) auto auto;min-height:min(492px,58dvh)}
+.pv-photo>img,.pv-photo>.inv-noimg{width:100%;height:min(400px,48dvh);object-fit:contain;padding:18px;box-sizing:border-box}
+.pv-photo .pv-caption{background:#141920;margin:0;padding:10px 12px}
+.pv-thumbs{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;background:#f3f4f6}
+.pv-thumbs button{flex:none;width:58px;height:58px;padding:3px;border-radius:8px;border:2px solid transparent;background:#fff;cursor:pointer}
+.pv-thumbs button[aria-pressed=true]{border-color:#f59e0b}
+.pv-thumbs img{width:100%;height:100%;object-fit:contain}
+.pv-caption{margin:8px 2px 0}
+.pv-buy{margin:24px 0;padding-top:18px;border-top:1px solid var(--border)}
+.pv-price strong{font-size:26px;color:#fbbf24;margin-right:6px}
+.pv-stores{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.pv-stores .chip{text-decoration:none}
+@media(max-width:860px){.pl-detail{width:100vw;max-height:100dvh;height:100dvh;border-radius:0;padding:16px}.pl-modal-grid{grid-template-columns:1fr;gap:16px}.pl-modal-media{position:static}.pv3d-stage{height:300px}.pv-photo{min-height:340px}.pv-photo>img{height:280px}}
+
+/* ---- Wrench: web pictures and shoppable finds ---- */
+.fc-pics{display:flex;gap:8px;overflow-x:auto;margin:8px 0;padding-bottom:4px}
+.fc-pics a{flex:none;width:112px;height:112px;border-radius:10px;background:#fff;overflow:hidden;border:1px solid var(--border)}
+.fc-pics img{width:100%;height:100%;object-fit:contain}
+.fc-finds{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0}
+.fc-find{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface-2,#151a21)}
+.fc-find-pic{display:block;height:120px;background:#fff}
+.fc-find-pic img{width:100%;height:100%;object-fit:contain}
+.fc-find-pic .fc-find-none{display:grid;place-items:center;height:100%;color:#6b7280;font-size:12px}
+.fc-find-body{display:flex;flex-direction:column;gap:4px;padding:9px 10px 10px;font-size:12.5px}
+.fc-find-body strong{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fc-find-price{color:#fbbf24;font-weight:700}
+.fc-find-body .btn{margin-top:4px}
