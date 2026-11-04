@@ -15,7 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForgeAssistant } from "./ChatDock";
 import ChatMessages from "./ChatMessages";
-import { promptWrench } from "@/lib/wrenchPrompt";
+import { promptWrench, takeWrenchPrompt, WRENCH_PROMPT_EVENT, type WrenchPrompt } from "@/lib/wrenchPrompt";
 import AttachButton from "./AttachButton";
 import VoiceButton from "./VoiceButton";
 import CopyButton from "./CopyButton";
@@ -30,6 +30,20 @@ export default function ChatBar() {
   const [text, setText] = useState("");
   const msgsRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const [attachRequest,setAttachRequest]=useState(0);
+  useEffect(()=>{
+    if(['/garage','/garage/','/forge','/forge/','/chat','/chat/'].includes(pathname))return;
+    const prepare=(p:WrenchPrompt)=>{
+      if(p.mode==='design')return;
+      takeWrenchPrompt();setOpen(true);
+      if(typeof p.text==='string')setText(p.text);
+      if(p.attach)setAttachRequest(n=>n+1);
+      else requestAnimationFrame(()=>taRef.current?.focus());
+    };
+    const onPrompt=(e:Event)=>prepare((e as CustomEvent<WrenchPrompt>).detail);
+    window.addEventListener(WRENCH_PROMPT_EVENT,onPrompt);
+    return()=>window.removeEventListener(WRENCH_PROMPT_EVENT,onPrompt);
+  },[pathname]);
 
   /* Every page starts with the conversation collapsed (Abel,
    * 2026-11-01): it opens only when the person sends a message or
@@ -149,7 +163,7 @@ export default function ChatBar() {
           </svg>
           Create
         </button>
-        <AttachButton text={text} onSent={() => setText("")} />
+        <AttachButton request={attachRequest} text={text} onSent={() => setText("")} />
         <VoiceButton
           onText={(t) => {
             /* The transcript joins what's already typed (same

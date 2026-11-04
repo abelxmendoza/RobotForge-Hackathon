@@ -72,6 +72,7 @@ import {
   proposalToRecord, recordWebAddition, toCataloguePart, WEB_PARTS_KEY,
   type ProposalFieldChange, type WebPartProposal, type WebPartRecord,
 } from "@/lib/webParts";
+import {catalogItems,changeLibrary,parseLibraryCommand,saveCadDesign,mergeLibraryExport,type LibraryCommand} from '@/lib/partsLibrary';
 import { cadFromText } from "@/lib/cadGen";
 import { activeRecords } from '@/lib/lifecycle';
 import { readActiveRobots } from '@/lib/robotLifecycleRepository';
@@ -541,6 +542,18 @@ export function useForgeAssistant() {
    * save-collision choice below: it is conversation state, not
    * app state, and reset clears it. */
   const pendingWebProposal = useRef<PendingWebProposal | null>(null);
+  const pendingLibraryImport=useRef<{doc:unknown;stock:string;web:string}|null>(null);
+  const pendingLibrary = useRef<{command:LibraryCommand;expected:string;webExpected:string;robotsExpected:string;id:string}|null>(null);
+
+  const prepareLibraryImport=(doc:unknown)=>{
+    try{
+      const current=readStore<InventoryPart[]>(INVENTORY_KEY,[]),web=readStore<WebPartRecord[]>(WEB_PARTS_KEY,[]);
+      const preview=mergeLibraryExport(doc,current,web);
+      pendingLibrary.current=null;pendingWebProposal.current=null;
+      pendingLibraryImport.current={doc,stock:JSON.stringify(current),web:JSON.stringify(web)};
+      noteBubble(`This export adds ${preview.added} record${preview.added===1?'':'s'} to My Parts and Tools. Existing IDs stay unchanged. Photos restore as thumbnails. Reply “yes” to import or “no” to cancel.`);
+    }catch(e){noteBubble('Library not imported: '+(e as Error).message);}
+  };
 
   /* Propose: an add/update ask carrying a page URL fetches the
    * page (the same gated /web route as grounding), extracts a
@@ -906,6 +919,19 @@ export function useForgeAssistant() {
    * so a model proposal gets exactly the validation a typed command gets,
    * and nothing applies until the user taps Apply on the preview. */
   const runCommands = (q: string): boolean => {
+      const libraryCommand=parseLibraryCommand(q);
+      if(libraryCommand){
+        try{
+          const current=readStore<InventoryPart[]>(INVENTORY_KEY,[]),web=readStore<WebPartRecord[]>(WEB_PARTS_KEY,[]);
+          const robotRecords=readStore<GarageRobot[]>(GARAGE_KEY,[]);
+          const id=uid('part');
+          const result=changeLibrary(current,web,catalogItems(parts),activeRecords(robotRecords),libraryCommand,new Date().toISOString(),id);
+          pendingLibrary.current={command:libraryCommand,expected:JSON.stringify(current),webExpected:JSON.stringify(web),robotsExpected:JSON.stringify(robotRecords),id};
+          pendingWebProposal.current=null;
+          noteBubble(result.description+'. Reply “yes” to save or “no” to cancel. This does not change robot geometry or consume stock.');
+        }catch(e){noteBubble((e as Error).message);}
+        return true;
+      }
       if (runSaveCommand(q)) return true;
       /* Robodex filing commands ("move "Spot" to sighted",
        * lib/dexCategorize): parsed BEFORE the assembly grammar —
@@ -945,7 +971,7 @@ export function useForgeAssistant() {
       const stockCommand=parseInventoryCommand(q);
       if(stockCommand){
         try{
-          const stock=readStore<InventoryPart[]>(INVENTORY_KEY,[]);
+          const stock=readStore<InventoryPart[]>(INVENTORY_KEY,[]).filter(p=>!p.archivedAt);
           const robots=readActiveRobots(()=>readStore<GarageRobot[]>(GARAGE_KEY,[]));
           if(stockCommand.kind==='list'){
             let shown=stock;
@@ -1028,16 +1054,23 @@ export function useForgeAssistant() {
        * from the chat-stated dimensions — deterministic and local.
        * The .scad downloads through the store's blob pattern and
        * the full source rides in a collapsible block in the reply;
-       * generated geometry is ESTIMATED/PLANNED and says so. Demo
-       * mode skips this branch entirely (the loop is inert there),
-       * so demo answers stay byte-unchanged. */
-      if (!demoRef.current) {
-        const cad = cadFromText(q);
+       * generated geometry is ESTIMATED/PLANNED and says so. CAD designs are saved locally, including in the isolated demo store. */
+      { // Local CAD is safe in the isolated demo inventory as well.
+        const revision=q.match(/^revise custom part "([^"\n]+)":\s*(.+)$/i);
+        const cad = cadFromText(revision?revision[2]:q);
         if (cad) {
+          try {
+            const current=readStore<InventoryPart[]>(INVENTORY_KEY,[]);
+            const matches=revision?current.filter(p=>p.origin==='custom'&&(p.id===revision[1]||p.name.toLowerCase()===revision[1].toLowerCase())):[];
+            if(revision&&matches.length!==1)throw new Error('Use a unique saved custom part name or ID to revise it.');
+            const next=saveCadDesign(current,cad,q,new Date().toISOString(),uid('part'),matches[0]?.id);
+            const error=writeStore(INVENTORY_KEY,next);
+            if(error)throw new Error(error);
+          }catch(e){noteBubble('The custom design was not saved: '+(e as Error).message);return true;}
           downloadText(cad.filename, cad.source);
           appendMsg({
             who: "bot",
-            html: "<p>" + esc(cad.summary) + "</p>" +
+            html: "<p>" + esc(cad.summary) + " Saved in My Parts and Tools as a Custom wishlist design.</p>" +
               "<details><summary>OpenSCAD source — " + esc(cad.filename) + "</summary><pre>" + esc(cad.source) + "</pre></details>",
           });
           return true;
@@ -1207,6 +1240,38 @@ export function useForgeAssistant() {
       setProposal(null);
       setAssemblyProposal(null);
       setInventoryProposal(null);
+      if(pendingLibraryImport.current){
+        const pending=pendingLibraryImport.current;pendingLibraryImport.current=null;
+        const verdict=classifyProposalReply(q);
+        if(verdict==='discard'){noteBubble('Import cancelled.');return;}
+        if(verdict==='confirm'){
+          try{
+            const current=readStore<InventoryPart[]>(INVENTORY_KEY,[]),web=readStore<WebPartRecord[]>(WEB_PARTS_KEY,[]);
+            if(JSON.stringify(current)!==pending.stock||JSON.stringify(web)!==pending.web)throw new Error('Your library changed. Attach the export again for a fresh preview.');
+            const result=mergeLibraryExport(pending.doc,current,web);
+            const first=writeStore(INVENTORY_KEY,result.parts);if(first)throw new Error(first);
+            const second=writeStore(WEB_PARTS_KEY,result.web);
+            if(second){const rollback=writeStore(INVENTORY_KEY,current);throw new Error(second+(rollback?' Inventory was saved but rollback failed; export your current library.':' The inventory change was rolled back.'));}
+            noteBubble(`Imported ${result.added} record${result.added===1?'':'s'} into My Parts and Tools.`);
+          }catch(e){noteBubble('Import did not finish: '+(e as Error).message);}
+          return;
+        }
+      }
+      if(pendingLibrary.current){
+        const pending=pendingLibrary.current;pendingLibrary.current=null;
+        const verdict=classifyProposalReply(q);
+        if(verdict==='discard'){noteBubble('Cancelled. Your library is unchanged.');return;}
+        if(verdict==='confirm'){
+          try{
+            const current=readStore<InventoryPart[]>(INVENTORY_KEY,[]),web=readStore<WebPartRecord[]>(WEB_PARTS_KEY,[]);
+            if(JSON.stringify(current)!==pending.expected||JSON.stringify(web)!==pending.webExpected||JSON.stringify(readStore<GarageRobot[]>(GARAGE_KEY,[]))!==pending.robotsExpected)throw new Error('Your library changed. Ask for a fresh preview.');
+            const result=changeLibrary(current,web,catalogItems(parts),activeRecords(readStore<GarageRobot[]>(GARAGE_KEY,[])),pending.command,new Date().toISOString(),pending.id);
+            const error=writeStore(INVENTORY_KEY,result.parts);if(error)throw new Error(error);
+            noteBubble('Saved: '+result.description+'.');
+          }catch(e){noteBubble((e as Error).message);}
+          return;
+        }
+      }
       /* A pending web proposal owns the next reply: an affirmative
        * lands it (deterministic code, never the model), a negative
        * discards it, a short ambiguity re-asks ONCE, and anything
@@ -1235,7 +1300,8 @@ export function useForgeAssistant() {
       /* Submit a robot through chat: a GitHub repo link anywhere in
        * the message opens the repo importer with that repo, and the
        * import starts there (same pipeline as /import/'s own form). */
-      const repo = repoLinkIn(q);
+      const libraryWeb=detectWebAddIntent(q)&&extractFirstUrl(q)&&(/\b(part|tool|model|wishlist|stl|obj|glb|scad)\b/i.test(q)||pathname.startsWith('/inventory'));
+      const repo = libraryWeb ? null : repoLinkIn(q);
       if (repo) {
         noteBubble(`Importing ${repo.owner}/${repo.repo}. I'm opening the repo importer: it reads the README, parts list, model files and pictures, then you can save it to your Workshop.`);
         const slug = repo.owner + '/' + repo.repo;
@@ -1491,6 +1557,8 @@ export function useForgeAssistant() {
     setMessages([]);
     pendingSave.current = null;
     pendingWebProposal.current = null;
+    pendingLibrary.current = null;
+    pendingLibraryImport.current = null;
     setProposal(null);
     setAssemblyProposal(null);
     setInventoryProposal(null);
@@ -1506,7 +1574,7 @@ export function useForgeAssistant() {
     setChipsState(chipsFor({}));
   }, [pathname, wrench]);
 
-  return {ask,messages,chips,onHitClick,fixGroundedAnswer,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
+  return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {dexMoveProposal&&<DexMoveProposal key={JSON.stringify(dexMoveProposal)} plan={dexMoveProposal} onDone={text=>{setDexMoveProposal(null);noteBubble(text);}} onCancel={()=>{setDexMoveProposal(null);noteBubble('Cancelled. Robodex filing unchanged.');}}/>}
         {assemblyProposal && <AssemblyProposal key={JSON.stringify(assemblyProposal)} operation={assemblyProposal}

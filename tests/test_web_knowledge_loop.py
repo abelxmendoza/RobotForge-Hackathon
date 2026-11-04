@@ -88,7 +88,7 @@ def test_chatdock_owns_the_loop_and_demo_is_inert():
         assert marker in CHATDOCK, marker
     # The interception is demo-gated, and so is the CAD branch.
     assert "!demoRef.current && detectWebAddIntent(q)" in CHATDOCK
-    assert "cadFromText(q)" in CHATDOCK
+    assert "cadFromText(revision?revision[2]:q)" in CHATDOCK  # CAD revisions keep design history
     # Reset clears the pending proposal with the other pendings.
     assert "pendingWebProposal.current = null;" in CHATDOCK
     # The save is deterministic caller code: the proposal path never
