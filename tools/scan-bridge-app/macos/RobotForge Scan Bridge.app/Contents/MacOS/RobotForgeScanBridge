@@ -1,0 +1,66 @@
+#!/bin/sh
+# RobotForge Scan Bridge — the double-click launcher (macOS).
+#
+# What it does, with no terminal and nothing to type:
+#   * If the bridge is already running, it just steps aside (and, when
+#     you double-clicked the app yourself, opens Scan Studio).
+#   * On the first run it sets itself up in
+#     ~/Library/Application Support/RobotForgeScanBridge: a private
+#     Python environment with the open-source camera pieces (numpy,
+#     pyrealsense2, Open3D). That download happens once.
+#   * Then it starts the bridge on 127.0.0.1:8765 in the background.
+#
+# It is also what macOS opens for robotforge-scan:// links, which is
+# how Scan Studio's "Start the bridge app" button wakes it: the page
+# passes the link as an argument, and in that case the app does not
+# open a second copy of the page.
+set -u
+
+PORT=8765
+PAGE="https://robot-forge-hackathon.vercel.app/scan"
+APP_HOME="$HOME/Library/Application Support/RobotForgeScanBridge"
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" || exit 1)
+RESOURCES="$SELF_DIR/../Resources"
+
+notify() {
+  /usr/bin/osascript -e "display notification \"$1\" with title \"RobotForge Scan Bridge\"" >/dev/null 2>&1 || true
+}
+fail() {
+  /usr/bin/osascript -e "display dialog \"$1\" with title \"RobotForge Scan Bridge\" buttons {\"OK\"} default button \"OK\"" >/dev/null 2>&1 || true
+  exit 1
+}
+answering() {
+  /usr/bin/curl -s -m 2 "http://127.0.0.1:$PORT/status" >/dev/null 2>&1
+}
+
+if answering; then
+  [ "${1:-}" = "" ] && open "$PAGE"
+  exit 0
+fi
+
+mkdir -p "$APP_HOME" || fail "The bridge could not create its folder in Application Support."
+cp "$RESOURCES/scan_bridge.py" "$APP_HOME/scan_bridge.py" || fail "The bridge could not copy its files into place."
+
+if [ ! -x "$APP_HOME/venv/bin/python" ]; then
+  notify "First run: downloading the open-source camera pieces. This happens once and can take a few minutes."
+  PY=$(command -v python3 || true)
+  [ -n "$PY" ] || fail "Python 3 was not found on this Mac. The bridge app needs it; install Python from python.org, then double-click the bridge app again."
+  "$PY" -m venv "$APP_HOME/venv" >>"$APP_HOME/setup.log" 2>&1 || fail "Setup failed at the Python environment step. Details are in setup.log inside the RobotForgeScanBridge folder in Application Support."
+  "$APP_HOME/venv/bin/python" -m pip install --upgrade pip >>"$APP_HOME/setup.log" 2>&1
+  "$APP_HOME/venv/bin/python" -m pip install numpy pyrealsense2 open3d >>"$APP_HOME/setup.log" 2>&1 \
+    || fail "Setup could not download the camera pieces (numpy, pyrealsense2, Open3D). Check the internet connection, then double-click the bridge app again. Details are in setup.log inside the RobotForgeScanBridge folder in Application Support."
+  notify "Setup is done. The bridge is starting."
+fi
+
+nohup "$APP_HOME/venv/bin/python" "$APP_HOME/scan_bridge.py" --port "$PORT" >>"$APP_HOME/bridge.log" 2>&1 &
+
+# Give it a moment to answer before opening the page on it.
+n=0
+while [ $n -lt 40 ]; do
+  answering && break
+  sleep 0.5
+  n=$((n + 1))
+done
+
+[ "${1:-}" = "" ] && open "$PAGE"
+exit 0

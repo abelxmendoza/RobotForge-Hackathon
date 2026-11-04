@@ -4,7 +4,11 @@
  * A browser tab cannot read a RealSense depth stream (no shipped web
  * API), so the camera is read by a small open-source bridge on the
  * user's own computer (tools/scan_bridge.py: librealsense + Open3D),
- * and this page talks to it over 127.0.0.1 only. Live colour, depth
+ * and this page talks to it over 127.0.0.1 only. Nobody needs a
+ * terminal: the bridge app (tools/scan-bridge-app) starts the bridge
+ * with a double-click and registers a robotforge-scan:// link, so
+ * the Start the bridge app button below can wake it and this page
+ * connects on its own once it answers. Live colour, depth
  * and a 3D point cloud; record a walk-around; Build fuses it into one
  * scan with sizes measured from real depth; then download the PLY or
  * put it in a robot's RealSense scan slot, where Improve this twin
@@ -18,7 +22,8 @@ import { OMEGA1_ROBOT_ID } from '@/lib/omega1Garage';
 import { saveScanFile, saveSlotScanFile } from '@/lib/scanStore';
 import { fmtBytes } from '@/lib/scan3d';
 import {
-  attachRealsenseScan, b64ToBytes, BRIDGE_URL_KEY, bridgeUrlProblem, decodePoints, DEFAULT_BRIDGE,
+  attachRealsenseScan, b64ToBytes, BRIDGE_APP_LINK, BRIDGE_APP_PAGE, BRIDGE_URL_KEY, bridgeAnswers,
+  bridgeUrlProblem, decodePoints, DEFAULT_BRIDGE,
   dimsError, normalizeBridgeUrl, rgbToRgba, scanFileName,
   type BridgeFrame, type BridgeStatus, type BuildResult,
 } from '@/lib/scanBridge';
@@ -49,6 +54,8 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
 } = {}) {
   const [url, setUrl] = useState(DEFAULT_BRIDGE);
   const [conn, setConn] = useState<Conn>('idle');
+  const [waiting, setWaiting] = useState(false);
+  const waitToken = useRef(0);
   const [status, setStatus] = useState<BridgeStatus | null>(null);
   const [message, setMessage] = useState('');
   const [recording, setRecording] = useState(false);
@@ -112,7 +119,7 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
         if (!live.current) return;
         live.current = false;
         setConn('offline');
-        setMessage('Lost the bridge: ' + (e as Error).message + ' Is tools/scan_bridge.py still running?');
+        setMessage('Lost the bridge: ' + (e as Error).message + ' Is the bridge app still open? Press Start the bridge app to wake it again.');
         return;
       }
       const wait = Math.max(0, 110 - (performance.now() - t0));
@@ -143,12 +150,39 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
        * no-cors probe tells them apart. */
       const someone = await fetch(base + '/status', { mode: 'no-cors', cache: 'no-store' }).then(() => true, () => false);
       if (someone) {
-        setMessage(`Something is answering at ${base}, but not as the scan bridge for this page. Either another program is using that port (a local web server often is): start the bridge with --port 8767 and change the address above to http://127.0.0.1:8767. Or the bridge is refusing this page: restart it with --allow-origin ${window.location.origin}`);
+        setMessage(`Something is answering at ${base}, but not as the scan bridge for this page. Another program may be using the bridge's port, or an older bridge is refusing this page. Quit the other program, or close the bridge and press Start the bridge app again. Developers: the port and origin flags are under "Run it yourself" below.`);
         return;
       }
-      setMessage(`No bridge answered at ${base}. Start it with python3 tools/scan_bridge.py (add --simulate to try it without a camera), then press Connect again. Safari blocks pages from reaching this computer: use Chrome or Edge, and allow local network access if asked.`);
+      setMessage(`The bridge app isn't running yet. Press Start the bridge app below — this page connects by itself once it wakes. First time on this computer? Get the bridge app first: one double-click sets it up. Safari blocks pages from reaching this computer: use Chrome, Edge or Firefox, and allow local network access if asked.`);
     }
   };
+
+  /* The one-click path: the bridge app registered a link with this
+   * computer (robotforge-scan://), the Start button follows it, and
+   * this loop waits for the bridge to answer and connects on its own.
+   * If the app was never set up, the wait simply runs out and the
+   * message points at the one double-click that sets it up. */
+  const startBridgeApp = async () => {
+    const token = ++waitToken.current;
+    setWaiting(true);
+    setMessage('Waking the bridge app… if your computer asks whether to open RobotForge Scan Bridge, allow it.');
+    const deadline = Date.now() + 60000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 1500));
+      if (waitToken.current !== token || !mounted.current) return;
+      if (await bridgeAnswers(base)) {
+        setWaiting(false);
+        setMessage('');
+        void connect();
+        return;
+      }
+    }
+    if (waitToken.current !== token || !mounted.current) return;
+    setWaiting(false);
+    setMessage('The bridge app didn\'t wake up. It may not be set up on this computer yet: get it below (one double-click, it sets itself up), then press Start the bridge app again. If it is set up, make sure the camera is plugged in and try once more.');
+  };
+
+  const cancelWait = () => { waitToken.current++; setWaiting(false); setMessage(''); };
 
   // The camera window tries the bridge once on open, silently: if it isn't
   // running yet, the steps to start it are already on screen.
@@ -264,11 +298,27 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
           </p>
           <ol className="studio-steps">
             <li>Plug the RealSense (D415, D435 or D455) into a USB 3 port.</li>
-            <li>Install the open-source pieces: <code>pip install numpy pyrealsense2 open3d</code></li>
-            <li>From the RobotForge repo, start the bridge: <code>python3 tools/scan_bridge.py</code><br />
-              <span className="faint g-small">No camera handy? <code>python3 tools/scan_bridge.py --simulate</code> streams a synthetic test rover with a known size, so you can try every step.</span></li>
-            <li>Press <strong>Connect</strong> above (Chrome or Edge; allow local network access if asked).</li>
+            <li>Press <strong>Start the bridge app</strong>. Your computer may ask whether to open RobotForge Scan Bridge — allow it. This page connects by itself when the bridge wakes (Chrome, Edge or Firefox; allow local network access if asked).</li>
+            <li>First time on this computer? <strong>Get the bridge app</strong> and double-click it once — it sets itself up, and from then on the button above just works. No terminal, nothing to type.</li>
           </ol>
+          <div className="studio-actions">
+            <a className="btn btn-primary" href={BRIDGE_APP_LINK} onClick={() => { void startBridgeApp(); }} aria-disabled={waiting}>
+              {waiting ? 'Waiting for the bridge app…' : 'Start the bridge app'}
+            </a>
+            <a className="btn" href={BRIDGE_APP_PAGE} target="_blank" rel="noreferrer">Get the bridge app</a>
+            {waiting && <button type="button" className="btn btn-sm" onClick={cancelWait}>Cancel</button>}
+          </div>
+          {waiting && <p className="faint g-small" role="status">Waiting for the bridge to answer on this computer… first-ever start can take a little while if it is still setting itself up.</p>}
+          <details className="studio-advanced">
+            <summary>Run it yourself (developers)</summary>
+            <p className="faint g-small">
+              The app is a launcher around the same bridge. By hand: <code>pip install numpy pyrealsense2 open3d</code>, then
+              from the RobotForge repo <code>python3 tools/scan_bridge.py</code> and press <strong>Connect</strong> above.
+              No camera handy? <code>python3 tools/scan_bridge.py --simulate</code> streams a synthetic test rover with a
+              known size. Port busy? Start it with <code>--port 8767</code> and change the bridge address above to match.
+              A page the bridge refuses needs <code>--allow-origin &lt;the page&apos;s origin&gt;</code>.
+            </p>
+          </details>
           <h3>Walking around {subject}</h3>
           <ul className="studio-steps">
             <li>Set {subject} on a table or the floor with clear space all round. Plain floor is fine: the bridge finds it and removes it.</li>

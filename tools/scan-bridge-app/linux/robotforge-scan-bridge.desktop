@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=RobotForge Scan Bridge
+Comment=Reads the Intel RealSense camera for RobotForge Scan Studio, on this computer only
+Exec=__START_SCRIPT__ %u
+Path=__WORKDIR__
+Terminal=false
+Categories=Utility;
+MimeType=x-scheme-handler/robotforge-scan;
