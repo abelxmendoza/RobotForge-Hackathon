@@ -7,6 +7,7 @@ import { AiInsideCards } from "@/components/home/AiInside";
 import StatusCards from "@/components/home/StatusCards";
 import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
+import FounderVideo from "@/components/home/FounderVideo";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 
 /**
@@ -138,6 +139,23 @@ export default function HomePage() {
               carry real, credited photos.
             </figcaption>
           </figure>
+        </div>
+      </section>
+
+      {/* ============ WHY I BUILT IT — Abel's own walk-through
+           (Nov 4, 2026). Cropped to the screen area at encode time
+           (no phone-frame black bars); framed player in FounderVideo. */}
+      <section className="band" id="why-video">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">From the builder</div>
+            <h2>Why I built RobotForge.</h2>
+            <p>
+              Abel Mendoza walks through the app in his own words.{" "}
+              <a href="#why">Read the story ↓</a>
+            </p>
+          </div>
+          <FounderVideo />
         </div>
       </section>
 
