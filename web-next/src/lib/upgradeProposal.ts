@@ -47,6 +47,17 @@ export interface LoadRating {
 }
 
 export const LOAD_RATINGS: Record<string, LoadRating> = {
+  'raspberry-pi-4b-sbc': {
+    volts: 5.1,
+    amps: 3,
+    inputConnector: 'USB-C power port',
+    altSupplyPins: '5 V on pins 2 and 4, GND on pin 6 of the 40-pin header',
+    notes: [
+      'Raspberry Pi recommends a 5 V / 3 A supply for the Pi 4B; the official supply is 5.1 V / 3 A, the extra 0.1 V covering cable drop.',
+      'The Pi 4B USB-C input has no USB-PD negotiation: it is a plain 5 V input, so the feed must already be a regulated 5 V at up to 3 A.',
+    ],
+    source: 'https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#power-supply',
+  },
   'raspberry-pi-5-sbc': {
     volts: 5.1,
     amps: 5,
@@ -145,9 +156,11 @@ export function parseUpgradeAsk(text: string): { componentId: string } | null {
       if (re.test(rest) && (!best || a.length > best.len)) best = { id: c.id, len: a.length };
     }
   }
-  // "raspberry pi" alone is ambiguous between models: only the Pi 5 is
-  // in the table, so a bare "raspberry pi" is not taken as a Pi 5.
+  // "raspberry pi" alone is ambiguous between models (the table now
+  // holds both the Pi 5 and the Pi 4B): a bare "raspberry pi" is not
+  // taken as either board — the ask must name the model.
   if (best && best.id === 'raspberry-pi-5-sbc' && !/\b(?:pi\s*5|rpi\s*5|raspberry pi 5)\b/.test(rest)) return null;
+  if (best && best.id === 'raspberry-pi-4b-sbc' && !/\b(?:pi\s*4b?|rpi\s*4b?|raspberry pi 4b?)\b/.test(rest)) return null;
   return best ? { componentId: best.id } : null;
 }
 
@@ -350,6 +363,9 @@ export function buildUpgradeProposal(robot: GarageRobot, componentId: string): U
     const rows: { from?: string; to?: string; detail?: string }[] = (spec.connections ?? []).filter((r: { from?: string; to?: string }) => r.from === replaces || r.to === replaces);
     checks.push({ id: 'compute.existing', label: 'Existing computer', verdict: 'WARN',
       detail: `${robot.name} already has a ${replaces} with ${rows.length} documented connection${rows.length === 1 ? '' : 's'}. Decide whether ${partName} replaces it; if so, those connections move to ${partName}.` });
+    if (c.id === 'raspberry-pi-4b-sbc') {
+      if (rows.some((r) => /csi/i.test(String(r.detail ?? '')))) review.push(`The camera's CSI ribbon: the Pi 4B uses the standard 15-pin camera connector the OV5647 module was made for, so no adapter cable is needed.`);
+    }
     if (c.id === 'raspberry-pi-5-sbc') {
       if (rows.some((r) => /csi/i.test(String(r.detail ?? '')))) review.push(`The camera's CSI ribbon: the Pi 5 uses the smaller 22-pin camera connector, so a camera made for earlier Pis needs a 22-to-15-pin adapter cable.`);
       if (rows.some((r) => /gpio|i2c/i.test(String(r.detail ?? '')))) review.push(`The 40-pin header keeps the same GPIO and I2C pin numbers as on earlier Pis, but check any HAT still fits with ${partName}'s cooler fitted.`);
