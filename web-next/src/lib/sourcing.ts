@@ -82,3 +82,29 @@ export function partSearchQuery(part: {
   }
   return cleanQuery(bits.join(" "));
 }
+
+/* Robotics and maker shops, as SEARCH links too (same rule as above:
+ * a query URL, never a price or a stock claim). Shown next to the
+ * general vendors in the part modal. */
+export const HOBBY_STORES: Vendor[] = [
+  { id: "adafruit", label: "Adafruit" },
+  { id: "sparkfun", label: "SparkFun" },
+  { id: "pololu", label: "Pololu" },
+  { id: "robotshop", label: "RobotShop" },
+  { id: "ebay", label: "eBay" },
+];
+const HOBBY_URL: Record<string, (q: string) => string> = {
+  adafruit: (q) => `https://www.adafruit.com/search?q=${encodeURIComponent(q)}`,
+  sparkfun: (q) => `https://www.sparkfun.com/search/results?term=${encodeURIComponent(q)}`,
+  pololu: (q) => `https://www.pololu.com/search?query=${encodeURIComponent(q)}`,
+  robotshop: (q) => `https://www.robotshop.com/search?q=${encodeURIComponent(q)}`,
+  ebay: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}`,
+};
+export function storeSearchLinks(query: string): SourceLink[] {
+  const q = cleanQuery(query);
+  if (!q) return [];
+  return [
+    ...sourcingLinks(q),
+    ...HOBBY_STORES.map((v) => ({ vendor: v.id, label: v.label, url: HOBBY_URL[v.id](q) })),
+  ];
+}

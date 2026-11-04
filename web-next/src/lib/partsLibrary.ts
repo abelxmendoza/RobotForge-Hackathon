@@ -14,10 +14,17 @@ function base(id:string,name:string,category:string):InventoryPart {
 }
 export function libraryItems(stock:InventoryPart[],web:WebPartRecord[]):InventoryPart[] {
   const linked=new Set(stock.map(p=>p.web_record_id));
-  return [...stock.filter(p=>!p.archivedAt),...web.filter(r=>!linked.has(r.id)).map(r=>({...base('web:'+r.id,r.name,categoryFor(r.category,r.name)),web_record_id:r.id,origin:'web' as const,source_url:r.provenance.sourceUrl,specs:r.specs,createdAt:r.provenance.fetchedAt,notes:r.verification}))];
+  return [...stock.filter(p=>!p.archivedAt),...web.filter(r=>!linked.has(r.id)).map(r=>({...base('web:'+r.id,r.name,categoryFor(r.category,r.name)),web_record_id:r.id,origin:'web' as const,source_url:r.provenance.sourceUrl,specs:r.specs,createdAt:r.provenance.fetchedAt,notes:r.verification,...(r.images?.length?{image_urls:r.images,image_credit:'Photo: '+(r.store||'the source page')}:{}),...(r.store?{store:r.store}:{}),...(r.priceEstimate?{price_estimate:{text:r.priceEstimate.text,amountUsd:r.priceEstimate.amountUsd,sourceUrl:r.priceEstimate.sourceUrl,fetchedAt:r.priceEstimate.fetchedAt}}:{})}))];
 }
 export function catalogItems(catalogue:CataloguePart[]):InventoryPart[] {
-  return catalogue.map(p=>({...base('catalog:'+p.id,p.name||p.id,categoryFor(p.part_class||'',p.name||p.id)),catalog_part_id:p.id,origin:'catalogue' as const,specs:Object.fromEntries(Object.entries(p.specs||{}).filter(([,v])=>typeof v==='number'||typeof v==='string')) as InventoryPart['specs']}));
+  return catalogue.map(p=>({...base('catalog:'+p.id,p.name||p.id,categoryFor(p.part_class||'',p.name||p.id)),catalog_part_id:p.id,origin:'catalogue' as const,...catalogPhoto(p),specs:Object.fromEntries(Object.entries(p.specs||{}).filter(([,v])=>typeof v==='number'||typeof v==='string')) as InventoryPart['specs']}));
+}
+/* A catalogue part's verified web photo (catalog/parts.json `photo`,
+ * state web_gathered with its source page and credit), else nothing. */
+function catalogPhoto(p:CataloguePart):Partial<InventoryPart> {
+  const ph=(p as unknown as {photo?:{url?:string;source_page?:string;credit?:string;state?:string}}).photo;
+  if(!ph||ph.state!=='web_gathered'||!ph.url||!/^https?:\/\//.test(ph.url)||!ph.credit)return {};
+  return {image_urls:[ph.url],image_credit:ph.credit,...(ph.source_page&&/^https?:\/\//.test(ph.source_page)?{source_url:ph.source_page}:{})};
 }
 export function ownershipLabel(p:InventoryPart):string {return p.ownership==='wishlist'?'Wishlist':partReality(p)==='sim_only'?'Sim only':'Owned';}
 export function originLabel(p:InventoryPart):string {return p.origin==='custom'?'Custom':p.origin==='web'?'Web-sourced':p.catalog_part_id?'Catalogue':p.source==='photo'?'Photo':'Added by you';}
@@ -152,7 +159,7 @@ export function mergeLibraryExport(doc:unknown,stock:InventoryPart[],web:WebPart
   for(const record of d.webParts||[]){
     if(!record||typeof record.id!=='string'||typeof record.name!=='string'||!/^https?:\/\//.test(record.provenance?.sourceUrl||'')||typeof record.provenance?.fetchedAt!=='string'||!record.specs||typeof record.specs!=='object'||Object.values(record.specs).some(v=>typeof v!=='string'&&(typeof v!=='number'||!Number.isFinite(v))))throw new Error('Invalid web part in export.');
     if(records.some(r=>r.id===record.id))continue;
-    records.push({...record,verification:'WEB-SOURCED — UNVERIFIED'});added++;
+    records.push({...record,images:Array.isArray(record.images)?record.images.filter(u=>typeof u==='string'&&/^https?:\/\//.test(u)).slice(0,6):undefined,verification:'WEB-SOURCED — UNVERIFIED'});added++;
   }
   return {parts,web:records,added};
 }

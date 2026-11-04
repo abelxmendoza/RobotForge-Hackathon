@@ -71,6 +71,12 @@ export interface WebPartProposal {
   priceEstimate: WebPriceEstimate | null;
   provenance: WebProvenance;
   verification: string; // always WEB_VERIFICATION
+  /* Product pictures whose absolute URLs literally appear in the
+   * fetched page (extractImagesFromText). Pictures of the listed
+   * product, hot-linked from the store; never generated. */
+  images?: string[];
+  /* The store the page belongs to (its hostname, prettified). */
+  store?: string;
 }
 
 export interface WebPartRecord {
@@ -83,6 +89,8 @@ export interface WebPartRecord {
   provenance: WebProvenance;
   verification: string;
   addedAt: string;
+  images?: string[];
+  store?: string;
 }
 
 /* The structural minimum of a /web scrape result (webIntent's
@@ -257,6 +265,73 @@ export function classifyCategory(name: string, markdown: string): { category: st
   return { category: 'uncategorised', kind: 'part' };
 }
 
+/* ---------------- pictures, store, search finds ---------------- */
+
+/* Image URLs the page states, in page order: markdown images first
+ * (`![alt](https://…)`), then bare https links ending in an image
+ * extension. Only absolute http(s) URLs that literally appear in
+ * the text are kept, so every picture traces back to the page.
+ * Logos, icons, sprites, payment badges, tracking pixels, SVGs and
+ * GIFs are skipped — they are page chrome, not the product. */
+const IMAGE_CHROME = /(logo|icon|sprite|favicon|badge|avatar|payment|paypal|visa|mastercard|klarna|flag|pixel|tracking|spinner|loader|placeholder|banner|rating|stars?[-_.]|social|facebook|twitter|instagram|youtube|pinterest|tiktok|cart|arrow|chevron|close|search)/i;
+export function extractImagesFromText(markdown: string, max = 6): string[] {
+  const text = String(markdown || '');
+  const out: string[] = [];
+  const keep = (raw: string) => {
+    const url = raw.trim().replace(/[)\].,;]+$/, '');
+    if (!/^https?:\/\//i.test(url) || !text.includes(url)) return;
+    let path = url;
+    try { path = new URL(url).pathname; } catch { return; }
+    if (/\.(svg|gif|ico)(\?|$)/i.test(path) || IMAGE_CHROME.test(path)) return;
+    if (/(?:^|[^0-9])(1[0-9]|2[0-9]|3[0-9]|4[0-8])x(1[0-9]|2[0-9]|3[0-9]|4[0-8])(?:[^0-9]|$)/.test(path)) return; // 16x16 … 48x48 thumbnails
+    if (!out.includes(url)) out.push(url);
+  };
+  for (const m of text.matchAll(/!\[[^\]]*\]\(\s*<?(https?:\/\/[^\s)>]+)>?(?:\s+"[^"]*")?\s*\)/gi)) keep(m[1]);
+  for (const m of text.matchAll(/https?:\/\/[^\s<>"')\]]+\.(?:jpe?g|png|webp|avif)(?:\?[^\s<>"')\]]*)?/gi)) keep(m[0]);
+  return out.slice(0, max);
+}
+
+const STORE_NAMES: [RegExp, string][] = [
+  [/amazon\./, 'Amazon'], [/adafruit\./, 'Adafruit'], [/sparkfun\./, 'SparkFun'], [/pololu\./, 'Pololu'],
+  [/digikey\./, 'Digi-Key'], [/mouser\./, 'Mouser'], [/robotshop\./, 'RobotShop'], [/aliexpress\./, 'AliExpress'],
+  [/ebay\./, 'eBay'], [/octopart\./, 'Octopart'], [/mcmaster\./, 'McMaster-Carr'], [/raspberrypi\./, 'Raspberry Pi'],
+  [/seeedstudio\./, 'Seeed Studio'], [/dfrobot\./, 'DFRobot'], [/waveshare\./, 'Waveshare'], [/servocity\./, 'ServoCity'],
+  [/gobilda\./, 'goBILDA'], [/getfpv\./, 'GetFPV'], [/hobbyking\./, 'HobbyKing'], [/arduino\./, 'Arduino'],
+  [/microcenter\./, 'Micro Center'], [/newegg\./, 'Newegg'], [/walmart\./, 'Walmart'], [/robotis\./, 'ROBOTIS'],
+  [/intelrealsense\.|realsenseai\./, 'Intel RealSense'], [/slamtec\./, 'SLAMTEC'], [/nvidia\./, 'NVIDIA'],
+];
+/* The store a page belongs to: a known shop's name, else its bare
+ * hostname. Presentation only — never a claim about stock. */
+export function storeFromUrl(url: string): string {
+  let host = '';
+  try { host = new URL(url).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; }
+  for (const [re, name] of STORE_NAMES) if (re.test(host)) return name;
+  return host;
+}
+
+/* One search hit as a shoppable find: its page, store, the first
+ * product picture and the first $ price its own text states. The
+ * chat shows these as cards; "Add to My Parts" re-reads the page as
+ * a scrape, so the saved record still passes the full honesty gate. */
+export interface WebFind { url: string; title: string; store: string; image: string | null; price: string | null }
+export function webFindsFromSearch(result: { mode: string; results?: { url: string; title?: string; description?: string; markdown?: string }[] } | null | undefined): WebFind[] {
+  if (!result || result.mode !== 'search' || !Array.isArray(result.results)) return [];
+  return result.results
+    .filter((r) => r && /^https?:\/\//i.test(String(r.url || '')))
+    .slice(0, 6)
+    .map((r) => {
+      const md = String(r.markdown || '') + '\n' + String(r.description || '');
+      const price = extractPriceFromText(md);
+      return {
+        url: r.url,
+        title: String(r.title || r.url).replace(/\s+/g, ' ').trim().slice(0, 120),
+        store: storeFromUrl(r.url),
+        image: extractImagesFromText(String(r.markdown || ''), 1)[0] || null,
+        price: price ? price.text : null,
+      };
+    });
+}
+
 /* ---------------- proposal build + validation ---------------- */
 
 /* Build a proposal from ONE scrape result. Returns null for
@@ -279,6 +354,8 @@ export function buildWebProposal(
     priceEstimate: extractPriceFromText(markdown),
     provenance: { sourceUrl: result.url, fetchedAt, sourceKind: 'scrape' },
     verification: WEB_VERIFICATION,
+    images: extractImagesFromText(markdown),
+    store: storeFromUrl(result.url),
   };
   return validateWebProposal(proposal, markdown).length === 0 ? proposal : null;
 }
@@ -310,6 +387,9 @@ export function validateWebProposal(p: WebPartProposal, fetchedText: string): st
         errors.push('spec "' + key + '" lacks a fetched-text basis (its source snippet is absent from the fetched page)');
       }
     }
+  }
+  for (const img of p.images || []) {
+    if (!/^https?:\/\//i.test(img) || !text.includes(img)) errors.push('picture ' + img + ' is not literally in the fetched page');
   }
   if (p.priceEstimate) {
     if (!p.priceEstimate.text || !text.includes(p.priceEstimate.text)) {
@@ -359,7 +439,10 @@ export function formatProposalText(
   if (p.priceEstimate) {
     lines.push('Price estimate: ' + p.priceEstimate.text + ' (from the page, fetched ' + p.provenance.fetchedAt.slice(0, 10) + ' — an estimate, not a quote)');
   }
-  lines.push('Source: ' + p.provenance.sourceUrl + ' (fetched ' + p.provenance.fetchedAt.slice(0, 10) + ')');
+  if (p.images && p.images.length) {
+    lines.push('Pictures from the page: ' + p.images.length + ' (shown below; they are the store\'s photos, kept as links).');
+  }
+  lines.push('Source: ' + (p.store ? p.store + ' — ' : '') + p.provenance.sourceUrl + ' (fetched ' + p.provenance.fetchedAt.slice(0, 10) + ')');
   if (target && target.changes && target.changes.length) {
     lines.push('On “' + target.robotName + '” this changes:');
     for (const c of target.changes) lines.push('  · ' + c.path + ': ' + fmtVal(c.before) + ' → ' + fmtVal(c.after));
@@ -468,6 +551,8 @@ export function proposalToRecord(p: WebPartProposal, addedAt: string): WebPartRe
     provenance: p.provenance,
     verification: p.verification,
     addedAt,
+    ...(p.images && p.images.length ? { images: p.images.slice(0, 6) } : {}),
+    ...(p.store ? { store: p.store } : {}),
   };
 }
 

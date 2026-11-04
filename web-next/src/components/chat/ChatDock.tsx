@@ -75,6 +75,7 @@ import {
   addWebRecord, buildWebProposal, classifyProposalReply, detectWebAddIntent,
   formatProposalText, formatSavedText, isShortReply, mergeCatalogue,
   proposalToRecord, recordWebAddition, toCataloguePart, WEB_PARTS_KEY,
+  extractImagesFromText, webFindsFromSearch, type WebFind,
   type ProposalFieldChange, type WebPartProposal, type WebPartRecord,
 } from "@/lib/webParts";
 import {catalogItems,changeLibrary,parseLibraryCommand,saveCadDesign,mergeLibraryExport,type LibraryCommand} from '@/lib/partsLibrary';
@@ -206,6 +207,10 @@ interface Msg {
    * the recorded/live answer pipeline and never carry grounding. */
   pill?: string;
   openAction?: { robotId: string; tab?: string; label: string };
+  /* Pictures a fetched page states, and shoppable search finds
+   * (lib/webParts). Only ever set from a real /web fetch. */
+  images?: string[];
+  finds?: WebFind[];
 }
 
 /* A web-sourced answer about a Workshop robot that can be kept in that
@@ -520,13 +525,17 @@ export function useForgeAssistant() {
   const fetchWebGrounding = useCallback(
     async (
       q: string
-    ): Promise<{ context: string; caption: string } | null> => {
+    ): Promise<{ context: string; caption: string; finds: WebFind[]; images: string[] } | null> => {
       const body = await fetchWebResult(q);
       if (!body) return null;
       const context = buildWebGrounding(body);
       const caption = webSourceCaption(body);
       if (!context || !caption) return null;
-      return { context, caption };
+      return {
+        context, caption,
+        finds: webFindsFromSearch(body as Parameters<typeof webFindsFromSearch>[0]),
+        images: body.mode === 'scrape' ? extractImagesFromText(String(body.markdown || '')) : [],
+      };
     },
     [fetchWebResult]
   );
@@ -659,11 +668,11 @@ export function useForgeAssistant() {
         additionOnly: changes.length === 0,
         reasked: false,
       };
-      noteBubble(formatProposalText(proposal, { robotName: robot.name, changes, additionOnly: changes.length === 0 }));
+      appendMsg({ who: "bot", text: formatProposalText(proposal, { robotName: robot.name, changes, additionOnly: changes.length === 0 }), images: proposal.images });
       return;
     }
     pendingWebProposal.current = { proposal, reasked: false };
-    noteBubble(formatProposalText(proposal));
+    appendMsg({ who: "bot", text: formatProposalText(proposal), images: proposal.images });
   };
 
   /* Land: the ONLY writer in the loop, run by ask() on an explicit
@@ -1481,10 +1490,10 @@ export function useForgeAssistant() {
         who: "bot",
         html: '<p class="fc-dim">Checking the recorded data&hellip;</p>',
       });
-      const done = (ans: AnswerResult & { sources?: SourceRef[]; grounding?: Msg["grounding"] }) => {
+      const done = (ans: AnswerResult & { sources?: SourceRef[]; grounding?: Msg["grounding"]; finds?: WebFind[]; images?: string[] }) => {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits, sources: ans.sources, grounding: ans.grounding } : m
+            m.id === waitId ? { ...m, html: ans.html, hits: ans.hits, sources: ans.sources, grounding: ans.grounding, finds: ans.finds, images: ans.images } : m
           )
         );
         setChips(
@@ -1567,10 +1576,17 @@ export function useForgeAssistant() {
                 : m
             )
           );
+          /* The fetch's pictures and shoppable finds ride along with
+           * the live answer (lib/webParts). */
+          let webFound: { finds: WebFind[]; images: string[] } | null = null;
           void fetchWebGrounding(q)
+            .then((web) => { webFound = web; return web; })
             .then((web) => liveChat(q, web))
             .then(({ answer, ws, webCaption }) => {
+              const found = webFound as { finds: WebFind[]; images: string[] } | null;
               done({
+                finds: found?.finds?.length ? found.finds : undefined,
+                images: found?.images?.length ? found.images : undefined,
                 html:
                   '<p><span class="fc-live-badge">' +
                   LIVE_BADGE +

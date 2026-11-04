@@ -73,6 +73,8 @@ export const RESEARCH_PATTERNS: readonly RegExp[] = [
   /^research\s+(.+)$/i,
   /^look\s+up\s+(.+)$/i,
   /^find\s+(.+?)\s+(?:online|on\s+the\s+web)$/i,
+  /^(?:find|show(?:\s+me)?|pull\s+up|get)\s+(?:some\s+)?(?:pictures|photos|images)\s+of\s+(.+)$/i,
+  /^(?:shop\s+for|find\s+(?:me\s+)?(?:a\s+|an\s+)?)(.+?)\s+(?:to\s+buy|for\s+sale|in\s+stores?)$/i,
   /^where\s+(?:can|do|should)\s+i\s+buy\s+(.+)$/i,
   /^how\s+much\s+(?:does|do)\s+(.+?)\s+cost$/i,
   /^what(?:'s|’s|\s+is)\s+the\s+price\s+of\s+(.+)$/i,
