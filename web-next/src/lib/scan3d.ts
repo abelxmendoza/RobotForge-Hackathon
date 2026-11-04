@@ -81,3 +81,13 @@ export function fitScan(size: [number, number, number], target = 1): { scale: nu
 export function scanKey(robotId: string, demo: boolean): string {
   return (demo ? 'demo:' : '') + robotId;
 }
+
+/* Scans from RobotForge's own scan bridge (tools/scan_bridge.py) are
+ * stored z-up (x length, y width, z height: the axes ScanMeasure
+ * reads) and say so in a PLY header comment. Viewers are y-up, so
+ * they stand such a scan upright with a quarter turn about x. */
+export function isZUpRobotForgeScan(data: ArrayBuffer): boolean {
+  const head = new TextDecoder().decode(new Uint8Array(data, 0, Math.min(512, data.byteLength)));
+  const end = head.indexOf('end_header');
+  return /^comment robotforge scan:.*z up/m.test(end >= 0 ? head.slice(0, end) : head);
+}

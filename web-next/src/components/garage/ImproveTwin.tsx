@@ -7,6 +7,7 @@
  * wiring. Plain language, big tap targets, nothing leaves the
  * browser: scan files live in this browser's IndexedDB, and every
  * save is a new version in the robot's own store. */
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { getPath, type GarageRobot, type Spec } from '@/lib/garage';
 import { improveStepStates, OMEGA1_MEASURE_FIELDS, type SpecConnection } from '@/lib/omega1Garage';
@@ -180,6 +181,10 @@ export default function ImproveTwin({ robot, draft, onSlotSave, onApplyScanSize,
               fallback={robot.scans?.filter((x) => x.kind !== s.kind).at(-1)}
               onSlotSave={onSlotSave} />
           ))}
+          <p className="g-small">
+            Have a RealSense? <Link href="/scan/">Scan it live in Scan Studio</Link>: walk around the robot,
+            and the measured scan lands in the RealSense slot above.
+          </p>
           <p className="faint g-small">
             A point scan is a point preview, not a photoreal render — the photo model (GLB) is the one
             that looks solid. The ProjectSim twin stays labelled ESTIMATED either way.

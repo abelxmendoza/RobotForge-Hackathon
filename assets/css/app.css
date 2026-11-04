@@ -2008,3 +2008,27 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 @media(max-width:680px){.pl-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pl-category-art{height:125px}.pl-category-info{padding:12px}.pl-category-info strong{font-size:14px}.pl-search-row{flex-wrap:wrap}.pl-search{flex-basis:100%}.pl-scope{width:100%}.pl-scope button{flex:1}.pl-intro{align-items:flex-start;gap:10px}.pl-intro p{font-size:14px;max-width:185px}.pl-intro .pl-actions{gap:4px}.pl-intro .btn{padding:9px 11px;font-size:12px}.pl-detail{padding:20px}.pl-detail-picture{height:170px}}
 @media(prefers-reduced-motion:reduce){.pl-category{transition:none}}
 .pl-archived-actions>button:not(:first-child){display:none}
+/* Scan Studio (/scan/): RealSense through the local bridge. */
+.studio{display:grid;gap:var(--s4);max-width:1100px}
+.studio-connect{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3)}
+.studio-url{display:grid;gap:4px;flex:1 1 240px;max-width:340px}
+.studio-url input{font:var(--fs-sm)/1.4 var(--mono);padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--r);background:var(--surface);color:var(--text);width:100%}
+.studio-url input:disabled{opacity:.75}
+.studio-cam{font-size:var(--fs-sm);color:var(--text-muted);display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:6px}
+.studio-empty,.studio-live,.studio-result{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);padding:var(--s4)}
+.studio-empty h2,.studio-result h2{margin-top:0}
+.studio-empty h3{margin-top:var(--s4)}
+.studio-steps{display:grid;gap:8px;padding-left:1.3em;line-height:1.5;margin:0}
+.studio-steps code{overflow-wrap:anywhere}
+.studio-feeds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--s3)}
+.studio-feeds figure,.studio-cloud{margin:0}
+.studio-feeds canvas{width:100%;height:auto;aspect-ratio:4/3;background:#081321;border-radius:var(--r);border:1px solid var(--border);display:block}
+.studio-feeds figcaption,.studio-cloud figcaption{font-size:var(--fs-xs);color:var(--text-faint);margin-top:4px}
+.studio-cloud{margin-top:var(--s3)}
+.studio-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);margin-top:var(--s3)}
+.studio-actions select{margin-left:4px;padding:6px 8px;border-radius:var(--r);border:1px solid var(--border-strong);background:var(--surface);color:var(--text)}
+.studio-rec.on{border-color:var(--fail);color:var(--fail)}
+.studio-dims{width:100%;border-collapse:collapse;margin-top:var(--s3);font-size:var(--fs-sm)}
+.studio-dims th,.studio-dims td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.studio-done{border-left:3px solid var(--pass);padding:8px 12px;background:var(--surface-2);border-radius:var(--r)}
+@media(max-width:640px){.studio-dims{font-size:var(--fs-xs)}.studio-dims th,.studio-dims td{padding:6px 4px}}
