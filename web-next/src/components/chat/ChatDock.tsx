@@ -73,6 +73,7 @@ import {
   type ProposalFieldChange, type WebPartProposal, type WebPartRecord,
 } from "@/lib/webParts";
 import {catalogItems,changeLibrary,parseLibraryCommand,saveCadDesign,mergeLibraryExport,type LibraryCommand} from '@/lib/partsLibrary';
+import {parseSimCommand,SIM_COMMAND_EVENT} from '@/lib/simulation';
 import { cadFromText } from "@/lib/cadGen";
 import { activeRecords } from '@/lib/lifecycle';
 import { readActiveRobots } from '@/lib/robotLifecycleRepository';
@@ -919,6 +920,8 @@ export function useForgeAssistant() {
    * so a model proposal gets exactly the validation a typed command gets,
    * and nothing applies until the user taps Apply on the preview. */
   const runCommands = (q: string): boolean => {
+      const simCommand=parseSimCommand(q);
+      if(simCommand){const detail={command:simCommand,handled:false,message:''};window.dispatchEvent(new CustomEvent(SIM_COMMAND_EVENT,{detail}));noteBubble(detail.handled?detail.message:'Open the selected robot’s Simulate tab first, then ask me to run or change its scenario.');return true;}
       const libraryCommand=parseLibraryCommand(q);
       if(libraryCommand){
         try{

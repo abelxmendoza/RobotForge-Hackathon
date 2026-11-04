@@ -1,0 +1,11 @@
+# Workshop simulation
+
+Approved direction: Overview, Build, Wiring, BOM, Test, History, Simulate. No more top-level tabs. Tools/materials nest under BOM; Test holds checks and saved simulation runs. Simulate opens the selected robot/version in a large 3D scene, with Browser / Gazebo on this computer modes, run/pause/reset/camera and flat/ramp/obstacle scenarios. Input remains through Wrench except direct driving and view/run controls.
+
+Browser uses Rapier rigid-body wheels and torque-limited joints, with keyboard and touch driving. Uploaded meshes, recorded URDF or Omega1 GLB supply visuals when available; absent models use a clearly labeled geometry proxy. The physical model is a simplified wheeled approximation; missing required measurements or unsupported drivetrains disable driving rather than inventing capabilities. Scans alone are not physics definitions.
+
+Gazebo uses a loopback-only Python companion, on the same Linux or Apple Silicon computer. No second computer. Current verified runner is Harmonic/Linux; macOS detection describes best-effort status. Companion generates only trusted SDF through the existing twin runner, executes a bounded drive/turn test, and returns actual ground-truth trajectory and run provenance. This first Gazebo mode is test/replay, not manual live teleoperation. Failures remain failures. Existing catalogue launch bundles remain available as advanced options.
+
+Approaches: native-only excludes easy Mac/browser use; remote Gazebo requires infrastructure/another computer; choose browser plus optional local companion. Companion binds 127.0.0.1, validates Host and exact configured Origin, requires a custom header/preflight, limits payload/run concurrency and subprocess duration, accepts no shell commands, arbitrary XML/plugins or file paths. No Worker changes/deployments or secret operations. Opening network services beyond loopback is out of scope.
+
+Run records are browser-local and tied to robot ID, version ID and exact spec fingerprint. Changed drafts invalidate in-memory results; saved results remain historical with their source and snapshot. Never present proxy/browser results as real robot measurements or a Gazebo result. macOS runtime cannot be claimed tested on Linux.

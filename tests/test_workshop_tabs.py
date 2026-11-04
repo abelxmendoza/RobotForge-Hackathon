@@ -51,15 +51,18 @@ def test_one_tab_bar_rendered_unconditionally_at_top():
     assert "const tabBar = robot && draft ? (" not in GARAGE
 
 
-def test_work_tabs_five_main_destinations_with_grouped_sections():
+def test_work_tabs_seven_main_destinations_with_bom_sections():
     nav = GARAGE.split('const WORK_TABS:', 1)[1].split('];', 1)[0]
-    for tab_id, label in [('overview', 'Overview'), ('build', 'Build'), ('wiring', 'Wiring'), ('checks', 'Test'), ('history', 'History')]:
-        assert f"{{ id: '{tab_id}', label: '{label}'" in nav
-    for tab_id in ['specs', 'simulate', 'bom', 'tools']:
+    destinations = [('overview', 'Overview'), ('build', 'Build'), ('wiring', 'Wiring'), ('bom', 'BOM'), ('checks', 'Test'), ('history', 'History'), ('simulate', 'Simulate')]
+    positions = [nav.index(f"{{ id: '{tab_id}', label: '{label}'") for tab_id, label in destinations]
+    assert positions == sorted(positions)
+    for tab_id in ['specs', 'tools']:
         assert f"id: '{tab_id}'" not in nav
-    assert "if (tab === 'bom' || tab === 'tools') return 'build'" in GARAGE
-    assert "if (tab === 'simulate') return 'checks'" in GARAGE
-    assert 'BUILD_SECTIONS' in GARAGE and 'TEST_SECTIONS' in GARAGE
+    assert "if (tab === 'tools') return 'bom'" in GARAGE
+    assert 'BOM_SECTIONS' in GARAGE
+    assert 'TEST_SECTIONS' not in GARAGE
+    assert '<SimulationWorkspace' in GARAGE
+    assert '<SavedSimulationRuns robotId={robot.id}' in GARAGE
     assert '<SpecsDialog' in GARAGE
 
 

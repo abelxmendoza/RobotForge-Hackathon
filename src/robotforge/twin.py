@@ -60,6 +60,15 @@ PHYSICS_MAX_STEP_S = 0.001
 _SEMVER = re.compile(r"\b(\d+\.\d+\.\d+)\b")
 
 
+def _spawn(*args, **kwargs):
+    # The optional loopback companion owns one bounded process group for the
+    # worker plus all Gazebo/transport descendants. Ordinary CLI runs keep
+    # their historical separate-session behavior.
+    if os.environ.get("ROBOTFORGE_SHARED_PROCESS_GROUP") == "1":
+        kwargs["start_new_session"] = False
+    return subprocess.Popen(*args, **kwargs)
+
+
 def gazebo_version() -> str:
     """The Gazebo Sim version this host would run the gate on.
 
@@ -320,7 +329,7 @@ class _OdomStream:
 
     def __init__(self, log_path: Path):
         self._log = log_path.open("wb")
-        self._proc = subprocess.Popen(
+        self._proc = _spawn(
             ["gz", "topic", "-e", "-t", "/odom"],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             start_new_session=True)
@@ -354,6 +363,15 @@ class _OdomStream:
 
 
 def _kill_group(proc: subprocess.Popen) -> None:
+    if os.environ.get("ROBOTFORGE_SHARED_PROCESS_GROUP") == "1":
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=2)
+        return
     try:
         os.killpg(proc.pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
@@ -386,7 +404,7 @@ class _CmdVelStream:
         msg = f"linear: {{x: {linear}}}, angular: {{z: {angular}}}"
         loop = ("while :; do gz topic -t /cmd_vel -m gz.msgs.Twist "
                 f"-p '{msg}' >/dev/null 2>&1; done")
-        self._proc = subprocess.Popen(
+        self._proc = _spawn(
             ["bash", "-c", loop], stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, start_new_session=True)
 
@@ -570,7 +588,7 @@ class _TruthStream:
 
     def __init__(self, log_path: Path, model_name: str):
         self._log = log_path.open("wb")
-        self._proc = subprocess.Popen(
+        self._proc = _spawn(
             ["gz", "topic", "-e", "-t",
              "/world/robotforge_world/dynamic_pose/info"],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -732,7 +750,7 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
         if not server.run(False, 0, False):
             raise TwinError("in-process gz-sim server failed to start")
     else:
-        gz = subprocess.Popen(["gz", "sim", "-s", "-r", str(world)],
+        gz = _spawn(["gz", "sim", "-s", "-r", str(world)],
                               stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL,
                               start_new_session=True)
