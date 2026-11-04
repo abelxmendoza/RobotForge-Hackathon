@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/img/logo.svg" alt="RobotForge logo" width="180">
+</p>
+
 # RobotForge
 
 **Build, fix, modify, upgrade and simulate your robot before you spend a dollar.** Describe a robot, photograph it, or
