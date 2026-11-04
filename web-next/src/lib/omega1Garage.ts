@@ -28,7 +28,7 @@ export interface SpecConnection {
   from: string;
   to: string;
   detail: string;
-  evidence: 'DOCUMENTED' | 'CODE_DEFAULT' | 'OWNER';
+  evidence: 'DOCUMENTED' | 'CODE_DEFAULT' | 'OWNER' | 'PLANNED';
   at?: string;
   /* Set when the owner confirms this row against the real robot
    * (the wiring step's one-tap Confirm): an ISO date. The row keeps
@@ -122,7 +122,9 @@ export function improveStepStates(robot: GarageRobot, savedSpec: Spec): {
   const scans = (robot.scans?.length ?? 0) >= 1;
   const measured = robot.versions.some((v) => v.note.startsWith('Dimensions measured from scan'));
   const numbersIn = OMEGA1_MEASURE_FIELDS.filter((f) => typeof getPath(savedSpec, f.path) === 'number').length;
-  const conns: SpecConnection[] = Array.isArray(savedSpec?.connections) ? (savedSpec.connections as SpecConnection[]) : [];
+  /* PLANNED rows (an approved upgrade not built yet) describe the
+   * future robot, so they don't count toward confirming today's wiring. */
+  const conns: SpecConnection[] = (Array.isArray(savedSpec?.connections) ? (savedSpec.connections as SpecConnection[]) : []).filter((c) => c?.evidence !== 'PLANNED');
   const confirmed = conns.filter((c) => c?.verifiedAt).length;
   const states = {
     scans,
