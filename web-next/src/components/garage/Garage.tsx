@@ -870,7 +870,7 @@ export default function Garage() {
   /* Tools are equipment, not components — they live in the inventory's
    * Tools section and are never fitted to a robot. Sim-only parts CAN
    * be fitted (the fit is a simulation fit, and usePart says so). */
-  const usableParts = inventory.filter((p) => p.status === 'confirmed' && p.quantity > 0 && partSection(p) === 'parts' && (!p.robot_id || p.robot_id === robot?.id) && partToChanges(p).length);
+  const usableParts = inventory.filter((p) => !p.archivedAt && p.ownership !== 'wishlist' && p.status === 'confirmed' && p.quantity > 0 && partSection(p) === 'parts' && (!p.robot_id || p.robot_id === robot?.id) && partToChanges(p).length);
   const dc = counts(draftLines);
   const fixable = dc.errors > 0 || (withWarnings && dc.warns > 0);
 

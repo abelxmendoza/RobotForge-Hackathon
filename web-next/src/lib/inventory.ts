@@ -34,6 +34,14 @@ export type InventoryReality = 'real' | 'sim_only';
 export type InventorySection = 'parts' | 'tools';
 
 export interface InventoryPart {
+  archivedAt?: string;
+  ownership?: 'owned' | 'wishlist';
+  origin?: 'catalogue' | 'web' | 'custom' | 'photo' | 'manual';
+  web_record_id?: string;
+  source_url?: string;
+  license?: string;
+  robot_links?: {robot_id: string; kind: 'planned' | 'installed'}[];
+  design?: {filename: string; versions: {source: string; createdAt: string; request: string}[]};
   robot_id?: string | null;
   /* The part this one is mounted on or inside (an encoder on its
    * motor, a HAT on its Pi). Rules live in lib/partsTree.ts. */
@@ -67,8 +75,8 @@ export const INVENTORY_KEY = 'rf.inventory.v1';
 /* Reality/section accessors that also normalise legacy records
  * (saved before the fields existed): photo/manual records were
  * physical shelf items, and a 'tool' category lives in Tools. */
-export function partReality(p: Pick<InventoryPart, 'reality'>): InventoryReality {
-  return p.reality === 'sim_only' ? 'sim_only' : 'real';
+export function partReality(p: Pick<InventoryPart, 'reality' | 'ownership'>): InventoryReality {
+  return p.ownership === 'wishlist' || p.reality === 'sim_only' ? 'sim_only' : 'real';
 }
 export function sectionForCategory(category: string): InventorySection {
   return category === 'tool' ? 'tools' : 'parts';
@@ -162,6 +170,15 @@ export function importedPart(raw: unknown): InventoryPart {
   const p=raw as Partial<InventoryPart>;
   if(typeof p.id!=='string'||!p.id||typeof p.name!=='string'||!Number.isSafeInteger(p.quantity)||p.quantity!<0||!PART_CATEGORIES.includes(p.category as typeof PART_CATEGORIES[number]))throw new Error('Inventory records need an ID, name, valid category and whole nonnegative quantity.');
   const safe={...p};delete (safe as Record<string,unknown>).photo_full;
+  safe.archivedAt=typeof p.archivedAt==='string'?p.archivedAt:undefined;
+  safe.ownership=p.ownership==='owned'||p.ownership==='wishlist'?p.ownership:undefined;
+  safe.origin=['catalogue','web','custom','photo','manual'].includes(p.origin||'')?p.origin:undefined;
+  safe.web_record_id=typeof p.web_record_id==='string'?p.web_record_id:undefined;
+  safe.source_url=typeof p.source_url==='string'&&/^https?:\/\//.test(p.source_url)?p.source_url:undefined;
+  safe.license=typeof p.license==='string'?p.license:undefined;
+  safe.robot_links=Array.isArray(p.robot_links)?p.robot_links.filter(l=>l&&typeof l.robot_id==='string'&&(l.kind==='planned'||l.kind==='installed')).map(l=>({robot_id:l.robot_id,kind:l.kind})):undefined;
+  safe.design=p.design&&typeof p.design.filename==='string'&&Array.isArray(p.design.versions)&&p.design.versions.length>0&&p.design.versions.every(v=>v&&typeof v.source==='string'&&typeof v.createdAt==='string'&&typeof v.request==='string')?{filename:p.design.filename,versions:p.design.versions.map(v=>({source:v.source,createdAt:v.createdAt,request:v.request}))}:undefined;
+
   const image=(v:unknown)=>typeof v==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(v)?v:null;
   const specs=Object.fromEntries(Object.entries(p.specs??{}).filter(([,v])=>typeof v==='string'||(typeof v==='number'&&Number.isFinite(v))));
   return {...safe,id:p.id,name:p.name,category:p.category!,quantity:p.quantity!,specs,photo:image(p.photo),photo_asset_id:null,catalog_part_id:typeof p.catalog_part_id==='string'?p.catalog_part_id:null,read_from_label:Array.isArray(p.read_from_label)?p.read_from_label.filter(x=>typeof x==='string'):[],condition:['new','used','damaged','unknown'].includes(p.condition??'')?p.condition!:'unknown',confidence:'owner',status:p.status==='confirmed'?'confirmed':'needs_confirmation',question:typeof p.question==='string'?p.question:'',chat:Array.isArray(p.chat)?p.chat.filter(c=>c&&(c.role==='user'||c.role==='assistant')&&typeof c.text==='string'):[],createdAt:typeof p.createdAt==='string'?p.createdAt:new Date().toISOString(),source:p.source==='photo'?'photo':'manual',reality:p.reality==='sim_only'?'sim_only':'real',section:p.section==='tools'||p.section==='parts'?p.section:sectionForCategory(p.category!),robot_id:typeof p.robot_id==='string'?p.robot_id:null,parent_id:typeof p.parent_id==='string'&&p.parent_id!==p.id?p.parent_id:null,stock_location:typeof p.stock_location==='string'?p.stock_location:'',notes:typeof p.notes==='string'?p.notes:''};

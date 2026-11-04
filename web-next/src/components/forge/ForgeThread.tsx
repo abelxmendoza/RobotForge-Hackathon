@@ -30,6 +30,7 @@ import { naturalOrder } from '@/lib/photoSpin';
 import { ASSISTANT_NAME, HANDOFF_ACCEPT, HANDOFF_LABEL, handoffKind, takeHandoff } from '@/lib/handoff';
 import { elementText } from '@/lib/copytext';
 import { parts as intakeParts } from '@/lib/data';
+import { isLibraryExport } from '@/lib/partsLibrary';
 import { mergeCatalogue, WEB_PARTS_KEY, type WebPartRecord } from '@/lib/webParts';
 const intakeCatalogue = () => mergeCatalogue(intakeParts, readStore<WebPartRecord[]>(WEB_PARTS_KEY, []));
 import { applyModification, generateRobot, parseBrief, type ArchetypeId } from '@/lib/forgeEngine';
@@ -757,6 +758,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         ));
         return;
       }
+      if(isLibraryExport(spec)){assistant.prepareLibraryImport(spec);return;}
       const res = forgeValidateSpec(spec);
       if (res.schemaErrors) {
         pushStage(
@@ -780,7 +782,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       specStage(spec, 'local', 'parsed in your browser', 'Spec — ' + spec.name);
       specPipeline(spec, 'uploaded-spec.json');
     },
-    [beginRun, pushUser, pushNote, pushStage, specStage, specPipeline],
+    [beginRun, pushUser, pushNote, pushStage, specStage, specPipeline, assistant.prepareLibraryImport],
   );
 
   /* ---------------- input flows: photo + document ---------------- */
@@ -964,7 +966,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           {noteText ? <p>{noteText}</p> : null}
         </>,
       );
-      const mode = robotPhoto ? 'robot' : await choosePhotoMode();
+      const mode = /\b(part photo|this is a part)\b/i.test(noteText) ? 'part' : robotPhoto ? 'robot' : await choosePhotoMode();
       if(mode==='part'){pushNote(<PartPhotoIntake file={file}/>);return;}
       if (mode === 'document') {
         await runPhotoDocument(noteText, dataUrl);
