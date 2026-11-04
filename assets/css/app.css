@@ -567,6 +567,12 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .garage-main .sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:4px}
 .garage-add{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s5);display:grid;gap:var(--s3);max-width:640px}
 .garage-add h2{font-size:var(--fs-lg)}
+.garage-add-actions{display:flex;flex-wrap:wrap;gap:8px}
+.garage-scan-how{display:grid;gap:var(--s3);border-top:1px solid var(--border);padding-top:var(--s3);justify-items:start}
+.garage-scan-how p{margin:0}
+.garage-scan-qr{display:flex;gap:var(--s3);align-items:center}
+.garage-scan-qr img{background:#fff;border-radius:8px;padding:6px;width:120px;height:120px}
+.garage-scan-qr p{max-width:300px}
 .g-pane{display:grid;gap:var(--s3);justify-items:start}
 .g-pane .g-field{width:100%}
 .g-head{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--s4);flex-wrap:wrap}
@@ -1010,6 +1016,31 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .dex-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3);padding:var(--s3)}
   .dex-modal-head{padding:var(--s3) 56px var(--s3) var(--s3)}
 }
+
+/* The picker as grouped rows (Workshop "Add from Robodex"): name,
+   source label, and the row's one action — add, already-in, or the
+   honest no-spec state. */
+.dex-pick-groups{padding:var(--s3) var(--s5) var(--s5);display:grid;gap:var(--s4)}
+.dex-pick-group h3{margin:0 0 var(--s2);font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)}
+.dex-pick-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.dex-pick-row{display:flex;gap:var(--s3);align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md,12px);padding:8px var(--s3)}
+.dex-pick-thumb{width:56px;height:56px;flex:none;border-radius:8px;overflow:hidden;background:#e9ecf0;display:flex;align-items:center;justify-content:center}
+.dex-pick-thumb img{width:100%;height:100%;object-fit:contain}
+.dex-pick-main{flex:1;min-width:0;display:grid;gap:2px}
+.dex-pick-row .dex-pick-name{padding:0}
+.dex-pick-row .dex-pick-sub{padding:0}
+.dex-pick-label{font:700 11px/1 var(--mono);letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase}
+.dex-pick-action{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.dex-in{color:var(--pass);font-weight:600;font-size:var(--fs-sm);white-space:nowrap}
+@media (max-width:600px){.dex-pick-groups{padding:var(--s3)}.dex-pick-row{flex-wrap:wrap}}
+
+/* RealSense live-view modal: the camera's colour view, nothing more. */
+.rs-body{padding:var(--s4) var(--s5) var(--s5);display:grid;gap:var(--s3)}
+.rs-body p{margin:0}
+.rs-video{width:100%;aspect-ratio:4/3;background:#000;border-radius:var(--r-md,12px);object-fit:cover}
+.rs-picker{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)}
+.rs-picker select{flex:1}
+.rs-actions{display:flex;justify-content:flex-end}
 
 /* Workshop tabs (Overview, Build, Wiring, Specs, Checks): one job per
    screen, verdicts carried by colour, details behind tooltips. */

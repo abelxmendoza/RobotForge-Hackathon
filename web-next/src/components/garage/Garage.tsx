@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import RobodexPicker from './RobodexPicker';
+import RealSenseModal from './RealSenseModal';
 import RobotAvatar from './RobotAvatar';
 import SpecsDialog from './SpecsDialog';
 import WrenchStart from './WrenchStart';
@@ -137,8 +138,44 @@ const STATUS_CLASS: Record<string, string> = { PASS: 'pass', MARGINAL: 'marginal
 
 /* ------------------------------------------------------------------ */
 
-function AddRobot({ firstRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean }) {
-  return <div className="garage-add">{firstRobot && <EmptyBench />}<h2>Your next robot starts in Wrench</h2><p className="sub">Attach phone photos, a mesh scan or a spec file. Or describe a robot that doesn’t exist yet.</p><button type="button" className="btn btn-primary" onClick={() => promptWrench({mode:'chat',text:'',attach:true})}>Attach files to Wrench</button><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'design',text:'Generate a robot '})}>Describe a new concept</button></div>;
+/* The verified official Scaniverse destination (Niantic Spatial's
+ * site — it links the iOS and Android apps). The QR beside it
+ * encodes exactly this URL; a guard test pins the three together. */
+const SCANIVERSE_URL = 'https://scaniverse.com';
+
+function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean; onOpenRobot: (id: string) => void }) {
+  const [dexOpen, setDexOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [rsOpen, setRsOpen] = useState(false);
+  return (
+    <div className="garage-add">
+      {firstRobot && <EmptyBench />}
+      <h2>Your next robot starts in Wrench</h2>
+      <p className="sub">Attach photos, a mesh scan or a spec file; bring one in from your Robodex; scan with Scaniverse on your phone or hook up an Intel RealSense camera; or describe a robot that doesn’t exist yet.</p>
+      <button type="button" className="btn btn-primary" onClick={() => promptWrench({mode:'chat',text:'',attach:true})}>Attach files to Wrench</button>
+      <div className="garage-add-actions">
+        <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'design',text:'Generate a robot '})}>Describe a new concept</button>
+        <button type="button" className="btn btn-sm" onClick={() => setDexOpen(true)}>Add from Robodex</button>
+        <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
+        <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
+        <button type="button" className="btn btn-sm" onClick={() => setRsOpen(true)}>Connect Intel RealSense camera</button>
+      </div>
+      {scanOpen && (
+        <div className="garage-scan-how">
+          <p><strong>Scan it with Scaniverse on your phone.</strong> Walk around the real robot in the Scaniverse app so it sees every side, export the scan as a PLY or GLB file, then attach that file to Wrench — a scan’s sizes stay estimated until you measure the real thing.</p>
+          <div className="garage-scan-qr">
+            {/* Static QR asset for SCANIVERSE_URL (generated once, decode-verified; no runtime dependency). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={assetPath('assets/img/scaniverse-qr.svg')} alt="QR code for the Scaniverse app site, scaniverse.com" width="120" height="120" />
+            <p className="faint g-small">Point your phone camera at the code, or open <a href={SCANIVERSE_URL} target="_blank" rel="noreferrer">scaniverse.com</a> — Scaniverse by Niantic Spatial, free on iPhone and Android.</p>
+          </div>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from this 3D scan.',attach:true})}>Attach a scan in Wrench</button>
+        </div>
+      )}
+      <RobodexPicker open={dexOpen} onClose={() => setDexOpen(false)} onAdded={(id) => { setDexOpen(false); onOpenRobot(id); }} />
+      <RealSenseModal open={rsOpen} onClose={() => setRsOpen(false)} />
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -1094,7 +1131,7 @@ export default function Garage() {
         {twinOpen && (omegaTab === 'specs'
           ? <SpecsDialog readOnly onClose={() => setOmegaTab(specsReturn.current.twin)}><Omega1Twin tab="specs" /></SpecsDialog>
           : <Omega1Twin tab={omegaTab} garageScans={storedOmega1 ? (storedOmega1.scans?.length ?? (storedOmega1.scan ? 1 : 0)) : null} onOpenGarage={openStoredOmega1} onAdopt={adoptOmega1} />)}
-        {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} />}
+        {!twinOpen && (adding || activeRobots.length === 0) && <AddRobot onAdd={addRobot} firstRobot={activeRobots.length === 0} onOpenRobot={(id) => { setSelected(id); setTwinOpen(false); setAdding(false); }} />}
 
         {!twinOpen && !adding && robot && draft && (() => {
           const verdict = verdictOf(draftLines);
