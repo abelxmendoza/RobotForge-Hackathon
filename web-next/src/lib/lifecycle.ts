@@ -70,6 +70,15 @@ export function deleteArchivedRecord<T extends LifecycleRecord>(records: readonl
   return records.filter((record) => record !== target) as T[];
 }
 
+/* Permanent delete of any record, active or archived, with the same
+ * snapshot guard: a record changed elsewhere since it was read is
+ * refused. The caller owns the confirmation — the Garage asks inline
+ * ("Delete … for good? This can't be undone") before calling this. */
+export function deleteRecord<T extends LifecycleRecord>(records: readonly T[], id: string, expected: string): T[] {
+  const target = currentRecord(records, id, expected);
+  return records.filter((record) => record !== target) as T[];
+}
+
 /* Swap one record for a replacement with the same id (for example a
  * fresh copy rebuilt from its records), guarded the same way. */
 export function replaceRecord<T extends LifecycleRecord>(records: readonly T[], id: string, expected: string, next: T): T[] {
