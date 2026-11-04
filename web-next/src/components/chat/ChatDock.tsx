@@ -98,10 +98,18 @@ const DEFAULT_CHIPS = [
   "How does RobotForge work?",
 ];
 
-const SUB_RECORDED =
-  "Answers from RobotForge's recorded data (not a live AI) — the Robodex, the parts catalogue and the recorded gate reports.";
+/* Wrench is a live AI for signed-in users: the recorded data answers
+ * first (instant, cited) and the live model takes the rest. The
+ * subtitle says "live" only once /health confirms the model can chat,
+ * and says plainly when it can't (owner, 2026-11-04). */
+const SUB_CHECKING =
+  "Live AI, grounded in RobotForge\u2019s data. Connecting to the live model\u2026";
 const SUB_LIVE =
-  "Recorded data first — the Robodex, the parts catalogue and the recorded gate reports. Questions they can’t answer go to a live model, badged LIVE MODEL.";
+  "Live AI, grounded in RobotForge\u2019s data: the Robodex, the parts catalogue and the recorded gate reports answer first, and anything they don\u2019t cover goes to the live model, badged LIVE MODEL.";
+const SUB_OFF =
+  "The live AI is switched off or out of budget for today, so answers come from RobotForge\u2019s recorded data: the Robodex, the parts catalogue and the recorded gate reports.";
+const SUB_RECORDED =
+  "The live AI isn\u2019t reachable right now, so answers come from RobotForge\u2019s recorded data: the Robodex, the parts catalogue and the recorded gate reports.";
 const SUB_DEMO =
   "Demo mode — answers are recorded from real runs: the Robodex, the parts catalogue and the recorded gate reports. Nothing here calls the live model; sign in for live AI.";
 
@@ -276,17 +284,13 @@ export function useForgeAssistant() {
   const [chips, setChipsState] = useState<string[]>(
     () => carry.chips ?? chipsFor(carry.memory)
   );
-  const [subText, setSubText] = useState(SUB_RECORDED);
+  const [subText, setSubText] = useState(LIVE_ENDPOINT ? SUB_CHECKING : SUB_RECORDED);
   /* Demo mode: the subtitle says so, and every live path below
    * short-circuits before any fetch (see checkLive / ask /
    * proposeViaLive). The ref mirrors the state for the callbacks. */
   const demo = useDemoMode();
   const demoRef = useRef(false);
   demoRef.current = demo;
-  useEffect(() => {
-    if (demo) setSubText(SUB_DEMO);
-    else setSubText((prev) => (prev === SUB_DEMO ? SUB_RECORDED : prev));
-  }, [demo]);
 
   const [proposal, setProposal] = useState<Preview | null>(() => carry.proposal);
   const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(() => carry.inventoryProposal);
@@ -421,6 +425,24 @@ export function useForgeAssistant() {
       h && h.ok && h.mode === "live" && h.routes && h.routes.chat &&
         !(h.budget && h.budget.exhausted)
     );
+
+  /* Probe the live model as soon as Wrench opens (not on the first
+   * question that misses the recorded data), so the subtitle tells
+   * the truth from the start. Demo mode never probes. */
+  useEffect(() => {
+    if (demo) { setSubText(SUB_DEMO); return; }
+    if (!liveBase()) { setSubText(SUB_RECORDED); return; }
+    setSubText((prev) => (prev === SUB_DEMO ? SUB_CHECKING : prev));
+    let live = true;
+    void checkLive().then((h) => {
+      if (!live) return;
+      if (liveUsable(h)) setSubText(SUB_LIVE);
+      else if (h && h.ok && (h.mode === "off" || (h.budget && h.budget.exhausted))) setSubText(SUB_OFF);
+      else setSubText(SUB_RECORDED);
+    });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demo, checkLive]);
 
   /* The one /web fetch (Firecrawl via the Worker's /web route),
    * shared by web grounding and the web knowledge loop's proposal
