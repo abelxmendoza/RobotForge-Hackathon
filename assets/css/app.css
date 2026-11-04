@@ -685,6 +685,8 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .demo-bar-text{color:var(--text-muted);flex:1;min-width:0}
 .demo-bar-exit{flex:none;min-height:44px;padding:6px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer}
 .demo-bar-exit:hover{border-color:var(--text-faint);background:var(--surface-3)}
+.demo-bar-signin{flex:none;min-height:44px;padding:6px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+.demo-bar-signin:hover{border-color:var(--text-faint)}
 .demo-bar-welcome{max-width:1200px;margin:0 auto;padding:0 14px 12px}
 .demo-bar-welcome p{margin:0 0 10px;color:var(--text-muted);max-width:72ch}
 .demo-bar-welcome strong{color:var(--text)}
@@ -701,6 +703,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .demo-pill-note{margin:0;color:var(--text-muted);font-size:var(--fs-sm)}
 .demo-pill-menu button{padding:8px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;cursor:pointer;text-align:left}
 .demo-pill-menu button:hover{border-color:var(--text-faint);background:var(--surface-3)}
+.demo-pill-menu button.demo-pill-primary{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:600}
 /* The demo persona chip (shell/DemoIdentity.tsx): whose sample
  * shelf this is, next to the real Sign in control. */
 .demo-identity{display:inline-flex;align-items:center;gap:8px;flex:none}
@@ -1360,6 +1363,14 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .dex-sighting .ph img{width:100%;height:100%;object-fit:cover}
 .dex-where{font-size:var(--fs-xs);color:var(--text-muted)}
 .dex-local{font-size:var(--fs-xs)}
+.dex-cell{display:grid;gap:8px;align-content:start}
+.dex-bring{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dex-family{margin-bottom:var(--s5)}
+.dex-family-name{font:700 var(--fs-lg)/1.2 var(--font);margin:0 0 var(--s2)}
+.dex-variant{margin-bottom:var(--s4)}
+.dex-variant-name{font:600 var(--fs-md)/1.2 var(--font);margin:0 0 4px}
+.dex-sig{margin:0 0 var(--s3)}
+.dex-filed-head{font:600 var(--fs-md)/1.2 var(--font);margin:var(--s4) 0 var(--s3)}
 .dex-empty{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s4);border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface)}
 .dex-empty p{flex:1 1 260px;margin:0;color:var(--text-muted)}
 .dex-empty strong{color:var(--text)}

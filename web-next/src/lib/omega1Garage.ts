@@ -86,6 +86,22 @@ export const OMEGA1_SEED_SOURCE: VersionSource = 'repo';
 export const OMEGA1_SEED_NOTE =
   'Seeded from Omega1\u2019s records — the Freenove FNK0043 kit record and the extraction of Abel\u2019s Omega-Code repo (docs/omega1/, 2026-11-01). DOCUMENTED fields only: dimensions, mass, wheel diameter, battery capacity and motor voltage are MEASURE_ME in the records and stay blank until they are measured on the real robot or applied from a scan.';
 
+/* The stored Omega1 entry adoption creates: fixed id, one
+ * Baseline version from the documented seed spec. This is the
+ * record the Robodex My robots specimen card (DexSources.tsx)
+ * writes when adopted from there — field-for-field the record
+ * the Workshop's Adopt button writes (Garage.tsx keeps its own
+ * construction, pinned by tests/test_omega1_garage.py), so
+ * adopting from either place yields the identical entry. */
+export function buildOmega1SeedEntry(nowIso: string, versionId: string): GarageRobot {
+  return {
+    id: OMEGA1_ROBOT_ID,
+    name: 'Omega1',
+    createdAt: nowIso,
+    versions: [{ id: versionId, label: 'Baseline', note: OMEGA1_SEED_NOTE, source: OMEGA1_SEED_SOURCE, createdAt: nowIso, spec: omega1SeedSpec() }],
+  };
+}
+
 /* The spec the stored copy is born with. DOCUMENTED template fields
  * only; the MEASURE_ME names (length_m, width_m, height_m,
  * ground_clearance_m, mass_kg, wheel.diameter_m, wheel.width_m,

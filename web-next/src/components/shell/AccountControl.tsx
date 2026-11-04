@@ -10,12 +10,21 @@
  * anonymous entries open (seed + rf.demo.v1, real keys untouched),
  * and while the demo flag is on this control makes no Worker
  * calls: a stored session is adopted for display as-is and only
- * revalidates after the demo exits. */
+ * revalidates after the demo exits.
+ *
+ * Demo login (2026-11-03): authenticating is the demo's exit
+ * ramp, in full. ANY successful auth while the demo flag is on —
+ * email sign-in, register, or a social-login fragment landing —
+ * clears the flag and lands on the visitor's own garage, so the
+ * app actually switches to their real account instead of keeping
+ * the demo twins on screen. The demo chrome (bar + pill) opens
+ * this card through lib/auth's requestSignIn (SIGNIN_EVENT). */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   AUTH_EVENT,
+  SIGNIN_EVENT,
   authLogout,
   authMe,
   captureFragmentAuth,
@@ -28,7 +37,6 @@ import { liveHealth } from "@/components/forge/live";
 import { isDemoMode, setDemoMode, useDemoMode } from "@/lib/demoMode";
 import { seedDemoStores } from "@/lib/demoSeed";
 import SignInCard, { PROVIDER_LABELS } from "./SignInCard";
-import { useDemoExit } from "./DemoBar";
 import { applyAccountData, fetchAccountData, readSavedMark } from "@/lib/accountSync";
 
 function roleBadge(role: string) {
@@ -47,7 +55,6 @@ export default function AccountControl() {
   const overlayRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const inDemo = useDemoMode();
-  const exitDemo = useDemoExit();
 
   /* Enter the demo from the account panel: the same seed + flag
    * as the anonymous entries, so there is exactly one sandbox.
@@ -65,6 +72,34 @@ export default function AccountControl() {
   const adopt = useCallback((s: AuthSession | null) => {
     setSession(s);
     saveSession(s);
+  }, []);
+
+  /* Leave the demo for the signed-in visitor's real account:
+   * clear the flag (the stores swap from the demo twins back to
+   * the real keys on the demo event) and land on their garage. */
+  const switchToAccount = useCallback(() => {
+    setDemoMode(false);
+    router.push("/garage/");
+  }, [router]);
+
+  /* A fresh authentication completing while the demo flag is on
+   * (email sign-in/register via the card) exits the demo: saving
+   * the session alone left the demo twins on screen, so the
+   * visitor "signed in" but never actually switched accounts. */
+  const handleAuthed = useCallback((s: AuthSession) => {
+    const wasDemo = isDemoMode();
+    adopt(s);
+    setOpen(false);
+    if (wasDemo) switchToAccount();
+  }, [adopt, switchToAccount]);
+
+  /* The demo chrome's sign-in action (DemoBar / DemoPill) asks
+   * for this card by event — there is exactly one sign-in
+   * surface, and this control owns it. */
+  useEffect(() => {
+    const openCard = () => setOpen(true);
+    window.addEventListener(SIGNIN_EVENT, openCard);
+    return () => window.removeEventListener(SIGNIN_EVENT, openCard);
   }, []);
 
   /* On mount: a social-login redirect lands with #auth=<token>;
@@ -99,7 +134,15 @@ export default function AccountControl() {
       if (token) {
         try {
           const user = await authMe(token);
-          if (!cancelled) adopt({ token, user });
+          if (!cancelled) {
+            adopt({ token, user });
+            /* A social login completing is an authentication
+             * too: if it was started from inside the demo, exit
+             * the demo now — the same switch the email path
+             * makes in handleAuthed — or the returning visitor
+             * lands back on the demo twins while signed in. */
+            if (frag.token && isDemoMode()) switchToAccount();
+          }
         } catch {
           if (!cancelled) adopt(null);
         }
@@ -108,7 +151,7 @@ export default function AccountControl() {
     return () => {
       cancelled = true;
     };
-  }, [adopt]);
+  }, [adopt, switchToAccount]);
 
   /* Mirror the stored session when it changes elsewhere: the
    * app gate's own sign-in card, another tab, or an expiry
@@ -232,7 +275,7 @@ export default function AccountControl() {
           <SignInCard
             notice={fragError || undefined}
             onClose={() => setOpen(false)}
-            onAuthed={(s) => { adopt(s); setOpen(false); }}
+            onAuthed={handleAuthed}
           />
         </div>,
         document.body,
@@ -284,15 +327,17 @@ export default function AccountControl() {
           {inDemo ? (
             <>
               <p className="acct-note">
-                You&apos;re in the demo — sample data and recorded answers. Your
-                account and your own robots and inventory are untouched.
+                You&apos;re signed in, but you&apos;re viewing the demo —
+                sample data and recorded answers. Your own robots and
+                inventory are untouched, and nothing from the demo is
+                saved to your account.
               </p>
               <button
                 type="button"
                 className="btn"
-                onClick={() => { setOpen(false); exitDemo(); }}
+                onClick={() => { setOpen(false); switchToAccount(); }}
               >
-                Exit demo
+                Switch to my account
               </button>
             </>
           ) : (

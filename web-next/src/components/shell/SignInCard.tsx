@@ -23,6 +23,7 @@ import {
   type AuthSession,
   type OAuthProviderId,
 } from "@/lib/auth";
+import { useDemoMode } from "@/lib/demoMode";
 import DemoEntryButton from "./DemoEntryButton";
 
 /* ---- field + provider glyphs (inline, no icon dependency) ---- */
@@ -130,11 +131,16 @@ export default function SignInCard({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const inDemo = useDemoMode();
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const cfg = await authConfig();
+      /* This card only exists because the visitor explicitly
+       * opened it — including from inside the demo, where it is
+       * the exit ramp — so the provider probe is an explicit one
+       * (see authConfig). Automatic probes stay demo-silent. */
+      const cfg = await authConfig({ explicit: true });
       if (!cancelled) setProviders(cfg.providers);
     })();
     return () => {
@@ -189,6 +195,15 @@ export default function SignInCard({
 
       {notice && (
         <p className="acct-errorbox" role="alert">{notice}</p>
+      )}
+
+      {inDemo && (
+        <p className="acct-note" role="status">
+          You&apos;re in the demo. Signing in leaves the demo and
+          switches you to your own account — your robots and parts,
+          not the samples. Nothing from the demo is saved to your
+          account.
+        </p>
       )}
 
       <form onSubmit={submit} className="acct-form">
