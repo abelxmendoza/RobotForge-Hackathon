@@ -28,7 +28,7 @@ export default function DriveScene({spec,robot,identity,scenario,running,resetKe
    const grid=new THREE.GridHelper(24,48,0x507080,0x344957);grid.rotation.x=Math.PI/2;grid.position.z=.001;scene.add(grid);
    if(scenario!=='flat'){const mesh=new THREE.Mesh(new THREE.BoxGeometry(scenario==='ramp'?2:.3,scenario==='ramp'?1.6:1.4,scenario==='ramp'?.1:.03),new THREE.MeshStandardMaterial({color:0x66877e}));mesh.position.set(scenario==='ramp'?1.7:.9,0,scenario==='ramp'?Math.sin(Math.PI/18):.015);if(scenario==='ramp')mesh.rotation.y=-Math.PI/18;mesh.receiveShadow=true;mesh.castShadow=true;scene.add(mesh);}
    const size=Math.max(.2,spec.length_m||.3,spec.width_m||.25,spec.height_m||.2);
-   const resetCamera=()=>{camera.position.set(shell.position.x+size*3,shell.position.y-size*4,size*3);controls.target.set(shell.position.x,shell.position.y,(spec.height_m||.2)/2);controls.update();};reframe.current=resetCamera;resetCamera();
+   const resetCamera=()=>{camera.position.set(shell.position.x+size*1.6,shell.position.y-size*2,size*1.5);controls.target.set(shell.position.x,shell.position.y,(spec.height_m||.2)/2);controls.update();};reframe.current=resetCamera;resetCamera();
    const resize=()=>{if(!host.current)return;const w=host.current.clientWidth,h=host.current.clientHeight;renderer.setSize(w,h);camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();};
    const observer=new ResizeObserver(resize);observer.observe(host.current);resize();
    let world:Awaited<ReturnType<typeof createDriveWorld>>|undefined,raf=0,elapsed=0,last=performance.now(),sampleTick=0,replayTick=0;
