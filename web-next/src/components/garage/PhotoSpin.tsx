@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { spinFrame, videoFrames } from '@/lib/image';
 import {
-  evenPick, frameAfterDrag, naturalOrder, stepFrame,
+  evenPick, frameAfterDrag, naturalOrder, removePhotoFromSet, stepFrame,
   SPIN_MAX_FRAMES, SPIN_MIN_FRAMES, SPIN_VIDEO_FRAMES, type PhotoSpin as Spin,
 } from '@/lib/photoSpin';
 import type { ScanMeta } from '@/lib/scan3d';
@@ -183,7 +183,7 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
  * views one switch away, and ways to add either. */
 export type ReferencePhoto = { url: string; caption: string; source?: string; position?: string };
 type View = 'photos' | 'scan' | 'model' | 'reference';
-export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = false, modelNote, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onSave, onScanSave, onApplyScanSize, onRealsenseScan }: {
+export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = false, modelNote, photo, photoSet, photoAddedAt, referencePhoto, concept = false, onPhotoSave, onPhotosSave, onSave, onScanSave, onApplyScanSize, onRealsenseScan }: {
   robotId: string;
   spin: Spin | undefined;
   scan: ScanMeta | undefined;
@@ -201,6 +201,11 @@ export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = f
   photoAddedAt?: string;
   referencePhoto?: ReferencePhoto;
   onPhotoSave?: (photo: string | null) => string | null;
+  /* Replace or clear the owner's uploaded still photos as one set
+   * (photo is photoSet[0]; null clears photo, photoSet and
+   * photoAddedAt together). Only the owner's own photos get removal
+   * controls — a reference photo is not theirs to delete. */
+  onPhotosSave?: (next: { photo: string; photoSet: string[]; photoAddedAt: string } | null) => string | null;
   onSave: (next: Spin | null) => string | null;
   onScanSave: (next: ScanMeta | null) => string | null;
   /* Turn the scan's measured size into spec dimensions (Garage saves
@@ -211,6 +216,7 @@ export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = f
 }) {
   const [pick, setPick] = useState<View | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [confirmRemovePhoto, setConfirmRemovePhoto] = useState<'one' | 'all' | null>(null);
   const [photoError, setPhotoError] = useState('');
   const [failedPhoto, setFailedPhoto] = useState('');
   const [busyPhoto, setBusyPhoto] = useState(false);
@@ -221,6 +227,23 @@ export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = f
     : pick === 'reference' ? 'reference'
     : scan ? 'scan' : modelReady ? 'model'
     : photo && photoAddedAt && photoAddedAt > (spin?.addedAt ?? '') ? 'reference' : spin ? 'photos' : concept && !photo && !referencePhoto ? 'model' : 'reference';
+  const ownPhotos: string[] = photoSet && photoSet.length ? photoSet : photo ? [photo] : [];
+  const removePhotoAt = (index: number) => {
+    if (!onPhotosSave) return;
+    const next = removePhotoFromSet(ownPhotos, index);
+    setConfirmRemovePhoto(null);
+    if (!next) { removeAllPhotos(); return; }
+    const failure = onPhotosSave({ photo: next[0], photoSet: next, photoAddedAt: photoAddedAt ?? new Date().toISOString() });
+    setPhotoError(failure ?? '');
+    if (!failure) setPhotoIndex((i) => Math.max(0, Math.min(i - (index < i ? 1 : 0), next.length - 1)));
+  };
+  const removeAllPhotos = () => {
+    if (!onPhotosSave) return;
+    setConfirmRemovePhoto(null);
+    const failure = onPhotosSave(null);
+    setPhotoError(failure ?? '');
+    if (!failure) { setPhotoIndex(0); setPick(null); }
+  };
   return (
     <div className="ps-overview">
       <div className="ps-switch" role="group" aria-label="Overview picture">
@@ -245,6 +268,27 @@ export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = f
         </figure> : <div className="ws-media-empty"><h3>{image ? 'Photo could not load' : 'No photo of this robot yet'}</h3><p>Add a photo, a photo 360 or a scan of your build. The concept model is available above.</p></div>
       )}
       {view === 'reference' && photoSet && photoSet.length > 1 && <div className="ws-photo-thumbs" role="group" aria-label="Your robot photos">{photoSet.map((src,i) => <button type="button" className="btn btn-sm" aria-pressed={photoIndex===i} key={i} onClick={() => setPhotoIndex(i)}><img src={src} alt={`Photo ${i+1}`} /></button>)}</div>}
+      {view === 'reference' && photo && onPhotosSave && (
+        <div className="ps-actions">
+          {confirmRemovePhoto === 'one' ? (
+            <span className="g-remove-confirm" role="alert">
+              Remove this photo? <button type="button" className="btn btn-sm g-remove-yes" onClick={() => removePhotoAt(photoIndex)}>Yes, remove</button>
+              <button type="button" className="btn btn-sm" onClick={() => setConfirmRemovePhoto(null)}>Cancel</button>
+            </span>
+          ) : confirmRemovePhoto === 'all' ? (
+            <span className="g-remove-confirm" role="alert">
+              Remove {ownPhotos.length > 1 ? `all ${ownPhotos.length} photos` : 'this photo'}? This can&apos;t be undone. If you saved this robot to your account, press Save afterwards to remove {ownPhotos.length > 1 ? 'them' : 'it'} there too. <button type="button" className="btn btn-sm g-remove-yes" onClick={removeAllPhotos}>Yes, remove</button>
+              <button type="button" className="btn btn-sm" onClick={() => setConfirmRemovePhoto(null)}>Cancel</button>
+            </span>
+          ) : (
+            <>
+              {ownPhotos.length > 1 && <button type="button" className="btn btn-sm" onClick={() => setConfirmRemovePhoto('one')}>Remove this photo</button>}
+              <button type="button" className="btn btn-sm" onClick={() => setConfirmRemovePhoto('all')}>{ownPhotos.length > 1 ? 'Remove all photos' : 'Remove photo'}</button>
+            </>
+          )}
+        </div>
+      )}
+      {photoError && <p className="g-error" role="alert">{photoError}</p>}
       <div className="ps-actions">
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Update this robot with these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add this 3D scan to my robot.',attach:true})}>Upload a scan file</button>

@@ -223,6 +223,38 @@ export function addComponentSkin(
     shaft.rotation.z = Math.PI / 2;
     shaft.position.set(l * 0.41, 0, 0);
     mesh.add(shaft);
+  } else if (componentId.startsWith('pi-camera')) {
+    // Pi Camera module: small PCB + lens barrel on a raised mount + CSI ribbon stub
+    box([l * 0.96, w * 0.96, h * 0.30], [0, 0, -h * 0.30], pcbRed);
+    addCornerMountPads(-h * 0.10, 0.36, 0.36);
+    const rLens = Math.min(l, w) * 0.30;
+    const barrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(rLens, rLens * 1.15, h * 0.42, 24),
+      black,
+    );
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0, h * 0.22);
+    mesh.add(barrel);
+    const glass = new THREE.Mesh(
+      new THREE.CylinderGeometry(rLens * 0.55, rLens * 0.55, h * 0.06, 24),
+      accentCyan,
+    );
+    glass.rotation.x = Math.PI / 2;
+    glass.position.set(0, 0, h * 0.44);
+    mesh.add(glass);
+  } else if (componentId.startsWith('servo')) {
+    // Hobby servo: body + mounting ears + output spline + horn on top
+    box([l * 0.72, w * 0.92, h * 0.78], [0, 0, -h * 0.08], pcbBlue);
+    for (const sign of [-1, 1]) {
+      box([l * 0.14, w * 0.92, h * 0.16], [sign * l * 0.43, 0, -h * 0.10], pcbBlue);
+    }
+    const spline = new THREE.Mesh(
+      new THREE.CylinderGeometry(Math.min(l, w) * 0.16, Math.min(l, w) * 0.16, h * 0.14, 16),
+      silver,
+    );
+    spline.position.set(l * 0.18, 0, h * 0.38);
+    mesh.add(spline);
+    box([l * 0.52, w * 0.20, h * 0.08], [l * 0.18, 0, h * 0.46], warnYellow);
   } else if (componentId.startsWith('estop')) {
     // Emergency stop switch: yellow safety enclosure + corner screws + black collar + red mushroom button
     box([l * 0.92, w * 0.92, h * 0.54], [0, 0, -h * 0.20], warnYellow);

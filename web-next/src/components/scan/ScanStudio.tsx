@@ -192,6 +192,11 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
     }
   };
 
+  /* Pre-save discard: the built scan lives only in this state until
+   * attach() writes it, so dropping it here removes the capture
+   * entirely — nothing was saved to any robot yet. */
+  const discard = () => { setPly(null); setResult(null); setAttached(null); setMessage('Scan discarded. Nothing was saved.'); };
+
   const download = () => {
     if (!ply) return;
     const a = document.createElement('a');
@@ -335,6 +340,7 @@ export default function ScanStudio({ robot: fixed, onAttach, autoConnect = false
           </p>
           <div className="studio-actions">
             <button type="button" className="btn btn-sm" onClick={download}>Download PLY</button>
+            {!attached && <button type="button" className="btn btn-sm" onClick={discard}>Discard scan</button>}
             {simulated ? (
               <span className="faint g-small">A simulated scan can&apos;t be added to a robot: it is not your robot.</span>
             ) : fixed ? (
