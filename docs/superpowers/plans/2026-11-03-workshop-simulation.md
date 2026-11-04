@@ -27,7 +27,7 @@
 - [x] Browser QA, full tests/build, independent review, commit/push/PR with CI checks. Preserve existing deep links.
 
 ## Verification
-- Full regression suite: 806 passed, 5 skipped.
+- Full regression suite: 838 passed, 5 skipped after merging current main.
 - TypeScript no-emit and Next production build: passed.
 - Browser: keyboard drive, pause, Save run to Test, local Gazebo connect/run/save/replay verified.
 - Linux Gazebo 8.15: 0.51 m drive, 92.7° turn measured in UI. No automatic pass/fail.
