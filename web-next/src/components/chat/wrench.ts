@@ -444,11 +444,11 @@ const PERSON_REF = ["he", "him", "his", "hes", "she", "her", "hers", "shes"];
 
 function workshopRoute(root: string): string {
   const base = root ? root.replace(/\/?$/, "/") : "/";
-  return base + "garage/";
+  return base + "garage/#omega1";
 }
 
 function omega1Named(qt: string[]): boolean {
-  if (qt.indexOf("omega1") !== -1 || qt.indexOf("omega") !== -1) return true;
+  if (["omega1", "omega", "freenove", "fnk0043"].some((w) => qt.indexOf(w) !== -1)) return true;
   return phraseIn(qt, "built in specimen") || qt.indexOf("specimen") !== -1;
 }
 
@@ -473,7 +473,7 @@ type Omega1Aspect =
  * "tell me about Omega1", or just "Omega1?"). Any other Omega1 ask
  * the aspects above do not cover is a fact the records do not hold. */
 const INTRO_WORDS = ["know", "about", "who", "tell", "describe", "introduce", "overview", "summary", "explain", "more"];
-const FILLER = ["omega", "omega1", "1", "what", "whats", "is", "s", "the", "a", "an", "this", "that", "he", "him", "hes", "it", "its", "and", "so", "ok", "okay", "hey", "wrench"];
+const FILLER = ["omega", "omega1", "1", "freenove", "fnk0043", "what", "whats", "is", "s", "the", "a", "an", "this", "that", "he", "him", "hes", "it", "its", "and", "so", "ok", "okay", "hey", "wrench"];
 
 function omega1Intro(qt: string[]): boolean {
   if (INTRO_WORDS.some((w) => qt.indexOf(w) !== -1)) return true;

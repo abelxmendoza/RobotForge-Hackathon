@@ -1,5 +1,5 @@
 import type { GarageRobot } from './garage';
-import { activeRecords, archiveRecord, restoreRecord } from './lifecycle';
+import { activeRecords, archiveRecord, deleteArchivedRecord, replaceRecord, restoreRecord } from './lifecycle';
 
 export type RobotLifecycleResult = { ok: true } | { ok: false; error: string };
 type ReadRobots = () => GarageRobot[];
@@ -38,4 +38,23 @@ export function restoreRobotInStore(
   expected: string,
 ): RobotLifecycleResult {
   return commit(() => restoreRecord(read(), id, expected), write);
+}
+
+export function deleteArchivedRobotInStore(
+  read: ReadRobots,
+  write: WriteRobots,
+  id: string,
+  expected: string,
+): RobotLifecycleResult {
+  return commit(() => deleteArchivedRecord(read(), id, expected), write);
+}
+
+export function replaceRobotInStore(
+  read: ReadRobots,
+  write: WriteRobots,
+  id: string,
+  expected: string,
+  next: GarageRobot,
+): RobotLifecycleResult {
+  return commit(() => replaceRecord(read(), id, expected, next), write);
 }

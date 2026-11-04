@@ -63,8 +63,24 @@ def test_family_grouping_lives_inside_the_tabs():
     assert "byFamily" in DEX and "byVariant" in DEX
     # browser-saved sightings join the same grids
     assert "allDexSightings" in DEX and "loadSightings" in DEX
-    # RobotsIndex renders the grouped sightings in BOTH sighting tabs
-    assert INDEX.count("<SightingsGroups") == 2
+    # RobotsIndex renders the grouped sightings in BOTH sighting tabs,
+    # plus in Researched for a sighting the owner re-filed there
+    assert 'source="sighted"' in INDEX and 'source="photos"' in INDEX
+    assert INDEX.count("<SightingsGroups") == 3
+    assert 'items={dex.sightingsByTab.researched} source="researched"' in INDEX
+
+
+def test_refiled_records_render_in_their_destination_tab():
+    # A catalog robot moved to Sighted, or a sighting moved to
+    # Researched, shows (and counts) there instead of vanishing.
+    assert "dex.catalogByTab.sighted.map(catalogCell)" in INDEX
+    assert "dex.catalogByTab.sighted.length +" in INDEX
+    assert "dex.sightingsByTab.researched.length +" in INDEX
+    # A browser-saved PhotoDraft keeps its recorded spec under `spec`.
+    assert "d.draft_spec ?? d.spec" in DEX
+    # The chat bring-in re-reads the Garage after its async fetch.
+    move = (WEB / "src/components/chat/DexMoveProposal.tsx").read_text()
+    assert "const latest = readStore<GarageRobot[]>(GARAGE_KEY, [])" in move
 
 
 # ------------------------------------------------------- 2. My robots parity

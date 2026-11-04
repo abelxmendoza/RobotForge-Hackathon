@@ -4,7 +4,7 @@
  * RobotForge built, and the caption says so. */
 import { useEffect, useRef, useState } from 'react';
 import { readScanFile } from '@/lib/scanStore';
-import { fitScan, fmtBytes, type ScanMeta } from '@/lib/scan3d';
+import { fitScan, fmtBytes, isZUpRobotForgeScan, type ScanMeta } from '@/lib/scan3d';
 
 export default function ScanView({ robotId, scan, name }: { robotId: string; scan: ScanMeta; name: string }) {
   const host = useRef<HTMLDivElement>(null);
@@ -56,6 +56,7 @@ export default function ScanView({ robotId, scan, name }: { robotId: string; sca
             setPoints(true);
           }
         }
+        if (scan.format === 'ply' && isZUpRobotForgeScan(data)) object.rotation.x = -Math.PI / 2;
         if (disposed || !host.current) return;
 
         const el = host.current;

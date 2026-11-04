@@ -66,13 +66,18 @@ export default function RobotsIndex() {
     mine: dex.mine
       ? dex.garageByTab.mine.length + (dex.showOmegaSpecimen ? 1 : 0)
       : null,
-    sighted: dex.sightingsByTab.sighted.length + dex.garageByTab.sighted.length,
+    sighted:
+      dex.sightingsByTab.sighted.length +
+      dex.catalogByTab.sighted.length +
+      dex.garageByTab.sighted.length,
     photos:
       dex.sightingsByTab.photos.length +
       dex.catalogByTab.photos.length +
       dex.garageByTab.photos.length,
     researched:
-      dex.catalogByTab.researched.length + dex.garageByTab.researched.length,
+      dex.catalogByTab.researched.length +
+      dex.sightingsByTab.researched.length +
+      dex.garageByTab.researched.length,
   };
   const pickSource = (id: DexSource) => {
     setSource(id);
@@ -167,10 +172,15 @@ export default function RobotsIndex() {
         <MyRobotsGrid mine={dex.mine === null ? null : dex.garageByTab.mine} showSpecimen={dex.showOmegaSpecimen} />
       ) : shown === "sighted" ? (
         <>
+          {dex.catalogByTab.sighted.length > 0 && (
+            <div className="robot-grid dex-src-grid">
+              {dex.catalogByTab.sighted.map(catalogCell)}
+            </div>
+          )}
           <SightingsGroups
             items={dex.sightingsByTab.sighted}
             source="sighted"
-            hasOther={dex.garageByTab.sighted.length > 0}
+            hasOther={dex.catalogByTab.sighted.length > 0 || dex.garageByTab.sighted.length > 0}
           />
           <FiledGarageGrid robots={dex.garageByTab.sighted} tab="sighted" />
         </>
@@ -191,6 +201,9 @@ export default function RobotsIndex() {
       ) : (
         <>
           <FiledGarageGrid robots={dex.garageByTab.researched} tab="researched" />
+          {dex.sightingsByTab.researched.length > 0 && (
+            <SightingsGroups items={dex.sightingsByTab.researched} source="researched" hasOther />
+          )}
           {openGroup === null ? (
             <div className="group-grid" id="group-grid">
               {MOBILITY_CLASSES.map((cls) => (

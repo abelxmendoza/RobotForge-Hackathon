@@ -1,6 +1,7 @@
 'use client';
 /* Add, replace or remove the robot's 3D scan. The file goes to this
  * browser's IndexedDB first; only then is the small record saved. */
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { removeScanFile, saveScanFile } from '@/lib/scanStore';
 import { scanFormat, scanProblem, type ScanMeta } from '@/lib/scan3d';
@@ -43,7 +44,7 @@ export default function ScanEditor({ robotId, scan, onSave }: {
       {!scan && (
         <p className="faint g-small">
           Scan the robot with a phone app such as Scaniverse (free; Share → Export model → GLB), Polycam or
-          Apple Object Capture, or with a RealSense depth camera (<code>tools/realsense_scan.py</code>), then upload
+          Apple Object Capture, or with a RealSense depth camera in <Link href="/scan/">Scan Studio</Link> (or <code>tools/realsense_scan.py</code>), then upload
           the GLB, OBJ or PLY here. It stays in this browser.
         </p>
       )}

@@ -58,8 +58,14 @@ export default function DexMoveProposal({ plan, onDone, onCancel }: {
           } else {
             throw new Error("No recorded spec to bring in.");
           }
-          const err = writeStore(GARAGE_KEY, [...garage, entry]);
-          if (err) throw new Error(err);
+          /* The spec fetch above is async: re-read the Garage and repeat
+           * the duplicate check right before writing, so a save made
+           * meanwhile (another tab, the Workshop) is never overwritten. */
+          const latest = readStore<GarageRobot[]>(GARAGE_KEY, []);
+          if (!latest.some((r) => r.name.toLowerCase() === plan.entity.name.toLowerCase())) {
+            const err = writeStore(GARAGE_KEY, [...latest, entry]);
+            if (err) throw new Error(err);
+          }
         }
       }
       const err = saveDexOverrides(applyDexMove(loadDexOverrides(), plan));

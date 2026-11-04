@@ -567,6 +567,12 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .garage-main .sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:4px}
 .garage-add{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s5);display:grid;gap:var(--s3);max-width:640px}
 .garage-add h2{font-size:var(--fs-lg)}
+.garage-add-actions{display:flex;flex-wrap:wrap;gap:8px}
+.garage-scan-how{display:grid;gap:var(--s3);border-top:1px solid var(--border);padding-top:var(--s3);justify-items:start}
+.garage-scan-how p{margin:0}
+.garage-scan-qr{display:flex;gap:var(--s3);align-items:center}
+.garage-scan-qr img{background:#fff;border-radius:8px;padding:6px;width:120px;height:120px}
+.garage-scan-qr p{max-width:300px}
 .g-pane{display:grid;gap:var(--s3);justify-items:start}
 .g-pane .g-field{width:100%}
 .g-head{display:flex;justify-content:space-between;align-items:flex-end;gap:var(--s4);flex-wrap:wrap}
@@ -1010,6 +1016,31 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
   .dex-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3);padding:var(--s3)}
   .dex-modal-head{padding:var(--s3) 56px var(--s3) var(--s3)}
 }
+
+/* The picker as grouped rows (Workshop "Add from Robodex"): name,
+   source label, and the row's one action — add, already-in, or the
+   honest no-spec state. */
+.dex-pick-groups{padding:var(--s3) var(--s5) var(--s5);display:grid;gap:var(--s4)}
+.dex-pick-group h3{margin:0 0 var(--s2);font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)}
+.dex-pick-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.dex-pick-row{display:flex;gap:var(--s3);align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md,12px);padding:8px var(--s3)}
+.dex-pick-thumb{width:56px;height:56px;flex:none;border-radius:8px;overflow:hidden;background:#e9ecf0;display:flex;align-items:center;justify-content:center}
+.dex-pick-thumb img{width:100%;height:100%;object-fit:contain}
+.dex-pick-main{flex:1;min-width:0;display:grid;gap:2px}
+.dex-pick-row .dex-pick-name{padding:0}
+.dex-pick-row .dex-pick-sub{padding:0}
+.dex-pick-label{font:700 11px/1 var(--mono);letter-spacing:.04em;color:var(--text-muted);text-transform:uppercase}
+.dex-pick-action{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.dex-in{color:var(--pass);font-weight:600;font-size:var(--fs-sm);white-space:nowrap}
+@media (max-width:600px){.dex-pick-groups{padding:var(--s3)}.dex-pick-row{flex-wrap:wrap}}
+
+/* RealSense live-view modal: the camera's colour view, nothing more. */
+.rs-body{padding:var(--s4) var(--s5) var(--s5);display:grid;gap:var(--s3)}
+.rs-body p{margin:0}
+.rs-video{width:100%;aspect-ratio:4/3;background:#000;border-radius:var(--r-md,12px);object-fit:cover}
+.rs-picker{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)}
+.rs-picker select{flex:1}
+.rs-actions{display:flex;justify-content:flex-end}
 
 /* Workshop tabs (Overview, Build, Wiring, Specs, Checks): one job per
    screen, verdicts carried by colour, details behind tooltips. */
@@ -2013,3 +2044,27 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .workshop .ws-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}.workshop .ws-tabs button{flex:0 0 auto;white-space:nowrap}
 .simulation-workspace{margin:16px 0}.sim-workspace-head{display:flex;justify-content:space-between;gap:16px;align-items:start;flex-wrap:wrap}.sim-workspace-head h3{margin:0 0 8px}.sim-workspace-head p{margin:0;overflow-wrap:anywhere}.sim-engine-switch,.sim-course,.sim-runbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sim-engine-switch button[aria-pressed=true],.sim-course button[aria-pressed=true]{border-color:var(--accent);background:#21403b}.sim-course{margin:18px 0 12px}.sim-drive-scene{margin:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#09131e}.sim-drive-canvas{height:440px;min-height:300px;position:relative}.sim-drive-canvas canvas{display:block;touch-action:none;max-width:100%}.sim-drive-scene figcaption{padding:10px 14px;color:var(--text-muted);font-size:12px;overflow-wrap:anywhere}.sim-runbar{margin:16px 0}.sim-drive-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}.sim-drive-controls [role=group]{display:flex;gap:8px}.sim-drive-controls button{touch-action:none;min-width:48px;min-height:44px;font-size:22px}.sim-setup-note,.sim-local-setup{padding:16px;background:#17232b;border:1px solid var(--border);border-radius:12px;margin:16px 0}.sim-local-setup details{margin-top:16px}.sim-local-setup code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;padding:10px;background:#080f16}.sim-local-setup summary{cursor:pointer}.saved-sim-runs{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--border)}.saved-sim-runs details{padding:10px 0}.saved-sim-runs summary{cursor:pointer}.saved-sim-runs pre{max-height:200px;overflow:auto;font-size:12px}
 @media(max-width:640px){.workshop .ws-tabs{display:flex;justify-content:flex-start;overflow-x:auto;gap:0}.workshop .ws-tabs button{padding:12px 10px;font-size:12px;flex-shrink:0}.sim-drive-canvas{height:320px}.sim-runbar .btn{font-size:12px;padding:9px 12px}.sim-workspace-head h3{font-size:18px}.sim-engine-switch{width:100%}.sim-engine-switch button{flex:1}}
+/* Scan Studio (/scan/): RealSense through the local bridge. */
+.studio{display:grid;gap:var(--s4);max-width:1100px}
+.studio-connect{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s3)}
+.studio-url{display:grid;gap:4px;flex:1 1 240px;max-width:340px}
+.studio-url input{font:var(--fs-sm)/1.4 var(--mono);padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--r);background:var(--surface);color:var(--text);width:100%}
+.studio-url input:disabled{opacity:.75}
+.studio-cam{font-size:var(--fs-sm);color:var(--text-muted);display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:6px}
+.studio-empty,.studio-live,.studio-result{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);padding:var(--s4)}
+.studio-empty h2,.studio-result h2{margin-top:0}
+.studio-empty h3{margin-top:var(--s4)}
+.studio-steps{display:grid;gap:8px;padding-left:1.3em;line-height:1.5;margin:0}
+.studio-steps code{overflow-wrap:anywhere}
+.studio-feeds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--s3)}
+.studio-feeds figure,.studio-cloud{margin:0}
+.studio-feeds canvas{width:100%;height:auto;aspect-ratio:4/3;background:#081321;border-radius:var(--r);border:1px solid var(--border);display:block}
+.studio-feeds figcaption,.studio-cloud figcaption{font-size:var(--fs-xs);color:var(--text-faint);margin-top:4px}
+.studio-cloud{margin-top:var(--s3)}
+.studio-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);margin-top:var(--s3)}
+.studio-actions select{margin-left:4px;padding:6px 8px;border-radius:var(--r);border:1px solid var(--border-strong);background:var(--surface);color:var(--text)}
+.studio-rec.on{border-color:var(--fail);color:var(--fail)}
+.studio-dims{width:100%;border-collapse:collapse;margin-top:var(--s3);font-size:var(--fs-sm)}
+.studio-dims th,.studio-dims td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.studio-done{border-left:3px solid var(--pass);padding:8px 12px;background:var(--surface-2);border-radius:var(--r)}
+@media(max-width:640px){.studio-dims{font-size:var(--fs-xs)}.studio-dims th,.studio-dims td{padding:6px 4px}}
