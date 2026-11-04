@@ -3,10 +3,10 @@ import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { ASSEMBLY_KEY, effectiveAssemblies, currentAssembly, type Assemblies } from '@/lib/assembly';
-import { planUpgrade, applyUpgrade, type UpgradeInputs } from '@/lib/upgradePlan';
+import { planUpgrade, applyUpgrade, UPGRADE_BOARDS, type UpgradeInputs, type UpgradeBoardId } from '@/lib/upgradePlan';
 import { downloadText, readStore, useStore, writeStore, uid } from '@/lib/store';
 
-export interface UpgradeRequest {robotId:string;expectedRobotVersionId:string;expectedAssemblyRevision:string|null;inputs?:UpgradeInputs}
+export interface UpgradeRequest {robotId:string;expectedRobotVersionId:string;expectedAssemblyRevision:string|null;boardId?:UpgradeBoardId;inputs?:UpgradeInputs}
 export default function UpgradeProposal({request,onApplied,onCancel,onInputsChange}:{request:UpgradeRequest;onApplied:(id:string)=>void;onCancel:()=>void;onInputsChange:(inputs:UpgradeInputs)=>void}) {
   const [robots,,ready]=useStore<GarageRobot[]>(GARAGE_KEY,[]);
   const [legacy,,assemblyReady]=useStore<Assemblies>(ASSEMBLY_KEY,{});
@@ -20,9 +20,9 @@ export default function UpgradeProposal({request,onApplied,onCancel,onInputsChan
   const stale=!robot||robot.versions.at(-1)?.id!==base.expectedRobotVersionId||(assembly?.id||null)!==base.expectedAssemblyRevision;
   const result=useMemo(()=>{
     if(!ready||!assemblyReady||!robot||!assembly||stale)return {plan:null,error:''};
-    try{return {plan:planUpgrade(robot,assembly,inputs),error:''};}
+    try{return {plan:planUpgrade(robot,assembly,inputs,base.boardId??'raspberry-pi-5-sbc'),error:''};}
     catch(e){return {plan:null,error:(e as Error).message};}
-  },[ready,assemblyReady,robot,assembly,stale,inputs]);
+  },[ready,assemblyReady,robot,assembly,stale,inputs,base.boardId]);
   const plan=result.plan;
   const refresh=()=>{
     const fresh=readStore<GarageRobot[]>(GARAGE_KEY,[]),r=fresh.find(r=>r.id===request.robotId&&!r.archivedAt);
@@ -33,7 +33,7 @@ export default function UpgradeProposal({request,onApplied,onCancel,onInputsChan
   const numeric=(label:string,key:keyof UpgradeInputs)=><label className="g-field" key={key}><span>{label}</span><input type="number" step="any" min="0" value={typeof inputs[key]==='number'&&Number.isFinite(inputs[key])?String(inputs[key]):''} placeholder="Unknown — use documented values" onChange={e=>{updateInputs({[key]:e.target.value===''?undefined:Number(e.target.value)});setError('');}}/></label>;
   const note=(label:string,key:keyof UpgradeInputs)=><label className="g-field" key={key}><span>{label}</span><input type="text" maxLength={1000} value={typeof inputs[key]==='string'?String(inputs[key]):''} placeholder="Documented reference / measurement" onChange={e=>updateInputs({[key]:e.target.value||undefined})}/></label>;
   return <section className="fc-msg bot" role="region" aria-label="Coordinated robot upgrade proposal">
-    <strong>Wrench upgrade proposal · Raspberry Pi 5</strong>
+    <strong>Wrench upgrade proposal · Raspberry {UPGRADE_BOARDS[base.boardId??'raspberry-pi-5-sbc'].short}</strong>
     <p>{robot?.name??'Saved robot'} · one planned version for the assembly, wiring and printable designs.</p>
     <p>Uses the latest saved robot, not unsaved Specs edits. You approve a plan; this is not authorization to power the hardware.</p>
     {stale&&ready&&<p role="alert">This proposal is stale or its robot was removed. Refresh it before applying. <button type="button" className="btn btn-sm" onClick={refresh}>Refresh saved version</button></p>}
@@ -52,7 +52,7 @@ export default function UpgradeProposal({request,onApplied,onCancel,onInputsChan
         {note('Power connector / USB-PD interface evidence','interfaceEvidence')}
       </div>
       <label><input type="checkbox" checked={inputs.powerInterfaceConfirmed===true} onChange={e=>updateInputs({powerInterfaceConfirmed:e.target.checked})}/> I have checked the documented power delivery interface for this setup.</label>
-      <p className="faint">A converter&apos;s output amperage does not establish USB-PD support. Do not enter the Pi&apos;s 5 A recommended supply capacity as if it were a measured load.</p>
+      <p className="faint">A converter&apos;s output amperage does not establish USB-PD support. Do not enter the Pi&apos;s recommended supply capacity as if it were a measured load.</p>
     </details>
     {(error||result.error)&&<p role="alert">{error||result.error}</p>}
     {plan&&<>
