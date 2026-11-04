@@ -2,7 +2,7 @@
 /* Workshop "BOM" tab (Abel, 2026-11-01): the bill of materials for the
  * robot being edited, read straight from its spec, the battery, the
  * motors and wheels with their counts, and every part in its wiring
- * block, then checked against the person's own parts list (My parts).
+ * block, then checked against the person's own parts list (My Parts and Tools).
  * Each line says whether a matching part is already on the shelf,
  * only in the sim, or still to get, and carries vendor SEARCH links.
  * It never shows a stock level or an availability claim.
@@ -162,7 +162,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
     saveProfile({ ...storedProfile, prices });
   };
   const rows: Row[] = useMemo(() => {
-    const pool = inventory.filter((p) => partSection(p) === 'parts' && p.quantity > 0 && (!p.robot_id || p.robot_id === robotId));
+    const pool = inventory.filter((p) => !p.archivedAt && p.ownership !== 'wishlist' && partSection(p) === 'parts' && p.quantity > 0 && (!p.robot_id || p.robot_id === robotId));
     const left = new Map(pool.map((p) => [p.id, p.quantity]));
     // prefer a part assigned to this robot, then a real one, then sim-only
     const rank = (a: InventoryPart, b: InventoryPart) => Number(b.robot_id === robotId) - Number(a.robot_id === robotId) || Number(partReality(a) === 'sim_only') - Number(partReality(b) === 'sim_only');
@@ -245,7 +245,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
         <h3>Parts list</h3>
         <p className="faint">Parts for {robotName}, checked against your inventory.</p>
         <details className="g-small faint"><summary>How matches and prices work</summary>
-        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My parts. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it — the price you type in, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>        </details>
+        <p className="faint">What this version of {robotName} is made of, read from its spec and wiring, checked against My Parts and Tools. A part only counts as on the shelf when its name or specs match and there are enough of it. Pictures are illustrations of a typical part, not your own — except where the matched shelf part has a verified manufacturer photo in the catalogue, which is shown with its credit instead. Vendor links are searches. A line shows a price only where one is recorded for it — the price you type in, or a sourced estimate with its supplier and fetch date; a line with no record is marked unpriced and is never counted as $0.</p>        </details>
 
       </div>
       {rows.length === 0 ? (
@@ -337,7 +337,7 @@ export default function BomTab({ spec, robotId, robotName, inventory }: {
           )}
           <p className="ws-hist-actions">
             <button type="button" className="btn btn-sm" onClick={exportCsv}>Export CSV</button>
-            <Link className="btn btn-sm btn-ghost" href={'/inventory/?robot=' + encodeURIComponent(robotId)}>Open My parts</Link>
+            <Link className="btn btn-sm btn-ghost" href={'/inventory/?robot=' + encodeURIComponent(robotId)}>Open My Parts and Tools</Link>
           </p>
         </>
       )}

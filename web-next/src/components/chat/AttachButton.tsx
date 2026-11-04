@@ -2,13 +2,15 @@
 /* Paperclip for Wrench on every page: picks a file, works out which
  * ingestion flow it belongs to, and hands it to Wrench in the Workshop (/garage/)
  * with whatever was typed alongside it. */
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { HANDOFF_ACCEPT, handoffKind, setHandoff } from "@/lib/handoff";
 
-export default function AttachButton({ text, className, onSent }: { text: string; className?: string; onSent?: () => void }) {
+export default function AttachButton({ text, className, onSent, request = 0 }: { request?:number; text: string; className?: string; onSent?: () => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const pathname=usePathname();
+  useEffect(()=>{if(request>0)ref.current?.click();},[request]);
   const [err, setErr] = useState("");
   return (
     <>
@@ -42,7 +44,7 @@ export default function AttachButton({ text, className, onSent }: { text: string
             return;
           }
           setErr("");
-          setHandoff({ kind, file: f, files, text: text.trim() });
+          setHandoff({ kind, file: f, files, text: text.trim() || (pathname.startsWith('/inventory')?'Identify this part photo for My Parts and Tools.':'') });
           onSent?.();
           router.push("/garage/#wrench");
         }}

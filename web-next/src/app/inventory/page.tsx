@@ -2,28 +2,25 @@
  * confirm each in a short chat. */
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
-import Inventory from "@/components/inventory/Inventory";
+import PartsLibrary from "@/components/inventory/PartsLibrary";
 
 export const metadata: Metadata = {
-  title: "My parts",
+  title: "My Parts and Tools",
   description: "Photograph the robot parts you own, let Muse Spark identify them, and confirm each one in chat.",
 };
 
 export default function InventoryPage() {
   return (
-    <AppShell active="inventory" crumbs={[{ label: "My parts" }]}>
+    <AppShell active="inventory" crumbs={[{ label: "My Parts and Tools" }]}>
       <div className="page-head">
         <div>
-          <div className="eyebrow">My parts</div>
-          <h1>What’s on your shelf</h1>
+          <h1>My Parts and Tools</h1>
           <p className="lede">
-            Photograph your parts. Muse Spark reads the labels and asks one question
-            to confirm each part; you answer in the chat or fix the fields yourself.
-            Nothing counts as confirmed until you say so.
+            Parts, tools and custom designs, organized for your robots.
           </p>
         </div>
       </div>
-      <Inventory />
+      <PartsLibrary />
     </AppShell>
   );
 }

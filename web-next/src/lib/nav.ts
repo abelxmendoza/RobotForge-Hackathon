@@ -24,7 +24,7 @@ const PAGES: { match: string[]; route: string; label: string }[] = [
   { match: ['parts', 'parts catalogue', 'parts catalog', 'kit', 'components catalogue'], route: '/kit/', label: 'the parts catalogue' },
   { match: ['evidence'], route: '/evidence/', label: 'the Evidence page' },
   { match: ['demo'], route: '/demo/', label: 'the Demo' },
-  { match: ['my parts', 'inventory', 'stock'], route: '/inventory/', label: 'My parts' },
+  { match: ['my parts', 'inventory', 'stock'], route: '/inventory/', label: 'My Parts and Tools' },
   { match: ['workshop', 'my robots', 'garage', 'workspace'], route: '/garage/', label: 'the Workshop' },
   { match: ['home', 'landing', 'front page'], route: '/', label: 'the home page' },
 ];

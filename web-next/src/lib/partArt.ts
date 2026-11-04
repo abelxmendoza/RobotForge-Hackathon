@@ -60,10 +60,12 @@ const RULES: [RegExp, string][] = [
 const BY_CATEGORY: Record<string, string> = {
   battery: 'lipo_3s_2200', motor: 'gearmotor_12v', motor_driver: 'driver_tb6612fng', wheel: 'wheel',
   sensor: 'lidar', computer: 'raspberry_pi_5', controller: 'esp32_devkit', power: 'buck_converter_5v',
+  servo:'servo_mg996r',radio:'elrs_receiver',frame:'plate',cable:'xt60_pigtail',other:'custom_pcb_kicad',
 };
 
 /** URL of a family illustration for a part, or null when nothing fits. */
 export function partArt(name: string, category?: string): string | null {
+  if(category==='tool')return assetPath('assets/img/parts/tools.svg');
   for (const [re, id] of RULES) if (re.test(name)) return assetPath(`assets/img/parts/${id}.jpg`);
   const id = category ? BY_CATEGORY[category] : undefined;
   return id ? assetPath(`assets/img/parts/${id}.jpg`) : null;
