@@ -16,11 +16,15 @@
  * owner's overrides (lib/dexOverrides.ts, set through Wrench chat)
  * are consulted before every automatic rule.
  *
- * My robots parity (Abel, 2026-11-03): this tab reads the SAME
- * Garage store the Workshop reads, through the same reactive
- * useStore, with the same archived-records filter and the same
- * built-in Omega1 specimen the Workshop's list carries — so the
- * two lists can never drift apart. */
+ * My robots parity (Abel, 2026-11-03; tightened 2026-11-04): this
+ * tab reads the SAME Garage store the Workshop reads, through the
+ * same reactive useStore, with the same archived-records filter —
+ * and nothing else. The built-in Omega1 specimen is hidden in the
+ * Workshop, so it is hidden here too: Omega1 shows under My robots
+ * only once it is in your Workshop. Each of your cards carries a
+ * Delete that removes the robot from the Workshop the same way the
+ * Workshop's own Delete does; catalog and sighting cards never get
+ * one, because they are not yours. */
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { families, robots } from "@/lib/data";
@@ -40,7 +44,10 @@ import {
   type DexTab,
 } from "@/lib/dexOverrides";
 import { buildDexEntry } from "@/lib/saveRobot";
-import { buildOmega1SeedEntry, OMEGA1_ROBOT_ID } from "@/lib/omega1Garage";
+import { recordSnapshot } from "@/lib/lifecycle";
+import { deleteRobotInStore } from "@/lib/robotLifecycleRepository";
+import { forgetRobotScans } from "@/lib/scanStore";
+import { forgetRobotNotes } from "@/lib/robotNotes";
 import { assetPath } from "@/components/home/asset";
 import RobotAvatar from "@/components/garage/RobotAvatar";
 import type { Robot } from "@/lib/types";
@@ -123,9 +130,6 @@ export interface DexModel {
   /* The Workshop's list, exactly: active Garage records read
    * reactively, or null until the store has been read. */
   mine: GarageRobot[] | null;
-  /* True while the built-in Omega1 specimen belongs in My robots:
-   * Workshop shows it until a stored 'omega1' exists. */
-  showOmegaSpecimen: boolean;
   sightings: DexSighting[];
   overrides: DexOverrides;
   /* Resolved filings — overrides first, automatic rules second. */
@@ -150,7 +154,6 @@ export function useDexSources(): DexModel {
 
   const stored = garageRaw ?? [];
   const mine = garageReady ? activeRecords(stored) : null;
-  const showOmegaSpecimen = !stored.some((r) => r.id === OMEGA1_ROBOT_ID);
 
   const catalogTab = (robot: Robot): DexTab =>
     overrides[dexKey(robot)] ?? (isPhotoDraft(robot) ? "photos" : "researched");
@@ -167,7 +170,7 @@ export function useDexSources(): DexModel {
   for (const r of mine ?? []) garageByTab[garageTab(r)].push(r);
 
   return {
-    mine, showOmegaSpecimen, sightings, overrides,
+    mine, sightings, overrides,
     catalogTab, sightingTab, garageTab,
     catalogByTab, sightingsByTab, garageByTab,
   };
@@ -301,54 +304,76 @@ export async function bringDexRobotIntoWorkshop({ name, specFile, draftSpec }: {
   return { status: "added", entry };
 }
 
+/* The Workshop's Delete, from a Robodex card: the same store
+ * operation (deleteRobotInStore, guarded by the record snapshot so a
+ * robot edited meanwhile is never deleted blind) and the same
+ * clean-up of its scans, notes and unsaved draft. Writes go through
+ * lib/store, so demo mode deletes from the demo twin only. */
+const WORKSHOP_DRAFT_KEY = (id: string) => `robotforge.workshop.draft.${id}`;
+export function deleteGarageRobot(robot: GarageRobot): string | null {
+  const result = deleteRobotInStore(
+    () => readStore<GarageRobot[]>(GARAGE_KEY, []),
+    (next) => writeStore(GARAGE_KEY, next),
+    robot.id, recordSnapshot(robot),
+  );
+  if (!result.ok) return result.error;
+  void forgetRobotScans(robot.id).catch(() => undefined);
+  forgetRobotNotes(robot.id);
+  writeStore(WORKSHOP_DRAFT_KEY(robot.id), null);
+  return null;
+}
+
 /* A Workshop robot as a Robodex card — used for My robots and for
- * Workshop robots the owner filed under another tab. */
+ * Workshop robots the owner filed under another tab. These are the
+ * only Robodex cards with a Delete: they are your robots. */
 export function GarageRobotCard({ robot, filedAs }: { robot: GarageRobot; filedAs: DexTab }) {
   const latest = robot.versions[robot.versions.length - 1];
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState("");
+  const remove = () => {
+    if (!confirming) { setConfirming(true); return; }
+    const problem = deleteGarageRobot(robot);
+    setConfirming(false);
+    setError(problem ?? "");
+  };
   return (
-    <Link className="robot-card dex-mine" href="/garage/">
-      <div className="ph dex-ph"><RobotAvatar names={[robot.name, String(latest?.spec?.name ?? "")]} size={96} /></div>
+    <article className="robot-card dex-mine">
+      <Link className="dex-ph-link" href="/garage/" aria-label={`Open ${robot.name} in the Workshop`}>
+        <div className="ph dex-ph"><RobotAvatar names={[robot.name, String(latest?.spec?.name ?? "")]} size={96} /></div>
+      </Link>
       <div className="body">
-        <h3>{robot.name}</h3>
+        <h3><Link href="/garage/">{robot.name}</Link></h3>
         <span className="cls">{robot.versions.length} version{robot.versions.length === 1 ? "" : "s"} · {latest ? SOURCE_LABEL[latest.source] : ""}</span>
         <SourceBadge source={filedAs} />
+        {confirming ? (
+          <span className="g-remove-confirm" role="alert">
+            Delete {robot.name} and its {robot.versions.length} version{robot.versions.length === 1 ? "" : "s"} for good? It leaves your Workshop too. This can&apos;t be undone. If you saved it to your account, press Save afterwards to remove it there too.{" "}
+            <button type="button" className="btn btn-sm" onClick={remove}>Yes, delete</button>{" "}
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirming(false)}>Cancel</button>
+          </span>
+        ) : (
+          <span className="dex-bring">
+            <Link className="btn btn-sm" href="/garage/">Open in the Workshop</Link>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={remove} aria-label={`Delete ${robot.name}`}>Delete</button>
+          </span>
+        )}
+        {error && <span className="faint dex-local" role="status">Couldn&apos;t delete it ({error}). Nothing changed.</span>}
       </div>
-    </Link>
+    </article>
   );
 }
 
-export function MyRobotsGrid({ mine, showSpecimen }: { mine: GarageRobot[] | null; showSpecimen: boolean }) {
-  const [, setTick] = useState(0);
+export function MyRobotsGrid({ mine }: { mine: GarageRobot[] | null }) {
   if (mine === null) return <p className="faint">Checking your Workshop…</p>;
-  if (!mine.length && !showSpecimen) return (
+  if (!mine.length) return (
     <div className="dex-empty">
-      <p><strong>No robots of your own yet.</strong> Bring one into the Workshop from a photo, a spec file or the Robodex.</p>
+      <p><strong>No robots of your own yet.</strong> My robots shows exactly what is in your Workshop. Bring one in from a photo, a spec file or the Robodex.</p>
       <Link className="btn btn-primary btn-sm" href="/garage/">Open the Workshop</Link>
     </div>
   );
-  const adoptSpecimen = () => {
-    const current = readStore<GarageRobot[]>(GARAGE_KEY, []);
-    if (current.some((r) => r.id === OMEGA1_ROBOT_ID)) return;
-    const error = writeStore(GARAGE_KEY, [...current, buildOmega1SeedEntry(new Date().toISOString(), uid("v"))]);
-    if (!error) setTick((t) => t + 1);
-  };
   return (
     <div className="robot-grid dex-src-grid">
       {mine.map((r) => <GarageRobotCard key={r.id} robot={r} filedAs="mine" />)}
-      {showSpecimen && (
-        <article className="robot-card dex-mine">
-          <div className="ph dex-ph"><RobotAvatar names={["Omega1"]} size={96} /></div>
-          <div className="body">
-            <h3>Omega1</h3>
-            <span className="cls">Built-in specimen · Digital twin</span>
-            <span className="faint dex-local">ProjectSim reconstruction · estimated — the same specimen the Workshop lists.</span>
-            <span className="dex-bring">
-              <Link className="btn btn-sm" href="/garage/">Open in the Workshop</Link>{" "}
-              <button type="button" className="btn btn-sm" onClick={adoptSpecimen}>Adopt as my robot</button>
-            </span>
-          </div>
-        </article>
-      )}
     </div>
   );
 }
