@@ -1,0 +1,7 @@
+<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stacked model layers illustration">
+<ellipse cx="100" cy="116" rx="72" ry="7" fill="#0e1013" opacity=".55"/>
+<polygon points="100,22 152,46 100,70 48,46" fill="#3d4a58" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="48,66 100,90 152,66 152,80 100,104 48,80" fill="#23262b" stroke="#34d399" stroke-width="2.5" stroke-linejoin="round"/>
+<polygon points="48,46 100,70 152,46 152,58 100,82 48,58" fill="#1b2e42"/>
+<circle cx="100" cy="46" r="6" fill="#f59e0b"/>
+</svg>

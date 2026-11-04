@@ -121,3 +121,70 @@ def test_no_foreign_project_provenance_leaks_in():
 def test_credits_list_style_in_css_source_of_truth():
     assert ".credits-list" in CSS
     assert 'className="credits-list"' in PAGE
+
+
+APP_SHELL = (ROOT / "web-next/src/components/shell/AppShell.tsx").read_text()
+CREDITS_IMG = ROOT / "assets/img/credits"
+
+
+def test_sidebar_foot_links_to_credits():
+    # Abel's ask: Credits lives at the bottom of the app sidebar,
+    # alongside the two links already there (and copied in his
+    # message): How it works and GitHub.
+    foot = APP_SHELL.split('className="side-foot"')[1].split("</div>")[0]
+    assert 'href="/how-it-works/"' in foot
+    assert "GitHub" in foot
+    assert 'href="/credits/"' in foot
+    assert ">Credits</Link>" in foot
+    # The credits page lights the link up like How it works does.
+    assert 'active="credits"' in PAGE
+    assert 'active === "credits"' in APP_SHELL
+
+
+def test_credits_page_is_visual():
+    # Founder portrait (already in the repo for the landing's
+    # Why-I-built section) and the catalogue's own part photos
+    # for the cited sources.
+    assert "assets/img/abel-founder.jpg" in PAGE
+    assert "assets/img/parts/driver_tb6612fng.jpg" in PAGE
+    assert "assets/img/parts/pla_filament.jpg" in PAGE
+    # Abel's call: the credits page does NOT re-show the Robodex
+    # robots or Omega1 — their photos live on their own pages,
+    # and repeating them here is duplication. Credit is words
+    # and logos here.
+    assert "credits-gallery" not in PAGE
+    assert "robotImage" not in PAGE
+    assert "omega1-real-photo" not in PAGE
+    assert "omega1-rover-preview" not in PAGE
+    # Visual styles live in the CSS source of truth.
+    for cls in (".credits-tiles", ".credits-founder",
+                ".credits-tile-stage--dark"):
+        assert cls in CSS, cls
+
+
+def test_credits_logos_and_illustrations_exist():
+    # Every logo / illustration file the page references is a real
+    # file in the repo (brand marks via Simple Icons, Freenove's
+    # from freenove.com, the rest drawn for RobotForge), so no
+    # tile renders as a broken image.
+    import re
+    refs = set(re.findall(r"(?:logo|art)=\"([a-z0-9\-]+\.(?:svg|png))\"", PAGE))
+    refs |= set(re.findall(r"assets/img/credits/([a-z0-9\-]+\.(?:svg|png))", PAGE))
+    assert len(refs) >= 12
+    for name in refs:
+        f = CREDITS_IMG / name
+        assert f.is_file(), name
+        if name.endswith(".svg"):
+            assert f.read_text().lstrip().startswith("<svg"), name
+        else:
+            assert f.read_bytes()[:4] == b"\x89PNG", name
+    # Freenove is credited with its real logo (the white wordmark
+    # from freenove.com, on the dark tile stage), never a word
+    # tile or a redraw.
+    assert 'logo="logo-freenove.png"' in PAGE
+    assert "dark" in PAGE.split('logo="logo-freenove.png"')[1].split("/>")[0]
+    assert "freenove.com" in PAGE
+    # The page says plainly which tiles are RobotForge drawings,
+    # not the companies' own artwork.
+    assert "illustrations drawn for RobotForge" in PAGE
+    assert "Simple Icons (CC0)" in PAGE
