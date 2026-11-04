@@ -8,6 +8,24 @@ import type { SlotScan } from './scan3d';
 export const DEFAULT_BRIDGE = 'http://127.0.0.1:8765';
 export const BRIDGE_URL_KEY = 'rf.scanBridge.url';
 
+/* One-click start: the bridge app (tools/scan-bridge-app) registers
+ * this link with the computer on its first double-click, so after
+ * that, this page can wake the bridge itself — no terminal, nothing
+ * to type. The download page is the same folder in the repo. */
+export const BRIDGE_APP_LINK = 'robotforge-scan://start';
+export const BRIDGE_APP_PAGE = 'https://github.com/abelxmendoza/RobotForge-Hackathon/tree/main/tools/scan-bridge-app';
+
+/* Does a scan bridge answer at this address? Used while waiting for
+ * the bridge app to come up after the Start button is pressed. */
+export async function bridgeAnswers(base: string): Promise<boolean> {
+  try {
+    const r = await fetch(base + '/status', { cache: 'no-store' });
+    if (!r.ok) return false;
+    const d = (await r.json().catch(() => null)) as { bridge?: unknown } | null;
+    return typeof d?.bridge === 'string';
+  } catch { return false; }
+}
+
 export interface BridgeStatus {
   ok: boolean;
   bridge: string;

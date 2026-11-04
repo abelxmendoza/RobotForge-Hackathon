@@ -16,7 +16,13 @@ Open-source pieces:
     when Open3D is missing); required to build from a real camera.
   * numpy: everything else, including the measurements.
 
-Run:
+Easiest run (no terminal): the bridge app in tools/scan-bridge-app/
+starts all of this with a double-click, sets itself up on first run,
+and registers the robotforge-scan:// link that Scan Studio's
+"Start the bridge app" button uses, so after that one double-click
+the page starts the bridge by itself.
+
+Run by hand:
     pip install numpy pyrealsense2 open3d
     python3 tools/scan_bridge.py              # real camera
     python3 tools/scan_bridge.py --simulate   # no camera: a synthetic robot
