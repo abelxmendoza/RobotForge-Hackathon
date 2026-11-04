@@ -50,7 +50,7 @@ import {
   clearRepos, detachRepo, diffSpecs, FIELD_GROUPS, fmtValue, GARAGE_KEY, getPath, partToChanges, robotRepos, setPath,
   SOURCE_LABEL, type Field, type GarageRobot, type RobotVersion, type Spec, type VersionSource,
 } from '@/lib/garage';
-import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
+import { copyAsNew, isOmega1Name, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { activeRecords, activeSelection, archivedRecords, recordSnapshot } from '@/lib/lifecycle';
 import { archiveRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
@@ -584,6 +584,12 @@ export default function Garage() {
 
   const robot = activeRobots.find((r) => r.id === selected) ?? null;
   const latest = robot ? robot.versions[robot.versions.length - 1] : null;
+  /* Omega1 identity is the canonical stored copy OR any robot the owner
+   * has named as Omega1 (a photo import renamed "Omega1" / "Freenove"):
+   * the name match (lib/saveRobot isOmega1Name) is what links it to the
+   * ProjectSim twin and the real reference photo in the Overview. The
+   * twin's geometry stays labelled an estimate either way. */
+  const isOmegaRobot = !!robot && (robot.id === OMEGA1_ROBOT_ID || isOmega1Name(robot.name) || isOmega1Name(latest?.spec?.name));
   const base = robot ? robot.versions.find((v) => v.id === baseId) ?? latest : null;
 
   useEffect(() => {
@@ -1186,6 +1192,7 @@ export default function Garage() {
             {BOM_SECTIONS.map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
           </div>}
           <button type="button" className="btn btn-sm ws-edit-specs" onClick={() => goTab('specs')}>{twinOpen ? 'View specs' : 'Specs'}</button>
+          {!twinOpen && isOmegaRobot && <button type="button" className="btn btn-sm" onClick={() => { setOmegaTab('overview'); setTwinOpen(true); }}>View ProjectSim twin</button>}
         </div>}
         {!twinOpen && !adding && robot && draft && (() => {
           const focus = tabFocus(tab, {
@@ -1314,7 +1321,7 @@ export default function Garage() {
                       photoSet={robot.photoSet}
                       photoAddedAt={robot.photoAddedAt}
                       referencePhoto={(() => {
-                        if (robot.id === OMEGA1_ROBOT_ID) return { ...OMEGA1_PHOTO, url: assetPath(OMEGA1_PHOTO.url) };
+                        if (isOmegaRobot) return { ...OMEGA1_PHOTO, url: assetPath(OMEGA1_PHOTO.url) };
                         const normalize = (value: unknown) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/demo$/, '');
                         const names = [robot.name, draft.name, robot.versions[0]?.spec?.name].map(normalize);
                         const match = dexRobots.find((r) => names.includes(normalize(r.name)) || names.includes(normalize(r.slug)));
@@ -1324,14 +1331,15 @@ export default function Garage() {
                         return image ? { url: image.url, caption: 'Repository reference image · appearance has not been verified against your build.', source: repo.provenance.repoUrl } : undefined;
                       })()}
                       onPhotoSave={(photo) => patchRobot(robot.id, (r) => { if (photo) return { ...r, photo }; const { photo: _removed, ...rest } = r; return rest; })}
+                      onPhotosSave={(next) => patchRobot(robot.id, (r) => { if (next) return { ...r, photo: next.photo, photoSet: next.photoSet, photoAddedAt: next.photoAddedAt }; const { photo: _p, photoSet: _s, photoAddedAt: _a, ...rest } = r; return rest; })}
                       scan={robot.scan}
                       name={robot.name}
-                      modelReady={robot.id === OMEGA1_ROBOT_ID || hasBody(draft)}
-                      modelNote={robot.id === OMEGA1_ROBOT_ID
+                      modelReady={isOmegaRobot || hasBody(draft)}
+                      modelNote={isOmegaRobot
                         ? 'Omega1 digital twin · generated from a photo of the real rover, so its shape and size are estimates, not measurements. Drag to look around it, or use its Turn control for the full 360.'
                         : latest?.planned ? undefined
                         : 'Model built from this robot\u2019s recorded spec · approximate geometry, not a measured twin. Drag to look around it.'}
-                      model={robot.id === OMEGA1_ROBOT_ID ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
+                      model={isOmegaRobot ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
                       onSave={(next) => patchRobot(robot.id, (r) => {
                         if (next) return { ...r, spin: next };
                         const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
