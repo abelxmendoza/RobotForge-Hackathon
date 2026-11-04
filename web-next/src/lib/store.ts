@@ -7,7 +7,7 @@
  * throw), and Export / Import JSON is the way to move data between
  * browsers or commit it to the repo. */
 import { useCallback, useEffect, useState } from 'react';
-import { effectiveStorageKey } from './demoMode';
+import { DEMO_EVENT, effectiveStorageKey } from './demoMode';
 
 const EVENT = 'rf-store';
 
@@ -48,9 +48,12 @@ export function useStore<T>(key: string, fallback: T): [T, (next: T) => string |
       const k = (e as CustomEvent).detail ?? (e as StorageEvent).key;
       if (k === key) setValue(readStore(key, fallback));
     };
+    const onDemoChange = () => setValue(readStore(key, fallback));
+    window.addEventListener(DEMO_EVENT, onDemoChange);
     window.addEventListener(EVENT, onChange);
     window.addEventListener('storage', onChange);
     return () => {
+      window.removeEventListener(DEMO_EVENT, onDemoChange);
       window.removeEventListener(EVENT, onChange);
       window.removeEventListener('storage', onChange);
     };

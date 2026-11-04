@@ -1,28 +1,13 @@
 'use client';
-/* Demo seed data — what a visitor finds inside demo mode.
- *
- * Fresh and guided (Abel, 2026-11-01): demo mode is the showcase for
- * visitors who won't sign in, so it opens like a first visit, not
- * like someone else's half-used workshop. Every entry resets the
- * demo sandbox and seeds:
- * - two TurtleBots in the Workshop, each a single version straight
- *   from its recorded Robodex spec: the TurtleBot3 Burger (published
- *   spec) and the TurtleBot3 Waffle Pi (a photo draft, so every
- *   dimension is ESTIMATED and its note says so);
- * - a small starter shelf so My parts and the BOM have something to
- *   match: sim-only entries ARE real catalogue parts (datasheet specs,
- *   catalogue id attached), and the few "real" entries are stand-ins
- *   that carry "(demo sample)" in their name and a note saying so.
- * No invented history, wear or dates: the visitor makes the history.
- * Seeds write ONLY the ".demo" storage twins (see demoMode.ts); the
- * visitor's own data is never read or written. */
+/* A populated demo account: two TurtleBots and a sample shelf. All writes
+ * stay in .demo stores. Re-entry preserves the visitor's demo changes;
+ * the Waffle Pi photo draft keeps its estimated dimensions labelled. */
 import { parts } from '@/lib/data';
 import type { Part } from '@/lib/types';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { INVENTORY_KEY, type InventoryPart } from '@/lib/inventory';
 import { OWNERSHIP_KEY } from '@/lib/toolsMaterials';
 import { assetPath } from '@/components/home/asset';
-import { DEMO_DATA_KEYS } from '@/lib/demoMode';
 
 const SEED_AT = '2026-11-01T00:00:00.000Z';
 const SIM_NOTE = 'Demo seed: a catalogue part shown as sim-only — virtual stock, not a shelf item.';
@@ -117,17 +102,6 @@ function demoInventory(): InventoryPart[] {
   ];
 }
 
-/* The demo twins a fresh entry clears, plus the once-per-entry
- * welcome flag so the guide shows again. */
-function resetDemoSandbox(): void {
-  try {
-    for (const k of DEMO_DATA_KEYS) window.localStorage.removeItem(k + '.demo');
-    window.sessionStorage.removeItem('rf.demo.welcomed');
-  } catch {
-    /* storage blocked: nothing to reset */
-  }
-}
-
 function writeIfAbsent(key: string, value: unknown): void {
   try {
     if (window.localStorage.getItem(key) === null) {
@@ -152,12 +126,8 @@ async function fetchSpec(file: string): Promise<GarageRobot['versions'][number][
   return null;
 }
 
-/* Reset and seed every demo twin. Each entry into the demo starts
- * fresh. The Garage robots are demo copies of Robodex robots with
- * their recorded specs (static assets — no Worker call); a spec that
- * can't load just means that robot isn't seeded. */
+/* Seed missing stores only; never replace an existing demo workshop. */
 export async function seedDemoStores(): Promise<void> {
-  resetDemoSandbox();
   writeIfAbsent(INVENTORY_KEY + '.demo', demoInventory());
   /* Demo ownership state (§11): the demo sandbox shows the Prusa
    * printer as on hand so both badges — and the derived build-plan

@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setDemoMode, useDemoMode } from "@/lib/demoMode";
+import { saveSession } from "@/lib/auth";
 import { seedDemoStores } from "@/lib/demoSeed";
 
 export default function DemoEntryButton({
@@ -37,6 +38,7 @@ export default function DemoEntryButton({
           /* seeding is best-effort; the demo still opens */
         }
         setDemoMode(true);
+        saveSession(null);
         router.push(to);
       }}
     >

@@ -58,11 +58,13 @@ export default function AccountControl() {
 
   /* Enter the demo from the account panel: the same seed + flag
    * as the anonymous entries, so there is exactly one sandbox.
-   * The session is never touched — rf.auth.v1 is not a demo-twin
-   * key, and coming back restores this panel exactly as it was. */
-  const startDemo = useCallback(() => {
-    seedDemoStores();
+   * Entering signs out the real account; its saved robots and parts
+   * remain untouched. Leaving the demo requires signing in again. */
+  const startDemo = useCallback(async () => {
+    await seedDemoStores();
     setDemoMode(true);
+    saveSession(null);
+    setSession(null);
     setOpen(false);
     router.push("/garage/");
   }, [router]);
@@ -134,7 +136,7 @@ export default function AccountControl() {
       if (token) {
         try {
           const user = await authMe(token);
-          if (!cancelled) {
+          if (!cancelled && (frag.token || loadSession()?.token === token)) {
             adopt({ token, user });
             /* A social login completing is an authentication
              * too: if it was started from inside the demo, exit
@@ -144,7 +146,7 @@ export default function AccountControl() {
             if (frag.token && isDemoMode()) switchToAccount();
           }
         } catch {
-          if (!cancelled) adopt(null);
+          if (!cancelled && loadSession()?.token === token) adopt(null);
         }
       }
     })();
