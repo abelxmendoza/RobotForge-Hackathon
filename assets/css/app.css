@@ -1396,6 +1396,7 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
 .dex-local{font-size:var(--fs-xs)}
 .dex-cell{display:grid;gap:8px;align-content:start}
 .dex-bring{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dex-ph-link{display:block;color:inherit}
 .dex-family{margin-bottom:var(--s5)}
 .dex-family-name{font:700 var(--fs-lg)/1.2 var(--font);margin:0 0 var(--s2)}
 .dex-variant{margin-bottom:var(--s4)}

@@ -193,6 +193,12 @@ export interface EngineData {
   intents?: IntentsData | null;
   root?: string;
   toolsMaterials?: () => TmSnapshotData | null;
+  /* The names of the user's OWN robots: the active robots in their
+   * Workshop, read at answer time through the store layer (demo mode
+   * reads the demo twin). Wrench uses it to tell "your robot" apart
+   * from a Robodex/catalog robot. Absent = ownership unknown, and
+   * answers say nothing about it. */
+  myRobots?: () => string[];
 }
 
 export interface Hit {

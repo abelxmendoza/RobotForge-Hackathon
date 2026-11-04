@@ -61,11 +61,9 @@ export default function RobotsIndex() {
   const dex = useDexSources();
   /* Default tab: My robots when you have any, otherwise Researched. */
   const shown: DexSource =
-    source ?? (dex.garageByTab.mine.length || dex.showOmegaSpecimen ? "mine" : "researched");
+    source ?? (dex.garageByTab.mine.length ? "mine" : "researched");
   const counts: Record<DexSource, number | null> = {
-    mine: dex.mine
-      ? dex.garageByTab.mine.length + (dex.showOmegaSpecimen ? 1 : 0)
-      : null,
+    mine: dex.mine ? dex.garageByTab.mine.length : null,
     sighted:
       dex.sightingsByTab.sighted.length +
       dex.catalogByTab.sighted.length +
@@ -169,7 +167,7 @@ export default function RobotsIndex() {
       </p>
 
       {shown === "mine" ? (
-        <MyRobotsGrid mine={dex.mine === null ? null : dex.garageByTab.mine} showSpecimen={dex.showOmegaSpecimen} />
+        <MyRobotsGrid mine={dex.mine === null ? null : dex.garageByTab.mine} />
       ) : shown === "sighted" ? (
         <>
           {dex.catalogByTab.sighted.length > 0 && (

@@ -674,6 +674,122 @@ function chipsForRobot(robot: RobotData): string[] {
   ];
 }
 
+/* ---------------- yours vs the Robodex (2026-11-04) ----------------
+ * The user's robots are exactly the active robots in their Workshop
+ * — the same list the Robodex's My robots tab shows. Every other
+ * robot Wrench knows (the Robodex catalog, sightings, Omega1's
+ * records) is a reference robot, not theirs, and Wrench says which
+ * is which instead of blurring them. */
+
+function ownedNames(data: EngineData): string[] | null {
+  if (!data.myRobots) return null;
+  try {
+    return data.myRobots();
+  } catch {
+    return null;
+  }
+}
+
+function ownsName(owned: string[], name: string): boolean {
+  const key = slugify(name);
+  return owned.some((n) => slugify(n) === key);
+}
+
+const MY_ROBOTS_ASK =
+  /^(?:(?:what|which) robots (?:do i (?:have|own)|are mine|are my own|have i got)|(?:what|which|who) are my robots|(?:show|list|show me) my robots|my robots|which (?:ones|robots) (?:are|is) mine|which robots belong to me)\s*[?.!]*$/i;
+const IS_MINE_ASK =
+  /^(?:is|are) (?:the )?"?(.+?)"? (?:mine|my robots?|one of my robots|in my workshop)\s*[?.!]*$|^do i (?:own|have) (?:a |an |the )?"?(.+?)"?(?: robot)?\s*[?.!]*$/i;
+
+function workshopHit(root: string): Hit {
+  const base = root ? root.replace(/\/?$/, "/") : "/";
+  return { kind: "route", label: "Your Workshop", route: base + "garage/" };
+}
+
+function myRobotsHit(root: string): Hit {
+  const base = root ? root.replace(/\/?$/, "/") : "/";
+  return { kind: "route", label: "Robodex — My robots", route: base + "robots/#source=mine" };
+}
+
+function myRobotsAnswer(owned: string[], root: string): AnswerResult {
+  const list = owned.map((n) => "<strong>" + esc(n) + "</strong>").join(", ");
+  const html = owned.length
+    ? "<p>Your robots are the ones in your Workshop: " + list + ". That is exactly what " +
+      "My robots in the Robodex shows.</p><p>Every other robot in the Robodex " +
+      "(researched, sighted or from photos) is a reference robot, not yours. Bring one into " +
+      "your Workshop and it becomes one of yours.</p>"
+    : "<p>You don&rsquo;t have any robots of your own yet: your Workshop is empty, so My " +
+      "robots in the Robodex is empty too. The Robodex robots are reference robots, not " +
+      "yours. Bring one into your Workshop from a photo, a spec file or the Robodex and it " +
+      "becomes yours.</p>";
+  return { html, hits: [workshopHit(root), myRobotsHit(root)] };
+}
+
+/* The Robodex robot the WHOLE phrase names: its full name, or a
+ * trailing part of it ("Spot", "Waffle Pi"). A phrase that merely
+ * mentions a robot ("a battery for Andino") names none, so parts and
+ * tools questions keep their normal handling. */
+function namedDexRobot(name: string, robots: RobotData[]): RobotData | null {
+  const asked = tokens(name).join(" ");
+  if (!asked) return null;
+  return robots.find((r) => {
+    const toks = tokens(r.name);
+    for (let i = 0; i < toks.length; i++) {
+      const tail = toks.slice(i).join(" ");
+      if (tail === asked && (i === 0 || tail.length >= 3)) return true;
+    }
+    return false;
+  }) || null;
+}
+
+function isMineAnswer(name: string, owned: string[], robots: RobotData[], root: string): AnswerResult {
+  const dex = namedDexRobot(name, robots);
+  if (ownsName(owned, name) || (dex && ownsName(owned, dex.name))) {
+    const shown = owned.find((n) => slugify(n) === slugify(name)) || (dex ? dex.name : name);
+    return {
+      html: "<p>Yes. <strong>" + esc(shown) + "</strong> is in your Workshop, so it is one of " +
+        "your robots and it shows under My robots in the Robodex.</p>",
+      hits: [workshopHit(root), myRobotsHit(root)],
+    };
+  }
+  if (dex) {
+    return {
+      html: "<p>No. <strong>" + esc(dex.name) + "</strong> is a Robodex robot, not one of " +
+        "yours: it isn&rsquo;t in your Workshop. Say &ldquo;move &quot;" + esc(dex.name) +
+        "&quot; to my robots&rdquo; to bring it in from its recorded spec.</p>",
+      hits: [{ kind: "robot", id: slugify(dex.name), label: dex.name, route: robotRoute(root, dex) }, workshopHit(root)],
+    };
+  }
+  if (slugify(name) === OMEGA1_SLUG) {
+    return {
+      html: "<p>Not right now. <strong>Omega1</strong> isn&rsquo;t in your Workshop, so it " +
+        "isn&rsquo;t one of your robots here. Open it from the Workshop link and a copy is " +
+        "added from its records.</p>",
+      hits: [{ kind: "route", label: "Workshop — Omega1", route: workshopRoute(root) }],
+    };
+  }
+  return {
+    html: "<p>I don&rsquo;t see a robot called <strong>" + esc(name) + "</strong> in your " +
+      "Workshop, so it isn&rsquo;t one of your robots.</p>",
+    hits: [workshopHit(root), myRobotsHit(root)],
+  };
+}
+
+/* One line under an answer about a single Robodex robot: is it yours? */
+function ownershipNote(ans: AnswerResult, owned: string[] | null, robots: RobotData[]): AnswerResult {
+  if (!owned || ans.fallback) return ans;
+  const robotHits = (ans.hits || []).filter((h) => h.kind === "robot");
+  if (robotHits.length !== 1) return ans;
+  const robot = robots.find((r) => slugify(r.name) === robotHits[0].id);
+  if (!robot) return ans;
+  const name = robot.name;
+  const note = ownsName(owned, name)
+    ? "<p class=\"fc-dim\">You also have <strong>" + esc(name) + "</strong> in your " +
+      "Workshop. The answer above is the Robodex record; your copy lives in the Workshop.</p>"
+    : "<p class=\"fc-dim\"><strong>" + esc(name) + "</strong> is a Robodex robot, not " +
+      "one of yours.</p>";
+  return { ...ans, html: ans.html + note };
+}
+
 /* ---------------- the wrench ---------------- */
 
 export function createWrench(data: EngineData): Wrench {
@@ -681,7 +797,8 @@ export function createWrench(data: EngineData): Wrench {
   const root = data.root || "";
   const robots = (data.robots || []).slice().sort((a, b) => Number(a.number) - Number(b.number));
 
-  function finish(ans: AnswerResult, mem: TurnMemory): TurnResult {
+  function finish(raw: AnswerResult, mem: TurnMemory): TurnResult {
+    const ans = ownershipNote(raw, ownedNames(data), robots);
     return {
       html: ans.html,
       chips: ans.chips,
@@ -696,6 +813,23 @@ export function createWrench(data: EngineData): Wrench {
     const q = String(question || "");
     const qt = tokens(q);
     if (!qt.length) return finish(engine.answer(q), mem);
+
+    /* Yours vs the Robodex: "what robots do I have?", "is Spot mine?" */
+    const owned = ownedNames(data);
+    if (owned) {
+      const trimmed = q.trim();
+      if (MY_ROBOTS_ASK.test(trimmed)) return finish(myRobotsAnswer(owned, root), mem);
+      const mine = IS_MINE_ASK.exec(trimmed);
+      const askedName = mine ? (mine[1] || mine[2] || "").trim() : "";
+      /* "do I have …" also asks about parts and tools: answer it here
+       * only when it names a robot (yours, a Robodex one, or Omega1). */
+      const namesRobot = (n: string) =>
+        ownsName(owned, n) || !!namedDexRobot(n, robots) || slugify(n) === OMEGA1_SLUG;
+      if (askedName && !/^(?:any|anything|robots?)$/i.test(askedName) &&
+          (mine![1] ? true : namesRobot(askedName))) {
+        return finish(isMineAnswer(askedName, owned, robots, root), mem);
+      }
+    }
 
     /* Failure explanations come from the record, structured —
      * they pre-empt the generic robot answer for why/fix asks. */
@@ -738,6 +872,13 @@ export function createWrench(data: EngineData): Wrench {
       (qt.some((t) => PERSON_REF.indexOf(t) !== -1) || isFollowUp(qt));
     if ((named || carried) && !omega1HowTo(qt) && !matchRobot(qt, robots)) {
       const oa = omega1Answer(qt, root);
+      if (owned) {
+        oa.html += ownsName(owned, OMEGA1_NAME)
+          ? "<p class=\"fc-dim\">Omega1 is in your Workshop, so it is one of your robots.</p>"
+          : "<p class=\"fc-dim\">Omega1 isn&rsquo;t in your Workshop right now, so it isn&rsquo;t " +
+            "one of your robots here and My robots doesn&rsquo;t list it. Open it from the " +
+            "Workshop link to add a copy from its records.</p>";
+      }
       return { ...finish(oa, mem), memory: OMEGA1_MEM };
     }
 

@@ -139,7 +139,27 @@ function engineData() {
       readStore<ConstraintsProfile>(PROFILE_KEY, DEFAULT_PROFILE),
       new Date().toISOString(),
     ),
+    /* Your robots = the active robots in your Workshop, read at answer
+     * time (the same list the Robodex's My robots tab shows). */
+    myRobots: myRobotNames,
   };
+}
+
+function myRobotNames(): string[] {
+  return readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, [])).map((r) => r.name);
+}
+
+/* The live model gets the same line Wrench answers from: which robots
+ * are the user's own (their Workshop), so it never calls a Robodex
+ * robot "yours". Appended to the message, inside the Worker's 2,000
+ * character cap; dropped when it would not fit. */
+const LIVE_MESSAGE_CAP = 2000;
+function withOwnership(q: string): string {
+  const names = myRobotNames().slice(0, 20).map((n) => n.slice(0, 60));
+  const line = "\n\n(App context, not typed by the user: the user's own robots are exactly the ones in their RobotForge Workshop" +
+    (names.length ? ": " + names.join(", ") + "." : ", which is empty right now.") +
+    " Every other robot, including Robodex and catalogue robots, is a reference robot, not theirs.)";
+  return q.length + line.length <= LIVE_MESSAGE_CAP ? q + line : q;
 }
 
 function buildEngine(): Engine {
@@ -535,7 +555,7 @@ export function useForgeAssistant() {
             : {}),
         },
         body: JSON.stringify({
-          message: q,
+          message: withOwnership(q),
           ...(ws
             ? {
                 ws_context: buildWsContext(
@@ -1160,7 +1180,7 @@ export function useForgeAssistant() {
           if (command.kind === 'help') {
             noteBubble('Submit a robot: paste its GitHub repo link (https://github.com/owner/repo) and I open the repo importer with it, or attach a photo, parts list or spec file with the paperclip. Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Robodex filing: move "Spot" to sighted; put "Andino" under from photos; recategorize "TurtleBot3 Waffle Pi" as researched; reset categorization for "Spot". Filing only changes where the Robodex shows a robot — except moving one to my robots, which brings it into your Workshop from its recorded spec first. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Upgrades: add a Raspberry Pi 5 to this rover (one proposal with power, converter, wiring, mount and checks; Approve saves one version). Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Navigation: open "TurtleBot3 Burger"; go to wiring; show the legged robots. Free-form operation requests (for example “make Omega1’s wheels bigger”) go to the live model when it is available: it proposes a command in this same grammar, the app validates it, and you still tap Apply. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
-            noteBubble(saved.length ? saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') : 'No robots saved in this browser yet. Add one in My robots.');
+            noteBubble(saved.length ? 'Your robots (the ones in your Workshop, same as My robots in the Robodex):\n' + saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') + '\nEvery other Robodex robot is a reference robot, not yours.' : 'You have no robots of your own yet: your Workshop is empty. Robodex robots are reference robots, not yours.');
           } else if (command.kind === 'undo') {
             const last = lastApplied.current;
             if (!last) throw new Error('No chat change to undo in this session.');

@@ -91,17 +91,31 @@ def test_my_robots_is_the_workshops_list():
     assert "readStore<GarageRobot[]>(GARAGE_KEY" not in DEX.split("BringIntoWorkshop")[0]
     # same archived-records filter the Workshop applies
     assert "activeRecords(stored)" in DEX
-    # same built-in Omega1 specimen rule as Garage.tsx: shown while
-    # no stored 'omega1' exists
-    assert "!stored.some((r) => r.id === OMEGA1_ROBOT_ID)" in DEX
-    garage = (WEB / "src/components/garage/Garage.tsx").read_text()
-    assert "OMEGA1_ROBOT_ID" in garage
-    # adopting from the Robodex writes the lib's seed entry — the
-    # same fixed-id Baseline record the Workshop's adopt writes
-    assert "buildOmega1SeedEntry" in DEX
-    omega_lib = (WEB / "src/lib/omega1Garage.ts").read_text()
-    assert "export function buildOmega1SeedEntry" in omega_lib
-    assert "id: OMEGA1_ROBOT_ID" in omega_lib
+    # nothing else: the Workshop hides the built-in Omega1 specimen,
+    # so My robots never adds it either (Abel, 2026-11-04) — Omega1
+    # shows here only once it is a stored Workshop robot
+    assert "OMEGA1_ROBOT_ID" not in DEX
+    assert "showOmegaSpecimen" not in DEX
+    assert "Adopt as my robot" not in DEX
+    index = (WEB / "src/components/robots/RobotsIndex.tsx").read_text()
+    assert "showOmegaSpecimen" not in index
+    assert "mine: dex.mine ? dex.garageByTab.mine.length : null" in index
+
+
+def test_only_your_robot_cards_can_be_deleted():
+    # the Workshop's own delete operation, snapshot-guarded, with the
+    # same clean-up of scans, notes and the unsaved draft
+    assert "deleteRobotInStore(" in DEX
+    assert "recordSnapshot(robot)" in DEX
+    assert "forgetRobotScans(robot.id)" in DEX
+    assert "forgetRobotNotes(robot.id)" in DEX
+    card = DEX.split("export function GarageRobotCard")[1].split("export function MyRobotsGrid")[0]
+    assert ">Delete</button>" in card and "Yes, delete" in card
+    # catalog and sighting cards carry no Delete
+    sightings = DEX.split("export function SightingsGroups")[1]
+    assert "Delete" not in sightings
+    index = (WEB / "src/components/robots/RobotsIndex.tsx").read_text()
+    assert "deleteGarageRobot" not in index and ">Delete<" not in index
 
 
 # ------------------------------------------------------------------ 3. Spot
