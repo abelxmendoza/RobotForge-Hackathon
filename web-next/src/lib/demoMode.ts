@@ -25,6 +25,7 @@ export const DEMO_EVENT = 'rf-demo-change';
 export const DEMO_DATA_KEYS: ReadonlySet<string> = new Set([
   'rf.garage.v1',
   'rf.inventory.v1',
+  'rf.simruns.v1',
   'rf.assemblies.v1',
   'rf.buildplan.v1',
   'rf.ownership.v1',

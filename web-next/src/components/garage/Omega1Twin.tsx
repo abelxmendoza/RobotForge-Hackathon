@@ -11,6 +11,8 @@
 import { useState } from 'react';
 import { assetPath } from '@/components/home/asset';
 import TwinView from './TwinView';
+import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
+import {omega1SeedSpec} from '@/lib/omega1Garage';
 import {
   OMEGA1_CHECK_LINES, OMEGA1_FACTS, OMEGA1_PHOTO, TWIN_ESTIMATE_NOTE, TWIN_LABEL, TWIN_NOT_GENERATED,
   omega1Parts, omega1Rover, twinSubjects,
@@ -185,32 +187,11 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
         </section>
       )}
 
-      {tab === 'simulate' && (
-        <section aria-label="Omega1 simulate — not gated">
-          <h3>Simulation</h3>
-          <p>
-            <span className="fbadge planned">NOT GATED</span> No recorded driving-gate run exists for
-            Omega1 — it has never been put through the Workshop&apos;s driving test, and no result is
-            claimed for it here.
-          </p>
-          <p>
-            Forge Tests are <strong>NOT_CHECKED</strong> for Omega1: the acceptance tests need recorded
-            spec inputs the Workshop does not hold for this robot — measured mass, wheel diameter and
-            motor data. Those live in its measuring worksheet (docs/omega1/MEASURE.md) and are not
-            loaded as Workshop spec fields.
-          </p>
-          <h4>Twin physics — ProjectSim estimates, not measurements</h4>
-          <ul className="twin-physics">
-            {omega1Rover.physics.map((p) => (
-              <li key={p.label}><span className="faint">{p.label}</span> {p.value}</li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {tab === 'simulate' && <><SimulationWorkspace spec={omega1SeedSpec()} robotId="builtin-omega1" versionId="built-in-documented-spec" /><details className="ws-disclosure"><summary>Twin physics — ProjectSim estimates, not measurements</summary><p><span className="fbadge planned">NOT GATED</span> No recorded driving gate is claimed for this built-in specimen. Missing measured mass, wheel diameter and motor data stay NOT_CHECKED until recorded in your saved robot.</p><ul>{omega1Rover.physics.map(p=><li key={p.label}>{p.label}: {p.value}</li>)}</ul></details></>}
 
       {tab === 'checks' && (
         <section aria-label="Omega1 checks — from its records">
-          <h3>Checks from the records</h3>
+          <SavedSimulationRuns robotId="builtin-omega1" /><h3>Checks from the records</h3>
           <p className="faint g-small">
             Only what Omega1&apos;s own records state, in the Workshop&apos;s check-line shape. The gaps
             are named as NOT_CHECKED, and no overall pass is claimed for Omega1 — no gate has run on it.

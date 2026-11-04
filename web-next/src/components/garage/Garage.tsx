@@ -29,6 +29,7 @@ import { promptWrench } from '@/lib/wrenchPrompt';
 import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_FIX_EVENT } from '@/lib/workshopContext';
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
+import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
 import OverviewTurntable from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
 import { cardImagesOf } from '@/lib/repoImport';
@@ -74,19 +75,19 @@ const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
+  { id: 'bom', label: 'BOM', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4' },
   { id: 'checks', label: 'Test', icon: 'M4 12l5 5L20 6' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
+  { id: 'simulate', label: 'Simulate', icon: 'M8 4l12 8-12 8z' },
 ];
 
-// Preserve existing chat and result links while showing five main destinations.
+// Preserve old specs/tools deep links alongside the seven main destinations.
 function mainTab(tab: WorkTab): WorkTab {
-  if (tab === 'bom' || tab === 'tools') return 'build';
-  if (tab === 'simulate') return 'checks';
+  if (tab === 'tools') return 'bom';
   if (tab === 'specs') return 'overview';
   return tab;
 }
-const BUILD_SECTIONS = [{ id: 'build', label: 'Assembly' }, { id: 'bom', label: 'Parts list' }, { id: 'tools', label: 'Tools & materials' }] as const;
-const TEST_SECTIONS = [{ id: 'checks', label: 'Checks' }, { id: 'simulate', label: 'Simulation' }] as const;
+const BOM_SECTIONS = [{ id: 'bom', label: 'Parts list' }, { id: 'tools', label: 'Tools & materials' }] as const;
 type BrowserDraft = { baseline: string; spec: Spec; label: string; note: string; planned: boolean };
 const draftKey = (id: string) => `robotforge.workshop.draft.${id}`;
 
@@ -590,7 +591,8 @@ export default function Garage() {
 
   useEffect(() => {
     if (!ready) return;
-    const next = activeSelection(activeRobots, selected);
+    const requested=window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)/)?.[1];
+    const next = activeSelection(activeRobots, selected??(activeRobots.some(r=>r.id===requested)?requested!:null));
     if (next !== selected) setSelected(next);
   }, [ready, activeRobots, selected]);
 
@@ -1122,8 +1124,8 @@ export default function Garage() {
         {(mainTab(barTab) === 'overview' || barDisabled) && <WrenchStart expanded={barDisabled} />}
         {tabBar}
         {!barDisabled && <div className="ws-taskbar">
-          {(mainTab(barTab) === 'build' || mainTab(barTab) === 'checks') && <div className="ws-sections" role="group" aria-label={mainTab(barTab) === 'build' ? 'Build sections' : 'Test sections'}>
-            {(mainTab(barTab) === 'build' ? BUILD_SECTIONS : TEST_SECTIONS).map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
+          {mainTab(barTab) === 'bom' && <div className="ws-sections" role="group" aria-label="BOM sections">
+            {BOM_SECTIONS.map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
           </div>}
           <button type="button" className="btn btn-sm ws-edit-specs" onClick={() => goTab('specs')}>{twinOpen ? 'View specs' : 'Specs'}</button>
         </div>}
@@ -1383,7 +1385,7 @@ export default function Garage() {
             )}
 
             {tab === 'simulate' && (
-              <SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} />
+              <><SimulationWorkspace spec={draft} robot={robot} robotId={robot.id} versionId={(unsaved.length?'draft:':'')+(latest?.id||'new')} /><details className="ws-disclosure"><summary>Estimates and advanced simulation options</summary><SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} /></details></>
             )}
 
             {tab === 'bom' && (
@@ -1446,7 +1448,7 @@ export default function Garage() {
 
             {tab === 'checks' && (
             <section className="g-compare ws-pane" aria-label="Checks">
-              <h3>Engineering checks</h3>
+              <SavedSimulationRuns robotId={robot.id} /><h3>Engineering checks</h3>
               <p className="g-small faint">Calculated from your specs; these are not physical test results.</p>
               <Findings lines={draftLines} />
               <details className="ws-disclosure"><summary>Compare with a saved version</summary>
