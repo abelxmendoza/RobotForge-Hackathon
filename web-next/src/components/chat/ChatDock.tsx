@@ -9,6 +9,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { conversationMessage, spawnDesignPrompt, contextualWebIntent } from "@/lib/museConversation";
+import { promptWrench } from "@/lib/wrenchPrompt";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createEngine,
@@ -108,7 +110,7 @@ const DEFAULT_CHIPS = [
 const SUB_CHECKING =
   "Live AI, grounded in RobotForge\u2019s data. Connecting to the live model\u2026";
 const SUB_LIVE =
-  "Live AI, grounded in RobotForge\u2019s data: the Robodex, the parts catalogue and the recorded gate reports answer first, and anything they don\u2019t cover goes to the live model, badged LIVE MODEL.";
+  "Live AI, grounded in RobotForge\u2019s data: Muse handles conversation with recent context; explicit app commands still use checked previews. Live replies are badged LIVE MODEL.";
 const SUB_OFF =
   "The live AI is switched off or out of budget for today, so answers come from RobotForge\u2019s recorded data: the Robodex, the parts catalogue and the recorded gate reports.";
 const SUB_RECORDED =
@@ -309,6 +311,8 @@ export function useForgeAssistant() {
   }, [pathname, wrench]);
 
   const [messages, setMessages] = useState<Msg[]>(() => carry.messages);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [chips, setChipsState] = useState<string[]>(
     () => carry.chips ?? chipsFor(carry.memory)
   );
@@ -487,7 +491,7 @@ export function useForgeAssistant() {
    * demo. */
   const fetchWebResult = useCallback(
     async (q: string): Promise<WebFetchResult | null> => {
-      const intent = detectWebIntent(q);
+      const intent = contextualWebIntent(q, messagesRef.current, detectWebIntent(q));
       if (!intent) return null;
       const h = await checkLive();
       if (!h || !h.routes || !h.routes.web) return null;
@@ -569,7 +573,7 @@ export function useForgeAssistant() {
             : {}),
         },
         body: JSON.stringify({
-          message: withOwnership(q),
+          message: conversationMessage(withOwnership(q), messagesRef.current),
           ...(ws
             ? {
                 ws_context: buildWsContext(
@@ -1360,7 +1364,7 @@ export function useForgeAssistant() {
             ? { Authorization: "Bearer " + sessionToken() }
             : {}),
         },
-        body: JSON.stringify({ message: q, op_context: buildOpContext() }),
+        body: JSON.stringify({ message: conversationMessage(q, messagesRef.current), op_context: buildOpContext() }),
       });
       const body = (await res.json().catch(() => null)) as
         | { answer?: unknown; command?: unknown }
@@ -1466,6 +1470,13 @@ export function useForgeAssistant() {
         }
         return;
       }
+      const designPrompt = spawnDesignPrompt(q, messagesRef.current);
+      if (designPrompt) {
+        noteBubble('I carried the robot and parts you described into Design a robot. Review the description and send it to generate a new concept, then review and save the result. Nothing has been added to your Workshop yet.');
+        // The submit handler clears its input and busy flag before this handoff.
+        window.setTimeout(() => promptWrench({mode:'design',text:designPrompt}), 0);
+        return;
+      }
       if (runCommands(q)) return;
       const nav = parseNavCommand(q, navContext());
       if (nav) { doNav(nav); return; }
@@ -1488,7 +1499,7 @@ export function useForgeAssistant() {
       }
       const waitId = appendMsg({
         who: "bot",
-        html: '<p class="fc-dim">Checking the recorded data&hellip;</p>',
+        html: '<p class="fc-dim">Thinking&hellip;</p>',
       });
       const done = (ans: AnswerResult & { sources?: SourceRef[]; grounding?: Msg["grounding"]; finds?: WebFind[]; images?: string[] }) => {
         setMessages((prev) =>
@@ -1510,6 +1521,12 @@ export function useForgeAssistant() {
         const turn = wrench.answerTurn(q, memoryRef.current);
         memoryRef.current = turn.memory || {};
         let ans: AnswerResult & { sources?: SourceRef[] } = turn;
+        // Ordinary signed-in conversation is Muse-first. Recorded fuzzy matches
+        // cannot answer a different question or replace a failed live request.
+        if (!demoRef.current && !isDemoRequest(q)) ans = {
+          html: '<p>The live model is unavailable for this conversation. Nothing was changed. Try again, or use the recorded demo.</p>',
+          fallback: true,
+        };
         /* A question about the Workshop robot on screen: the recorded
          * catalogue can't answer it (its fuzzy match can land on an
          * unrelated part), so it goes live with the snapshot, and the
@@ -1524,8 +1541,8 @@ export function useForgeAssistant() {
             fallback: true,
           };
         }
-        /* Recorded answers stay the default and stay instant: only
-         * the engine's honest fallback may go live. In demo mode the
+        /* Demo answers stay recorded; ordinary account conversation
+         * uses the live model before fuzzy catalogue matches. In demo mode the
          * fallback stays recorded too, with the demo note attached —
          * no /health probe, no /chat call. */
         if (!ans.fallback || !liveBase() || demoRef.current) {
