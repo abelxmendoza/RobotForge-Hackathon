@@ -324,6 +324,16 @@ function SaveToRobots({ spec }: { spec: RobotSpec }) {
   );
 }
 
+/* "Omega1", "make omega-1", "the Freenove 4WD car": a bare ask for the
+ * built-in robot, with no change words that would make it a new design. */
+export function omega1Ask(value: string): boolean {
+  const t = value.toLowerCase();
+  const names = /\bomega[\s-]?1\b|\bfreenove\b|\bfnk0043\b/.test(t);
+  if (!names) return false;
+  const changes = /\b(with|but|plus|add|adding|bigger|smaller|taller|wider|faster|instead|swap|replace|replacing|upgrade|upgraded|without|more|less|modify|modified|like)\b/.test(t);
+  return !changes && t.split(/\s+/).filter(Boolean).length <= 12;
+}
+
 export default function ForgeThread({ docked = false }: { docked?: boolean } = {}) {
   /* Docked (the Workshop): only the oval composer shows at the bottom of
    * the page, like the bar on other pages; the conversation opens above
@@ -641,6 +651,20 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     async (value: string) => {
       beginRun('Words');
       pushUser(value);
+      /* Omega1 (a Freenove FNK0043 4WD car) is built into every account:
+       * asking for it by name opens the built-in copy, seeded from its
+       * real records, instead of generating a new guess. A description
+       * that changes it ("Omega1 with a lidar") still goes to the model. */
+      if (omega1Ask(value)) {
+        pushNote(
+          <p>
+            Omega1 is already built in, so there is nothing to generate. It is the <strong>Built-in specimen</strong> in the
+            Workshop, seeded from its real records (Freenove FNK0043 4WD kit, Raspberry Pi 4B, 2× 18650). Open it and tap{' '}
+            <strong>Add Omega1 to your Garage</strong> to get your own copy. <Link href="/garage/#omega1">Open Omega1</Link>
+          </p>,
+        );
+        return;
+      }
       const h = await liveHealth();
       if (routeOn(h, 'describe')) {
         const cardId = pushStage(

@@ -73,9 +73,13 @@ export interface DexSighting {
   local: boolean;
 }
 
+/* Catalog dossiers record the spec as `draft_spec`; sightings saved in
+ * this browser store the Forge's PhotoDraft itself, whose spec is
+ * `spec`. Either one is the recorded spec. */
 function draftSpecOf(dossier: unknown): Spec | null {
   if (!dossier || typeof dossier !== "object") return null;
-  const spec = (dossier as { draft_spec?: unknown }).draft_spec;
+  const d = dossier as { draft_spec?: unknown; spec?: unknown };
+  const spec = d.draft_spec ?? d.spec;
   return spec && typeof spec === "object" && !Array.isArray(spec)
     ? (spec as Spec)
     : null;
@@ -343,7 +347,7 @@ export function FiledGarageGrid({ robots: filed, tab }: { robots: GarageRobot[];
  * Catalog and browser-saved sightings share these grids. */
 export function SightingsGroups({ items, source, hasOther = false }: {
   items: DexSighting[];
-  source: "sighted" | "photos";
+  source: "sighted" | "photos" | "researched";
   hasOther?: boolean;
 }) {
   if (!items.length && hasOther) return null;

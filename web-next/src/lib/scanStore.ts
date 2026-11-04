@@ -2,7 +2,7 @@
 /* The scan files themselves, in this browser's IndexedDB. They are not
  * uploaded anywhere and are not part of Save to account (too big). */
 import { isDemoMode } from './demoMode';
-import { scanKey, slotScanKey, type ScanKind } from './scan3d';
+import { SCAN_SLOTS, scanKey, slotScanKey, type ScanKind } from './scan3d';
 
 const DB = 'robotforge-scans-v1';
 const STORE = 'scans';
@@ -60,4 +60,14 @@ export async function readSlotScanFile(robotId: string, kind: ScanKind): Promise
 
 export async function removeSlotScanFile(robotId: string, kind: ScanKind): Promise<void> {
   await run('readwrite', (s) => s.delete(slotScanKey(robotId, kind, isDemoMode())));
+}
+
+/* Every scan file a robot owns (the Overview scan plus each slot).
+ * Only for a robot that is being deleted or started over, never for
+ * Archive: an archived robot keeps its scans for Restore. */
+export async function forgetRobotScans(robotId: string): Promise<void> {
+  const keys = [scanKey(robotId, isDemoMode())].concat(
+    SCAN_SLOTS.map((slot) => slotScanKey(robotId, slot.kind, isDemoMode())),
+  );
+  await run('readwrite', (s) => { keys.forEach((k) => s.delete(k)); });
 }

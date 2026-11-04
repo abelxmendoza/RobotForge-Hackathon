@@ -50,7 +50,8 @@ import {
 import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { activeRecords, activeSelection, archivedRecords, recordSnapshot } from '@/lib/lifecycle';
-import { archiveRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
+import { archiveRobotInStore, deleteArchivedRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
+import { forgetRobotScans } from '@/lib/scanStore';
 
 const now = () => new Date().toISOString();
 
@@ -527,6 +528,18 @@ export default function Garage() {
     return () => window.removeEventListener('hashchange', check);
   }, [activeRobots]);
 
+  /* #omega1 opens the built-in Omega1 specimen (Wrench and the Forge
+   * link here instead of generating Omega1 from scratch). */
+  useEffect(() => {
+    const check = () => {
+      if (window.location.hash === '#omega1') { setTwinOpen(true); setAdding(false); setOmegaTab('overview'); }
+    };
+    if (!ready) return;
+    check();
+    window.addEventListener('hashchange', check);
+    return () => window.removeEventListener('hashchange', check);
+  }, [ready]);
+
   useEffect(() => { liveHealth().then(setHealth); }, []);
   const lm = useLiveMode('fix', 'mock');
   /* Each Forge loop run gets a token; switching robots or editing the
@@ -592,13 +605,26 @@ export default function Garage() {
    * it) is the one Abel improves. Seeded from the records only —
    * lib/omega1Garage.ts holds the seed and its provenance. Shown
    * only while no stored 'omega1' exists; adopting selects it. */
-  const storedOmega1 = robots.find((r) => r.id === OMEGA1_ROBOT_ID) ?? null;
+  /* Only an ACTIVE stored copy counts: an archived Omega1 stays in
+   * Archived robots (restore it, or delete it forever to start fresh). */
+  const storedOmega1 = activeRobots.find((r) => r.id === OMEGA1_ROBOT_ID) ?? null;
+  const archivedOmega1 = archivedRobots.find((r) => r.id === OMEGA1_ROBOT_ID) ?? null;
+  const freshOmega1 = (): GarageRobot => ({
+    id: OMEGA1_ROBOT_ID, name: 'Omega1', createdAt: now(),
+    versions: [{ id: uid('v'), label: 'Baseline', note: OMEGA1_SEED_NOTE, source: OMEGA1_SEED_SOURCE, createdAt: now(), spec: omega1SeedSpec() }],
+  });
+  /* Scan files live in IndexedDB under the robot id, so a fresh start
+   * clears them too; failures here only leave an unused file behind. */
+  const clearOmega1Scans = () => {
+    void forgetRobotScans(OMEGA1_ROBOT_ID).catch(() => undefined);
+  };
   const adoptOmega1 = () => {
     if (storedOmega1) { setSelected(OMEGA1_ROBOT_ID); setTwinOpen(false); setAdding(false); return; }
-    const r: GarageRobot = {
-      id: OMEGA1_ROBOT_ID, name: 'Omega1', createdAt: now(),
-      versions: [{ id: uid('v'), label: 'Baseline', note: OMEGA1_SEED_NOTE, source: OMEGA1_SEED_SOURCE, createdAt: now(), spec: omega1SeedSpec() }],
-    };
+    if (archivedOmega1) {
+      setLifecycleNotice('Your earlier Omega1 copy is in Archived robots. Restore it there, or tap Delete forever to start fresh from the records.');
+      return;
+    }
+    const r = freshOmega1();
     persist([...robots, r]);
     setSelected(r.id);
     setAdding(false);
@@ -759,6 +785,44 @@ export default function Garage() {
     setConfirmArchive(null);
     setSelected(next[0]?.id ?? null);
     setLifecycleNotice(`Archived ${robot.name}. You can restore it below.`);
+  };
+  /* Delete forever: only for an archived robot, and it asks first. */
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const deleteForever = (archived: GarageRobot) => {
+    if (confirmDelete !== archived.id) { setConfirmDelete(archived.id); return; }
+    const result = deleteArchivedRobotInStore(
+      () => readStore<GarageRobot[]>(GARAGE_KEY, []), saveRobots,
+      archived.id, recordSnapshot(archived),
+    );
+    setConfirmDelete(null);
+    if (!result.ok) { setSaveError(result.error); return; }
+    void forgetRobotScans(archived.id).catch(() => undefined);
+    setLifecycleNotice(archived.id === OMEGA1_ROBOT_ID
+      ? 'Deleted your Omega1 copy. The built-in Omega1 is still here: open it under Built-in specimen to add a fresh copy from the records.'
+      : `Deleted ${archived.name} for good.`);
+  };
+  /* Start Omega1 over: swap the stored copy for a fresh one seeded
+   * from the records, dropping its versions, scans and photo spin. */
+  const [confirmReset, setConfirmReset] = useState(false);
+  useEffect(() => { setConfirmReset(false); }, [robot?.id]);
+  const resetOmega1 = () => {
+    if (!robot || robot.id !== OMEGA1_ROBOT_ID) return;
+    if (!confirmReset) { setConfirmReset(true); return; }
+    const result = replaceRobotInStore(
+      () => readStore<GarageRobot[]>(GARAGE_KEY, []), saveRobots,
+      robot.id, recordSnapshot(robot), freshOmega1(),
+    );
+    setConfirmReset(false);
+    if (!result.ok) { setSaveError(result.error); return; }
+    /* Drop the old editor draft too: forget the loaded spec so the load
+     * effect doesn't keep unsaved edits, and clear the cached draft so
+     * they aren't restored against the new Baseline. */
+    loadedSpec.current = null;
+    writeStore(draftKey(OMEGA1_ROBOT_ID), null);
+    clearOmega1Scans();
+    setSelected(OMEGA1_ROBOT_ID);
+    setTab('overview');
+    setLifecycleNotice('Omega1 starts over: one Baseline version from its records. Nothing measured yet.');
   };
   const restoreRobot = (archived: GarageRobot) => {
     const result = restoreRobotInStore(
@@ -999,6 +1063,15 @@ export default function Garage() {
                     <span className="faint">{archived.versions.length} version{archived.versions.length === 1 ? '' : 's'} · archived {new Date(archived.archivedAt!).toLocaleDateString()}</span>
                   </span>
                   <button type="button" className="btn btn-sm" onClick={() => restoreRobot(archived)}>Restore</button>
+                  {confirmDelete === archived.id ? (
+                    <span className="g-remove-confirm" role="alert">
+                      Delete {archived.name} and its {archived.versions.length} version{archived.versions.length === 1 ? '' : 's'} for good? This can&apos;t be undone.{' '}
+                      <button type="button" className="btn btn-sm" onClick={() => deleteForever(archived)}>Yes, delete</button>{' '}
+                      <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                    </span>
+                  ) : (
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => deleteForever(archived)}>Delete forever</button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1058,6 +1131,15 @@ export default function Garage() {
                 <div className="g-head-actions">
                 <button type="button" className="btn btn-sm" onClick={saveCopy} title="Save a separate copy of this robot in your Garage — versions and provenance carried over; the original is unchanged">Save a copy</button>
                 <button type="button" className="btn btn-sm" onClick={() => downloadJSON(`${(draft.name || 'robot').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`, draft)}>Export</button>
+                {robot.id === OMEGA1_ROBOT_ID && (confirmReset ? (
+                  <span className="g-remove-confirm" role="alert">
+                    Start Omega1 over? Its {robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}, scans and photos are replaced by one fresh Baseline from its records. This can&apos;t be undone.{' '}
+                    <button type="button" className="btn btn-sm" onClick={resetOmega1}>Yes, start over</button>{' '}
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmReset(false)}>Cancel</button>
+                  </span>
+                ) : (
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={resetOmega1} title="Replace this copy with a fresh one from Omega1's records">Start over from the records</button>
+                ))}
                 {confirmArchive === robot.id ? (
                   <span className="g-remove-confirm" role="alert">
                     Archive {draft.name || robot.name} and its {robot.versions.length} version{robot.versions.length === 1 ? '' : 's'}? You can restore it later.{' '}
