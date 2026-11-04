@@ -222,3 +222,30 @@ footer.site-footer p{max-width:60ch}
 @media (max-width:760px){.verb-cards{grid-template-columns:1fr 1fr}}
 @media (max-width:520px){.verb-cards{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.verb-card{transition:none}.verb-card:hover{transform:none}}
+
+/* ---- "Why I built RobotForge" player (FounderVideo.tsx) ----
+   A framed window in the app's navy + teal: chrome bar, the cropped
+   screen recording, a big teal play button, and a slim control row. */
+.fv{max-width:1000px;margin:0 auto;border-radius:var(--r-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border-strong);box-shadow:0 0 0 1px rgba(66,214,196,.08),0 24px 60px -20px rgba(0,0,0,.65),0 0 80px -30px rgba(66,214,196,.35)}
+.fv:fullscreen{max-width:none;display:flex;flex-direction:column;justify-content:center;background:#000;border-radius:0}
+.fv-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+.fv-dots{display:inline-flex;gap:6px}
+.fv-dots i{width:10px;height:10px;border-radius:50%;background:var(--surface-3);display:block}
+.fv-dots i:first-child{background:var(--accent)}
+.fv-title{font-weight:600;font-size:var(--fs-sm);color:var(--text)}
+.fv-badge{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+.fv-screen{position:relative;background:#050b14;line-height:0}
+.fv-screen video{width:100%;height:auto;display:block;aspect-ratio:1080/640;cursor:pointer;background:#050b14}
+.fv-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);cursor:pointer;box-shadow:0 0 0 10px rgba(66,214,196,.18),0 10px 30px rgba(0,0,0,.5);transition:transform .15s ease,box-shadow .15s ease}
+.fv-play:hover,.fv-play:focus-visible{transform:translate(-50%,-50%) scale(1.06);box-shadow:0 0 0 14px rgba(66,214,196,.22),0 10px 30px rgba(0,0,0,.5);outline:none}
+.fv-play svg{margin-left:4px}
+.fv-play-small{width:58px;height:58px}
+.fv-controls{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-2);border-top:1px solid var(--border)}
+.fv-btn{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.fv-btn:hover,.fv-btn:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.fv-time{font-family:var(--mono);font-size:12px;color:var(--text-muted);min-width:34px;text-align:center}
+.fv-seek{flex:1;min-width:0;height:6px;-webkit-appearance:none;appearance:none;border-radius:99px;cursor:pointer;background:linear-gradient(to right,var(--accent) var(--fv-pct,0%),var(--surface-3) var(--fv-pct,0%))}
+.fv-seek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--text);border:2px solid var(--accent)}
+.fv-seek::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--text);border:2px solid var(--accent)}
+@media (max-width:560px){.fv-badge{display:none}.fv-time:last-of-type{display:none}.fv-play{width:60px;height:60px}}
+@media (prefers-reduced-motion:reduce){.fv-play{transition:none}}
