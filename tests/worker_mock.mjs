@@ -1059,6 +1059,37 @@ await scenario('auth login stamps lastLoginAt and loginCount', async () => {
   assert.ok(!JSON.stringify(me.body).includes('passHash'), 'hash leaked via /auth/me');
 });
 
+await scenario('a sign-in in progress cannot undo a role change', async () => {
+  const env = makeEnv();
+  const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };
+  await call(env, '/auth/register', { method: 'POST',
+    body: { email: 'race@example.com', password: 'password-123' } });
+  await call(env, '/admin/grant-role', { method: 'POST',
+    body: { email: 'race@example.com', role: 'admin' }, ...op });
+  /* Demote the account right after the login has read its record. */
+  const kv = env.RF_LIVE_KV;
+  const get = kv.get.bind(kv);
+  let armed = true;
+  kv.get = async (key, ...rest) => {
+    const value = await get(key, ...rest);
+    if (armed && key === 'auth:user:race@example.com') {
+      armed = false;
+      await kv.put(key, JSON.stringify({ ...JSON.parse(value), role: 'user' }));
+    }
+    return value;
+  };
+  const login = await call(env, '/auth/login', { method: 'POST',
+    body: { email: 'race@example.com', password: 'password-123' } });
+  kv.get = get;
+  assert.strictEqual(login.status, 200, JSON.stringify(login.body));
+  const stored = JSON.parse(await kv.get('auth:user:race@example.com'));
+  assert.strictEqual(stored.role, 'user', 'the login wrote back a stale role');
+  const me = await call(env, '/auth/me',
+    { headers: { Authorization: 'Bearer ' + login.body.token } });
+  assert.strictEqual(me.body.user.role, 'user');
+  assert.strictEqual(me.body.user.loginCount, 2);
+});
+
 await scenario('auth console users is founder-only and session-gated', async () => {
   const env = makeEnv();
   const op = { headers: { 'X-Operator-Token': 'mock-operator-token' } };

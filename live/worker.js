@@ -1747,6 +1747,7 @@ async function handlePartChat(request, env) {
  * Users live in the same KV as the budget counters:
  *   auth:user:<email-lowercase> -> { email, name, passHash, role,
  *     provider, providerId, createdAt }
+ *   auth:login:<email-lowercase> -> { lastLoginAt, loginCount }
  * providerId is the creating provider's stable user id (Meta id,
  * GitHub numeric id, Google sub); password accounts have none.
  * Because the store is keyed by email, a social login may only
@@ -2021,13 +2022,34 @@ function publicUser(u) {
   };
 }
 
-/* Every successful sign-in stamps the record, so the founder's
- * admin console can show who has actually logged in, and when —
- * not just who registered. Registration counts as the first login. */
+/* Every successful sign-in stamps it, so the founder's admin console
+ * can show who has actually logged in, and when — not just who
+ * registered. Registration counts as the first login.
+ *
+ * Stamps have their own key, auth:login:<email>. A sign-in must never
+ * write the account record: it read that record before verifying, so
+ * writing it back could undo a role change made in between. */
+function loginKey(email) { return 'auth:login:' + email; }
+
+async function readLogin(env, email) {
+  const raw = await env.RF_LIVE_KV.get(loginKey(email));
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
 async function stampLogin(env, user) {
+  const prev = await readLogin(env, user.email);
   user.lastLoginAt = new Date().toISOString();
-  user.loginCount = (user.loginCount || 0) + 1;
-  await putUser(env, user);
+  user.loginCount = ((prev ? prev.loginCount : user.loginCount) || 0) + 1;
+  await env.RF_LIVE_KV.put(loginKey(user.email), JSON.stringify({
+    lastLoginAt: user.lastLoginAt, loginCount: user.loginCount,
+  }));
+}
+
+/* An account with its latest stamp applied, for showing it. */
+async function withLogin(env, user) {
+  const stamp = await readLogin(env, user.email);
+  return stamp ? { ...user, ...stamp } : user;
 }
 
 /* Every account record in the store, as public users. Shared by the
@@ -2041,7 +2063,7 @@ async function listAllUsers(env) {
     const page = await env.RF_LIVE_KV.list({ prefix: 'auth:user:', cursor, limit: 256 });
     for (const k of page.keys) {
       const u = await getUser(env, k.name.slice('auth:user:'.length));
-      if (u) users.push(publicUser(u));
+      if (u) users.push(publicUser(await withLogin(env, u)));
     }
     cursor = page.list_complete ? undefined : page.cursor;
   } while (cursor && users.length < 1000);
@@ -2144,7 +2166,7 @@ async function handleAuthMe(request, env) {
   if (!authConfigured(env)) return authOff(request);
   const user = await sessionUser(request, env);
   if (!user) return err(request, 401, 'unauthorized', 'Sign in first.');
-  return json(request, 200, { user: publicUser(user) });
+  return json(request, 200, { user: publicUser(await withLogin(env, user)) });
 }
 
 /* ---------------- account save (robots + parts) ----------------
