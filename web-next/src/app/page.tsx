@@ -152,28 +152,30 @@ export default function HomePage() {
             <div className="eyebrow">Trailer</div>
             <h2>Watch RobotForge work.</h2>
             <p>
-              One minute inside the real app — the Workshop, the
-              Robodex, the take-apart Kit, and a broken robot caught
-              and fixed in one run.
+              Inside the real app with Omega1, a real broken rover:
+              one job per Workshop tab, engineering checks, Wrench
+              remembering what you tell it, a RealSense scan, and a
+              drive test in browser physics.
             </p>
           </div>
           <figure className="hero-art" style={{ marginTop: 0 }}>
             <video
               controls
               preload="none"
-              poster={assetPath("assets/video/robotforge-trailer-short-v2-poster.jpg")}
-              width={1920}
-              height={1080}
+              poster={assetPath("assets/video/robotforge-trailer-short-v3-poster.jpg")}
+              width={1280}
+              height={720}
               aria-label="RobotForge trailer — a recorded tour of the live app in demo mode"
             >
               <source
-                src={assetPath("assets/video/robotforge-trailer-short-v2.mp4")}
+                src={assetPath("assets/video/robotforge-trailer-short-v3.mp4")}
                 type="video/mp4"
               />
             </video>
             <figcaption>
-              Recorded from the live app in demo mode, Nov 1, 2026 —
-              real screens, recorded data, no mockups. Silent; the
+              Recorded from the app in demo mode, Nov 4, 2026 — real
+              screens, recorded data, no mockups. The RealSense part
+              uses the scan bridge's simulated test camera. Silent; the
               text is on screen.
             </figcaption>
           </figure>
