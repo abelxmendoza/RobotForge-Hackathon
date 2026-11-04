@@ -541,13 +541,18 @@ function omega1Answer(qt: string[], root: string): AnswerResult {
         "Its digital twin began as the built-in specimen: a 3D model " +
         "generated from a photo of the real rover, so its shape and " +
         "size are <strong>estimates</strong>, not measurements. The " +
-        "specimen is hidden now, so the Workshop holds one Omega1: " +
-        "your stored copy, and its Checks pane lists only what the " +
+        "specimen entry is hidden now, but the twin itself lives on " +
+        "your stored copy: open Omega1 in the Workshop and its " +
+        "Overview opens on the 3D twin — drag to look around it, or " +
+        "use its Turn control for the full 360.</p>" +
+        "<p>Make the twin better with more input: attach a mesh " +
+        "file (.glb) or a 3D scan (.ply) here in chat — the " +
+        "Overview&rsquo;s &ldquo;Add a scan through Wrench&rdquo; button does " +
+        "the same — or bring an Intel RealSense scan in through " +
+        "Scan Studio, and the Overview opens on your scan instead " +
+        "of the estimate. Its Checks pane lists only what the " +
         "records say. No gate has run on it, so it has no gate " +
-        "verdict.</p>" +
-        "<p>Open Omega1 in the Workshop and it is added to your " +
-        "robots as a stored copy seeded from the records only, ready " +
-        "for your own scans and measurements.</p>";
+        "verdict.</p>";
       break;
     case "broken":
       html =
@@ -597,9 +602,9 @@ function omega1Answer(qt: string[], root: string): AnswerResult {
       html =
         "<p>" + lead + "&rsquo;s size and mass are not measured yet, so I " +
         "won&rsquo;t guess them. The Freenove kit is 0.15 m wide overall, but its code " +
-        "assumes a 0.20 m track, which is why measuring comes first. The " +
-        "Workshop&rsquo;s Improve this twin steps take a RealSense scan for " +
-        "true size and a short tape-measure form for the rest.</p>";
+        "assumes a 0.20 m track, which is why measuring comes first: a " +
+        "RealSense scan gives the true size, and tape-measure numbers " +
+        "added through Wrench cover the rest.</p>";
       break;
     case "unknown":
       /* Same honesty contract as the engine's fallback: say it is not

@@ -11,7 +11,7 @@ GARAGE = ROOT / "web-next/src/components/garage"
 
 def test_overview_uses_the_turntable_for_every_robot() -> None:
     src = (GARAGE / "Garage.tsx").read_text()
-    assert "import OverviewTurntable from './OverviewTurntable';" in src
+    assert "import OverviewTurntable, { hasBody } from './OverviewTurntable';" in src
     assert "<OverviewTurntable key={robot.id}" in src
     assert "fallback={drawing}" in src
 
