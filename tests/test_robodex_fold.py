@@ -103,19 +103,15 @@ def test_my_robots_is_the_workshops_list():
 
 
 def test_only_your_robot_cards_can_be_deleted():
-    # the Workshop's own delete operation, snapshot-guarded, with the
-    # same clean-up of scans, notes and the unsaved draft
-    assert "deleteRobotInStore(" in DEX
-    assert "recordSnapshot(robot)" in DEX
-    assert "forgetRobotScans(robot.id)" in DEX
-    assert "forgetRobotNotes(robot.id)" in DEX
+    # the ONE delete path the Workshop and Wrench use too (lib/robotDelete)
+    assert "deleteOwnedRobot(robot)" in DEX
     card = DEX.split("export function GarageRobotCard")[1].split("export function MyRobotsGrid")[0]
     assert ">Delete</button>" in card and "Yes, delete" in card
     # catalog and sighting cards carry no Delete
     sightings = DEX.split("export function SightingsGroups")[1]
     assert "Delete" not in sightings
     index = (WEB / "src/components/robots/RobotsIndex.tsx").read_text()
-    assert "deleteGarageRobot" not in index and ">Delete<" not in index
+    assert "deleteOwnedRobot" not in index and ">Delete<" not in index
 
 
 # ------------------------------------------------------------------ 3. Spot

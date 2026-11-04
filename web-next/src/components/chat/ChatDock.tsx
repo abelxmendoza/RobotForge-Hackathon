@@ -55,7 +55,9 @@ import intentsDoc from "@/data/chat-intents.json";
 import InventoryProposal from './InventoryProposal';
 import {INVENTORY_KEY,parseInventoryCommand,proposeInventory,type InventoryPart,type InventoryOperation} from '@/lib/inventory';
 import DexMoveProposal from './DexMoveProposal';
-import {buildDexEntities,normalizeDexName,parseDexMove,planDexMove,resolveDexEntity,type DexMovePlan} from '@/lib/dexCategorize';
+import RobotDeleteProposal from './RobotDeleteProposal';
+import {classifyRobot,deleteRefusal,isCurrentRobotName,ownedRobotsText,ownershipAnswer,parseOwnershipAsk} from '@/lib/robotOwnership';
+import {buildDexEntities,DEX_TAB_LABEL,normalizeDexName,parseDexMove,planDexMove,resolveDexEntity,type DexMovePlan} from '@/lib/dexCategorize';
 import {DEX_OVERRIDES_KEY,type DexOverrides} from '@/lib/dexOverrides';
 import {isPhotoDraft} from '@/lib/robotSource';
 import {allDexSightings} from '@/components/robots/DexSources';
@@ -252,11 +254,12 @@ const carry: {
   proposal: Preview | null;
   inventoryProposal: InventoryOperation | null;
   dexMoveProposal: DexMovePlan | null;
+  robotDeleteProposal: GarageRobot | null;
   assemblyProposal: AssemblyOperation | null;
   upgradeProposal: UpgradeProposal | null;
   lastApplied: Applied;
   memory: TurnMemory;
-} = { messages: [], chips: null, proposal: null, inventoryProposal: null, dexMoveProposal: null, assemblyProposal: null, upgradeProposal: null, lastApplied: null, memory: {} };
+} = { messages: [], chips: null, proposal: null, inventoryProposal: null, dexMoveProposal: null, robotDeleteProposal: null, assemblyProposal: null, upgradeProposal: null, lastApplied: null, memory: {} };
 
 export function useForgeAssistant() {
   const router = useRouter();
@@ -315,6 +318,7 @@ export function useForgeAssistant() {
   const [proposal, setProposal] = useState<Preview | null>(() => carry.proposal);
   const [inventoryProposal,setInventoryProposal]=useState<InventoryOperation|null>(() => carry.inventoryProposal);
   const [dexMoveProposal,setDexMoveProposal]=useState<DexMovePlan|null>(() => carry.dexMoveProposal);
+  const [robotDeleteProposal,setRobotDeleteProposal]=useState<GarageRobot|null>(() => carry.robotDeleteProposal);
   const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(() => carry.assemblyProposal);
   const [upgradeProposal, setUpgradeProposal] = useState<UpgradeProposal | null>(() => carry.upgradeProposal);
   const lastApplied = useRef<Applied>(carry.lastApplied);
@@ -324,9 +328,10 @@ export function useForgeAssistant() {
     carry.proposal = proposal;
     carry.inventoryProposal = inventoryProposal;
     carry.dexMoveProposal = dexMoveProposal;
+    carry.robotDeleteProposal = robotDeleteProposal;
     carry.assemblyProposal = assemblyProposal;
     carry.upgradeProposal = upgradeProposal;
-  }, [messages, chips, proposal, inventoryProposal, dexMoveProposal, assemblyProposal, upgradeProposal]);
+  }, [messages, chips, proposal, inventoryProposal, dexMoveProposal, robotDeleteProposal, assemblyProposal, upgradeProposal]);
   /* lastApplied is a ref, so copy it out when this instance unmounts. */
   useEffect(() => () => { carry.lastApplied = lastApplied.current; }, []);
   const proposalRef = useRef<Preview | null>(null);
@@ -1010,6 +1015,49 @@ export function useForgeAssistant() {
         return true;
       }
       if (runSaveCommand(q)) return true;
+      /* Whose robot is it, and delete: only a robot in the Workshop is
+       * yours (lib/robotOwnership). A bare "remove X" that names no known
+       * robot falls through, so "remove the battery" stays an edit. */
+      const ownershipAsk=parseOwnershipAsk(q);
+      if(ownershipAsk){
+        const allRobots=readStore<GarageRobot[]>(GARAGE_KEY,[]);
+        const active=activeRecords(allRobots);
+        const archived=allRobots.filter(r=>!active.includes(r));
+        /* "this robot" is the robot open in the Workshop, found by its id:
+         * the published name can be an unsaved draft rename. */
+        const ctx=isCurrentRobotName(ownershipAsk.name)?readWorkshopContext():null;
+        const currentRobot=ctx?.robotId?allRobots.find(r=>r.id===ctx.robotId)??null:null;
+        /* A saved robot whose exact name is the whole phrase ("My Rover")
+         * wins before "my"/"the"/"robot" are read as command words. */
+        const norm=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+        const fullMatch=ownershipAsk.kind==='delete'&&ownershipAsk.fullName
+          ?allRobots.filter(r=>norm(r.name)===norm(ownershipAsk.fullName!)):[];
+        if(isCurrentRobotName(ownershipAsk.name)&&!currentRobot){
+          if(ownershipAsk.kind==='whose'||ownershipAsk.explicit){noteBubble('Which robot? Open it in the Workshop, or name it.');return true;}
+        }else if(ownershipAsk.kind==='delete'&&(currentRobot||fullMatch.length===1)){
+          setRobotDeleteProposal((currentRobot??fullMatch[0])!);
+          noteBubble('Review the delete below. Nothing is deleted until you confirm.');
+          return true;
+        }else if(isCurrentRobotName(ownershipAsk.name)&&currentRobot){
+          noteBubble(ownershipAnswer(currentRobot.name,{kind:active.includes(currentRobot)?'mine':'archived',robots:[currentRobot]}));
+          return true;
+        }else{
+          const name=ownershipAsk.name;
+          const overrides=readStore<DexOverrides>(DEX_OVERRIDES_KEY,{});
+          const records=buildDexEntities({catalog:robots,isPhotoDraft,sightings:allDexSightings(),garage:[],overrides}).map(e=>({name:e.name,tab:DEX_TAB_LABEL[e.currentTab]}));
+          const ownership=classifyRobot(name,{active,archived,records,match:ownershipAsk.kind==='whose'?'loose':ownershipAsk.match});
+          if(ownershipAsk.kind==='whose'){noteBubble(ownershipAnswer(name,ownership));return true;}
+          if(ownership.kind!=='unknown'||ownershipAsk.explicit){
+            const refusal=deleteRefusal(name,ownership);
+            if(refusal)noteBubble(refusal);
+            else if(ownership.kind==='mine'||ownership.kind==='archived'){
+              setRobotDeleteProposal(ownership.robots[0]);
+              noteBubble('Review the delete below. Nothing is deleted until you confirm.');
+            }
+            return true;
+          }
+        }
+      }
       /* Robodex filing commands ("move "Spot" to sighted",
        * lib/dexCategorize): parsed BEFORE the assembly grammar —
        * the filing grammar requires a category destination word,
@@ -1180,7 +1228,7 @@ export function useForgeAssistant() {
           if (command.kind === 'help') {
             noteBubble('Submit a robot: paste its GitHub repo link (https://github.com/owner/repo) and I open the repo importer with it, or attach a photo, parts list or spec file with the paperclip. Inventory: list my inventory; list my parts for "Omega1"; set inventory "Battery" quantity to 3; assign inventory "Battery" to "Omega1". Operations available now: list my robots; set "Omega1" wheel.diameter_m to 0.12; undo last chat change. Robodex filing: move "Spot" to sighted; put "Andino" under from photos; recategorize "TurtleBot3 Waffle Pi" as researched; reset categorization for "Spot". Filing only changes where the Robodex shows a robot — except moving one to my robots, which brings it into your Workshop from its recorded spec first. Edits use exact saved robot names and spec units (m, kg, V, mAh), preview first, and save a new version. Upgrades: add a Raspberry Pi 5 to this rover (one proposal with power, converter, wiring, mount and checks; Approve saves one version). Assembly commands: add a Jetson Orin Nano to "Omega1"; move "Jetson Orin Nano" on "Omega1" to 0 0 70 mm; connect "battery" to "Jetson Orin Nano" on "Omega1"; remove "battery" from "Omega1". Names resolve when unique; use workbench instance IDs for duplicates. Connections are planning-only, NOT_CHECKED. Navigation: open "TurtleBot3 Burger"; go to wiring; show the legged robots. Free-form operation requests (for example “make Omega1’s wheels bigger”) go to the live model when it is available: it proposes a command in this same grammar, the app validates it, and you still tap Apply. Mount generation and simulation jobs remain planned.');
           } else if (command.kind === 'list') {
-            noteBubble(saved.length ? 'Your robots (the ones in your Workshop, same as My robots in the Robodex):\n' + saved.map(r => r.name + ' — ' + r.versions.length + ' versions').join('\n') + '\nEvery other Robodex robot is a reference robot, not yours.' : 'You have no robots of your own yet: your Workshop is empty. Robodex robots are reference robots, not yours.');
+            noteBubble(ownedRobotsText(saved));
           } else if (command.kind === 'undo') {
             const last = lastApplied.current;
             if (!last) throw new Error('No chat change to undo in this session.');
@@ -1677,12 +1725,14 @@ export function useForgeAssistant() {
     setUpgradeProposal(null);
     setInventoryProposal(null);
     setDexMoveProposal(null);
+    setRobotDeleteProposal(null);
     lastApplied.current = null;
     memoryRef.current = {};
     carry.messages = [];
     carry.proposal = null;
     carry.inventoryProposal = null;
     carry.dexMoveProposal = null;
+    carry.robotDeleteProposal = null;
     carry.assemblyProposal = null;
     carry.upgradeProposal = null;
     carry.memory = {};
@@ -1697,6 +1747,7 @@ export function useForgeAssistant() {
   return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,saveGroundedNote,workingOn,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
         {inventoryProposal&&<InventoryProposal key={JSON.stringify(inventoryProposal)} operation={inventoryProposal} onDone={text=>{setInventoryProposal(null);noteBubble(text);}} onCancel={()=>{setInventoryProposal(null);noteBubble('Cancelled. Inventory unchanged.');}}/>}
         {dexMoveProposal&&<DexMoveProposal key={JSON.stringify(dexMoveProposal)} plan={dexMoveProposal} onDone={text=>{setDexMoveProposal(null);noteBubble(text);}} onCancel={()=>{setDexMoveProposal(null);noteBubble('Cancelled. Robodex filing unchanged.');}}/>}
+        {robotDeleteProposal&&<RobotDeleteProposal key={robotDeleteProposal.id} robot={robotDeleteProposal} onDone={text=>{setRobotDeleteProposal(null);noteBubble(text);}} onCancel={()=>{setRobotDeleteProposal(null);noteBubble('Cancelled. Your robot is unchanged.');}}/>}
         {upgradeProposal && <UpgradeProposalCard key={upgradeProposal.expectedVersionId + upgradeProposal.component.id} proposal={upgradeProposal}
           onDone={(text, versionId) => { if (versionId) lastApplied.current = { robotId: upgradeProposal.robotId, versionId }; setUpgradeProposal(null); noteBubble(text); }}
           onCancel={() => { setUpgradeProposal(null); noteBubble('Cancelled. Nothing changed.'); }} />}

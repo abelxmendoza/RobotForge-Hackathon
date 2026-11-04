@@ -52,11 +52,13 @@ import {
 import { copyAsNew, uniqueCopyName } from '@/lib/saveRobot';
 import { INVENTORY_KEY, partReality, partSection, type InventoryPart } from '@/lib/inventory';
 import { activeRecords, activeSelection, archivedRecords, recordSnapshot } from '@/lib/lifecycle';
-import { archiveRobotInStore, deleteRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
+import { archiveRobotInStore, replaceRobotInStore, restoreRobotInStore } from '@/lib/robotLifecycleRepository';
+import { deleteOwnedRobot } from '@/lib/robotDelete';
+import { workshopDraftKey } from '@/lib/robotOwnership';
 import { forgetRobotScans } from '@/lib/scanStore';
 import { attachRealsenseScan } from '@/lib/scanBridge';
 import ScanStudioModal from '@/components/scan/ScanStudioModal';
-import { forgetRobotNotes, noteContextLines, notesFor, removeRobotNote, ROBOT_NOTES_KEY, type RobotNote } from '@/lib/robotNotes';
+import { noteContextLines, notesFor, removeRobotNote, ROBOT_NOTES_KEY, type RobotNote } from '@/lib/robotNotes';
 import { SCAN_SLOTS } from '@/lib/scan3d';
 import { tabFocus } from '@/lib/tabFocus';
 import { SIM_COMMAND_EVENT } from '@/lib/simulation';
@@ -95,7 +97,7 @@ function mainTab(tab: WorkTab): WorkTab {
 }
 const BOM_SECTIONS = [{ id: 'bom', label: 'Parts list' }, { id: 'tools', label: 'Tools & materials' }] as const;
 type BrowserDraft = { baseline: string; spec: Spec; label: string; note: string; planned: boolean };
-const draftKey = (id: string) => `robotforge.workshop.draft.${id}`;
+const draftKey = workshopDraftKey;
 
 const ICON = {
   mass: 'M6 20h12l-2-11H8zM9.5 9a2.5 2.5 0 1 1 5 0',
@@ -842,15 +844,9 @@ export default function Garage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const deleteForever = (archived: GarageRobot) => {
     if (confirmDelete !== archived.id) { setConfirmDelete(archived.id); return; }
-    const result = deleteRobotInStore(
-      () => readStore<GarageRobot[]>(GARAGE_KEY, []), saveRobots,
-      archived.id, recordSnapshot(archived),
-    );
+    const result = deleteOwnedRobot(archived);
     setConfirmDelete(null);
     if (!result.ok) { setSaveError(result.error); return; }
-    void forgetRobotScans(archived.id).catch(() => undefined);
-    forgetRobotNotes(archived.id);
-    writeStore(draftKey(archived.id), null);
     if (archived.id === selected) {
       const next = activeRecords(readStore<GarageRobot[]>(GARAGE_KEY, []));
       setSelected(next[0]?.id ?? null);
