@@ -249,3 +249,15 @@ def test_ply_comment_is_added_to_a_foreign_header(tmp_path: Path) -> None:
     assert data.count(sb.PLY_COMMENT.encode()) == 1
     assert data.startswith(b"ply\nformat binary_little_endian 1.0\n" + sb.PLY_COMMENT.encode() + b"\nelement")
     assert data.endswith(b"end_header\n" + body)
+
+
+def test_busy_port_gets_a_plain_message(monkeypatch, capsys) -> None:
+    import socket
+    s = socket.socket(); s.bind(("127.0.0.1", 0)); s.listen(1)
+    port = s.getsockname()[1]
+    try:
+        with pytest.raises(SystemExit) as exc:
+            sb.main(["--simulate", "--port", str(port)])
+        assert "already in use" in str(exc.value) and f"--port {port + 2}" in str(exc.value)
+    finally:
+        s.close()

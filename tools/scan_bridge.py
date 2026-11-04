@@ -37,6 +37,7 @@ session folder so a heavier pass (e.g. COLMAP) can run on it later.
 from __future__ import annotations
 
 import argparse
+import errno
 import base64
 import json
 import math
@@ -805,7 +806,14 @@ def main(argv: list[str] | None = None) -> None:
     near, far = (0.15, 1.2) if a.simulate else (a.near, a.far)
     bridge = Bridge(source, Path(a.sessions).expanduser(), near, far)
     bridge.start()
-    httpd = serve(bridge, a.port, a.allow_origin)
+    try:
+        httpd = serve(bridge, a.port, a.allow_origin)
+    except OSError as e:
+        if getattr(e, "errno", None) in (errno.EADDRINUSE, 48):
+            sys.exit(f"Port {a.port} is already in use by another program (often a local web server). "
+                     f"Start the bridge on another port, e.g. --port {a.port + 2}, and enter "
+                     f"http://127.0.0.1:{a.port + 2} as the bridge address in Scan Studio.")
+        raise
     print(f"Scan bridge ready: {source.name}")
     print(f"  http://127.0.0.1:{a.port}  (only this computer can reach it)")
     print(f"  Sessions are saved in {Path(a.sessions).expanduser()}")
