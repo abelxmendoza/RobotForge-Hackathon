@@ -58,3 +58,22 @@ export function restoreRecord<T extends LifecycleRecord>(records: readonly T[], 
     return active as T;
   });
 }
+
+/* Permanent delete. Only an archived record can be deleted, so every
+ * delete has already passed through Archive (which asks first), and a
+ * record changed elsewhere since it was read is refused. */
+export function deleteArchivedRecord<T extends LifecycleRecord>(records: readonly T[], id: string, expected: string): T[] {
+  const target = currentRecord(records, id, expected);
+  if (!validArchiveAt(target.archivedAt)) {
+    throw new LifecycleConflictError('Archive this robot before deleting it.');
+  }
+  return records.filter((record) => record !== target) as T[];
+}
+
+/* Swap one record for a replacement with the same id (for example a
+ * fresh copy rebuilt from its records), guarded the same way. */
+export function replaceRecord<T extends LifecycleRecord>(records: readonly T[], id: string, expected: string, next: T): T[] {
+  if (next.id !== id) throw new RangeError('A replacement must keep the same id.');
+  const target = currentRecord(records, id, expected);
+  return records.map((record) => (record === target ? next : record)) as T[];
+}
