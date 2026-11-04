@@ -96,8 +96,10 @@ def test_wrench_is_wired_to_the_robot_on_screen() -> None:
     i = DOCK.index("const runCommands = (q: string): boolean => {")
     assert DOCK.index("parseRememberCommand(q)", i) < DOCK.index("parseWorkshopAction(q)", i) < DOCK.index("parseSimCommand(q)", i)
     assert "addRobotNote(ws.robotId,remember)" in DOCK
-    assert "if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow)) {" in DOCK
-    assert "html: snapshotAnswer(wsNow)" in DOCK and "fallback: true," in DOCK
+    assert "if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow) && !detectWebIntent(q)) {" in DOCK
+    assert "html: snapshotAnswer(wsNow)" in DOCK
+    # An explicit web ask is never swallowed by a recorded fuzzy match.
+    assert "if (detectWebIntent(q) && !ans.fallback) ans = { ...ans, fallback: true };" in DOCK and "fallback: true," in DOCK
     # Web-sourced answers about a stored robot can be kept as a note, with their source.
     assert "note: { robotId: ws.robotId, robotName: ws.robotName, text: answer, source: webCaption }" in DOCK
     assert "onSaveNote" in MSGS and "Save to {m.grounding.note.robotName}&apos;s notes" in MSGS

@@ -1392,7 +1392,10 @@ export function useForgeAssistant() {
          * unrelated part), so it goes live with the snapshot, and the
          * local answer is what the Workshop has on record. */
         const wsNow = (pathname || "").startsWith("/garage") ? readWorkshopContext() : null;
-        if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow)) {
+        /* An explicit web ask always goes live with the fetch: a recorded
+         * fuzzy match must not swallow "search the web for …". */
+        if (detectWebIntent(q) && !ans.fallback) ans = { ...ans, fallback: true };
+        if (wsNow?.robotId && isWorkshopRobotQuestion(q, wsNow) && !detectWebIntent(q)) {
           ans = {
             html: snapshotAnswer(wsNow).map((para) => "<p>" + esc(para).replace(/\n/g, "<br>") + "</p>").join(""),
             fallback: true,
