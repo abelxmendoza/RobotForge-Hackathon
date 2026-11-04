@@ -9,10 +9,10 @@ const label = (c: string) => c.replace(/_/g, ' ');
 export function PartThumb({ p }: { p: InventoryPart }) {
   /* A web photo can stop loading (the store moves it or blocks
    * hot-linking); then the card falls back to the illustration. */
-  const [broken, setBroken] = useState<string | null>(null);
-  const web = p.image_urls?.find((u) => u !== broken);
+  const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
+  const web = p.image_urls?.find((u) => !broken.has(u));
   return p.photo ? <img className="inv-thumb" src={p.photo} alt="" />
-    : web ? <img className="inv-thumb inv-webphoto" src={web} alt="" loading="lazy" referrerPolicy="no-referrer" title={p.image_credit || 'Photo from the web'} onError={() => setBroken(web)} />
+    : web ? <img className="inv-thumb inv-webphoto" src={web} alt="" loading="lazy" referrerPolicy="no-referrer" title={p.image_credit || 'Photo from the web'} onError={() => setBroken((b) => new Set(b).add(web))} />
     : partArt(p.name, p.category) ? <span className="part-art inv-thumb" title="Illustration of a typical part like this, not a photo of yours"><img src={partArt(p.name, p.category)!} alt="" loading="lazy" /></span>
       : <span className="inv-noimg inv-thumb" aria-hidden="true">{label(p.category).slice(0, 1).toUpperCase()}</span>;
 }

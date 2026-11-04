@@ -88,3 +88,18 @@ s = partShape({{name:'Mounting plate', category:'frame', specs:{{length_mm:80, w
 assert.deepEqual(s.size.map(v => Math.round(v*1000)), [80, 60, 3]);
 assert.equal(partShape({{name:'Odd thing', category:'other'}}).sizeBasis, 'typical');
 """)
+
+
+def test_stated_motor_diameter_wins(tmp_path):
+    if not shutil.which("node"):
+        pytest.skip("node unavailable")
+    (tmp_path / "componentSkin.ts").write_text("export function addComponentSkin(){}\n")
+    (tmp_path / "partModel3d.ts").write_text((LIB / "partModel3d.ts").read_text()
+                                             .replace("'../components/kit/componentSkin'", "'./componentSkin.ts'"))
+    _run(tmp_path, """
+import assert from 'node:assert/strict';
+import {partShape} from './partModel3d.ts';
+const mm = (s) => s.size.map(v => Math.round(v * 1000));
+assert.deepEqual(mm(partShape({name:'2207 brushless', category:'motor', specs:{diameter_mm:28, height_mm:40}})), [28, 28, 40]);
+assert.deepEqual(mm(partShape({name:'12V gearmotor', category:'motor', specs:{diameter_mm:25, length_mm:60}})), [60, 25, 25]);
+""")

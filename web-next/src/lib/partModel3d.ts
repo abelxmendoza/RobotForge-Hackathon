@@ -124,10 +124,14 @@ export function partShape(p: ShapeInput): PartShape {
     size[1] = W ? W / 1000 : typical[1] * k;
     size[2] = H ? H / 1000 : typical[2] * k;
     basis = 'specs';
-  } else if (D && (kind === 'gearmotor' || kind === 'brushless')) {
-    const r = D / 1000 / typical[1];
-    size[1] = D / 1000; size[2] = D / 1000; size[0] = typical[0] * (kind === 'brushless' ? r : 1); basis = 'specs';
-    if (kind === 'brushless') { size[0] = D / 1000; size[1] = D / 1000; size[2] = typical[2] * r; }
+  }
+  /* A motor's stated diameter always wins on its round axes, whatever
+   * else the specs state (gearmotor: round across Y/Z; brushless: X/Y). */
+  if (D && (kind === 'gearmotor' || kind === 'brushless')) {
+    const d = D / 1000, r = d / (kind === 'brushless' ? typical[0] : typical[1]);
+    if (kind === 'gearmotor') { size[1] = d; size[2] = d; if (!L) size[0] = typical[0] * r; }
+    else { size[0] = d; size[1] = d; if (!H) size[2] = typical[2] * r; }
+    basis = 'specs';
   }
   return { kind, size: size.map((v) => Math.min(Math.max(v, 0.002), 2)) as [number, number, number], sizeBasis: basis, label: KIND_LABEL[kind] };
 }
