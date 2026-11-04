@@ -30,6 +30,18 @@ export const viewport: Viewport = { themeColor: "#0b1420" };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* robot-forge.vercel.app can't reach the live Worker (its CORS
+         * list only has robot-forge-hackathon*), and the vercel.json
+         * host redirect didn't take effect there, so send visitors on
+         * before anything renders. Remove once the Worker allows it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if(location.hostname==='robot-forge.vercel.app'){location.replace('https://robot-forge-hackathon.vercel.app'+location.pathname+location.search+location.hash)}",
+          }}
+        />
+      </head>
       <body>
         <Providers>
           <DemoBar />
