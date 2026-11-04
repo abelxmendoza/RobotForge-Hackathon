@@ -7,14 +7,23 @@
  * photo, and the caption says so. Parts only move when recorded data
  * licenses it (lib/stageAnimation via the Robodex stage record): for a
  * robot with no stage record the stage turns but nothing on it moves.
- * Without dimensions, or without WebGL, it falls back to the drawing. */
+ * Without dimensions, or without WebGL, it falls back to the drawing.
+ *
+ * Take-apart by hand: click a part and its card opens beside the
+ * stage (the kit record for that part); drag a part with the pointer
+ * and it comes off and stays where it is dropped. None of it edits
+ * the robot's record — positions are view state, so Reassemble (the
+ * button below the stage, or asking Wrench in the chat) always puts
+ * every part back. */
 import dynamic from 'next/dynamic';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RobotLife } from '@/components/kit/Robot3D';
 import type { RobotSpec } from '@/components/forge/model';
+import { taBuildParts } from '@/components/kit/takeapart';
 import { stageRecordOf } from '@/lib/data';
 import { robotCapability } from '@/lib/stageAnimation';
 import { useStageAnimation } from '@/lib/useStageAnimation';
+import { WORKSHOP_REASSEMBLE_EVENT, type ReassembleResult } from '@/lib/workshopContext';
 
 const Robot3D = dynamic(() => import('@/components/kit/Robot3D'), {
   ssr: false,
@@ -36,6 +45,10 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
 }) {
   const [failed, setFailed] = useState(false);
   const [spin, setSpin] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detachedIds, setDetachedIds] = useState<string[]>([]);
+  const [resetNonce, setResetNonce] = useState(0);
+  const [restoreRequest, setRestoreRequest] = useState<{ id: string; nonce: number } | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const stage = useStageAnimation(stageRef);
   const body = hasBody(spec);
@@ -61,6 +74,30 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
     };
   }, [capability, stage, spin]);
 
+  const kitParts = useMemo(() => (body ? taBuildParts(shown).parts : []), [body, shown]);
+  const selectedPart = selectedId ? kitParts.find((p) => p.id === selectedId) ?? null : null;
+  const selectedOff = selectedId ? detachedIds.includes(selectedId) : false;
+
+  /* Wrench bridge: "reassemble" / "put it back together" in the chat
+   * lands here while this stage is on screen and answers with what
+   * actually happened, so the chat never claims work it didn't do. */
+  useEffect(() => {
+    if (!body || failed) return;
+    const onReassemble = (e: Event) => {
+      const detail = (e as CustomEvent<ReassembleResult>).detail;
+      detail.handled = true;
+      if (detachedIds.length > 0) {
+        const n = detachedIds.length;
+        setResetNonce((x) => x + 1);
+        detail.message = `Putting ${n === 1 ? 'the part' : `all ${n} parts`} back on ${name} — watch the 3D model come back together.`;
+      } else {
+        detail.message = `${name} is already fully assembled — no parts are off it.`;
+      }
+    };
+    window.addEventListener(WORKSHOP_REASSEMBLE_EVENT, onReassemble);
+    return () => window.removeEventListener(WORKSHOP_REASSEMBLE_EVENT, onReassemble);
+  }, [body, failed, detachedIds, name]);
+
   if (!body || failed) {
     return (
       <>
@@ -76,24 +113,69 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
 
   return (
     <figure className="ws-turntable" ref={stageRef}>
-      <div className="ws-turntable-stage">
-        <Robot3D
-          spec={shown}
-          life={life}
-          explode={0}
-          selected={null}
-          onSelect={() => {}}
-          onFail={() => setFailed(true)}
-          quality="high"
-          autoRotate={spin}
-          showComMarker={false}
-        />
-        <button type="button" className="btn btn-sm ws-turntable-toggle" aria-pressed={!spin} onClick={() => setSpin((s) => !s)}>
-          {spin ? 'Pause' : 'Spin'}
-        </button>
+      <div className="ws-turntable-flex">
+        <div className="ws-turntable-stage">
+          <Robot3D
+            spec={shown}
+            life={life}
+            explode={0}
+            selected={selectedId}
+            onSelect={(id) => setSelectedId(id)}
+            onFail={() => setFailed(true)}
+            quality="high"
+            autoRotate={spin}
+            showComMarker={false}
+            partDrag
+            resetNonce={resetNonce}
+            restoreRequest={restoreRequest}
+            onDetachedChange={setDetachedIds}
+          />
+          <button type="button" className="btn btn-sm ws-turntable-toggle" aria-pressed={!spin} onClick={() => setSpin((s) => !s)}>
+            {spin ? 'Pause' : 'Spin'}
+          </button>
+        </div>
+        {selectedPart && (
+          <aside className="ws-partbar" aria-label={`About the ${selectedPart.name}`}>
+            <div className="ws-partbar-head">
+              <h3>{selectedPart.name}</h3>
+              <button type="button" className="btn btn-sm" aria-label="Close the part card" onClick={() => setSelectedId(null)}>✕</button>
+            </div>
+            <p className={'ws-partbar-state' + (selectedOff ? ' is-off' : '')}>
+              {selectedOff ? 'Taken off the robot' : 'On the robot'}
+            </p>
+            {selectedPart.does && <p>{selectedPart.does}</p>}
+            <dl className="ws-partbar-facts">
+              {selectedPart.dims && (<><dt>Size</dt><dd>{selectedPart.dims}</dd></>)}
+              {selectedPart.qty > 1 && (<><dt>On this robot</dt><dd>× {selectedPart.qty}</dd></>)}
+              {selectedPart.print && (<><dt>Making it</dt><dd>{selectedPart.print}</dd></>)}
+              {selectedPart.tweak && (<><dt>Worth tweaking</dt><dd>{selectedPart.tweak}</dd></>)}
+              {selectedPart.file && (<><dt>Part file</dt><dd>{selectedPart.file}</dd></>)}
+            </dl>
+            {selectedOff ? (
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => setRestoreRequest({ id: selectedPart.id, nonce: Date.now() })}>
+                Put this part back
+              </button>
+            ) : (
+              <p className="faint g-small">Drag it in the model to take it off, or drag empty space to turn the robot.</p>
+            )}
+          </aside>
+        )}
+      </div>
+      <div className="ws-turntable-bar">
+        {detachedIds.length > 0 ? (
+          <>
+            <span role="status">{detachedIds.length} {detachedIds.length === 1 ? 'part' : 'parts'} off the robot</span>
+            <button type="button" className="btn btn-sm btn-primary" onClick={() => setResetNonce((x) => x + 1)}>
+              Reassemble
+            </button>
+            <span className="faint g-small">or ask Wrench to put it back together</span>
+          </>
+        ) : (
+          <span className="faint g-small">Click a part for its card. Drag a part to take it off — piece by piece, as far as you like.</span>
+        )}
       </div>
       <figcaption className="faint g-small">
-        Concept model built from {name}&apos;s spec, not a photo or a measured twin. Drag to turn it, pinch or scroll to zoom.
+        Concept model built from {name}&apos;s spec, not a photo or a measured twin. Drag empty space to turn it, pinch or scroll to zoom.
         {capability ? ' Moving parts follow the recorded robot data.' : ' Nothing on it moves until recorded data says it can.'}
       </figcaption>
     </figure>

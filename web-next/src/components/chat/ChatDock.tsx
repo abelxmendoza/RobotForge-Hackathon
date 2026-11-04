@@ -64,7 +64,7 @@ import {DEX_OVERRIDES_KEY,type DexOverrides} from '@/lib/dexOverrides';
 import {isPhotoDraft} from '@/lib/robotSource';
 import {allDexSightings} from '@/components/robots/DexSources';
 import {buildOmega1SeedEntry,OMEGA1_ROBOT_ID} from '@/lib/omega1Garage';
-import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseWorkshopAction, snapshotAnswer, readWorkshopContext, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
+import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseReassembleCommand, parseWorkshopAction, snapshotAnswer, readWorkshopContext, requestReassemble, requestWorkshopAction, requestWorkshopFix, workingOnLabel, workshopSnapshotFailing, workshopTabChips, WORKSHOP_CONTEXT_EVENT, type WorkshopChatContext } from "@/lib/workshopContext";
 import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNotes";
 import AssemblyProposal from './AssemblyProposal';
 import UpgradeProposal, { type UpgradeRequest } from './UpgradeProposal';
@@ -1027,6 +1027,13 @@ export function useForgeAssistant() {
         noteBubble(!handled?'Open one of your robots in the Workshop first, then ask me again.'
           :wsAction.kind==='realsense'?`Opened the RealSense camera window for ${ws?.robotName??'this robot'}. Start the bridge on your computer if it isn’t running (the window shows how), then Record a slow walk-around.`
           :`Opened the ${ws?.tabLabel??'requested'} tab.`);
+        return true;
+      }
+      /* "Reassemble" / "put it back together": the Workshop's 3D
+       * take-apart view answers with what it actually did. */
+      if(parseReassembleCommand(q)){
+        const result=requestReassemble();
+        noteBubble(result.handled?result.message:'Open the robot’s Overview in the Workshop first, so its 3D model is on screen — then I can put its parts back.');
         return true;
       }
       const simCommand=parseSimCommand(q);
