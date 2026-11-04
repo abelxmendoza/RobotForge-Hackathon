@@ -228,3 +228,21 @@ def test_build_errors_come_back_as_messages(tmp_path: Path) -> None:
     finally:
         httpd.shutdown()
         bridge.source.close()
+
+
+def test_mesh_crop_keeps_only_the_measured_box() -> None:
+    dims = {"length": 240.0, "width": 200.0, "height": 210.0}
+    v = np.array([[0, 0, 0.1], [0.119, -0.099, 0.0], [0.3, 0, 0.05], [0, 0, 0.25], [0, 0, -0.02], [0, 0.5, 0]])
+    assert sb.inside_object_bounds(v, dims).tolist() == [True, True, False, False, False, False]
+
+
+def test_ply_comment_is_added_to_a_foreign_header(tmp_path: Path) -> None:
+    p = tmp_path / "mesh.ply"
+    body = bytes(range(16))
+    p.write_bytes(b"ply\nformat binary_little_endian 1.0\nelement vertex 1\nend_header\n" + body)
+    sb.add_ply_comment(p, sb.PLY_COMMENT)
+    sb.add_ply_comment(p, sb.PLY_COMMENT)  # once only
+    data = p.read_bytes()
+    assert data.count(sb.PLY_COMMENT.encode()) == 1
+    assert data.startswith(b"ply\nformat binary_little_endian 1.0\n" + sb.PLY_COMMENT.encode() + b"\nelement")
+    assert data.endswith(b"end_header\n" + body)

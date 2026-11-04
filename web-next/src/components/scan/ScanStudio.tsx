@@ -15,7 +15,7 @@ import PointStage, { type PushPoints } from './PointStage';
 import { readStore, writeStore } from '@/lib/store';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { OMEGA1_ROBOT_ID } from '@/lib/omega1Garage';
-import { saveSlotScanFile } from '@/lib/scanStore';
+import { saveScanFile, saveSlotScanFile } from '@/lib/scanStore';
 import { fmtBytes } from '@/lib/scan3d';
 import {
   attachRealsenseScan, b64ToBytes, BRIDGE_URL_KEY, bridgeUrlProblem, decodePoints, DEFAULT_BRIDGE,
@@ -158,6 +158,8 @@ export default function ScanStudio() {
     try {
       const name = scanFileName(robot.name, new Date());
       await saveSlotScanFile(robot.id, 'realsense', new Blob([ply]));
+      // The record also becomes the Overview's primary scan, which reads its own key.
+      await saveScanFile(robot.id, new Blob([ply]));
       const next = attachRealsenseScan(readStore<GarageRobot[]>(GARAGE_KEY, []), robot.id,
         { name, format: 'ply', bytes: ply.byteLength, addedAt: new Date().toISOString() });
       if (!next) { setMessage(`${robot.name} was archived or removed meanwhile. Pick another robot.`); return; }

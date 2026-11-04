@@ -350,6 +350,29 @@ def write_ply(path: Path, points: np.ndarray, colors: np.ndarray) -> None:
         f.write(arr.tobytes())
 
 
+def inside_object_bounds(vertices: np.ndarray, dims_mm: dict, margin: float = 0.003) -> np.ndarray:
+    """Mask of vertices (in the scan file's frame) inside the measured
+    box: the footprint, from just below the floor to the top."""
+    L, W, H = dims_mm["length"] / 1000, dims_mm["width"] / 1000, dims_mm["height"] / 1000
+    v = np.asarray(vertices)
+    return ((np.abs(v[:, 0]) <= L / 2 + margin) & (np.abs(v[:, 1]) <= W / 2 + margin)
+            & (v[:, 2] >= -margin) & (v[:, 2] <= H + margin))
+
+
+def add_ply_comment(path: Path, comment: str) -> None:
+    """Insert a header comment into a PLY someone else wrote (Open3D
+    writes no comments), right after the format line."""
+    data = Path(path).read_bytes()
+    end = data.index(b"end_header")
+    head = data[:end].decode("ascii")
+    if comment in head:
+        return
+    lines = head.split("\n")
+    i = next(k for k, line in enumerate(lines) if line.startswith("format "))
+    lines.insert(i + 1, comment)
+    Path(path).write_bytes("\n".join(lines).encode("ascii") + data[end:])
+
+
 def depth_colormap(depth_m: np.ndarray, near: float, far: float) -> np.ndarray:
     """Depth as colour for the preview: near = warm, far = cool, none = black."""
     t = np.clip((depth_m - near) / max(far - near, 1e-6), 0, 1)
@@ -530,6 +553,11 @@ def _tsdf_mesh(frames, poses, intr, near, far, voxel, m, ply: Path) -> str:
                 depth_scale=1.0, depth_trunc=far, convert_rgb_to_intensity=False)
             vol.integrate(rgbd, K, np.linalg.inv(pose))
         mesh = vol.extract_triangle_mesh()
+        mesh.transform(m["transform"])  # same upright, z-up frame as the measurement
+        # Crop to the measured object (plus the floor patch under it), so
+        # the file holds what the sizes describe: the Workshop measures
+        # the file's whole bounding box.
+        mesh.remove_vertices_by_mask(~inside_object_bounds(np.asarray(mesh.vertices), m["dims_mm"]))
         labels, counts, _ = mesh.cluster_connected_triangles()
         labels, counts = np.asarray(labels), np.asarray(counts)
         if len(counts):
@@ -537,10 +565,10 @@ def _tsdf_mesh(frames, poses, intr, near, far, voxel, m, ply: Path) -> str:
             mesh.remove_unreferenced_vertices()
         if len(mesh.triangles) > 300_000:
             mesh = mesh.simplify_quadric_decimation(300_000)
-        mesh.transform(m["transform"])  # same upright, z-up frame as the measurement
         mesh.compute_vertex_normals()
         if len(mesh.triangles) == 0 or not o3d.io.write_triangle_mesh(str(ply), mesh, write_ascii=False):
             return "points"
+        add_ply_comment(ply, PLY_COMMENT)
         return "tsdf-mesh"
     except Exception:  # noqa: BLE001 - the point cloud is still a valid scan
         return "points"

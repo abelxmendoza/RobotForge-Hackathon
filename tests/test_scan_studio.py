@@ -99,6 +99,7 @@ def test_studio_is_honest_about_what_it_is() -> None:
     assert "Browsers can&apos;t read a RealSense" in STUDIO
     # The scan lands in the RealSense slot that Improve this twin measures from.
     assert "saveSlotScanFile(robot.id, 'realsense'" in STUDIO
+    assert "saveScanFile(robot.id," in STUDIO  # the Overview viewer's own key too
     assert "Step 2" in STUDIO
     improve = (WEB / "components/garage/ImproveTwin.tsx").read_text()
     assert 'href="/scan/"' in improve
