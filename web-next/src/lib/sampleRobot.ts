@@ -81,3 +81,61 @@ export function sampleAnswerHtml(): string {
     'them as measurements.</p>'
   );
 }
+
+/* ---- One-click path (2026-11-05) -------------------------------
+ * Abel asked for the Omega1 sample to be more prominent, so judges,
+ * recruiters and testers always have a robot to try. Besides the
+ * repo import above, every sample surface now offers ONE click that
+ * puts Omega1 in the Workshop straight from its records — the same
+ * adopt path the Workshop's #omega1 link already runs (Garage.tsx,
+ * lib/omega1Garage.ts). No AI call and no GitHub call, so it works
+ * the same in demo mode and when signed in. */
+export const SAMPLE_OPEN_HREF = '/garage/#omega1';
+export const SAMPLE_OPEN_LABEL = 'Open Omega1 now';
+export const SAMPLE_OPEN_NOTE =
+  'One click adds Omega1 to your Workshop from its records. Its real ' +
+  'size and weight are still blank until someone measures the robot.';
+
+/* The landing spotlight's words. */
+export const SAMPLE_SPOTLIGHT_EYEBROW = 'Sample robot · ready to try';
+export const SAMPLE_SPOTLIGHT_TITLE = 'Try Omega1, a real robot that needs fixing';
+export const SAMPLE_SPOTLIGHT_BODY =
+  "Omega1 is Abel's own Freenove 4WD rover on a Raspberry Pi 4B, and " +
+  'the robot RobotForge was built to fix. Open it in the Workshop to ' +
+  'spin it in 3D, check its wiring, plan an upgrade and run the ' +
+  'physics checks. No account needed.';
+
+/* Go to the Workshop and adopt Omega1. On /garage/ itself a plain
+ * link to the same hash would not fire `hashchange` when the hash is
+ * already #omega1, so clear it first; the Workshop's hash effect
+ * does the adopting (or opens the copy that is already yours). */
+export function openSampleInWorkshop(push: (href: string) => void): void {
+  if (typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/garage') {
+    if (window.location.hash === '#omega1') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    window.location.hash = 'omega1';
+    return;
+  }
+  requestSampleOpen();
+  push('/garage/');
+}
+
+/* A one-shot "open Omega1" request for the Workshop to pick up when
+ * it mounts. The hash alone is not enough when the Workshop mounts
+ * from behind the sign-in gate on the same URL: a client-side push
+ * of '#omega1' fires no hashchange, and can land after the Workshop's
+ * first check. Session storage only, consumed on first read. */
+const OPEN_REQUEST_KEY = 'rf.sample.open';
+export function requestSampleOpen(): void {
+  try { window.sessionStorage.setItem(OPEN_REQUEST_KEY, '1'); } catch { /* private mode: the hash path still works */ }
+}
+export function takeSampleOpenRequest(): boolean {
+  try {
+    if (!window.sessionStorage.getItem(OPEN_REQUEST_KEY)) return false;
+    window.sessionStorage.removeItem(OPEN_REQUEST_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}

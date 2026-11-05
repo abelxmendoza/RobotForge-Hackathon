@@ -25,6 +25,7 @@
  * Delete that removes the robot from the Workshop the same way the
  * Workshop's own Delete does; catalog and sighting cards never get
  * one, because they are not yours. */
+import SampleRobotCard from "@/components/sample/SampleRobotCard";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { families, robots } from "@/lib/data";
@@ -345,8 +346,9 @@ export function MyRobotsGrid({ mine }: { mine: GarageRobot[] | null }) {
   if (mine === null) return <p className="faint">Checking your Workshop…</p>;
   if (!mine.length) return (
     <div className="dex-empty">
-      <p><strong>No robots of your own yet.</strong> My robots shows exactly what is in your Workshop. Bring one in from a photo, a spec file or the Robodex.</p>
-      <Link className="btn btn-primary btn-sm" href="/garage/">Open the Workshop</Link>
+      <p><strong>No robots of your own yet.</strong> My robots shows exactly what is in your Workshop. Start with the Omega1 sample below, or bring one in from a photo, a spec file or the Robodex.</p>
+      <SampleRobotCard />
+      <Link className="btn btn-sm" href="/garage/">Open the Workshop</Link>
     </div>
   );
   return (
