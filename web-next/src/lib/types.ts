@@ -50,6 +50,14 @@ export interface Part {
   used_for?: string;
   image?: string;
   photo?: PartPhoto | null;
+  /* Shop links saved with the part (lib/shopLinks.ts): `shops` are
+   * constructed vendor SEARCH urls; the found_* slot carries a real
+   * product-page url when a search has found one (found_via names
+   * how, e.g. 'firecrawl'). Links only — never a price. */
+  shops?: { vendor: string; url: string }[];
+  found_url?: string | null;
+  found_via?: string | null;
+  found_store?: string | null;
   specs?: Record<string, unknown>;
   robot_types?: string[];
   notes?: string;

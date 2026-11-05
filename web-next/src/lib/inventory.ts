@@ -48,6 +48,11 @@ export interface InventoryPart {
    * stated (an estimate with its source and fetch date, not a quote). */
   store?: string;
   price_estimate?: {text: string; amountUsd: number; sourceUrl: string; fetchedAt: string};
+  /* Shop links saved WITH this item (lib/shopLinks.ts ShopLink[]):
+   * a 'found' product page first when one exists, then constructed
+   * vendor 'search' links. They ride through save/export/import so
+   * a part keeps its shops wherever it goes. Links only. */
+  shops?: import('./shopLinks').ShopLink[];
   license?: string;
   robot_links?: {robot_id: string; kind: 'planned' | 'installed'}[];
   design?: {filename: string; versions: {source: string; createdAt: string; request: string}[]};

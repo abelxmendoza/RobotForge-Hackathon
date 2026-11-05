@@ -415,6 +415,7 @@ def test_catalog_matching_near_misses(tmp_path):
     names = [
         "RPLIDAR A1", "RPLIDAR A1 2D lidar", "BNO085", "BNO055",
         "Raspberry Pi 4", "Raspberry Pi 4 (4 GB)", "Raspberry Pi 5",
+        "Raspberry Pi 400",
         "MPU6050 board", "Waveshare Motor Driver HAT",
     ]
     out = run_node(tmp_path, "match", {"names": names, "catalog": catalog()})
@@ -423,8 +424,9 @@ def test_catalog_matching_near_misses(tmp_path):
     assert m["RPLIDAR A1 2D lidar"] == "rplidar_a1"
     assert m["BNO085"] is None          # NOT the catalogue's BNO055
     assert m["BNO055"] == "imu_bno055"
-    assert m["Raspberry Pi 4"] is None  # NOT the catalogue's Pi 5
-    assert m["Raspberry Pi 4 (4 GB)"] is None
+    assert m["Raspberry Pi 4"] == "raspberry_pi_4b"  # the catalogue's Pi 4
+    assert m["Raspberry Pi 4 (4 GB)"] is None  # the catalogue's Pi 4 states no RAM size
+    assert m["Raspberry Pi 400"] is None  # still NOT in the catalogue
     assert m["Raspberry Pi 5"] == "raspberry_pi_5"
     assert m["MPU6050 board"] is None
     assert m["Waveshare Motor Driver HAT"] is None
@@ -583,7 +585,7 @@ def test_omega1_readme_parts_and_matches(tmp_path):
     assert by["Camera"] is None
     assert by["Controller"] is None
     assert by["Motor driver"] is None
-    assert by["Compute"] is None  # a Pi 4B is not the catalogue's Pi 5
+    assert by["Compute"] == "raspberry_pi_4b"  # the README's Pi 4B is the catalogue's Pi 4B — not the Pi 5
     # Vendored trees are not the robot.
     picked = out["picked"]
     assert picked["images"] == ["image/README/omega1.png"]
@@ -630,7 +632,7 @@ def test_notes_never_rename_a_named_part(tmp_path):
     out = run_node(tmp_path, "readme_parts",
                    {"md": md, "catalog": catalog(), "tree": ["README.md"]})
     by = {p["name"]: p["catalogId"] for p in out["parts"]}
-    assert by["OV5647"] is None  # NOT the Pi it plugs into
+    assert by["OV5647"] == "camera_ov5647"  # the camera itself — NOT the Pi it plugs into
     assert by["Ultrasonic"] == "ultrasonic_hcsr04"
 
 

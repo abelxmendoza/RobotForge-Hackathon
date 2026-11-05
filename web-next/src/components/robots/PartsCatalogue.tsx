@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { parts } from "@/lib/data";
 import { PART_GROUPS, partGroup } from "@/lib/partTaxonomy";
 import { partSearchQuery } from "@/lib/sourcing";
+import { cataloguePartLinks } from "@/lib/shopLinks";
 import type { Part } from "@/lib/types";
 import SourcingLinks from "./SourcingLinks";
 import type { AppDispatch, RootState } from "@/store/store";
@@ -70,7 +71,7 @@ function PartCard({ part, query, highlight, cardRef }: {
       <h4>{part.name}</h4>
       {part.blurb ? <p>{part.blurb}</p> : null}
       {specs ? <div className="specs">{specs}</div> : null}
-      <SourcingLinks query={partSearchQuery(part)} />
+      <SourcingLinks query={partSearchQuery(part)} links={cataloguePartLinks(part)} />
     </div>
   );
 }

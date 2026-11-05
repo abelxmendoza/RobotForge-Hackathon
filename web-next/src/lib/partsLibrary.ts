@@ -1,4 +1,5 @@
 import { categoryHint, importedPart, partReality, partSection, PART_CATEGORIES, type InventoryPart } from './inventory';
+import { cataloguePartLinks, webPartShopLinks } from './shopLinks';
 import type { WebPartRecord } from './webParts';
 import type { CataloguePart } from './forgeEngine';
 import type { GarageRobot } from './garage';
@@ -14,10 +15,10 @@ function base(id:string,name:string,category:string):InventoryPart {
 }
 export function libraryItems(stock:InventoryPart[],web:WebPartRecord[]):InventoryPart[] {
   const linked=new Set(stock.map(p=>p.web_record_id));
-  return [...stock.filter(p=>!p.archivedAt),...web.filter(r=>!linked.has(r.id)).map(r=>({...base('web:'+r.id,r.name,categoryFor(r.category,r.name)),web_record_id:r.id,origin:'web' as const,source_url:r.provenance.sourceUrl,specs:r.specs,createdAt:r.provenance.fetchedAt,notes:r.verification,...(r.images?.length?{image_urls:r.images,image_credit:'Photo: '+(r.store||'the source page')}:{}),...(r.store?{store:r.store}:{}),...(r.priceEstimate?{price_estimate:{text:r.priceEstimate.text,amountUsd:r.priceEstimate.amountUsd,sourceUrl:r.priceEstimate.sourceUrl,fetchedAt:r.priceEstimate.fetchedAt}}:{})}))];
+  return [...stock.filter(p=>!p.archivedAt),...web.filter(r=>!linked.has(r.id)).map(r=>({...base('web:'+r.id,r.name,categoryFor(r.category,r.name)),web_record_id:r.id,origin:'web' as const,source_url:r.provenance.sourceUrl,specs:r.specs,createdAt:r.provenance.fetchedAt,notes:r.verification,shops:webPartShopLinks({name:r.name,category:r.category,sourceUrl:r.provenance.sourceUrl}),...(r.images?.length?{image_urls:r.images,image_credit:'Photo: '+(r.store||'the source page')}:{}),...(r.store?{store:r.store}:{}),...(r.priceEstimate?{price_estimate:{text:r.priceEstimate.text,amountUsd:r.priceEstimate.amountUsd,sourceUrl:r.priceEstimate.sourceUrl,fetchedAt:r.priceEstimate.fetchedAt}}:{})}))];
 }
 export function catalogItems(catalogue:CataloguePart[]):InventoryPart[] {
-  return catalogue.map(p=>({...base('catalog:'+p.id,p.name||p.id,categoryFor(p.part_class||'',p.name||p.id)),catalog_part_id:p.id,origin:'catalogue' as const,...catalogPhoto(p),specs:Object.fromEntries(Object.entries(p.specs||{}).filter(([,v])=>typeof v==='number'||typeof v==='string')) as InventoryPart['specs']}));
+  return catalogue.map(p=>{const links=cataloguePartLinks(p);return {...base('catalog:'+p.id,p.name||p.id,categoryFor(p.part_class||'',p.name||p.id)),catalog_part_id:p.id,origin:'catalogue' as const,...catalogPhoto(p),...(links.length?{shops:links}:{}),specs:Object.fromEntries(Object.entries(p.specs||{}).filter(([,v])=>typeof v==='number'||typeof v==='string')) as InventoryPart['specs']};});
 }
 /* A catalogue part's verified web photo (catalog/parts.json `photo`,
  * state web_gathered with its source page and credit), else nothing. */
