@@ -160,7 +160,16 @@ def test_next_landing_shows_exactly_one_video():
     # video stacked above the real trailer player — confusing. The
     # landing keeps exactly one video: the playable trailer in #trailer.
     assert "DemoVideoCard" not in page
-    assert page.count("<video") == 1
+    # Disclosed pin change, Abel 2026-11-04: the in-repo trailer
+    # render in #trailer was replaced by his final hackathon demo
+    # video (YouTube embed) — the landing still keeps exactly one
+    # video player in #trailer, now an iframe, so page.tsx carries
+    # no <video> element of its own (the builder video is the
+    # FounderVideo component).
+    assert page.count("<video") == 0
+    assert page.count("<iframe") == 1
+    assert "youtube-nocookie.com/embed/qHt898yvSjA" in page
+    assert "robotforge-trailer-short-v3.mp4" not in page
     assert 'id="trailer"' in page
 
 
