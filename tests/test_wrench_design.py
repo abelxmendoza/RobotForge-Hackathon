@@ -38,21 +38,53 @@ def test_wrench_art_single_source_lists_every_mood():
     assert ts.count("WRENCH_ART") >= 1
     for mood in MOODS:
         assert f"assets/img/wrench/{mood}.jpg" in ts, mood
-    # The component renders only from the single source.
-    comp = AVATAR_TSX.read_text()
-    assert "WRENCH_ART" in comp and "wrenchArt" in comp
 
 
 def test_landing_meet_wrench_band():
     page = PAGE_TSX.read_text()
     assert 'id="wrench"' in page
     assert "Meet Wrench" in page
-    assert "WRENCH_ART.fullbody" in page
     assert "your robotics co-pilot" in page
-    for mood in ["ready", "analyzing", "pass", "fail",
-                 "design", "simulate", "report", "poster"]:
-        assert f"WRENCH_ART.{mood}" in page, mood
-    assert ".wrench-band" in SITE_CSS and ".wrench-moods" in SITE_CSS
+    # Drawn and animated (WrenchBot), not bitmap crops: the full figure,
+    # his three working poses, and the four moods the chat uses.
+    assert "WrenchBot" in page and 'pose="full"' in page
+    for pose in ["design", "simulate", "report"]:
+        assert f'pose="{pose}"' in page, pose
+    for mood in ["ready", "thinking", "pass", "fail"]:
+        assert f'mood="{mood}"' in page, mood
+    # Abel's original sheet stays one click away.
+    assert "WRENCH_ART.poster" in page
+    for cls in [".wrench-band", ".wrench-stage", ".wrench-poses", ".wrench-moods"]:
+        assert cls in SITE_CSS, cls
+
+
+WRENCH_BOT = REPO / "web-next/src/components/chat/WrenchBot.tsx"
+WRENCH_MOOD = REPO / "web-next/src/lib/wrenchMood.ts"
+
+
+def test_wrench_bot_character():
+    src = WRENCH_BOT.read_text()
+    for mood in ["idle", "listening", "thinking", "ready", "pass", "fail"]:
+        assert f'"{mood}"' in src, mood
+    for pose in ["head", "full", "design", "simulate", "report"]:
+        assert f'"{pose}"' in src, pose
+    # Abel's add-on: a torque power-wrench for a hand, with a socket
+    # that spins (faster while he thinks).
+    assert "PowerWrench" in src and "wb-socket" in src
+    assert ".wb-mood-thinking .wb-socket" in CHAT_CSS
+    # Motion is optional: reduced-motion users get a still Wrench.
+    assert "prefers-reduced-motion" in CHAT_CSS and ".wb-still" in CHAT_CSS
+
+
+def test_composer_wrench_follows_the_chat():
+    mood = WRENCH_MOOD.read_text()
+    assert "isWrenchThinking" in mood and "landedMood" in mood
+    for path in [CHAT_BAR, FORGE_THREAD]:
+        src = path.read_text()
+        assert "useWrenchMood" in src, path
+        assert "wb-composer-slot" in src and 'className="wb-composer"' in src, path
+        assert "fc-head-id" in src, path
+    assert ".wb-composer" in CHAT_CSS
 
 
 def test_chat_surfaces_render_wrenchs_face():
@@ -62,11 +94,7 @@ def test_chat_surfaces_render_wrenchs_face():
     assert "WrenchAvatar" in msgs
     assert 'mood="avatar"' in msgs and 'mood="ready"' in msgs
     assert '"fail" : "pass"' in msgs or "'fail' : 'pass'" in msgs.replace('"', "'")
-    # Both chat headers carry him, analyzing while he works.
-    for path in [CHAT_BAR, FORGE_THREAD]:
-        src = path.read_text()
-        assert "WrenchAvatar" in src, path
-        assert '"analyzing" : "avatar"' in src or "'analyzing' : 'avatar'" in src, path
-        assert "fc-head-id" in src, path
+    comp = AVATAR_TSX.read_text()
+    assert "WrenchBot" in comp
     for cls in [".wrench-head-avatar", ".fc-head-id", ".fc-avatar", ".fc-verdict"]:
         assert cls in CHAT_CSS, cls

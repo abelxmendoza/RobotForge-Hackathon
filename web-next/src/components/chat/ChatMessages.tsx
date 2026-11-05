@@ -60,7 +60,7 @@ export default function ChatMessages({
       )}
       {messages.map((m) => (
         <div key={m.id} className={"fc-msg " + m.who}>
-          {m.who === "bot" && <WrenchAvatar mood="avatar" className="fc-avatar" />}
+          {m.who === "bot" && <WrenchAvatar mood="avatar" className="fc-avatar" still />}
           {m.pill && (
             <p><span className="fbadge local">{m.pill}</span></p>
           )}
@@ -81,7 +81,7 @@ export default function ChatMessages({
           )}
           {m.grounding && (
             <p className="fc-grounding">
-              <WrenchAvatar mood={m.grounding.failing ? "fail" : "pass"} className="fc-verdict" />
+              <WrenchAvatar mood={m.grounding.failing ? "fail" : "pass"} className="fc-verdict" still />
               {m.grounding.caption}
             </p>
           )}

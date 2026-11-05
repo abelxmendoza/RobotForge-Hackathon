@@ -71,20 +71,40 @@ section{scroll-margin-top:80px}
 .why-sign{color:var(--text)!important;font-weight:600}
 @media (max-width:720px){.why-built{grid-template-columns:1fr}.why-photo{max-width:300px}}
 
-/* meet Wrench — his character art from Abel's sheet (Nov 4, 2026):
-   full figure beside his own intro, his three working poses, and the
-   four expression heads the app itself uses for his states. */
-.wrench-band{display:grid;grid-template-columns:minmax(220px,320px) 1fr;gap:var(--s7);align-items:center}
-.wrench-hero-img{width:100%;height:auto;display:block;border-radius:var(--r-lg);border:1px solid var(--border)}
-.wrench-band .lede{margin-bottom:var(--s4)}
-.wrench-minis{display:flex;gap:var(--s4);flex-wrap:wrap;margin:var(--s5) 0}
-.wrench-minis figure{margin:0;text-align:center}
-.wrench-minis img{width:104px;height:114px;object-fit:cover;display:block;border-radius:var(--r);border:1px solid var(--border)}
-.wrench-minis figcaption{margin-top:8px;color:var(--text-muted);font-size:var(--fs-xs);font-weight:600}
-.wrench-moods{display:flex;gap:var(--s5);flex-wrap:wrap;list-style:none;padding:0;margin:var(--s7) 0 0}
-.wrench-moods li{display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:var(--fs-sm);font-weight:600}
-.wrench-moods img{width:44px;height:44px;object-fit:cover;border-radius:50%;border:1px solid var(--border)}
-@media (max-width:720px){.wrench-band{grid-template-columns:1fr}.wrench-hero-img{max-width:280px}}
+/* meet Wrench — Abel's character, drawn and animated (WrenchBot,
+   Nov 5, 2026): full figure on a lit stage, his speech bubble, his
+   three working poses, and the four moods the chat composer uses. */
+.wrench-band{display:grid;grid-template-columns:minmax(240px,360px) 1fr;gap:var(--s7);align-items:center}
+.wrench-stage{position:relative;border-radius:var(--r-lg);border:1px solid var(--border);padding:28px 24px 18px;
+  background:radial-gradient(120% 70% at 50% 18%,rgba(92,225,255,.16),transparent 60%),
+             radial-gradient(60% 14% at 50% 94%,rgba(92,225,255,.28),transparent 70%),
+             linear-gradient(180deg,#0f1a33,#0a1022);overflow:hidden}
+.wrench-stage::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.25;
+  background-image:linear-gradient(rgba(92,225,255,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(92,225,255,.18) 1px,transparent 1px);
+  background-size:28px 28px;mask-image:linear-gradient(180deg,transparent,#000 60%,transparent)}
+.wrench-hero-bot{position:relative;width:100%;height:auto;max-width:300px;margin:0 auto;filter:drop-shadow(0 18px 24px rgba(0,0,0,.5))}
+.wrench-quote{margin:0 0 var(--s4);padding:14px 18px;border:1px solid rgba(92,225,255,.45);border-radius:16px;
+  background:rgba(92,225,255,.06);color:var(--text);font-size:var(--fs-md);line-height:1.5;font-weight:500;position:relative}
+.wrench-quote::after{content:"";position:absolute;left:22px;bottom:-8px;width:14px;height:14px;background:#0f1726;
+  border-left:1px solid rgba(92,225,255,.45);border-bottom:1px solid rgba(92,225,255,.45);transform:rotate(-45deg)}
+.wrench-poses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s4);list-style:none;padding:0;margin:var(--s5) 0}
+.wrench-poses li{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 10px 10px;border:1px solid var(--border);
+  border-radius:var(--r);background:linear-gradient(180deg,rgba(92,225,255,.06),transparent 70%)}
+.wrench-poses svg{width:100%;height:auto}
+.wrench-poses span{color:var(--text);font-size:var(--fs-sm);font-weight:700}
+.wrench-moods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s4);list-style:none;padding:0;margin:var(--s7) 0 0}
+.wrench-moods li{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 10px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
+.wrench-moods svg{width:116px;height:auto}
+.wrench-mood-pill{font-size:var(--fs-sm);font-weight:700;color:var(--text);padding:3px 12px;border-radius:999px;border:1px solid transparent}
+.wrench-mood-pill.is-pass{color:#4ade80;border-color:rgba(74,222,128,.6);background:rgba(34,197,94,.12)}
+.wrench-mood-pill.is-fail{color:#f87171;border-color:rgba(248,113,113,.6);background:rgba(239,68,68,.12)}
+@media (max-width:720px){
+  .wrench-band{grid-template-columns:1fr}
+  .wrench-stage{max-width:320px;margin:0 auto;width:100%}
+  .wrench-moods{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wrench-moods svg{width:96px}
+}
+@media (max-width:420px){.wrench-poses{gap:8px}.wrench-poses li{padding:8px 4px}.wrench-poses span{font-size:var(--fs-xs)}}
 
 /* workflow */
 .flow{list-style:none;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s3);counter-reset:step}

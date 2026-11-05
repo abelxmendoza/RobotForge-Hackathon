@@ -43,7 +43,8 @@ import { spinFrame } from '@/lib/image';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
 import CopyButton from '@/components/chat/CopyButton';
-import WrenchAvatar from '@/components/chat/WrenchAvatar';
+import WrenchBot from '@/components/chat/WrenchBot';
+import { useWrenchMood } from '@/lib/wrenchMood';
 import {
   useCallback,
   useEffect,
@@ -364,6 +365,8 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   }, []);
   const liveWorked = useCallback(() => setMode({ mode: 'live', why: '' }), []);
   const [text, setText] = useState('');
+  const liveMood = useWrenchMood(assistant.messages, text.trim().length > 0);
+  const wrenchMood = submitting ? 'thinking' : liveMood;
   const [attach, setAttach] = useState<{ kind: AttachKind; file: File; files?: File[] } | null>(
     null,
   );
@@ -1721,7 +1724,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         <section className="chat-bar-panel wrench-panel" aria-label={`${ASSISTANT_NAME} conversation`} hidden={!open}>
           <div className="fc-head">
             <div className="fc-head-id">
-              <WrenchAvatar mood={assistant.workingOn ? 'analyzing' : 'avatar'} />
+              <WrenchBot pose="head" mood={wrenchMood} className="wrench-head-avatar" />
               <div><strong>{ASSISTANT_NAME}</strong>{assistant.workingOn&&<span className="fc-working-on" role="status">{assistant.workingOn}</span>}</div>
             </div>
             <button type="button" className="fc-close" onClick={() => setOpen(false)} aria-label="Collapse conversation" title="Collapse conversation">▾</button>
@@ -1777,6 +1780,18 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
         {/* Same oval composer as Wrench's bottom bar on every other page:
             paperclip, one line that grows, round send button. */}
         <div className="chat-bar-composer wrench-composer">
+          {/* Wrench himself, at the left end of the oval: his face
+              follows the conversation (lib/wrenchMood). */}
+          <button
+            type="button"
+            className="wb-composer-slot"
+            aria-expanded={docked ? open : undefined}
+            onClick={() => (docked ? setOpen(!open) : inputRef.current?.focus())}
+            aria-label={docked ? (open ? `Collapse ${ASSISTANT_NAME}` : `Open ${ASSISTANT_NAME}`) : `Message ${ASSISTANT_NAME}`}
+            title={wrenchMood === 'thinking' ? `${ASSISTANT_NAME} is thinking…` : ASSISTANT_NAME}
+          >
+            <WrenchBot pose="head" mood={wrenchMood} className="wb-composer" />
+          </button>
           {docked && (
             <button
               type="button"

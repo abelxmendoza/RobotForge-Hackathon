@@ -294,3 +294,69 @@
 .fc-head-id{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
 .fc-avatar{float:left;width:26px;height:26px;object-fit:cover;border-radius:50%;border:1px solid var(--border);margin:1px 8px 2px 0}
 .fc-verdict{width:20px;height:20px;object-fit:cover;border-radius:50%;vertical-align:-5px;margin-right:6px}
+
+/* Wrench, animated (Abel's design, Nov 5, 2026) — WrenchBot.tsx.
+   He breathes and blinks when idle, watches what you type, winks
+   and spins his power wrench while he thinks, smiles when a reply
+   lands, sparkles on a pass and droops on a fail. */
+.wb{display:block;overflow:visible;flex:none}
+.wb-float,.wb-head,.wb-blink,.wb-eyes-look,.wb-crest,.wb-socket,.wb-torque,.wb-thumb,.wb-q,.wb-spark,.wb-drop,.wb-scan,.wb-sim-gear,.wb-progress{transform-box:fill-box}
+.wb-float{animation:wb-bob 3.2s ease-in-out infinite}
+.wb-blink{transform-origin:center;animation:wb-blink 5s infinite}
+.wb-eyes-look{animation:wb-blink 5s infinite,wb-glance 2.4s ease-in-out infinite}
+.wb-crest{transform-origin:50% 90%}
+.wb-ear{animation:wb-ear 2.6s ease-in-out infinite}
+.wb-socket{transform-origin:center;animation:wb-spin 4s linear infinite}
+.wb-torque{opacity:0}
+.wb-thumb{transform-origin:20% 70%;animation:wb-thumb 3.2s ease-in-out infinite}
+.wb-mood-thinking .wb-head{transform-origin:50% 80%;animation:wb-tilt 1.6s ease-in-out infinite}
+.wb-mood-thinking .wb-crest{animation:wb-wiggle .5s ease-in-out infinite}
+.wb-mood-thinking .wb-socket{animation-duration:.45s}
+.wb-mood-thinking .wb-torque{opacity:1;transform-origin:center;animation:wb-spin .9s linear infinite}
+.wb-mood-thinking .wb-ear,.wb-mood-thinking .wb-dial{animation:wb-ear .6s ease-in-out infinite}
+.wb-q{transform-origin:center;animation:wb-q 1.4s ease-in-out infinite}
+.wb-mood-ready .wb-head,.wb-mood-pass .wb-head{transform-origin:50% 100%;animation:wb-hop .6s ease-out 2}
+.wb-spark{transform-origin:0 100%;animation:wb-spark 1s ease-in-out infinite}
+.wb-mood-fail .wb-head{transform-origin:50% 100%;animation:wb-shake .5s ease-in-out 1,wb-droop 3s ease-in-out .5s infinite}
+.wb-drop{transform-origin:center;animation:wb-drip 2s ease-in infinite}
+.wb-scan{animation:wb-scan 2.4s ease-in-out infinite}
+.wb-sim-gear{transform-origin:center;animation:wb-spin 3s linear infinite}
+.wb-progress{transform-origin:left center;animation:wb-progress 2.8s ease-in-out infinite}
+@keyframes wb-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes wb-blink{0%,90%,100%{transform:scaleY(1)}93%{transform:scaleY(.12)}96%{transform:scaleY(1)}}
+@keyframes wb-glance{0%,100%{translate:0 0}50%{translate:2px 0}}
+@keyframes wb-ear{0%,100%{stroke-opacity:1}50%{stroke-opacity:.45}}
+@keyframes wb-spin{to{transform:rotate(360deg)}}
+@keyframes wb-thumb{0%,80%,100%{transform:rotate(0)}86%{transform:rotate(-8deg)}92%{transform:rotate(4deg)}}
+@keyframes wb-tilt{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(3deg)}}
+@keyframes wb-wiggle{0%,100%{transform:rotate(0)}50%{transform:rotate(-10deg)}}
+@keyframes wb-q{0%,100%{transform:translateY(0) rotate(-6deg);opacity:1}50%{transform:translateY(-4px) rotate(6deg);opacity:.7}}
+@keyframes wb-hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-6px) scaleY(1.03)}}
+@keyframes wb-spark{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+@keyframes wb-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@keyframes wb-droop{0%,100%{transform:translateY(1px) rotate(-2deg)}50%{transform:translateY(3px) rotate(-3deg)}}
+@keyframes wb-drip{0%{transform:translateY(0);opacity:1}80%{opacity:1}100%{transform:translateY(8px);opacity:0}}
+@keyframes wb-scan{0%,100%{transform:translateY(0)}50%{transform:translateY(74px)}}
+@keyframes wb-progress{0%{transform:scaleX(.08)}80%,100%{transform:scaleX(1)}}
+.wb-still,.wb-still *{animation:none!important}
+@media (prefers-reduced-motion:reduce){.wb,.wb *{animation:none!important}}
+
+/* Wrench in the oval composer: his head sits at the left end of the
+   oval, the wrench crest poking just above its edge. */
+.wb-composer{align-self:flex-end;margin:0 0 1px 0;width:42px;height:auto;margin-top:-12px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.wb-composer-slot{flex:none;display:flex;align-items:flex-end;align-self:stretch;padding:0;background:none;border:0;cursor:pointer;border-radius:50%}
+.wb-composer-slot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:600px){.wb-composer{width:34px;margin-top:-10px}}
+.wrench-head-avatar.wb{width:38px;height:auto;border:0;border-radius:0}
+.fc-avatar.wb{width:28px;height:auto;border:0;border-radius:0}
+.fc-verdict.wb{display:inline-block;width:22px;height:auto;border:0;border-radius:0;vertical-align:-6px}
+/* Phones: Wrench's head is the open/close control (it carries
+   aria-expanded), so the ▴ toggle steps aside and the message box
+   keeps its room; Create shrinks to its spark icon (aria-label kept).
+   The conversation header puts Wrench and his status on their own row. */
+@media (max-width:600px){
+  .chat-bar-composer:has(.wb-composer-slot) > .chat-bar-toggle{display:none}
+  .chat-bar-panel .fc-head{flex-wrap:wrap;row-gap:8px}
+  .chat-bar-panel .fc-head-id{flex:1 1 100%}
+}
+@media (max-width:420px){.chat-bar-composer .chat-bar-create{font-size:0;gap:0;padding:0 11px}}
