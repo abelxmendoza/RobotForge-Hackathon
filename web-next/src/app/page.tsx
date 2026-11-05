@@ -159,42 +159,36 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============ TRAILER — recorded from the live app in demo
-           mode (real screens, recorded data, no mockups). Tap-to-play:
-           preload="none" + poster, so nothing downloads until a
-           visitor asks for it. The video is silent; its text is on
-           screen. */}
+      {/* ============ FINAL DEMO — Abel's hackathon demo video
+           (YouTube), replacing the in-repo trailer render on
+           2026-11-04 at his direction. YouTube embed in the same
+           #trailer band the hero card scrolls to, so the landing
+           still has ONE video player. */}
       <section className="band" id="trailer">
         <div className="wrap">
           <div className="section-head">
-            <div className="eyebrow">Trailer</div>
+            <div className="eyebrow">Final demo</div>
             <h2>Watch RobotForge work.</h2>
             <p>
-              Inside the real app with Omega1, a real broken rover:
-              one job per Workshop tab, engineering checks, Wrench
-              remembering what you tell it, a RealSense scan, and a
-              drive test in browser physics.
+              Abel&apos;s final demo for the Meta Global AI Developer
+              Hackathon: the real app, checked specs, Wrench, and the
+              evidence behind every verdict.
             </p>
           </div>
           <figure className="hero-art" style={{ marginTop: 0 }}>
-            <video
-              controls
-              preload="none"
-              poster={assetPath("assets/video/robotforge-trailer-short-v3-poster.jpg")}
-              width={1280}
-              height={720}
-              aria-label="RobotForge trailer — a recorded tour of the live app in demo mode"
-            >
-              <source
-                src={assetPath("assets/video/robotforge-trailer-short-v3.mp4")}
-                type="video/mp4"
+            <div className="demo-video-frame">
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/qHt898yvSjA"
+                title="RobotForge final demo — Meta Global AI Developer Hackathon"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
               />
-            </video>
+            </div>
             <figcaption>
-              Recorded from the app in demo mode, Nov 4, 2026 — real
-              screens, recorded data, no mockups. The RealSense part
-              uses the scan bridge's simulated test camera. Silent; the
-              text is on screen.
+              Recorded by Abel Mendoza, Nov 4, 2026 — the live app at
+              robot-forge-hackathon.vercel.app. Also the demo video on
+              the hackathon submission.
             </figcaption>
           </figure>
         </div>
