@@ -883,6 +883,7 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .status-card .ai-card-head{margin-bottom:0}
 .status-art{margin:calc(-1*var(--s4)) calc(-1*var(--s4)) var(--s1);background:var(--surface-2);border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;overflow:hidden}
 .status-art svg{display:block;width:100%;height:128px}
+.status-art svg.sc-wrench{width:38px;height:40px}
 .status-card:first-child{grid-column:span 2}
 @media (max-width:560px){.status-card:first-child{grid-column:auto}}
 .status-card .status-lede{color:var(--text);font-size:var(--fs-sm)}

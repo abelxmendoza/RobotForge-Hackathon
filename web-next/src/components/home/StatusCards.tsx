@@ -38,7 +38,7 @@ const WrenchArt = (
   <svg viewBox="0 0 240 120" aria-hidden="true">
     <rect className="sc-panel" x="40" y="14" width="150" height="24" rx="10" />
     <text className="sc-text" x="52" y="30">add a lidar on top</text>
-    <WrenchBot pose="head" mood="ready" size={38} x={6} y={46} />
+    <WrenchBot pose="head" mood="ready" size={38} x={6} y={46} className="sc-wrench" />
     <rect className="sc-panel sc-accent-line" x="48" y="50" width="176" height="56" rx="10" />
     <text className="sc-text" x="60" y="68">Preview: + RPLIDAR A1, top plate</text>
     <rect className="sc-pass-soft" x="60" y="78" width="70" height="18" rx="9" />
