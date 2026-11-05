@@ -71,6 +71,21 @@ section{scroll-margin-top:80px}
 .why-sign{color:var(--text)!important;font-weight:600}
 @media (max-width:720px){.why-built{grid-template-columns:1fr}.why-photo{max-width:300px}}
 
+/* meet Wrench — his character art from Abel's sheet (Nov 4, 2026):
+   full figure beside his own intro, his three working poses, and the
+   four expression heads the app itself uses for his states. */
+.wrench-band{display:grid;grid-template-columns:minmax(220px,320px) 1fr;gap:var(--s7);align-items:center}
+.wrench-hero-img{width:100%;height:auto;display:block;border-radius:var(--r-lg);border:1px solid var(--border)}
+.wrench-band .lede{margin-bottom:var(--s4)}
+.wrench-minis{display:flex;gap:var(--s4);flex-wrap:wrap;margin:var(--s5) 0}
+.wrench-minis figure{margin:0;text-align:center}
+.wrench-minis img{width:104px;height:114px;object-fit:cover;display:block;border-radius:var(--r);border:1px solid var(--border)}
+.wrench-minis figcaption{margin-top:8px;color:var(--text-muted);font-size:var(--fs-xs);font-weight:600}
+.wrench-moods{display:flex;gap:var(--s5);flex-wrap:wrap;list-style:none;padding:0;margin:var(--s7) 0 0}
+.wrench-moods li{display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:var(--fs-sm);font-weight:600}
+.wrench-moods img{width:44px;height:44px;object-fit:cover;border-radius:50%;border:1px solid var(--border)}
+@media (max-width:720px){.wrench-band{grid-template-columns:1fr}.wrench-hero-img{max-width:280px}}
+
 /* workflow */
 .flow{list-style:none;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s3);counter-reset:step}
 .flow li{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--s5) var(--s4)}

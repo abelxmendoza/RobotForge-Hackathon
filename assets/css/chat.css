@@ -285,3 +285,12 @@
 .main-assistant-reply p+p{margin-top:10px}
 .main-chat-composer{margin-top:16px}
 @media(max-width:600px){.main-chat-actions .btn{width:100%;margin-top:8px}.main-chat-suggestions .chip{min-height:44px}}
+
+/* Wrench's face (Abel's character design, Nov 4, 2026): one avatar in
+   every chat header, his face on his messages, his analyzing head
+   while he works, and his pass/fail heads on grounded verdicts.
+   Art source: lib/wrenchArt.ts. */
+.wrench-head-avatar{width:36px;height:36px;object-fit:cover;border-radius:50%;border:1px solid var(--border);flex:none}
+.fc-head-id{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.fc-avatar{float:left;width:26px;height:26px;object-fit:cover;border-radius:50%;border:1px solid var(--border);margin:1px 8px 2px 0}
+.fc-verdict{width:20px;height:20px;object-fit:cover;border-radius:50%;vertical-align:-5px;margin-right:6px}

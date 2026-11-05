@@ -43,6 +43,7 @@ import { spinFrame } from '@/lib/image';
 import { GARAGE_KEY, type GarageRobot } from '@/lib/garage';
 import { readStore, writeStore, uid } from '@/lib/store';
 import CopyButton from '@/components/chat/CopyButton';
+import WrenchAvatar from '@/components/chat/WrenchAvatar';
 import {
   useCallback,
   useEffect,
@@ -1719,7 +1720,10 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       {docked ? (
         <section className="chat-bar-panel wrench-panel" aria-label={`${ASSISTANT_NAME} conversation`} hidden={!open}>
           <div className="fc-head">
-            <div><strong>{ASSISTANT_NAME}</strong>{assistant.workingOn&&<span className="fc-working-on" role="status">{assistant.workingOn}</span>}</div>
+            <div className="fc-head-id">
+              <WrenchAvatar mood={assistant.workingOn ? 'analyzing' : 'avatar'} />
+              <div><strong>{ASSISTANT_NAME}</strong>{assistant.workingOn&&<span className="fc-working-on" role="status">{assistant.workingOn}</span>}</div>
+            </div>
             <button type="button" className="fc-close" onClick={() => setOpen(false)} aria-label="Collapse conversation" title="Collapse conversation">▾</button>
           </div>
           <div className="wrench-panel-body" ref={panelBodyRef}>{panel}</div>

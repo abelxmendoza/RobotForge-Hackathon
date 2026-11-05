@@ -19,6 +19,7 @@ import { promptWrench, takeWrenchPrompt, WRENCH_PROMPT_EVENT, type WrenchPrompt 
 import AttachButton from "./AttachButton";
 import VoiceButton from "./VoiceButton";
 import CopyButton from "./CopyButton";
+import WrenchAvatar from "./WrenchAvatar";
 import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
 
@@ -85,10 +86,13 @@ export default function ChatBar() {
       {open && (
         <section className="chat-bar-panel" aria-label="Chat conversation">
           <div className="fc-head">
-            <div>
-              <strong>{ASSISTANT_NAME}</strong>
-              <span className="fc-sub">{assistant.subText}</span>
-              {assistant.workingOn && <span className="fc-working-on" role="status">{assistant.workingOn}</span>}
+            <div className="fc-head-id">
+              <WrenchAvatar mood={assistant.workingOn ? "analyzing" : "avatar"} />
+              <div>
+                <strong>{ASSISTANT_NAME}</strong>
+                <span className="fc-sub">{assistant.subText}</span>
+                {assistant.workingOn && <span className="fc-working-on" role="status">{assistant.workingOn}</span>}
+              </div>
             </div>
             {assistant.messages.length > 0 && (
               <CopyButton
