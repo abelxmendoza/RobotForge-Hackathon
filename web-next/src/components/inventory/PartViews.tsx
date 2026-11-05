@@ -79,7 +79,16 @@ function PhotoView({ p }: { p: InventoryPart }) {
 }
 
 export function PartBuyInfo({ p }: { p: InventoryPart }) {
-  const links = storeSearchLinks(partSearchQuery({ name: p.name, specs: p.specs }));
+  /* Links saved WITH the part (lib/shopLinks.ts): a found product
+   * page displays first, then the part's own vendor search links.
+   * Parts saved before shops existed fall back to generating the
+   * general store searches from the name and specs, as before. */
+  const stored = (p.shops || []).filter((l) => safe(l.url));
+  const found = stored.find((l) => l.kind === 'found');
+  const storedSearches = stored.filter((l) => l.kind === 'search');
+  const links = storedSearches.length
+    ? storedSearches
+    : storeSearchLinks(partSearchQuery({ name: p.name, specs: p.specs })).filter((l) => l.vendor !== found?.vendor);
   const src = safe(p.source_url);
   return (
     <section className="pv-buy">
@@ -92,13 +101,16 @@ export function PartBuyInfo({ p }: { p: InventoryPart }) {
       ) : (
         <p className="faint">No price recorded for this part yet. Ask Wrench “how much does {p.name} cost” to look it up, or open a store below.</p>
       )}
-      {src && (
+      {found ? (
+        <p><a className="btn btn-sm btn-primary" href={found.url} target="_blank" rel="noreferrer">Found at {found.label} ↗</a>
+          <br /><span className="faint g-small">The product page this part was found on{found.via ? ` (via ${found.via} search)` : ''}. Check it is the same part before buying.</span></p>
+      ) : src ? (
         <p><a className="btn btn-sm btn-primary" href={src} target="_blank" rel="noreferrer">Buy at {p.store || new URL(src).hostname.replace(/^www\./, '')} ↗</a></p>
-      )}
+      ) : null}
       <div className="pv-stores" aria-label="Search online stores">
         {links.map((l) => <a key={l.vendor} className="chip" href={l.url} target="_blank" rel="noreferrer">{l.label} ↗</a>)}
       </div>
-      <p className="faint g-small">Store buttons open a search for this part; they don’t check stock or price.</p>
+      <p className="faint g-small">{stored.length ? 'Shop links saved with this part. ' : ''}Store buttons open a search for this part; they don’t check stock or price.</p>
     </section>
   );
 }

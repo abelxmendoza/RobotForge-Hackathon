@@ -334,6 +334,19 @@ export function webFindsFromSearch(result: { mode: string; results?: { url: stri
 
 /* ---------------- proposal build + validation ---------------- */
 
+/* TODO (follow-up AFTER 2026-11-09, when the Worker freeze lifts):
+ * wire the live endpoint's Firecrawl search (providers.firecrawl is
+ * already configured true on the live Worker; routes web/part_chat
+ * are live) to search the preferred stores in lib/shopLinks.ts
+ * (PREFERRED_STORES) when Wrench finds a part, and return the found
+ * product-page urls, so a saved record's found link (kind 'found',
+ * via 'firecrawl' — built in lib/partsLibrary.ts from
+ * lib/shopLinks.ts) can point at the exact product page a search
+ * surfaced. Until then the found link is the one page the visitor
+ * confirmed here, classified by vendor domain. Do NOT wire this
+ * from the client around the endpoint, and never edit the Worker
+ * for it inside a client PR. */
+
 /* Build a proposal from ONE scrape result. Returns null for
  * anything that is not a scrape (a search is not a record source)
  * or when validation rejects what extraction produced — the caller

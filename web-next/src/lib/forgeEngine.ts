@@ -15,6 +15,13 @@ export interface CataloguePart {
   name?: string;
   part_class?: string;
   specs?: Record<string, unknown>;
+  /* Shop links saved with the catalogue record (lib/shopLinks.ts):
+   * constructed vendor search urls, plus the found-page slot for a
+   * real product url a search returned. Links only, never prices. */
+  shops?: { vendor: string; url: string }[];
+  found_url?: string | null;
+  found_via?: string | null;
+  found_store?: string | null;
   /* Set only on entries that arrived through the web knowledge
    * loop (lib/webParts.mergeCatalogue): a page the visitor fetched
    * and confirmed in chat. Their specs are WEB-SOURCED —
