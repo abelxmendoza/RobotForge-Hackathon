@@ -20,7 +20,17 @@
         "skid-steer rover"
       ],
       "notes": "Never discharge below about 3.0 V per cell; charge with a balance charger, never unattended. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=LiPo%20battery%204S%205200%20mAh"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=LiPo%20battery%204S%205200%20mAh"
+        }
+      ]
     },
     {
       "id": "lipo_4s_1500",
@@ -41,7 +51,17 @@
         "quadcopter"
       ],
       "notes": "Flight packs work hard: retire a pack that comes down puffy or hot. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=LiPo%20battery%204S%201500%20mAh%20%285-inch%20quad%29"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=LiPo%20battery%204S%201500%20mAh%20%285-inch%20quad%29"
+        }
+      ]
     },
     {
       "id": "lipo_3s_2200",
@@ -64,7 +84,17 @@
         "quadruped"
       ],
       "notes": "Never discharge below about 3.0 V per cell; balance-charge only. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=LiPo%20battery%203S%202200%20mAh"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=LiPo%20battery%203S%202200%20mAh"
+        }
+      ]
     },
     {
       "id": "buck_converter_5v",
@@ -86,7 +116,21 @@
         "robot arm"
       ],
       "notes": "Budget its current for the hungriest load \u2014 an SBC under load plus servos can brown out a weak converter. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Buck%20converter%205%20V%20%2F%205%20A"
+        },
+        {
+          "vendor": "mouser",
+          "url": "https://www.mouser.com/c/?q=Buck%20converter%205%20V%20%2F%205%20A"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Buck%20converter%205%20V%20%2F%205%20A"
+        }
+      ]
     },
     {
       "id": "lipo_balance_charger",
@@ -105,7 +149,17 @@
         "quadcopter"
       ],
       "notes": "A balance charger is not optional for LiPo packs \u2014 it is how you avoid damaging cells. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=LiPo%20balance%20charger"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=LiPo%20balance%20charger"
+        }
+      ]
     },
     {
       "id": "xt60_pigtail",
@@ -124,7 +178,17 @@
         "RC car"
       ],
       "notes": "XT60 is polarised, but check polarity before first plug-in \u2014 reversed power destroys electronics instantly. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=XT60%20pigtail%20lead"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=XT60%20pigtail%20lead"
+        }
+      ]
     },
     {
       "id": "silicone_wire_14awg",
@@ -140,7 +204,21 @@
       "used_for": "Main power runs between battery, fuse and drivers.",
       "robot_types": [],
       "notes": "Match wire gauge to current: thin wire on a battery lead is a fuse you did not choose. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Silicone%20wire%2014%20AWG%20%28per%20metre%29"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Silicone%20wire%2014%20AWG%20%28per%20metre%29"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Silicone%20wire%2014%20AWG%20%28per%20metre%29/"
+        }
+      ]
     },
     {
       "id": "driver_tb6612fng",
@@ -178,6 +256,20 @@
       ],
       "notes": "Rated about 1.2 A per channel continuous — right for small gearmotors, too small for big motors at stall. (General guidance.)",
       "buy": null,
+      "shops":       [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=TB6612FNG%20dual%20motor%20driver"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=TB6612FNG%20dual%20motor%20driver"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=TB6612FNG%20dual%20motor%20driver"
+        }
+      ],
       "gather_history": [
         {
           "run_id": "20261101T192346Z-224e7d",
@@ -423,7 +515,21 @@
       "used_for": "Cheap motor driving for school and hobby robots (it is the driver in the official Andino build).",
       "robot_types": [],
       "notes": "It drops roughly 2 V across the bridge and runs hot, so motors see noticeably less than the battery voltage. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=L298N%20dual%20motor%20driver%20module"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=L298N%20dual%20motor%20driver%20module"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=L298N%20dual%20motor%20driver%20module"
+        }
+      ]
     },
     {
       "id": "esc_4in1_45a",
@@ -443,7 +549,17 @@
         "quadcopter"
       ],
       "notes": "Match ESC current rating and cell count to motors and battery. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=4-in-1%20ESC%2045%20A%20%28BLHeli_S%20class%29"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=4-in-1%20ESC%2045%20A%20%28BLHeli_S%20class%29"
+        }
+      ]
     },
     {
       "id": "esc_quicrun_1060",
@@ -463,7 +579,17 @@
         "RC car"
       ],
       "notes": "Set its battery-type jumper correctly (LiPo cutoff) before first run. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Brushed%20ESC%2060%20A%20%28QuicRun%201060%20class%29"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Brushed%20ESC%2060%20A%20%28QuicRun%201060%20class%29"
+        }
+      ]
     },
     {
       "id": "esp32_devkit",
@@ -489,7 +615,21 @@
         "skid-steer rover"
       ],
       "notes": "GPIO is 3.3 V logic and not 5 V tolerant \u2014 level-shift 5 V sensor outputs. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=ESP32%20development%20board"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=ESP32%20development%20board"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=ESP32%20development%20board"
+        }
+      ]
     },
     {
       "id": "teensy_41",
@@ -521,7 +661,21 @@
         "robot arm"
       ],
       "notes": "3.3 V logic, not 5 V tolerant. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Teensy%204.1"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Teensy%204.1"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Teensy%204.1"
+        }
+      ]
     },
     {
       "id": "pico_rp2040",
@@ -551,7 +705,21 @@
       "used_for": "Small control jobs, custom sensor hubs, PIO-based timing tricks.",
       "robot_types": [],
       "notes": "3.3 V logic, not 5 V tolerant. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%20Pico%20%28RP2040%29"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Raspberry%20Pi%20Pico%20%28RP2040%29"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Raspberry%20Pi%20Pico%20%28RP2040%29"
+        }
+      ]
     },
     {
       "id": "raspberry_pi_5",
@@ -585,7 +753,21 @@
         "quadruped"
       ],
       "notes": "Needs a stiff 5 V / 5 A USB-C supply; undervoltage shows up as throttling and random reboots. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%205"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Raspberry%20Pi%205"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Raspberry%20Pi%205"
+        }
+      ]
     },
     {
       "id": "jetson_orin_nano",
@@ -619,7 +801,21 @@
         "humanoid"
       ],
       "notes": "Module only — it needs a carrier board, and its 5 V input must be sized for the 25 W top power mode; a sagging supply shows up as shutdowns under load. (Per the NVIDIA data sheet.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=NVIDIA%20Jetson%20Orin%20Nano"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=NVIDIA%20Jetson%20Orin%20Nano"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=NVIDIA%20Jetson%20Orin%20Nano"
+        }
+      ]
     },
     {
       "id": "microsd_128gb",
@@ -638,7 +834,17 @@
         "differential-drive rover"
       ],
       "notes": "The card is the robot's hard drive \u2014 a spare imaged card is cheap insurance. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=microSD%20card%20128%20GB%20%28A2%2FV30%29"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=microSD%20card%20128%20GB%20%28A2%2FV30%29"
+        }
+      ]
     },
     {
       "id": "sik_telemetry_v3",
@@ -663,7 +869,17 @@
       "used_for": "Telemetry and parameter tuning for drones/field robots at range.",
       "robot_types": [],
       "notes": "The 915 MHz variant suits the Americas; other regions use 433/868 MHz variants. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=SiK%20telemetry%20radio%20pair%20%28915%20MHz%29"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=SiK%20telemetry%20radio%20pair%20%28915%20MHz%29"
+        }
+      ]
     },
     {
       "id": "elrs_receiver",
@@ -683,7 +899,17 @@
         "quadcopter"
       ],
       "notes": "Receiver and transmitter must run compatible ELRS versions and the same binding phrase. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=ExpressLRS%20receiver"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=ExpressLRS%20receiver"
+        }
+      ]
     },
     {
       "id": "realsense_d435",
@@ -708,7 +934,21 @@
         "skid-steer rover"
       ],
       "notes": "Needs USB 3 for full depth rates; depth is unreliable in bright sunlight and on glass. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Intel%20RealSense%20D435%20depth%20camera"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Intel%20RealSense%20D435%20depth%20camera"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Intel%20RealSense%20D435%20depth%20camera"
+        }
+      ]
     },
     {
       "id": "rplidar_a1",
@@ -738,7 +978,21 @@
         "quadruped"
       ],
       "notes": "Keep its scan plane unobstructed for the full 360 degrees or the map gets blind spots. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=RPLIDAR%20A1%202D%20lidar"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=RPLIDAR%20A1%202D%20lidar"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=RPLIDAR%20A1%202D%20lidar"
+        }
+      ]
     },
     {
       "id": "imu_bno055",
@@ -759,7 +1013,21 @@
         "quadruped"
       ],
       "notes": "Keep it away from motors and power wires \u2014 magnetic interference corrupts its heading. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=BNO055%209-DOF%20IMU%20breakout"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=BNO055%209-DOF%20IMU%20breakout"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=BNO055%209-DOF%20IMU%20breakout"
+        }
+      ]
     },
     {
       "id": "ultrasonic_hcsr04",
@@ -787,7 +1055,21 @@
         "skid-steer rover"
       ],
       "notes": "Its echo pin outputs 5 V \u2014 divide it down before a 3.3 V input. Soft or angled surfaces absorb/deflect the ping. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=HC-SR04%20ultrasonic%20ranger"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=HC-SR04%20ultrasonic%20ranger"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=HC-SR04%20ultrasonic%20ranger"
+        }
+      ]
     },
     {
       "id": "pla_filament",
@@ -807,6 +1089,16 @@
       "robot_types": [],
       "notes": "PLA is stiff and easy but softens in a hot car; PETG is the tougher choice for parts near motors. (General guidance.)",
       "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=PLA%20filament%201.75%20mm%2C%201%20kg"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=PLA%20filament%201.75%20mm%2C%201%20kg"
+        }
+      ],
       "gather_history": [
         {
           "run_id": "20261101T182331Z-7a731d",
@@ -951,6 +1243,16 @@
       "robot_types": [],
       "notes": "Prints hotter than PLA and strings more; a dried spool prints noticeably better. (General guidance.)",
       "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=PETG%20filament%201.75%20mm%2C%201%20kg"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=PETG%20filament%201.75%20mm%2C%201%20kg"
+        }
+      ],
       "gather_history": [
         {
           "run_id": "20261101T182331Z-7a731d",
@@ -1160,7 +1462,17 @@
         "skid-steer rover"
       ],
       "notes": "Size the fuse above normal draw and below the wire's rating. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Inline%20blade%20fuse%20holder%20%2B%20fuse"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Inline%20blade%20fuse%20holder%20%2B%20fuse/"
+        }
+      ]
     },
     {
       "id": "estop_button",
@@ -1180,7 +1492,21 @@
         "skid-steer rover"
       ],
       "notes": "Wire it in the main power path, not in software \u2014 it must work when the code doesn't. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Emergency%20stop%20button%20%28latching%29/"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Emergency%20stop%20button%20%28latching%29"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Emergency%20stop%20button%20%28latching%29"
+        }
+      ]
     },
     {
       "id": "bms_4s",
@@ -1197,7 +1523,17 @@
       "used_for": "Protection for DIY 4S packs built from bare cells.",
       "robot_types": [],
       "notes": "A BMS protects the pack; it is not a charger \u2014 still use a proper balance charger. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=BMS%20protection%20board%204S%2040%20A"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=BMS%20protection%20board%204S%2040%20A"
+        }
+      ]
     },
     {
       "id": "custom_pcb_kicad",
@@ -1214,7 +1550,17 @@
       "used_for": "Tidying a proven breadboard design into one reliable board.",
       "robot_types": [],
       "notes": "Prove the circuit on a breadboard first \u2014 a PCB faithfully reproduces design mistakes. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Custom%20PCB%20%28KiCad%20import%29"
+        },
+        {
+          "vendor": "mouser",
+          "url": "https://www.mouser.com/c/?q=Custom%20PCB%20%28KiCad%20import%29"
+        }
+      ]
     },
     {
       "id": "gearmotor_12v",
@@ -1244,7 +1590,21 @@
         "skid-steer rover"
       ],
       "notes": "Stall current is several times the running current \u2014 size the driver for stall or limit current. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=DC%20gearmotor%2012%20V%20%2837%20mm%20class%29"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=DC%20gearmotor%2012%20V%20%2837%20mm%20class%29"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=DC%20gearmotor%2012%20V%20%2837%20mm%20class%29"
+        }
+      ]
     },
     {
       "id": "brushed_motor_540",
@@ -1263,7 +1623,21 @@
         "RC car"
       ],
       "notes": "Brushed motors spark and wear brushes; gearing decides whether it is fast or strong. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Brushed%20motor%20540%20size"
+        },
+        {
+          "vendor": "servocity",
+          "url": "https://www.servocity.com/search.php?search_query=Brushed%20motor%20540%20size"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Brushed%20motor%20540%20size"
+        }
+      ]
     },
     {
       "id": "servo_mg996r",
@@ -1284,7 +1658,21 @@
         "RC car"
       ],
       "notes": "Power servos from their own regulated rail, not a microcontroller pin \u2014 brownouts reset controllers. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=MG996R%20servo"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=MG996R%20servo"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=MG996R%20servo"
+        }
+      ]
     },
     {
       "id": "servo_sts3215",
@@ -1316,7 +1704,17 @@
         "robot arm"
       ],
       "notes": "Each bus servo needs a unique ID set before chaining; the bus is half-duplex UART. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=STS3215%20serial%20bus%20servo%20%28Feetech%29"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=STS3215%20serial%20bus%20servo%20%28Feetech%29"
+        }
+      ]
     },
     {
       "id": "stepper_nema17",
@@ -1334,7 +1732,21 @@
       "used_for": "3D printers, CNC axes, precise positioners.",
       "robot_types": [],
       "notes": "Needs a stepper driver (A4988/DRV8825 class) \u2014 never wire coils straight to a microcontroller. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=Stepper%20motor%20NEMA%2017"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Stepper%20motor%20NEMA%2017"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Stepper%20motor%20NEMA%2017"
+        }
+      ]
     },
     {
       "id": "brushless_2207_1960kv",
@@ -1354,7 +1766,17 @@
         "quadcopter"
       ],
       "notes": "KV times battery volts is roughly unloaded RPM \u2014 match prop size to KV and cell count. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Brushless%20motor%202207%201960%20KV"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Brushless%20motor%202207%201960%20KV"
+        }
+      ]
     },
     {
       "id": "wheel_100mm",
@@ -1374,7 +1796,21 @@
         "skid-steer rover"
       ],
       "notes": "Wheel diameter sets both ground clearance and the distance each motor turn travels \u2014 the motion gate measures exactly this. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=Wheel%20100%20mm%20diameter"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=Wheel%20100%20mm%20diameter"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Wheel%20100%20mm%20diameter"
+        }
+      ]
     },
     {
       "id": "mecanum_wheel_100mm",
@@ -1393,7 +1829,21 @@
         "skid-steer rover"
       ],
       "notes": "Mecanum rollers make wheel odometry unreliable by design \u2014 expect heading drift and fuse with an IMU. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=Mecanum%20wheel%20100%20mm"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Mecanum%20wheel%20100%20mm"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Mecanum%20wheel%20100%20mm"
+        }
+      ]
     },
     {
       "id": "caster_ball",
@@ -1411,7 +1861,21 @@
         "differential-drive rover"
       ],
       "notes": "Casters carry weight but no drive \u2014 the robot's balance point should sit close to the driven axle. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=Ball%20caster"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Ball%20caster/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Ball%20caster"
+        }
+      ]
     },
     {
       "id": "propeller_5040",
@@ -1431,7 +1895,17 @@
         "quadcopter"
       ],
       "notes": "Props are the dangerous part of a quad \u2014 remove them for every bench test. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Propeller%205x4.0x3%20tri-blade"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Propeller%205x4.0x3%20tri-blade"
+        }
+      ]
     },
     {
       "id": "fc_f405_stack",
@@ -1450,7 +1924,17 @@
         "quadcopter"
       ],
       "notes": "Mount it soft (vibration isolation) \u2014 a rigidly mounted gyro reads the frame's buzz as motion. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Flight%20controller%20stack%20F405"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Flight%20controller%20stack%20F405"
+        }
+      ]
     },
     {
       "id": "gripper_2finger",
@@ -1468,7 +1952,21 @@
         "robot arm"
       ],
       "notes": "Check servo torque against gripper + payload weight at full reach, not just at the base. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=2-finger%20parallel%20gripper%20kit"
+        },
+        {
+          "vendor": "servocity",
+          "url": "https://www.servocity.com/search.php?search_query=2-finger%20parallel%20gripper%20kit"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=2-finger%20parallel%20gripper%20kit"
+        }
+      ]
     },
     {
       "id": "quad_frame_5inch",
@@ -1487,7 +1985,17 @@
         "quadcopter"
       ],
       "notes": "Carbon fibre is conductive \u2014 insulate every board and wire that touches the frame. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Quadcopter%20frame%205%20inch%20%28carbon%29"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Quadcopter%20frame%205%20inch%20%28carbon%29"
+        }
+      ]
     },
     {
       "id": "extrusion_2020",
@@ -1503,7 +2011,21 @@
       "used_for": "Frames for arms, gantries and test rigs.",
       "robot_types": [],
       "notes": "Uses M3/M4 T-slot nuts \u2014 order fasteners when you order lengths. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Aluminium%20extrusion%202020%20%28per%20metre%29/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Aluminium%20extrusion%202020%20%28per%20metre%29"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=Aluminium%20extrusion%202020%20%28per%20metre%29"
+        }
+      ]
     },
     {
       "id": "chassis_plate",
@@ -1523,7 +2045,17 @@
         "differential-drive rover"
       ],
       "notes": "Keep mounting holes a few millimetres from plate edges in printed plastic, and print flat-side down. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Chassis%20plate%20%283D-printed%29/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Chassis%20plate%20%283D-printed%29"
+        }
+      ]
     },
     {
       "id": "motor_mount",
@@ -1543,7 +2075,17 @@
         "differential-drive rover"
       ],
       "notes": "Printed mounts flex under hard stall torque \u2014 gussets or a second bolt point help. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Motor%20mount%20bracket%20%283D-printed%29/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Motor%20mount%20bracket%20%283D-printed%29"
+        }
+      ]
     },
     {
       "id": "lidar_mount",
@@ -1563,7 +2105,17 @@
         "skid-steer rover"
       ],
       "notes": "The lidar must see over the robot's own body in every direction, or the map has a permanent blind wedge. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Lidar%20mount%20post%20%283D-printed%29/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Lidar%20mount%20post%20%283D-printed%29"
+        }
+      ]
     },
     {
       "id": "camera_bracket",
@@ -1584,7 +2136,17 @@
         "robot arm"
       ],
       "notes": "A slightly downward tilt sees near-field obstacles; level sees the horizon. Pick per job. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Camera%20bracket%20%283D-printed%29/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Camera%20bracket%20%283D-printed%29"
+        }
+      ]
     },
     {
       "id": "ultrasonic_bracket",
@@ -1604,7 +2166,17 @@
         "differential-drive rover"
       ],
       "notes": "Angle it straight ahead: a tilted sonar measures the floor, not the wall. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/Ultrasonic%20bracket%20%283D-printed%29/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Ultrasonic%20bracket%20%283D-printed%29"
+        }
+      ]
     },
     {
       "id": "camera_rpi_v2",
@@ -1624,7 +2196,21 @@
         "differential-drive rover"
       ],
       "notes": "The CSI ribbon is fragile and keyed \u2014 seat it straight and never hot-swap it. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%20Camera%20Module%20V2%20%288%20MP%29"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Raspberry%20Pi%20Camera%20Module%20V2%20%288%20MP%29"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Raspberry%20Pi%20Camera%20Module%20V2%20%288%20MP%29"
+        }
+      ]
     },
     {
       "id": "liion_18650_3s",
@@ -1644,7 +2230,3142 @@
         "differential-drive rover"
       ],
       "notes": "Use matched cells from one batch, and a holder with a fuse or BMS for a robot that drives unattended. (General guidance.)",
-      "buy": null
+      "buy": null,
+      "shops":       [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=18650%20Li-ion%20pack%203S%20%283%20cells%29"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=18650%20Li-ion%20pack%203S%20%283%20cells%29"
+        }
+      ]
+    },
+    {
+      "id": "servo_sg90",
+      "image": "assets/img/parts/servo_sg90.jpg",
+      "license": "proprietary-part",
+      "name": "SG90 micro servo",
+      "part_class": "actuators",
+      "source": "TowerPro SG90 class micro servo",
+      "specs": {
+        "kind": "servo_positional",
+        "mass_g": 9,
+        "torque_kg_cm": 1.8,
+        "voltage_v": "4.8-6.0"
+      },
+      "blurb": "A tiny 9 g positional servo, the classic first servo for small mechanisms.",
+      "used_for": "Steering, small grippers, camera tilt and sensor pointing on light robots.",
+      "robot_types": [
+        "differential-drive rover",
+        "robot arm"
+      ],
+      "notes": "Plastic gears strip under shock loads; keep loads light. (General guidance.) Interface: pwm.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=SG90%20micro%20servo"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=SG90%20micro%20servo"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=SG90%20micro%20servo"
+        }
+      ]
+    },
+    {
+      "id": "servo_mg90s",
+      "image": "assets/img/parts/servo_mg90s.jpg",
+      "license": "proprietary-part",
+      "name": "MG90S micro servo (metal gear)",
+      "part_class": "actuators",
+      "source": "TowerPro MG90S class micro servo",
+      "specs": {
+        "kind": "servo_positional",
+        "mass_g": 13.4,
+        "torque_kg_cm": 2.2,
+        "voltage_v": "4.8-6.0"
+      },
+      "blurb": "The SG90's tougher sibling: same size, metal gears, a bit more torque.",
+      "used_for": "Small mechanisms that outgrew plastic-gear servos.",
+      "robot_types": [
+        "differential-drive rover",
+        "robot arm"
+      ],
+      "notes": "Metal gears survive knocks better but still dislike stalled loads. (General guidance.) Interface: pwm.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=MG90S%20micro%20servo"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=MG90S%20micro%20servo"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=MG90S%20micro%20servo"
+        }
+      ]
+    },
+    {
+      "id": "servo_ds3218",
+      "image": "assets/img/parts/servo_ds3218.jpg",
+      "license": "proprietary-part",
+      "name": "DS3218 high-torque servo (20 kg class)",
+      "part_class": "actuators",
+      "source": "DSSERVO DS3218 class digital servo",
+      "specs": {
+        "kind": "servo_positional",
+        "torque_kg_cm": 20,
+        "voltage_v": "4.8-6.8"
+      },
+      "blurb": "A standard-size digital servo with metal gears and serious holding torque.",
+      "used_for": "Arm joints, steering on heavier rovers, gripper actuation.",
+      "robot_types": [
+        "robot arm",
+        "skid-steer rover"
+      ],
+      "notes": "Draws amps in the plural at stall: power it from a real BEC, not a microcontroller pin. (General guidance.) Interface: pwm.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=DS3218%2020kg%20servo"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=DS3218%2020kg%20servo"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=DS3218%2020kg%20servo"
+        }
+      ]
+    },
+    {
+      "id": "stepper_28byj48",
+      "image": "assets/img/parts/stepper_28byj48.jpg",
+      "license": "proprietary-part",
+      "name": "28BYJ-48 stepper motor with ULN2003 driver board",
+      "part_class": "actuators",
+      "source": "generic 28BYJ-48 geared stepper set",
+      "specs": {
+        "kind": "stepper",
+        "steps_per_rev": 2048,
+        "voltage_v": 5
+      },
+      "blurb": "A small 5 V geared stepper sold with its ULN2003 driver board; slow, cheap, everywhere.",
+      "used_for": "Dials, valves, small turntables and teaching rigs.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "The 2048 steps per output revolution are in full-step mode through its 64:1 gearbox. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=28BYJ-48%20stepper%20ULN2003"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=28BYJ-48%20stepper%20ULN2003"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=28BYJ-48%20stepper%20ULN2003"
+        }
+      ]
+    },
+    {
+      "id": "stepper_nema23",
+      "image": "assets/img/parts/stepper_nema23.jpg",
+      "license": "proprietary-part",
+      "name": "NEMA 23 stepper motor",
+      "part_class": "actuators",
+      "source": "generic NEMA 23 (57 mm frame) stepper",
+      "specs": {
+        "frame_mm": "57x57",
+        "kind": "stepper",
+        "steps_per_rev": 200
+      },
+      "blurb": "The bigger standard stepper frame: 57 mm face, 200 full steps per revolution.",
+      "used_for": "CNC axes, heavy gantries and larger arm joints.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Holding torque varies a lot by winding; check the datasheet of the exact unit before trusting it. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=NEMA%2023%20stepper%20motor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=NEMA%2023%20stepper%20motor"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=NEMA%2023%20stepper%20motor"
+        }
+      ]
+    },
+    {
+      "id": "gearmotor_25ga370",
+      "image": "assets/img/parts/gearmotor_25ga370.jpg",
+      "license": "proprietary-part",
+      "name": "25GA-370 DC gearmotor 12 V",
+      "part_class": "actuators",
+      "source": "generic 25 mm gearbox DC motor",
+      "specs": {
+        "diameter_mm": 25,
+        "kind": "dc_gearmotor",
+        "voltage_v": 12
+      },
+      "blurb": "A 25 mm metal-gearbox DC motor, the workhorse size between toy motors and industrial ones.",
+      "used_for": "Medium rovers, conveyor drives and powered casters.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Sold in many gear ratios; the ratio, not the shell, sets speed and torque. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=25GA-370%20gearmotor%2012V"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=25GA-370%20gearmotor%2012V"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=25GA-370%20gearmotor%2012V"
+        }
+      ]
+    },
+    {
+      "id": "gearmotor_tt",
+      "image": "assets/img/parts/gearmotor_tt.jpg",
+      "license": "proprietary-part",
+      "name": "TT DC gearmotor (1:48, dual shaft)",
+      "part_class": "actuators",
+      "source": "generic TT motor (yellow gearbox)",
+      "specs": {
+        "gear_ratio": "1:48",
+        "kind": "dc_gearmotor",
+        "voltage_v": "3-6"
+      },
+      "blurb": "The yellow plastic-gearbox motor from classroom robot kits, with a shaft on both sides.",
+      "used_for": "First rovers and classroom kits; the free side takes an encoder disc.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Happy at 3-6 V; encoder discs for it are sold as a matching accessory. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=TT%20motor%20gearmotor"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=TT%20motor%20gearmotor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=TT%20motor%20gearmotor"
+        }
+      ]
+    },
+    {
+      "id": "brushless_2212_1000kv",
+      "image": "assets/img/parts/brushless_2212_1000kv.jpg",
+      "license": "proprietary-part",
+      "name": "2212 1000KV brushless outrunner",
+      "part_class": "actuators",
+      "source": "generic A2212 class outrunner",
+      "specs": {
+        "cells": "2-3S",
+        "kind": "brushless_outrunner",
+        "kv": 1000
+      },
+      "blurb": "A classic mid-size drone and RC-plane outrunner, 1000 KV.",
+      "used_for": "Slow-flyer props, small VTOL and lift fans.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "KV is rpm per volt unloaded; pick the prop for the cell count, not the other way round. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=2212%201000KV%20brushless%20motor"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=2212%201000KV%20brushless%20motor"
+        }
+      ]
+    },
+    {
+      "id": "motor_775",
+      "image": "assets/img/parts/motor_775.jpg",
+      "license": "proprietary-part",
+      "name": "775-size DC motor (12-24 V)",
+      "part_class": "actuators",
+      "source": "generic 775 frame DC motor",
+      "specs": {
+        "kind": "dc_brushed",
+        "voltage_v": "12-24"
+      },
+      "blurb": "A fist-sized brushed motor with real shaft power for tools and drivetrains.",
+      "used_for": "Spindles, pumps, heavy skid-steer drives.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Stall current is large; size the driver and fuse for it, not for the running current. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=775%20DC%20motor"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=775%20DC%20motor"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/775%20DC%20motor/"
+        }
+      ]
+    },
+    {
+      "id": "servo_hs645mg",
+      "image": "assets/img/parts/servo_hs645mg.jpg",
+      "license": "proprietary-part",
+      "name": "Hitec HS-645MG servo",
+      "part_class": "actuators",
+      "source": "Hitec HS-645MG (manufacturer datasheet values)",
+      "specs": {
+        "kind": "servo_positional",
+        "mass_g": 55.2,
+        "torque_kg_cm": 9.6,
+        "voltage_v": "4.8-6.0"
+      },
+      "blurb": "A long-running standard-size servo with metal gears, popular in RC and robotics.",
+      "used_for": "Steering and arm joints on mid-size robots.",
+      "robot_types": [
+        "robot arm",
+        "RC car"
+      ],
+      "notes": "Torque figure is the 6.0 V stall value from the datasheet; expect less in motion. (General guidance.) Interface: pwm.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "servocity",
+          "url": "https://www.servocity.com/search.php?search_query=Hitec%20HS-645MG"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Hitec%20HS-645MG"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Hitec%20HS-645MG"
+        }
+      ]
+    },
+    {
+      "id": "linear_actuator_12v",
+      "image": "assets/img/parts/linear_actuator_12v.jpg",
+      "license": "proprietary-part",
+      "name": "Linear actuator 12 V, 100 mm stroke",
+      "part_class": "actuators",
+      "source": "generic small linear actuator",
+      "specs": {
+        "kind": "linear_actuator",
+        "stroke_mm": 100,
+        "voltage_v": 12
+      },
+      "blurb": "A motor-driven pushrod: apply 12 V, it extends; reverse polarity, it retracts.",
+      "used_for": "Lifts, latches, dump beds and adjustable mounts.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Most have built-in limit switches at both ends of travel; speed drops as load rises. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=linear%20actuator%2012V%20100mm"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/linear%20actuator%2012V%20100mm/"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=linear%20actuator%2012V%20100mm"
+        }
+      ]
+    },
+    {
+      "id": "solenoid_12v",
+      "image": "assets/img/parts/solenoid_12v.jpg",
+      "license": "proprietary-part",
+      "name": "Push-pull solenoid 12 V",
+      "part_class": "actuators",
+      "source": "generic open-frame solenoid (JF-0530B class)",
+      "specs": {
+        "kind": "solenoid",
+        "voltage_v": 12
+      },
+      "blurb": "A coil and a spring-loaded plunger: power it and the plunger pulls in with a clack.",
+      "used_for": "Latches, pinball-style kickers, lock release and part ejectors.",
+      "robot_types": [],
+      "notes": "Rated for intermittent duty; left powered, small solenoids cook themselves. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=12V%20solenoid%20push%20pull"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=12V%20solenoid%20push%20pull"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=12V%20solenoid%20push%20pull"
+        }
+      ]
+    },
+    {
+      "id": "driver_a4988",
+      "image": "assets/img/parts/driver_a4988.jpg",
+      "license": "proprietary-part",
+      "name": "A4988 stepper driver (Pololu-style carrier)",
+      "part_class": "drivers",
+      "source": "Allegro A4988 carrier board",
+      "specs": {
+        "input_v_max": 35,
+        "kind": "stepper_driver",
+        "microstep_max": 16,
+        "output_a": 1
+      },
+      "blurb": "The little red stepper driver carrier: step/dir in, one bipolar stepper out, up to 1/16 microstepping.",
+      "used_for": "One NEMA-class stepper per board on small CNC and robot joints.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "About 1 A per coil without a heatsink; set the current limit with the trim pot before first motion. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=A4988%20stepper%20driver"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=A4988%20stepper%20driver"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=A4988%20stepper%20driver"
+        }
+      ]
+    },
+    {
+      "id": "driver_drv8825",
+      "image": "assets/img/parts/driver_drv8825.jpg",
+      "license": "proprietary-part",
+      "name": "DRV8825 stepper driver (Pololu-style carrier)",
+      "part_class": "drivers",
+      "source": "TI DRV8825 carrier board",
+      "specs": {
+        "input_v_max": 45,
+        "kind": "stepper_driver",
+        "microstep_max": 32,
+        "output_a": 1.5
+      },
+      "blurb": "A4988's bigger sibling: higher voltage, 1/32 microstepping, more current per coil.",
+      "used_for": "NEMA 17/23 steppers that need more than an A4988 can give.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "About 1.5 A per coil without forced cooling; it drops in where an A4988 sat, with different current-set maths. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=DRV8825%20stepper%20driver"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=DRV8825%20stepper%20driver"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=DRV8825%20stepper%20driver"
+        }
+      ]
+    },
+    {
+      "id": "driver_tmc2209",
+      "image": "assets/img/parts/driver_tmc2209.jpg",
+      "license": "proprietary-part",
+      "name": "TMC2209 silent stepper driver",
+      "part_class": "drivers",
+      "source": "Trinamic TMC2209 carrier board",
+      "specs": {
+        "input_v_max": 29,
+        "kind": "stepper_driver",
+        "microstep_max": 256,
+        "output_a": 1.4
+      },
+      "blurb": "A stepper driver famous for quiet motion: stealthChop, sensorless homing, UART setup.",
+      "used_for": "Printers and robots that move near people and microphones.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Current figure is RMS per coil from the datasheet; quiet modes trade torque at speed. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=TMC2209%20stepper%20driver"
+        },
+        {
+          "vendor": "mouser",
+          "url": "https://www.mouser.com/c/?q=TMC2209%20stepper%20driver"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=TMC2209%20stepper%20driver"
+        }
+      ]
+    },
+    {
+      "id": "driver_bts7960",
+      "image": "assets/img/parts/driver_bts7960.jpg",
+      "license": "proprietary-part",
+      "name": "BTS7960 43 A H-bridge module",
+      "part_class": "drivers",
+      "source": "generic BTS7960 module",
+      "specs": {
+        "channels": 1,
+        "current_a": 43,
+        "kind": "h_bridge",
+        "voltage_v_max": 27
+      },
+      "blurb": "A chunky single-motor H-bridge module built around the BTS7960 half-bridges.",
+      "used_for": "One big brushed motor: 775s, wiper motors, actuator drives.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "The 43 A figure is the chip's limit, not a promise at stall with no airflow. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=BTS7960%20motor%20driver"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=BTS7960%20motor%20driver"
+        }
+      ]
+    },
+    {
+      "id": "driver_pca9685",
+      "image": "assets/img/parts/driver_pca9685.jpg",
+      "license": "proprietary-part",
+      "name": "PCA9685 16-channel PWM driver board",
+      "part_class": "drivers",
+      "source": "NXP PCA9685 breakout board",
+      "specs": {
+        "channels": 16,
+        "kind": "pwm_driver"
+      },
+      "blurb": "An I2C board that runs 16 servos or LEDs with its own clock, so the microcontroller does not have to.",
+      "used_for": "Many-servo robots: hexapod legs, animatronics, arm arrays.",
+      "robot_types": [
+        "robot arm",
+        "humanoid"
+      ],
+      "notes": "Servo power comes from the board's own terminal, not from I2C; budget a real 5-6 V supply. (General guidance.) Interface: i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=PCA9685%20servo%20driver"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=PCA9685%20servo%20driver"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=PCA9685%20servo%20driver"
+        }
+      ]
+    },
+    {
+      "id": "driver_l9110s",
+      "image": "assets/img/parts/driver_l9110s.jpg",
+      "license": "proprietary-part",
+      "name": "L9110S dual H-bridge module",
+      "part_class": "drivers",
+      "source": "generic L9110S module",
+      "specs": {
+        "channels": 2,
+        "current_a_per_channel": 0.8,
+        "voltage_v_max": 12
+      },
+      "blurb": "A tiny two-motor driver for small voltages and small motors.",
+      "used_for": "TT motors and other toy-class drives on a budget.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Continuous current is under an amp per channel; stalled TT motors can still trip it. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=L9110S%20motor%20driver"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=L9110S%20motor%20driver"
+        }
+      ]
+    },
+    {
+      "id": "esc_35a_blheli",
+      "image": "assets/img/parts/esc_35a_blheli.jpg",
+      "license": "proprietary-part",
+      "name": "35 A BLHeli_32 ESC",
+      "part_class": "drivers",
+      "source": "generic BLHeli_32 single ESC",
+      "specs": {
+        "cells": "2-6S",
+        "channels": 1,
+        "current_a": 35,
+        "kind": "esc_brushless"
+      },
+      "blurb": "A single brushless ESC running BLHeli_32: configurable, DShot-capable, no BEC on most.",
+      "used_for": "Individual brushless motors outside a 4-in-1 stack.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Check whether the unit has a BEC before planning to power a receiver from it. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=BLHeli_32%2035A%20ESC"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=BLHeli_32%2035A%20ESC"
+        }
+      ]
+    },
+    {
+      "id": "arduino_uno_r3",
+      "image": "assets/img/parts/arduino_uno_r3.jpg",
+      "license": "proprietary-part",
+      "name": "Arduino Uno R3",
+      "part_class": "microcontrollers",
+      "source": "Arduino Uno R3 (ATmega328P)",
+      "specs": {
+        "clock_mhz": 16,
+        "logic_v": 5,
+        "mcu": "ATmega328P"
+      },
+      "blurb": "The reference Arduino board: 5 V logic, a forest of shields, decades of examples.",
+      "used_for": "Teaching, prototyping and simple robot control at 5 V.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "5 V logic: level-shift before wiring it to 3.3 V sensors. (General guidance.) Interface: i2c/spi/uart/pwm.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Arduino%20Uno%20R3"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Arduino%20Uno%20R3"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Arduino%20Uno%20R3"
+        }
+      ]
+    },
+    {
+      "id": "arduino_nano",
+      "image": "assets/img/parts/arduino_nano.jpg",
+      "license": "proprietary-part",
+      "name": "Arduino Nano (classic)",
+      "part_class": "microcontrollers",
+      "source": "Arduino Nano (ATmega328P)",
+      "specs": {
+        "clock_mhz": 16,
+        "logic_v": 5,
+        "mcu": "ATmega328P"
+      },
+      "blurb": "Uno guts on a breadboard-friendly stick.",
+      "used_for": "Permanent small builds that started life as an Uno prototype.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Same 5 V logic and 16 MHz clock as the Uno; clones vary in USB chip. (General guidance.) Interface: i2c/spi/uart/pwm.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Arduino%20Nano"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Arduino%20Nano"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Arduino%20Nano"
+        }
+      ]
+    },
+    {
+      "id": "stm32_blue_pill",
+      "image": "assets/img/parts/stm32_blue_pill.jpg",
+      "license": "proprietary-part",
+      "name": "STM32 Blue Pill board (STM32F103C8T6)",
+      "part_class": "microcontrollers",
+      "source": "generic Blue Pill development board",
+      "specs": {
+        "clock_mhz": 72,
+        "logic_v": 3.3,
+        "mcu": "STM32F103C8T6"
+      },
+      "blurb": "A 72 MHz ARM Cortex-M3 board for a few dollars, programmed over SWD or USB.",
+      "used_for": "Fast control loops and CAN-bus nodes on a budget.",
+      "robot_types": [],
+      "notes": "Boards vary in provenance; the USB resistor fix on early boards is well documented. (General guidance.) Interface: i2c/spi/uart/usb/can.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=STM32%20Blue%20Pill%20F103"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=STM32%20Blue%20Pill%20F103"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=STM32%20Blue%20Pill%20F103"
+        }
+      ]
+    },
+    {
+      "id": "esp32_s3_devkit",
+      "image": "assets/img/parts/esp32_s3_devkit.jpg",
+      "license": "proprietary-part",
+      "name": "ESP32-S3 development board",
+      "part_class": "microcontrollers",
+      "source": "Espressif ESP32-S3 dev board class",
+      "specs": {
+        "logic_v": 3.3,
+        "mcu": "ESP32-S3"
+      },
+      "blurb": "The ESP32's newer sibling: dual-core, native USB, vector instructions for small ML.",
+      "used_for": "WiFi/BLE robot brains with camera and voice ambitions.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Native USB means it can present as keyboard/serial/MIDI without a bridge chip. (General guidance.) Interface: i2c/spi/uart/pwm/wifi/ble.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=ESP32-S3%20development%20board"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=ESP32-S3%20development%20board"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=ESP32-S3%20development%20board"
+        }
+      ]
+    },
+    {
+      "id": "esp8266_nodemcu",
+      "image": "assets/img/parts/esp8266_nodemcu.jpg",
+      "license": "proprietary-part",
+      "name": "NodeMCU ESP8266 development board",
+      "part_class": "microcontrollers",
+      "source": "generic NodeMCU v2/v3 (ESP8266)",
+      "specs": {
+        "logic_v": 3.3,
+        "mcu": "ESP8266"
+      },
+      "blurb": "The board that put WiFi on everything: one core, 3.3 V, huge community.",
+      "used_for": "Simple connected sensors and remotes.",
+      "robot_types": [],
+      "notes": "One ADC pin and modest RAM: fine for telemetry, not for cameras. (General guidance.) Interface: i2c/spi/uart/pwm/wifi.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=NodeMCU%20ESP8266"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=NodeMCU%20ESP8266"
+        }
+      ]
+    },
+    {
+      "id": "pico_w",
+      "image": "assets/img/parts/pico_w.jpg",
+      "license": "proprietary-part",
+      "name": "Raspberry Pi Pico W",
+      "part_class": "microcontrollers",
+      "source": "Raspberry Pi Pico W (RP2040)",
+      "specs": {
+        "logic_v": 3.3,
+        "mcu": "RP2040"
+      },
+      "blurb": "The Pico with WiFi and Bluetooth: RP2040 dual-core plus a radio.",
+      "used_for": "Connected controllers and robot nodes that phone home.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Same PIO superpowers as the plain Pico; radio and CPU share the board's power budget. (General guidance.) Interface: i2c/spi/uart/pio/wifi/ble.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%20Pico%20W"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Raspberry%20Pi%20Pico%20W"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Raspberry%20Pi%20Pico%20W"
+        }
+      ]
+    },
+    {
+      "id": "xiao_rp2040",
+      "image": "assets/img/parts/xiao_rp2040.jpg",
+      "license": "proprietary-part",
+      "name": "Seeed Studio XIAO RP2040",
+      "part_class": "microcontrollers",
+      "source": "Seeed Studio XIAO RP2040",
+      "specs": {
+        "logic_v": 3.3,
+        "mcu": "RP2040"
+      },
+      "blurb": "An RP2040 the size of a postage stamp, USB-C, for embedding in finished things.",
+      "used_for": "Wearables, in-mechanism controllers, tiny robot nodes.",
+      "robot_types": [],
+      "notes": "Few pins is the point: plan the pin map before the enclosure. (General guidance.) Interface: i2c/spi/uart.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Seeed%20XIAO%20RP2040"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Seeed%20XIAO%20RP2040"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Seeed%20XIAO%20RP2040"
+        }
+      ]
+    },
+    {
+      "id": "raspberry_pi_4b",
+      "image": "assets/img/parts/raspberry_pi_4b.jpg",
+      "license": "proprietary-part",
+      "name": "Raspberry Pi 4 Model B",
+      "part_class": "sbc",
+      "source": "Raspberry Pi 4 Model B",
+      "specs": {
+        "supply": "5V/3A USB-C"
+      },
+      "blurb": "The previous-generation Pi: quad-core, dual camera/display options, runs the same software as the 5.",
+      "used_for": "Robot brains where Pi 5 performance is not needed or stock is what it is.",
+      "robot_types": [
+        "differential-drive rover",
+        "robot arm"
+      ],
+      "notes": "Wants a real 5 V/3 A supply; undervoltage shows up as a lightning bolt and throttling. (General guidance.) Interface: usb/ethernet/csi/gpio.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%204%20Model%20B"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Raspberry%20Pi%204%20Model%20B"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Raspberry%20Pi%204%20Model%20B"
+        }
+      ]
+    },
+    {
+      "id": "raspberry_pi_zero_2_w",
+      "image": "assets/img/parts/raspberry_pi_zero_2_w.jpg",
+      "license": "proprietary-part",
+      "name": "Raspberry Pi Zero 2 W",
+      "part_class": "sbc",
+      "source": "Raspberry Pi Zero 2 W",
+      "specs": {
+        "supply": "5V/2.5A micro-USB"
+      },
+      "blurb": "A quad-core Pi in the tiny Zero footprint, with WiFi.",
+      "used_for": "Cameras and controllers in places a full Pi cannot fit.",
+      "robot_types": [],
+      "notes": "512 MB RAM is the ceiling; keep the workload honest. (General guidance.) Interface: csi/gpio/wifi/ble.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%20Zero%202%20W"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Raspberry%20Pi%20Zero%202%20W"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Raspberry%20Pi%20Zero%202%20W"
+        }
+      ]
+    },
+    {
+      "id": "jetson_nano",
+      "image": "assets/img/parts/jetson_nano.jpg",
+      "license": "proprietary-part",
+      "name": "NVIDIA Jetson Nano developer kit",
+      "part_class": "sbc",
+      "source": "NVIDIA Jetson Nano (original developer kit)",
+      "specs": {
+        "ai_performance": "472 GFLOPS",
+        "supply": "5V/4A barrel or 5V/2A micro-USB"
+      },
+      "blurb": "The original little Jetson: a 128-core Maxwell GPU for CUDA and vision learning.",
+      "used_for": "Vision projects and CUDA coursework on older, well-trodden docs.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Superseded by the Orin Nano for new designs; its software stack is frozen but deeply documented. (General guidance.) Interface: usb/ethernet/csi/gpio.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Jetson%20Nano%20developer%20kit"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Jetson%20Nano%20developer%20kit"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Jetson%20Nano%20developer%20kit"
+        }
+      ]
+    },
+    {
+      "id": "realsense_d455",
+      "image": "assets/img/parts/realsense_d455.jpg",
+      "license": "proprietary-part",
+      "name": "Intel RealSense Depth Camera D455",
+      "part_class": "cameras_sensors",
+      "source": "Intel RealSense D455 (manufacturer datasheet values)",
+      "specs": {
+        "depth_range_m": "0.6-6",
+        "kind": "rgbd_camera"
+      },
+      "blurb": "The long-range RealSense: depth from about 0.6 m to 6 m, with an IMU inside.",
+      "used_for": "Room-scale mapping, obstacle avoidance and the Scan Studio's measured scans.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "The D455 is the camera Abel's scan bridge runs; depth error grows with distance (about 2% of range). (General guidance.) Interface: usb3.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=RealSense%20D455"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=RealSense%20D455"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=RealSense%20D455"
+        }
+      ]
+    },
+    {
+      "id": "camera_rpi_v3",
+      "image": "assets/img/parts/camera_rpi_v3.jpg",
+      "license": "proprietary-part",
+      "name": "Raspberry Pi Camera Module 3",
+      "part_class": "cameras_sensors",
+      "source": "Raspberry Pi Camera Module 3 (IMX708)",
+      "specs": {
+        "autofocus": "phase-detection AF",
+        "kind": "rgb_camera",
+        "megapixels": 12
+      },
+      "blurb": "The current Pi camera: 12 MP with powered autofocus, in standard and wide versions.",
+      "used_for": "Robot eyes on any modern Pi.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Autofocus is the headline change from the v2; the ribbon is still fragile, route it kindly. (General guidance.) Interface: csi ribbon.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=Raspberry%20Pi%20Camera%20Module%203"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Raspberry%20Pi%20Camera%20Module%203"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Raspberry%20Pi%20Camera%20Module%203"
+        }
+      ]
+    },
+    {
+      "id": "camera_ov5647",
+      "image": "assets/img/parts/camera_ov5647.jpg",
+      "license": "proprietary-part",
+      "name": "OV5647 5 MP camera module (Pi camera v1 class)",
+      "part_class": "cameras_sensors",
+      "source": "generic OV5647 module for Raspberry Pi",
+      "specs": {
+        "kind": "rgb_camera",
+        "megapixels": 5
+      },
+      "blurb": "The original Pi camera sensor on a module: 5 MP, fixed focus, everywhere.",
+      "used_for": "Cheap robot vision and timelapse rigs.",
+      "robot_types": [],
+      "notes": "Fixed focus set at the factory; screwing the lens changes it permanently. (General guidance.) Interface: csi ribbon.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=OV5647%20camera%20module%20Raspberry%20Pi"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=OV5647%20camera%20module%20Raspberry%20Pi"
+        }
+      ]
+    },
+    {
+      "id": "tf_luna",
+      "image": "assets/img/parts/tf_luna.jpg",
+      "license": "proprietary-part",
+      "name": "Benewake TF-Luna LiDAR",
+      "part_class": "cameras_sensors",
+      "source": "Benewake TF-Luna (manufacturer datasheet values)",
+      "specs": {
+        "kind": "lidar_1d",
+        "range_m": 8
+      },
+      "blurb": "A single-point LiDAR the size of a grape: 0.2 to 8 m over UART or I2C.",
+      "used_for": "Altimeters, door counters and single-beam obstacle sensing.",
+      "robot_types": [
+        "quadcopter",
+        "differential-drive rover"
+      ],
+      "notes": "Sunlight and dark surfaces shorten the practical range below the headline 8 m. (General guidance.) Interface: uart/i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=TF-Luna%20LiDAR"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=TF-Luna%20LiDAR"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=TF-Luna%20LiDAR"
+        }
+      ]
+    },
+    {
+      "id": "vl53l0x_tof",
+      "image": "assets/img/parts/vl53l0x_tof.jpg",
+      "license": "proprietary-part",
+      "name": "VL53L0X time-of-flight distance sensor",
+      "part_class": "cameras_sensors",
+      "source": "ST VL53L0X breakout board",
+      "specs": {
+        "kind": "tof_distance",
+        "range_m": 2
+      },
+      "blurb": "A laser ranging chip on a breakout: distance in millimetres over I2C, up to about 2 m.",
+      "used_for": "Precise short-range distance: gripper approach, wall following, fill levels.",
+      "robot_types": [
+        "robot arm",
+        "differential-drive rover"
+      ],
+      "notes": "Range depends on target reflectivity and ambient light; the datasheet's 2 m is the friendly case. (General guidance.) Interface: i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=VL53L0X"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=VL53L0X"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=VL53L0X"
+        }
+      ]
+    },
+    {
+      "id": "imu_mpu6050",
+      "image": "assets/img/parts/imu_mpu6050.jpg",
+      "license": "proprietary-part",
+      "name": "MPU-6050 6-axis IMU module (GY-521)",
+      "part_class": "cameras_sensors",
+      "source": "generic GY-521 module (MPU-6050)",
+      "specs": {
+        "kind": "imu"
+      },
+      "blurb": "The everywhere IMU module: 3-axis gyro plus 3-axis accelerometer on I2C.",
+      "used_for": "Balance, tilt sensing and motion logging on a budget.",
+      "robot_types": [
+        "differential-drive rover",
+        "humanoid"
+      ],
+      "notes": "No magnetometer: heading drifts without an external reference. (General guidance.) Interface: i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=MPU-6050%20GY-521"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=MPU-6050%20GY-521"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=MPU-6050%20GY-521"
+        }
+      ]
+    },
+    {
+      "id": "sensor_bme280",
+      "image": "assets/img/parts/sensor_bme280.jpg",
+      "license": "proprietary-part",
+      "name": "BME280 environmental sensor",
+      "part_class": "cameras_sensors",
+      "source": "Bosch BME280 breakout board",
+      "specs": {
+        "kind": "temp_humidity_pressure"
+      },
+      "blurb": "Temperature, humidity and air pressure from one tiny I2C chip.",
+      "used_for": "Weather stations, greenhouse robots and altitude estimates.",
+      "robot_types": [],
+      "notes": "Self-heating biases the temperature reading if you sample it flat out. (General guidance.) Interface: i2c/spi.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=BME280%20sensor"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=BME280%20sensor"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=BME280%20sensor"
+        }
+      ]
+    },
+    {
+      "id": "sensor_dht22",
+      "image": "assets/img/parts/sensor_dht22.jpg",
+      "license": "proprietary-part",
+      "name": "DHT22 / AM2302 temperature-humidity sensor",
+      "part_class": "cameras_sensors",
+      "source": "Aosong DHT22 (AM2302)",
+      "specs": {
+        "kind": "temp_humidity"
+      },
+      "blurb": "The white-grid humidity and temperature sensor with the slow, patient protocol.",
+      "used_for": "Room and enclosure climate monitoring.",
+      "robot_types": [],
+      "notes": "One reading every two seconds is its pace; it is not a control-loop sensor. (General guidance.) Interface: single-wire digital.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=DHT22%20sensor"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=DHT22%20sensor"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=DHT22%20sensor"
+        }
+      ]
+    },
+    {
+      "id": "sensor_ina219",
+      "image": "assets/img/parts/sensor_ina219.jpg",
+      "license": "proprietary-part",
+      "name": "INA219 current and voltage sensor board",
+      "part_class": "cameras_sensors",
+      "source": "TI INA219 breakout board",
+      "specs": {
+        "current_a": 3.2,
+        "kind": "current_sensor",
+        "voltage_v_max": 26
+      },
+      "blurb": "An I2C power monitor: bus voltage, current and power, read digitally.",
+      "used_for": "Battery telemetry and per-branch power budgets.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Figures are the chip's maxima from its datasheet (26 V bus, about 3.2 A with the fitted shunt). (General guidance.) Interface: i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=INA219"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=INA219"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=INA219"
+        }
+      ]
+    },
+    {
+      "id": "gps_neom9n",
+      "image": "assets/img/parts/gps_neom9n.jpg",
+      "license": "proprietary-part",
+      "name": "u-blox NEO-M9N GPS module",
+      "part_class": "cameras_sensors",
+      "source": "u-blox NEO-M9N module board",
+      "specs": {
+        "kind": "gps"
+      },
+      "blurb": "A modern multi-constellation GPS receiver on a breakout, with a real fix indicator.",
+      "used_for": "Outdoor navigation and geotagging.",
+      "robot_types": [
+        "differential-drive rover",
+        "quadcopter"
+      ],
+      "notes": "Needs sky: indoors it will shrug at you. Cold starts take tens of seconds. (General guidance.) Interface: uart/i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=NEO-M9N%20GPS%20module"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=NEO-M9N%20GPS%20module"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=NEO-M9N%20GPS%20module"
+        }
+      ]
+    },
+    {
+      "id": "encoder_hall",
+      "image": "assets/img/parts/encoder_hall.jpg",
+      "license": "proprietary-part",
+      "name": "Hall-effect motor encoder (pair)",
+      "part_class": "cameras_sensors",
+      "source": "generic hall encoder kit for gearmotors",
+      "specs": {
+        "kind": "encoder"
+      },
+      "blurb": "Two hall sensors and a magnetic disc that clip onto a gearmotor's rear shaft.",
+      "used_for": "Wheel odometry for TT and 25GA-class motors.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Counts the motor shaft, not the wheel: gearbox backlash stays invisible to it. (General guidance.) Interface: digital pulse.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=hall%20encoder%20gearmotor"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=hall%20encoder%20gearmotor"
+        }
+      ]
+    },
+    {
+      "id": "sensor_qmc5883l",
+      "image": "assets/img/parts/sensor_qmc5883l.jpg",
+      "license": "proprietary-part",
+      "name": "QMC5883L 3-axis magnetometer",
+      "part_class": "cameras_sensors",
+      "source": "generic QMC5883L compass module",
+      "specs": {
+        "kind": "magnetometer"
+      },
+      "blurb": "A digital compass chip on a module: heading from the Earth's field, over I2C.",
+      "used_for": "Heading hold and turn-to-angle behaviours.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Motors and steel bend its world; calibrate away from both and mount it apart from them. (General guidance.) Interface: i2c.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=QMC5883L%20compass"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=QMC5883L%20compass"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=QMC5883L%20compass"
+        }
+      ]
+    },
+    {
+      "id": "pir_hcsr501",
+      "image": "assets/img/parts/pir_hcsr501.jpg",
+      "license": "proprietary-part",
+      "name": "HC-SR501 PIR motion sensor",
+      "part_class": "cameras_sensors",
+      "source": "generic HC-SR501 module",
+      "specs": {
+        "kind": "pir_motion",
+        "range_m": 7,
+        "voltage_v": "5-12"
+      },
+      "blurb": "The white-domed motion detector from a thousand alarm projects.",
+      "used_for": "Wake-on-approach, room occupancy and scarecrow duty.",
+      "robot_types": [],
+      "notes": "Detects changes in infrared, i.e. warm things moving; a still person fades from its view. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=HC-SR501%20PIR"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=HC-SR501%20PIR"
+        }
+      ]
+    },
+    {
+      "id": "sharp_gp2y0a21",
+      "image": "assets/img/parts/sharp_gp2y0a21.jpg",
+      "license": "proprietary-part",
+      "name": "Sharp GP2Y0A21YK0F IR distance sensor",
+      "part_class": "cameras_sensors",
+      "source": "Sharp GP2Y0A21YK0F (manufacturer datasheet values)",
+      "specs": {
+        "kind": "ir_distance",
+        "range_cm": "10-80"
+      },
+      "blurb": "The classic analogue IR ranger: voltage out falls as the obstacle nears, 10 to 80 cm.",
+      "used_for": "Obstacle detection older and newer robots keep coming back to.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Inside 10 cm the reading folds back and lies; keep a bumper for the last centimetres. (General guidance.) Interface: analog voltage.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=GP2Y0A21YK0F"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=GP2Y0A21YK0F"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=GP2Y0A21YK0F"
+        }
+      ]
+    },
+    {
+      "id": "hx711_kit",
+      "image": "assets/img/parts/hx711_kit.jpg",
+      "license": "proprietary-part",
+      "name": "HX711 load cell kit (5 kg cell + amplifier)",
+      "part_class": "cameras_sensors",
+      "source": "generic HX711 + beam load cell kit",
+      "specs": {
+        "kind": "force"
+      },
+      "blurb": "A beam load cell and its 24-bit amplifier chip: weigh things with a microcontroller.",
+      "used_for": "Gripper force, hopper levels and thrust stands.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Accurate after a two-point calibration with a known mass, and not before. (General guidance.) Interface: 2-wire serial.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=HX711%20load%20cell%20kit"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=HX711%20load%20cell%20kit"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=HX711%20load%20cell%20kit"
+        }
+      ]
+    },
+    {
+      "id": "lipo_2s_5000",
+      "image": "assets/img/parts/lipo_2s_5000.jpg",
+      "license": "proprietary-part",
+      "name": "LiPo battery 2S 5000 mAh",
+      "part_class": "power",
+      "source": "generic 2S LiPo pack",
+      "specs": {
+        "capacity_mah": 5000,
+        "chemistry": "lipo",
+        "connector": "XT60",
+        "voltage_v": 7.4
+      },
+      "blurb": "A 2-cell lithium-polymer pack, 7.4 V, the RC car standard.",
+      "used_for": "RC cars, small rovers and 7.4 V servo systems.",
+      "robot_types": [
+        "RC car",
+        "differential-drive rover"
+      ],
+      "notes": "Same LiPo rules as its bigger siblings: balance charge, never discharge below about 3.0 V per cell. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=2S%20LiPo%205000mAh"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=2S%20LiPo%205000mAh"
+        }
+      ]
+    },
+    {
+      "id": "lipo_6s_1300",
+      "image": "assets/img/parts/lipo_6s_1300.jpg",
+      "license": "proprietary-part",
+      "name": "LiPo battery 6S 1300 mAh",
+      "part_class": "power",
+      "source": "generic 6S LiPo pack",
+      "specs": {
+        "capacity_mah": 1300,
+        "chemistry": "lipo",
+        "connector": "XT60",
+        "voltage_v": 22.2
+      },
+      "blurb": "A 6-cell pack for 5-inch and larger quads that want punch over endurance.",
+      "used_for": "Freestyle and racing quadcopters.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "6S on a motor/prop picked for 4S is a fire with extra steps; check the whole chain. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=6S%20LiPo%201300mAh"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=6S%20LiPo%201300mAh"
+        }
+      ]
+    },
+    {
+      "id": "liion_21700_cell",
+      "image": "assets/img/parts/liion_21700_cell.jpg",
+      "license": "proprietary-part",
+      "name": "21700 Li-ion cell 3.7 V (5000 mAh class)",
+      "part_class": "power",
+      "source": "generic 21700 cylindrical cell",
+      "specs": {
+        "capacity_mah": 5000,
+        "chemistry": "liion",
+        "voltage_v": 3.7
+      },
+      "blurb": "The bigger cylindrical cell: 21 by 70 mm, about 5000 mAh in current production cells.",
+      "used_for": "Custom battery packs and high-capacity handhelds.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Spot-weld, do not solder, cells; and buy cells with datasheets, not adjectives. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=21700%20lithium%20cell"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=21700%20lithium%20cell"
+        }
+      ]
+    },
+    {
+      "id": "buck_lm2596",
+      "image": "assets/img/parts/buck_lm2596.jpg",
+      "license": "proprietary-part",
+      "name": "LM2596 adjustable buck converter module",
+      "part_class": "power",
+      "source": "generic LM2596 module",
+      "specs": {
+        "input_v_max": 40,
+        "output_a": 3,
+        "output_v": "1.25-37 adjustable"
+      },
+      "blurb": "The blue adjustable step-down module with the trim pot: set the voltage, feed a robot from a bigger pack.",
+      "used_for": "Deriving 5 V or 12 V rails from a main battery.",
+      "robot_types": [
+        "differential-drive rover",
+        "robot arm"
+      ],
+      "notes": "The 3 A figure is the switch's; sustained output near it needs airflow and honesty. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=LM2596%20buck%20converter"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=LM2596%20buck%20converter"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=LM2596%20buck%20converter"
+        }
+      ]
+    },
+    {
+      "id": "boost_mt3608",
+      "image": "assets/img/parts/boost_mt3608.jpg",
+      "license": "proprietary-part",
+      "name": "MT3608 boost converter module",
+      "part_class": "power",
+      "source": "generic MT3608 module",
+      "specs": {
+        "input_v_max": 24,
+        "input_v_min": 2,
+        "output_a": 2,
+        "output_v_max": 28
+      },
+      "blurb": "A tiny step-up module: turn one cell's sagging voltage into a steady higher rail.",
+      "used_for": "Running 5 V or 12 V bits from a single Li-ion cell.",
+      "robot_types": [],
+      "notes": "Boosting multiplies input current: a 2 A output at 12 V drinks far more at 3.7 V in. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=MT3608%20boost%20converter"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=MT3608%20boost%20converter"
+        }
+      ]
+    },
+    {
+      "id": "pdb_xt60",
+      "image": "assets/img/parts/pdb_xt60.jpg",
+      "license": "proprietary-part",
+      "name": "Power distribution board with XT60 input",
+      "part_class": "power",
+      "source": "generic PDB for multirotors",
+      "specs": {
+        "connector": "XT60",
+        "kind": "pdb"
+      },
+      "blurb": "A quadcopter power hub: battery in on XT60, solder pads out to ESCs and regulators.",
+      "used_for": "Multirotor power wiring without a knot of splices.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Pads are not fuses: the board distributes faults as happily as power. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=power%20distribution%20board%20XT60"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=power%20distribution%20board%20XT60"
+        }
+      ]
+    },
+    {
+      "id": "charger_imax_b6",
+      "image": "assets/img/parts/charger_imax_b6.jpg",
+      "license": "proprietary-part",
+      "name": "iMAX B6 balance charger",
+      "part_class": "power",
+      "source": "SkyRC iMAX B6 class charger",
+      "specs": {
+        "cells": "1-6S",
+        "charge_a_max": 5
+      },
+      "blurb": "The long-running blue balance charger for LiPo/Li-ion/NiMH packs, 80 W class.",
+      "used_for": "Charging the packs in this catalogue on a bench.",
+      "robot_types": [
+        "quadcopter",
+        "RC car"
+      ],
+      "notes": "Originals and clones share a name; the genuine article's menus are the documented ones. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=iMAX%20B6%20charger"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=iMAX%20B6%20charger"
+        }
+      ]
+    },
+    {
+      "id": "regulator_7805",
+      "image": "assets/img/parts/regulator_7805.jpg",
+      "license": "proprietary-part",
+      "name": "7805 voltage regulator (TO-220)",
+      "part_class": "power",
+      "source": "generic 7805 linear regulator",
+      "specs": {
+        "input_v_max": 35,
+        "output_a": 1.5,
+        "output_v": 5
+      },
+      "blurb": "The three-legged classic: a steady 5 V out, heat as the price of simplicity.",
+      "used_for": "Small 5 V rails where efficiency does not matter and silence does.",
+      "robot_types": [],
+      "notes": "It burns the dropped voltage as heat: at 12 V in and 1 A out, that is 7 W looking for a heatsink. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=7805%20voltage%20regulator"
+        },
+        {
+          "vendor": "mouser",
+          "url": "https://www.mouser.com/c/?q=7805%20voltage%20regulator"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=7805%20voltage%20regulator"
+        }
+      ]
+    },
+    {
+      "id": "nimh_pack_72",
+      "image": "assets/img/parts/nimh_pack_72.jpg",
+      "license": "proprietary-part",
+      "name": "NiMH battery pack 7.2 V, 3000 mAh",
+      "part_class": "power",
+      "source": "generic 6-cell NiMH pack",
+      "specs": {
+        "capacity_mah": 3000,
+        "chemistry": "nimh",
+        "voltage_v": 7.2
+      },
+      "blurb": "A forgiving 6-cell nickel-metal-hydride pack, the old RC standard.",
+      "used_for": "Trainers, toys and robots that charge unattended-adjacent.",
+      "robot_types": [
+        "RC car"
+      ],
+      "notes": "Less energy-dense than LiPo and much harder to set on fire: the school-club trade. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=7.2V%20NiMH%20battery%20pack"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=7.2V%20NiMH%20battery%20pack"
+        }
+      ]
+    },
+    {
+      "id": "xt90_pigtail",
+      "image": "assets/img/parts/xt90_pigtail.jpg",
+      "license": "proprietary-part",
+      "name": "XT90 pigtail (12 AWG)",
+      "part_class": "cables_connectors",
+      "source": "generic XT90 pigtail",
+      "specs": {
+        "connector": "XT90",
+        "gauge_awg": 12
+      },
+      "blurb": "The big sibling of XT60 on a short silicone lead, for high-current packs.",
+      "used_for": "6S and larger power connections.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Match the connector to the worst current, not the average. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=XT90%20pigtail"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=XT90%20pigtail"
+        }
+      ]
+    },
+    {
+      "id": "xt30_pigtail",
+      "image": "assets/img/parts/xt30_pigtail.jpg",
+      "license": "proprietary-part",
+      "name": "XT30 pigtail (18 AWG)",
+      "part_class": "cables_connectors",
+      "source": "generic XT30 pigtail",
+      "specs": {
+        "connector": "XT30",
+        "gauge_awg": 18
+      },
+      "blurb": "The little XT: a compact 2-pin power connector on a silicone lead.",
+      "used_for": "Small quads and tidy low-current power runs.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "XT30 is rated well below XT60; small connector, small currents. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=XT30%20pigtail"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=XT30%20pigtail"
+        }
+      ]
+    },
+    {
+      "id": "jst_ph_set",
+      "image": "assets/img/parts/jst_ph_set.jpg",
+      "license": "proprietary-part",
+      "name": "JST PH 2.0 mm connector set",
+      "part_class": "cables_connectors",
+      "source": "generic JST PH assortment",
+      "specs": {
+        "connector": "JST PH 2.0mm",
+        "kind": "connector_set"
+      },
+      "blurb": "Crimp housings and pins for the 2.0 mm pitch connector on half the sensor boards ever made.",
+      "used_for": "Making custom sensor and battery leads.",
+      "robot_types": [],
+      "notes": "A proper ratchet crimper turns these from misery into routine. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=JST%20PH%20connector%20kit"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=JST%20PH%20connector%20kit"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=JST%20PH%20connector%20kit"
+        }
+      ]
+    },
+    {
+      "id": "dupont_kit",
+      "image": "assets/img/parts/dupont_kit.jpg",
+      "license": "proprietary-part",
+      "name": "Dupont jumper wire kit",
+      "part_class": "cables_connectors",
+      "source": "generic jumper wire assortment",
+      "specs": {
+        "kind": "jumper_wires"
+      },
+      "blurb": "Rainbow ribbons of male-male, male-female and female-female jumpers.",
+      "used_for": "Breadboarding everything in this catalogue.",
+      "robot_types": [],
+      "notes": "The female ends loosen with age and cause the best ghost faults in the hobby. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=dupont%20jumper%20wires"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=dupont%20jumper%20wires"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=dupont%20jumper%20wires"
+        }
+      ]
+    },
+    {
+      "id": "wago_221",
+      "image": "assets/img/parts/wago_221.jpg",
+      "license": "proprietary-part",
+      "name": "WAGO 221 lever-nut connectors (assortment)",
+      "part_class": "cables_connectors",
+      "source": "WAGO 221 series",
+      "specs": {
+        "kind": "lever_nut",
+        "wire_range_awg": "24-12"
+      },
+      "blurb": "Lever-operated splicing connectors: flip, insert, clamp. Reusable and honest.",
+      "used_for": "Bench power distribution and quick rework.",
+      "robot_types": [],
+      "notes": "Genuine 221s carry ratings printed on the body; unbranded lookalikes are a lottery. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=WAGO%20221"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/WAGO%20221/"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=WAGO%20221"
+        }
+      ]
+    },
+    {
+      "id": "usb_c_cable_100w",
+      "image": "assets/img/parts/usb_c_cable_100w.jpg",
+      "license": "proprietary-part",
+      "name": "USB-C to USB-C cable (100 W PD)",
+      "part_class": "cables_connectors",
+      "source": "generic USB PD cable",
+      "specs": {
+        "connector": "USB-C",
+        "kind": "cable",
+        "power_w": 100
+      },
+      "blurb": "A USB-C cable rated for 100 W power delivery, for hungry single-board computers.",
+      "used_for": "Powering a Pi 5 or Jetson properly instead of almost properly.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "100 W cables carry an e-marker chip; a random thin cable may cap you at 60 W or 3 A. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=USB-C%20100W%20cable"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=USB-C%20100W%20cable"
+        }
+      ]
+    },
+    {
+      "id": "qwiic_cable_set",
+      "image": "assets/img/parts/qwiic_cable_set.jpg",
+      "license": "proprietary-part",
+      "name": "QWIIC / STEMMA QT cable set",
+      "part_class": "cables_connectors",
+      "source": "generic JST SH 1.0 mm I2C cable set",
+      "specs": {
+        "connector": "JST SH 1.0mm",
+        "kind": "i2c_cables"
+      },
+      "blurb": "Little 4-pin I2C cables in several lengths: sensor to board with no soldering.",
+      "used_for": "Chaining I2C sensors from SparkFun and Adafruit ecosystems.",
+      "robot_types": [],
+      "notes": "QWIIC and STEMMA QT are the same connector and pinout wearing two badges. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=QWIIC%20cable"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=QWIIC%20cable"
+        }
+      ]
+    },
+    {
+      "id": "heat_shrink_kit",
+      "image": "assets/img/parts/heat_shrink_kit.jpg",
+      "license": "proprietary-part",
+      "name": "Heat-shrink tubing kit (assorted)",
+      "part_class": "cables_connectors",
+      "source": "generic heat-shrink assortment",
+      "specs": {
+        "kind": "heat_shrink"
+      },
+      "blurb": "A box of shrinking sleeves in every diameter a robot harness wants.",
+      "used_for": "Insulating splices and finishing cable ends.",
+      "robot_types": [],
+      "notes": "Adhesive-lined (3:1) shrinks are the ones that survive vibration and weather. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=heat%20shrink%20tubing%20kit"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/heat%20shrink%20tubing%20kit/"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=heat%20shrink%20tubing%20kit"
+        }
+      ]
+    },
+    {
+      "id": "wheel_65mm",
+      "image": "assets/img/parts/wheel_65mm.jpg",
+      "license": "proprietary-part",
+      "name": "Rubber wheel 65 mm (TT-motor fit)",
+      "part_class": "wheels",
+      "source": "generic 65 mm tyre + hub",
+      "specs": {
+        "diameter_m": 0.065,
+        "width_m": 0.027
+      },
+      "blurb": "The wheel that ships with every TT-motor kit: 65 mm of grippy rubber.",
+      "used_for": "Classroom rovers and light differential drives.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Hub fits the TT motor's dual-flat shaft; a screw through the hub stops the wobble. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=65mm%20robot%20wheel"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=65mm%20robot%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=65mm%20robot%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "mecanum_wheel_48mm",
+      "image": "assets/img/parts/mecanum_wheel_48mm.jpg",
+      "license": "proprietary-part",
+      "name": "Mecanum wheel 48 mm",
+      "part_class": "wheels",
+      "source": "generic 48 mm mecanum wheel",
+      "specs": {
+        "diameter_m": 0.048
+      },
+      "blurb": "A small mecanum wheel: rollers at 45 degrees let a chassis strafe.",
+      "used_for": "Holonomic tabletop robots.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Sold as left/right handed rollers; a set needs two of each, mounted as an X or O pattern. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=48mm%20mecanum%20wheel"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=48mm%20mecanum%20wheel"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=48mm%20mecanum%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "wheel_130mm_pneumatic",
+      "image": "assets/img/parts/wheel_130mm_pneumatic.jpg",
+      "license": "proprietary-part",
+      "name": "Pneumatic wheel 130 mm",
+      "part_class": "wheels",
+      "source": "generic inflatable cart wheel",
+      "specs": {
+        "diameter_m": 0.13,
+        "kind": "pneumatic"
+      },
+      "blurb": "An air-filled wheel that floats over gravel and grass instead of rattling across them.",
+      "used_for": "Outdoor rovers on real ground.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Check the hub bore and axle standard before ordering the second pair. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=130mm%20pneumatic%20wheel"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=130mm%20pneumatic%20wheel"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/130mm%20pneumatic%20wheel/"
+        }
+      ]
+    },
+    {
+      "id": "tank_track_set",
+      "image": "assets/img/parts/tank_track_set.jpg",
+      "license": "proprietary-part",
+      "name": "Rubber tank track set (pair)",
+      "part_class": "wheels",
+      "source": "generic track + sprocket kit",
+      "specs": {
+        "kind": "track_set"
+      },
+      "blurb": "Linked rubber tracks with drive sprockets and idlers for a tracked chassis.",
+      "used_for": "Skid-steer rovers that climb kerbs and loose ground.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Tracks steer by scrubbing: budget motor current for the turn, not the straight line. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=robot%20tank%20tracks"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=robot%20tank%20tracks"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=robot%20tank%20tracks"
+        }
+      ]
+    },
+    {
+      "id": "omni_wheel_60mm",
+      "image": "assets/img/parts/omni_wheel_60mm.jpg",
+      "license": "proprietary-part",
+      "name": "Omni wheel 60 mm",
+      "part_class": "wheels",
+      "source": "generic double-row omni wheel",
+      "specs": {
+        "diameter_m": 0.06,
+        "kind": "omni"
+      },
+      "blurb": "A wheel with free rollers around its rim: drives forward, slides sideways.",
+      "used_for": "Three-wheel holonomic (kiwi) drives.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Rollers find every cable tie and floor seam; keep its world tidy. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=60mm%20omni%20wheel"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=60mm%20omni%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "extrusion_3030",
+      "image": "assets/img/parts/extrusion_3030.jpg",
+      "license": "proprietary-part",
+      "name": "Aluminium extrusion 3030 (per metre)",
+      "part_class": "structure",
+      "source": "generic 3030 extrusion",
+      "specs": {
+        "profile_mm": "30x30"
+      },
+      "blurb": "Slotted aluminium profile, 30 by 30 mm, sold by the metre.",
+      "used_for": "Stiffer frames, printer gantries and test rigs.",
+      "robot_types": [],
+      "notes": "Uses M4/M5 T-slot nuts depending on slot series; confirm before the fastener order. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/3030%20aluminum%20extrusion/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=3030%20aluminum%20extrusion"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=3030%20aluminum%20extrusion"
+        }
+      ]
+    },
+    {
+      "id": "extrusion_2040",
+      "image": "assets/img/parts/extrusion_2040.jpg",
+      "license": "proprietary-part",
+      "name": "Aluminium extrusion 2040 (per metre)",
+      "part_class": "structure",
+      "source": "generic 2040 extrusion",
+      "specs": {
+        "profile_mm": "20x40"
+      },
+      "blurb": "The flat 20-by-40 profile: a beam and a rail in one.",
+      "used_for": "Linear axes, camera sliders and long frame members.",
+      "robot_types": [],
+      "notes": "Strong axis is the 40 mm direction; orient it against the load. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/2040%20aluminum%20extrusion/"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=2040%20aluminum%20extrusion"
+        }
+      ]
+    },
+    {
+      "id": "bearing_608",
+      "image": "assets/img/parts/bearing_608.jpg",
+      "license": "proprietary-part",
+      "name": "608-2RS ball bearing",
+      "part_class": "structure",
+      "source": "generic 608-2RS bearing",
+      "specs": {
+        "bore_mm": 8,
+        "kind": "ball_bearing",
+        "outer_mm": 22,
+        "width_mm": 7
+      },
+      "blurb": "The skateboard bearing: 8 mm bore, 22 mm outside, 7 mm wide, sealed both sides.",
+      "used_for": "Idlers, rollers, spool holders and cheap shafts everywhere.",
+      "robot_types": [],
+      "notes": "The most standardised part in the catalogue: dimensions are the standard, brands are a detail. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=608-2RS%20bearing"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/608-2RS%20bearing/"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=608-2RS%20bearing"
+        }
+      ]
+    },
+    {
+      "id": "gt2_belt",
+      "image": "assets/img/parts/gt2_belt.jpg",
+      "license": "proprietary-part",
+      "name": "GT2 timing belt 6 mm (open, per metre)",
+      "part_class": "structure",
+      "source": "generic GT2 belt",
+      "specs": {
+        "kind": "timing_belt",
+        "pitch_mm": 2,
+        "width_mm": 6
+      },
+      "blurb": "Open-ended 2 mm-pitch toothed belt, 6 mm wide, sold by the metre.",
+      "used_for": "Linear axes and wheel-free drive runs.",
+      "robot_types": [],
+      "notes": "Fibreglass-cored belt barely stretches; steel-core is stiffer and hates small pulleys. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=GT2%20belt%206mm"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=GT2%20belt%206mm"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=GT2%20belt%206mm"
+        }
+      ]
+    },
+    {
+      "id": "gt2_pulley_20t",
+      "image": "assets/img/parts/gt2_pulley_20t.jpg",
+      "license": "proprietary-part",
+      "name": "GT2 pulley 20T, 5 mm bore",
+      "part_class": "structure",
+      "source": "generic GT2 pulley",
+      "specs": {
+        "bore_mm": 5,
+        "pitch_mm": 2,
+        "teeth": 20
+      },
+      "blurb": "A 20-tooth GT2 pulley with a 5 mm bore for NEMA 17 shafts.",
+      "used_for": "The motor end of a belt axis.",
+      "robot_types": [],
+      "notes": "Two grub screws at 90 degrees is the good pattern; one screw walks loose. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=GT2%20pulley%2020T%205mm"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=GT2%20pulley%2020T%205mm"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=GT2%20pulley%2020T%205mm"
+        }
+      ]
+    },
+    {
+      "id": "lead_screw_t8",
+      "image": "assets/img/parts/lead_screw_t8.jpg",
+      "license": "proprietary-part",
+      "name": "T8 lead screw with brass nut (8 mm)",
+      "part_class": "structure",
+      "source": "generic T8 screw set",
+      "specs": {
+        "diameter_mm": 8,
+        "kind": "lead_screw",
+        "lead_mm": 8
+      },
+      "blurb": "An 8 mm trapezoidal screw and its anti-backlash brass nut, in axis lengths.",
+      "used_for": "Z axes, lifts and slow precise linear motion.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "The common 4-start version advances 8 mm per turn; single-start (2 mm) exists and looks identical in photos. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=T8%20lead%20screw"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/T8%20lead%20screw/"
+        }
+      ]
+    },
+    {
+      "id": "linear_rail_mgn12",
+      "image": "assets/img/parts/linear_rail_mgn12.jpg",
+      "license": "proprietary-part",
+      "name": "MGN12 linear rail with carriage",
+      "part_class": "structure",
+      "source": "generic MGN12 rail set",
+      "specs": {
+        "kind": "linear_rail",
+        "width_mm": 12
+      },
+      "blurb": "A 12 mm miniature linear guideway and its ball carriage block.",
+      "used_for": "Printer axes, camera sliders and anywhere a shaft-and-bushing wobbles too much.",
+      "robot_types": [],
+      "notes": "The carriage balls are loose if it comes off the rail; the plastic keeper is not packaging. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=MGN12%20linear%20rail"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/MGN12%20linear%20rail/"
+        }
+      ]
+    },
+    {
+      "id": "coupler_5x8",
+      "image": "assets/img/parts/coupler_5x8.jpg",
+      "license": "proprietary-part",
+      "name": "Flexible shaft coupler 5 x 8 mm",
+      "part_class": "structure",
+      "source": "generic beam coupler",
+      "specs": {
+        "bore_mm": "5x8",
+        "kind": "coupler"
+      },
+      "blurb": "A spring-cut aluminium coupler joining a 5 mm motor shaft to an 8 mm screw or shaft.",
+      "used_for": "Stepper-to-leadscrew joints that forgive a little misalignment.",
+      "robot_types": [],
+      "notes": "Forgiving of angle, honest about backlash: precision axes want it aligned anyway. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=5x8%20shaft%20coupler"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=5x8%20shaft%20coupler"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/5x8%20shaft%20coupler/"
+        }
+      ]
+    },
+    {
+      "id": "standoff_kit_m3",
+      "image": "assets/img/parts/standoff_kit_m3.jpg",
+      "license": "proprietary-part",
+      "name": "M3 brass standoff kit (assorted)",
+      "part_class": "structure",
+      "source": "generic standoff assortment",
+      "specs": {
+        "kind": "standoffs",
+        "thread": "M3"
+      },
+      "blurb": "Hex brass spacers in a ladder of lengths: how boards hover over plates.",
+      "used_for": "Stacking PCBs, flight controllers and sensor boards.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Nylon versions isolate electrically and strip if you look at them firmly. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=M3%20standoff%20kit"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=M3%20standoff%20kit"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/M3%20standoff%20kit/"
+        }
+      ]
+    },
+    {
+      "id": "screw_kit_m3",
+      "image": "assets/img/parts/screw_kit_m3.jpg",
+      "license": "proprietary-part",
+      "name": "M3 socket-head screw kit (assorted lengths)",
+      "part_class": "structure",
+      "source": "generic screw assortment",
+      "specs": {
+        "kind": "fastener_kit",
+        "thread": "M3"
+      },
+      "blurb": "The box every robot builder ends up owning: M3 bolts from 6 to 30 mm, nuts and washers.",
+      "used_for": "Fastening printed parts, extrusion and boards.",
+      "robot_types": [],
+      "notes": "Button-head for looks, socket-head for torque, and a spare box for the floor's share. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=M3%20screw%20kit%20assorted"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/M3%20screw%20kit%20assorted/"
+        }
+      ]
+    },
+    {
+      "id": "heat_inserts_m3",
+      "image": "assets/img/parts/heat_inserts_m3.jpg",
+      "license": "proprietary-part",
+      "name": "M3 heat-set thread inserts",
+      "part_class": "structure",
+      "source": "generic knurled brass inserts (CNC Kitchen pattern)",
+      "specs": {
+        "kind": "heat_set_insert",
+        "thread": "M3"
+      },
+      "blurb": "Brass inserts that melt into printed holes and leave a real machine thread behind.",
+      "used_for": "Printed enclosures and parts that get disassembled more than once.",
+      "robot_types": [],
+      "notes": "Hole diameter is insert-specific and smaller than intuition says; print a test coupon first. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=M3%20heat%20set%20inserts"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/M3%20heat%20set%20inserts/"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=M3%20heat%20set%20inserts"
+        }
+      ]
+    },
+    {
+      "id": "angle_bracket_2020",
+      "image": "assets/img/parts/angle_bracket_2020.jpg",
+      "license": "proprietary-part",
+      "name": "2020 corner bracket set",
+      "part_class": "structure",
+      "source": "generic cast corner brackets",
+      "specs": {
+        "kind": "corner_bracket",
+        "profile_mm": "20x20"
+      },
+      "blurb": "Cast aluminium right-angle brackets that square up 2020 extrusion frames.",
+      "used_for": "Frame corners on rigs, enclosures and printer frames.",
+      "robot_types": [],
+      "notes": "Cast brackets square a frame; printed ones mostly decorate it. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=2020%20corner%20bracket"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/2020%20corner%20bracket/"
+        },
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=2020%20corner%20bracket"
+        }
+      ]
+    },
+    {
+      "id": "carbon_tube_10mm",
+      "image": "assets/img/parts/carbon_tube_10mm.jpg",
+      "license": "proprietary-part",
+      "name": "Carbon fibre tube 10 mm OD (per metre)",
+      "part_class": "structure",
+      "source": "generic pultruded carbon tube",
+      "specs": {
+        "diameter_mm": 10,
+        "kind": "tube",
+        "material": "carbon fibre"
+      },
+      "blurb": "A stiff, light 10 mm tube for booms, legs and handles.",
+      "used_for": "Drone arms, sensor masts and leg links.",
+      "robot_types": [
+        "quadcopter",
+        "quadruped"
+      ],
+      "notes": "Cut it wet or with extraction, and seal the dust: carbon splinters are forever. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=carbon%20fiber%20tube%2010mm"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/carbon%20fiber%20tube%2010mm/"
+        }
+      ]
+    },
+    {
+      "id": "abs_filament",
+      "image": "assets/img/parts/abs_filament.jpg",
+      "license": "proprietary-part",
+      "name": "ABS filament 1.75 mm, 1 kg",
+      "part_class": "materials",
+      "source": "generic ABS filament",
+      "specs": {
+        "density_g_cm3": 1.05,
+        "filament_diameter_mm": 1.75,
+        "print_temp_c": "230-250",
+        "spool_weight_g": 1000
+      },
+      "blurb": "The older workhorse plastic: tougher than PLA, warps without an enclosure.",
+      "used_for": "Parts that live near heat or outdoors-ish.",
+      "robot_types": [],
+      "notes": "Vapour-smoothing is an acetone party trick, not a finishing plan. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=ABS%20filament%201.75"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=ABS%20filament%201.75"
+        }
+      ]
+    },
+    {
+      "id": "pc_filament",
+      "image": "assets/img/parts/pc_filament.jpg",
+      "license": "proprietary-part",
+      "name": "Polycarbonate filament 1.75 mm, 1 kg",
+      "part_class": "materials",
+      "source": "generic polycarbonate filament",
+      "specs": {
+        "filament_diameter_mm": 1.75,
+        "spool_weight_g": 1000
+      },
+      "blurb": "The strong, heat-tough printing plastic: prints hot and warps if rushed.",
+      "used_for": "Gears, brackets and parts that live near motors or in hot cars.",
+      "robot_types": [],
+      "notes": "Wants a hot bed, an enclosure and dry storage; wet PC prints like bubble wrap. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=polycarbonate%20filament%201.75"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=polycarbonate%20filament%201.75"
+        }
+      ]
+    },
+    {
+      "id": "hips_filament",
+      "image": "assets/img/parts/hips_filament.jpg",
+      "license": "proprietary-part",
+      "name": "HIPS filament 1.75 mm, 1 kg",
+      "part_class": "materials",
+      "source": "generic HIPS filament",
+      "specs": {
+        "filament_diameter_mm": 1.75,
+        "spool_weight_g": 1000
+      },
+      "blurb": "ABS-like filament best known as a dissolvable support material.",
+      "used_for": "Support structures for ABS prints, and light housings.",
+      "robot_types": [],
+      "notes": "Dissolves in d-limonene, which is the whole trick; as a print material it is ABS's quieter sibling. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=HIPS%20filament%201.75"
+        },
+        {
+          "vendor": "pololu",
+          "url": "https://www.pololu.com/search?query=HIPS%20filament%201.75"
+        }
+      ]
+    },
+    {
+      "id": "resin_standard",
+      "image": "assets/img/parts/resin_standard.jpg",
+      "license": "proprietary-part",
+      "name": "Standard photopolymer resin, 1 kg (405 nm)",
+      "part_class": "materials",
+      "source": "generic SLA resin",
+      "specs": {
+        "kind": "resin",
+        "wavelength_nm": 405
+      },
+      "blurb": "Bottle of UV-curing resin for detail parts on an MSLA printer.",
+      "used_for": "Miniatures, fine gears and visual prototypes.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Uncured resin is a skin sensitiser: gloves, ventilation, and cure the waste. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=3D%20printing%20resin%20405nm"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=3D%20printing%20resin%20405nm"
+        }
+      ]
+    },
+    {
+      "id": "plywood_baltic_3mm",
+      "image": "assets/img/parts/plywood_baltic_3mm.jpg",
+      "license": "proprietary-part",
+      "name": "Baltic birch plywood sheet 3 mm",
+      "part_class": "materials",
+      "source": "generic Baltic birch ply",
+      "specs": {
+        "kind": "sheet",
+        "material": "birch plywood",
+        "thickness_mm": 3
+      },
+      "blurb": "Void-free plywood that laser-cuts into beautiful chassis plates.",
+      "used_for": "Laser-cut rover decks and enclosures.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Real Baltic birch has the BB/BB stamp and no football patches on the good face. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=baltic%20birch%20plywood%203mm"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/baltic%20birch%20plywood%203mm/"
+        }
+      ]
+    },
+    {
+      "id": "nrf24l01",
+      "image": "assets/img/parts/nrf24l01.jpg",
+      "license": "proprietary-part",
+      "name": "nRF24L01+ 2.4 GHz radio module",
+      "part_class": "comms",
+      "source": "Nordic nRF24L01+ module",
+      "specs": {
+        "band_ghz": 2.4
+      },
+      "blurb": "A tiny SPI radio that links Arduinos across a room for pocket money.",
+      "used_for": "Custom remotes and robot-to-robot chatter.",
+      "robot_types": [],
+      "notes": "A capacitor across its power pins cures half the forum threads ever written about it. (General guidance.) Interface: spi.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=nRF24L01%2B%20module"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=nRF24L01%2B%20module"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=nRF24L01%2B%20module"
+        }
+      ]
+    },
+    {
+      "id": "lora_rfm95w",
+      "image": "assets/img/parts/lora_rfm95w.jpg",
+      "license": "proprietary-part",
+      "name": "LoRa radio module 915 MHz (RFM95W)",
+      "part_class": "comms",
+      "source": "HopeRF RFM95W module/breakout",
+      "specs": {
+        "band_mhz": 915
+      },
+      "blurb": "A long-range, low-rate radio: kilometres of telemetry at a whisper of power.",
+      "used_for": "Field robots and remote sensors far from WiFi.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "915 MHz is the Americas band plan; other regions differ and so do the rules. (General guidance.) Interface: spi.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=RFM95W%20LoRa%20915"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=RFM95W%20LoRa%20915"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=RFM95W%20LoRa%20915"
+        }
+      ]
+    },
+    {
+      "id": "ble_hm10",
+      "image": "assets/img/parts/ble_hm10.jpg",
+      "license": "proprietary-part",
+      "name": "HM-10 BLE Bluetooth module",
+      "part_class": "comms",
+      "source": "generic HM-10 module (CC2541)",
+      "specs": {
+        "band_ghz": 2.4
+      },
+      "blurb": "A UART-to-Bluetooth-LE bridge: serial in, phone app out.",
+      "used_for": "Phone-controlled robots and wireless serial links.",
+      "robot_types": [],
+      "notes": "Clones vary in firmware; the AT command set is the tell. (General guidance.) Interface: uart.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=HM-10%20BLE%20module"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=HM-10%20BLE%20module"
+        }
+      ]
+    },
+    {
+      "id": "can_transceiver_sn65hvd230",
+      "image": "assets/img/parts/can_transceiver_sn65hvd230.jpg",
+      "license": "proprietary-part",
+      "name": "SN65HVD230 CAN bus transceiver board",
+      "part_class": "comms",
+      "source": "TI SN65HVD230 board (Waveshare pattern)",
+      "specs": {
+        "logic_v": 3.3
+      },
+      "blurb": "A 3.3 V CAN transceiver on a board: how ESP32s and Teensys join a vehicle bus.",
+      "used_for": "Talking to smart servos, ESCs and vehicle networks.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "A CAN bus wants its 120 ohm terminators at both ends, not at every node. (General guidance.) Interface: can.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=SN65HVD230%20CAN%20board"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=SN65HVD230%20CAN%20board"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=SN65HVD230%20CAN%20board"
+        }
+      ]
+    },
+    {
+      "id": "usb_ttl_cp2102",
+      "image": "assets/img/parts/usb_ttl_cp2102.jpg",
+      "license": "proprietary-part",
+      "name": "CP2102 USB-to-UART adapter",
+      "part_class": "comms",
+      "source": "generic CP2102 adapter board",
+      "specs": {
+        "logic_v": 3.3
+      },
+      "blurb": "The little USB stick that gives any UART a serial console.",
+      "used_for": "Debugging headless boards and flashing stubborn ones.",
+      "robot_types": [],
+      "notes": "Check whether its logic jumper is at 3.3 V before it meets a 3.3 V board. (General guidance.) Interface: usb/uart.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=CP2102%20USB%20UART"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=CP2102%20USB%20UART"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=CP2102%20USB%20UART"
+        }
+      ]
+    },
+    {
+      "id": "lipo_alarm",
+      "image": "assets/img/parts/lipo_alarm.jpg",
+      "license": "proprietary-part",
+      "name": "LiPo low-voltage alarm (1-8S)",
+      "part_class": "safety_protection",
+      "source": "generic balance-lead voltage alarm",
+      "specs": {
+        "cells": "1-8S",
+        "kind": "voltage_alarm"
+      },
+      "blurb": "A beeper that rides the balance lead and screams before a cell sags too far.",
+      "used_for": "Any LiPo robot without telemetry.",
+      "robot_types": [
+        "quadcopter",
+        "RC car"
+      ],
+      "notes": "Set it to 3.5-3.6 V per cell for warning with margin, not the 3.0 V of no return. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=lipo%20voltage%20alarm"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=lipo%20voltage%20alarm"
+        }
+      ]
+    },
+    {
+      "id": "antispark_xt90s",
+      "image": "assets/img/parts/antispark_xt90s.jpg",
+      "license": "proprietary-part",
+      "name": "XT90-S anti-spark connector (pair)",
+      "part_class": "safety_protection",
+      "source": "Amass XT90-S",
+      "specs": {
+        "connector": "XT90-S",
+        "kind": "anti_spark_connector"
+      },
+      "blurb": "An XT90 with a resistor pre-charge path: no snap, no pitted contacts on big packs.",
+      "used_for": "6S+ power connections with thirsty ESC capacitors.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Plug it in one motion; hovering at the resistor stage cooks the resistor. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=XT90-S%20anti%20spark"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=XT90-S%20anti%20spark"
+        }
+      ]
+    },
+    {
+      "id": "breaker_30a",
+      "image": "assets/img/parts/breaker_30a.jpg",
+      "license": "proprietary-part",
+      "name": "Manual-reset circuit breaker 30 A",
+      "part_class": "safety_protection",
+      "source": "generic automotive breaker",
+      "specs": {
+        "current_a": 30,
+        "kind": "circuit_breaker"
+      },
+      "blurb": "A resettable breaker for the main battery line: pops on fault, presses back to life.",
+      "used_for": "Main power protection on mid-size rovers.",
+      "robot_types": [
+        "skid-steer rover"
+      ],
+      "notes": "Size it above honest stall totals of everything downstream, below the wire's rating. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=30A%20circuit%20breaker%2012V"
+        },
+        {
+          "vendor": "mcmaster",
+          "url": "https://www.mcmaster.com/30A%20circuit%20breaker%2012V/"
+        }
+      ]
+    },
+    {
+      "id": "microsd_256gb",
+      "image": "assets/img/parts/microsd_256gb.jpg",
+      "license": "proprietary-part",
+      "name": "microSD card 256 GB (V30)",
+      "part_class": "memory_storage",
+      "source": "generic branded microSD",
+      "specs": {
+        "capacity_gb": 256,
+        "speed_class": "V30"
+      },
+      "blurb": "A quarter-terabyte on a fingernail, fast enough for 4K logging.",
+      "used_for": "SBC storage, camera recording and dataset capture.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Endurance-rated cards survive logging duty; bargain cards become read-only art. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=microSD%20256GB%20V30"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=microSD%20256GB%20V30"
+        }
+      ]
+    },
+    {
+      "id": "nvme_1tb",
+      "image": "assets/img/parts/nvme_1tb.jpg",
+      "license": "proprietary-part",
+      "name": "M.2 2280 NVMe SSD 1 TB",
+      "part_class": "memory_storage",
+      "source": "generic NVMe SSD",
+      "specs": {
+        "capacity_gb": 1000
+      },
+      "blurb": "A terabyte of fast storage for the SBCs that can boot from it.",
+      "used_for": "Jetson and Pi 5 data logging and dataset work.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "Check the host's lane count before blaming the drive for its speed. (General guidance.) Interface: pcie nvme.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=M.2%20NVMe%20SSD%201TB"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=M.2%20NVMe%20SSD%201TB"
+        }
+      ]
+    },
+    {
+      "id": "fc_pixhawk_6c",
+      "image": "assets/img/parts/fc_pixhawk_6c.jpg",
+      "license": "proprietary-part",
+      "name": "Holybro Pixhawk 6C flight controller",
+      "part_class": "flight_control",
+      "source": "Holybro Pixhawk 6C",
+      "specs": {
+        "firmware": "PX4 / ArduPilot",
+        "mcu": "STM32H743"
+      },
+      "blurb": "The current reference Pixhawk: triple-redundant IMUs, the full PX4/ArduPilot stack.",
+      "used_for": "Serious multirotors and VTOL research builds.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Abel's PX4 work is simulation-only; this is the hardware that stack targets. (Catalogue note.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=Pixhawk%206C"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Pixhawk%206C"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Pixhawk%206C"
+        }
+      ]
+    },
+    {
+      "id": "propeller_6040",
+      "image": "assets/img/parts/propeller_6040.jpg",
+      "license": "proprietary-part",
+      "name": "Propeller 6x4 (pair)",
+      "part_class": "propulsion_air",
+      "source": "generic 6040 propellers",
+      "specs": {
+        "blades": 2,
+        "diameter_in": 6,
+        "pitch_in": 4
+      },
+      "blurb": "A 6-inch, 4-inch-pitch two-blade prop pair (CW + CCW).",
+      "used_for": "Park flyers and small pusher drones.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "Props are consumables with a failure mode; inspect after every crash, retire after any strike. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=6x4%20propeller"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=6x4%20propeller"
+        }
+      ]
+    },
+    {
+      "id": "electromagnet_12v",
+      "image": "assets/img/parts/electromagnet_12v.jpg",
+      "license": "proprietary-part",
+      "name": "Electromagnet 12 V (holding)",
+      "part_class": "end_effectors",
+      "source": "generic round holding magnet",
+      "specs": {
+        "kind": "electromagnet",
+        "voltage_v": 12
+      },
+      "blurb": "A puck that becomes a magnet when powered: pick up steel parts, drop them on command.",
+      "used_for": "Pick-and-place of ferrous parts and magnetic latching.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Holding ratings assume thick, flat, clean steel; paint and gaps tax them hard. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=12V%20electromagnet"
+        },
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=12V%20electromagnet"
+        }
+      ]
+    },
+    {
+      "id": "gripper_parallel_kit",
+      "image": "assets/img/parts/gripper_parallel_kit.jpg",
+      "license": "proprietary-part",
+      "name": "Parallel gripper kit (servo-driven)",
+      "part_class": "end_effectors",
+      "source": "generic parallel-jaw gripper kit",
+      "specs": {
+        "actuation": "servo (not included)",
+        "kind": "gripper"
+      },
+      "blurb": "Two fingers on parallel links that stay parallel: the honest way to hold a cube.",
+      "used_for": "Arm end-effectors and pick-and-place demos.",
+      "robot_types": [
+        "robot arm"
+      ],
+      "notes": "Link up a standard servo (MG996R class) and mind the finger pads' friction. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "gobilda",
+          "url": "https://www.gobilda.com/search?q=parallel%20gripper%20kit"
+        },
+        {
+          "vendor": "servocity",
+          "url": "https://www.servocity.com/search.php?search_query=parallel%20gripper%20kit"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=parallel%20gripper%20kit"
+        }
+      ]
+    },
+    {
+      "id": "perfboard_set",
+      "image": "assets/img/parts/perfboard_set.jpg",
+      "license": "proprietary-part",
+      "name": "Perfboard / protoboard set",
+      "part_class": "custom_boards",
+      "source": "generic FR4 perfboard assortment",
+      "specs": {
+        "kind": "perfboard"
+      },
+      "blurb": "Copper-dot boards in useful sizes: where a circuit goes when it graduates from the breadboard.",
+      "used_for": "Permanent one-off interfaces and sensor carriers.",
+      "robot_types": [],
+      "notes": "One size up from the circuit you planned is the correct size. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=perfboard%20protoboard"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=perfboard%20protoboard"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=perfboard%20protoboard"
+        }
+      ]
+    },
+    {
+      "id": "motor_2306_1750kv",
+      "image": "assets/img/parts/motor_2306_1750kv.jpg",
+      "license": "proprietary-part",
+      "name": "2306 1750KV brushless motor",
+      "part_class": "actuators",
+      "source": "generic 2306 stator outrunner",
+      "specs": {
+        "cells": "4-6S",
+        "kind": "brushless_outrunner",
+        "kv": 1750
+      },
+      "blurb": "The 5-inch freestyle standard: 23 mm stator, 1750 KV for 6S manners.",
+      "used_for": "Freestyle quadcopters.",
+      "robot_types": [
+        "quadcopter"
+      ],
+      "notes": "1750 KV is the 6S tune; on 4S it will feel sleepy. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=2306%201750KV%20motor"
+        },
+        {
+          "vendor": "robotshop",
+          "url": "https://www.robotshop.com/search?q=2306%201750KV%20motor"
+        }
+      ]
     }
   ],
   "templates": [
