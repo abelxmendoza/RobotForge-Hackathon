@@ -25,6 +25,13 @@ function fmt(n: number, digits = 3): string {
   return n.toFixed(digits);
 }
 
+/* Inertia values span grams-to-kilograms robots: 3 significant
+ * figures read honestly at every scale, where toFixed would print
+ * 0.000 for a small robot's real tensor. */
+function fmtI(n: number): string {
+  return n === 0 ? "0" : n.toPrecision(3);
+}
+
 function SupportDiagram({ result }: { result: PhysicsResult }) {
   const st = result.stability;
   if (!st || st.hull.length < 2) return null;
@@ -135,6 +142,115 @@ function Results({ result, catalogMassKg, catalogMassLabel }: {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="card-head">
+          <h3 style={{ fontSize: "var(--fs-md)" }}>Inertia audit</h3>
+          <span className="fbadge local">LOCAL</span>
+        </div>
+        {result.inertia.aboutCom ? (
+          <>
+            <p style={{ marginTop: 8 }}>
+              Composed about the centre of mass (model frame, zero pose),
+              the model&apos;s inertia tensor is{" "}
+              <strong>Ixx {fmtI(result.inertia.aboutCom.ixx)}</strong>,{" "}
+              <strong>Iyy {fmtI(result.inertia.aboutCom.iyy)}</strong>,{" "}
+              <strong>Izz {fmtI(result.inertia.aboutCom.izz)}</strong> kg·m² —
+              how hard the whole robot is to start or stop rotating about
+              each axis.
+              {(() => {
+                const t = result.inertia.aboutCom!;
+                const maxDiag = Math.max(t.ixx, t.iyy, t.izz);
+                const maxProd = Math.max(Math.abs(t.ixy), Math.abs(t.ixz), Math.abs(t.iyz));
+                return maxDiag > 0 && maxProd > 0.01 * maxDiag ? (
+                  <> Its products of inertia are not zero (largest{" "}
+                  {fmtI(maxProd)} kg·m²): the mass is not distributed
+                  symmetrically about the model&apos;s axes.</>
+                ) : null;
+              })()}
+            </p>
+            {result.inertia.impossible.length ? (
+              <p style={{ marginTop: 8 }}>
+                <strong>
+                  {result.inertia.impossible.length} link
+                  {result.inertia.impossible.length > 1 ? "s declare" : " declares"}{" "}
+                  an inertia tensor no rigid body can have:
+                </strong>
+              </p>
+            ) : null}
+            {result.inertia.impossible.length ? (
+              <ul style={{ marginTop: 4 }}>
+                {result.inertia.impossible.map((f) => (
+                  <li key={f.link}>
+                    <code>{f.link}</code> — {f.problems.join("; ")}. Every
+                    rigid body&apos;s inertia obeys the triangle
+                    inequalities (each moment ≤ the sum of the other two)
+                    and bounds its products of inertia by the moments they
+                    couple; this tensor breaks that, so it is a recording
+                    error, not an approximation.
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {result.inertia.geometryMismatch.length ? (
+              <>
+                <p style={{ marginTop: 8 }}>
+                  For {result.inertia.geometryMismatch.length} link
+                  {result.inertia.geometryMismatch.length > 1 ? "s" : ""}, the
+                  recorded inertia disagrees with the inertia of the
+                  link&apos;s own collision shape by more than the ±25% band
+                  this cross-check uses:
+                </p>
+                <ul style={{ marginTop: 4 }}>
+                  {result.inertia.geometryMismatch.map((f) => (
+                    <li key={f.link}>
+                      <code>{f.link}</code> — off by {f.deviationPct.toFixed(0)}%
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {result.inertia.missing.length ? (
+              <p style={{ marginTop: 8 }}>
+                {result.inertia.missing.length} link
+                {result.inertia.missing.length > 1 ? "s carry" : " carries"}{" "}
+                mass with no inertia recorded (
+                {result.inertia.missing.slice(0, 5).map((n) => (
+                  <code key={n}>{n} </code>
+                ))}
+                {result.inertia.missing.length > 5
+                  ? `and ${result.inertia.missing.length - 5} more`
+                  : null}
+                ) — composed as point masses at their centres, the same
+                fallback the settle test uses.
+              </p>
+            ) : null}
+            <p className="prov" style={{ marginTop: 8 }}>
+              <span>
+                How this is computed: each link&apos;s recorded tensor is
+                rotated into the model frame (its inertial origin&apos;s
+                rpy, then the joint chain) and shifted to the whole
+                model&apos;s centre of mass with the parallel-axis
+                theorem. The cross-check recomputes inertia from the
+                link&apos;s collision primitive (solid box, sphere or
+                cylinder of the recorded size and mass) — it runs only
+                where a link has exactly one primitive shape and carries
+                at least 1% of the model&apos;s mass, because meshes have
+                no honest closed form here and smaller links cannot move
+                the whole-body tensor materially. A collision shape is an
+                envelope, not a mass distribution, so a disagreement
+                marks where the model&apos;s two descriptions of itself
+                diverge — it does not by itself convict either number.
+              </span>
+            </p>
+          </>
+        ) : (
+          <p className="state-box" style={{ marginTop: 8 }}>
+            No link in the model carries mass, so there is no inertia
+            tensor to compose.
+          </p>
+        )}
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
@@ -276,9 +392,12 @@ export default function PhysicsSection({ slug, robotName }: { slug: string; robo
     <section className="section" id="physics">
       <h2>Physics checks</h2>
       <p className="sub">
-        Three computations on this robot&apos;s own model, run in your
+        Four computations on this robot&apos;s own model, run in your
         browser when you ask: a mass audit (the URDF&apos;s link masses
-        against the catalogue&apos;s stated figure), a static stability
+        against the catalogue&apos;s stated figure), an inertia audit
+        (the links&apos; recorded inertia tensors composed about the
+        centre of mass, checked for physical possibility and against
+        the links&apos; own collision shapes), a static stability
         check (centre of mass against the support polygon), and a settle
         test (the model dropped 30 mm in the Rapier physics engine,
         joints locked at the model&apos;s zero pose). These are checks on
