@@ -143,7 +143,7 @@ def test_jetson_orin_nano_in_catalogue():
     assert "5 V" in p.specs["supply"]
     assert "25 W" in p.specs["power_modes"]
     assert "69.6" in p.specs["size"]
-    assert len(cat.parts) == 50
+    assert len(cat.parts) == 150
 
 
 def test_wiring_view_ships_on_robot_and_forge_pages():

@@ -4,8 +4,8 @@ import subprocess
 ROOT=Path(__file__).resolve().parents[1]
 def test_parts_library(tmp_path):
     lib=ROOT/'web-next/src/lib'
-    for name in ['partsLibrary','inventory']:
-        (tmp_path/f'{name}.ts').write_text((lib/f'{name}.ts').read_text().replace("from './inventory'", "from './inventory.ts'"))
+    for name in ['partsLibrary','inventory','shopLinks']:
+        (tmp_path/f'{name}.ts').write_text((lib/f'{name}.ts').read_text().replace("from './inventory'", "from './inventory.ts'").replace("from './shopLinks'", "from './shopLinks.ts'"))
     (tmp_path/'package.json').write_text('{"type":"module"}')
     (tmp_path/'run.mjs').write_text('''
 import assert from 'node:assert/strict';

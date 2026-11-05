@@ -68,13 +68,13 @@ def test_chat_and_wizard_share_the_wiring_state():
 def test_data_reality_counts():
     doc = json.loads((REPO / "catalog/parts.json").read_text())
     parts = doc["parts"]
-    assert len(parts) == 50
+    assert len(parts) == 150
     with_iface = [
         p for p in parts
         if (p.get("specs") or {}).get("interface")
         or (p.get("specs") or {}).get("interfaces")
     ]
-    # 13 parts record an interface; the port count (25) is higher
+    # 13 parts record an interface; the port count (54 of 150) is higher
     # because power data (voltage/supply/cells) also makes ports —
     # the exact split is asserted in node, against the real code.
     assert len(with_iface) == 13
@@ -104,8 +104,8 @@ const byId = id => partsById.get(id);
 
 // --- port derivation: the data reality ---
 const withPorts = parts.filter(p => W.portsForPart(p).ports.length > 0);
-assert.equal(withPorts.length, 25);
-assert.equal(parts.length - withPorts.length, 25);
+assert.equal(withPorts.length, 54);
+assert.equal(parts.length - withPorts.length, 96);
 const bat = W.portsForPart(byId('lipo_4s_5200')).ports;
 assert.deepEqual(bat.map(p => [p.id, p.dir, p.volts]), [['power-out', 'out', 14.8]]);
 const tb = W.portsForPart(byId('driver_tb6612fng')).ports;

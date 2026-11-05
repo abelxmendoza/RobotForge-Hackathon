@@ -94,7 +94,7 @@ const items = P.buildPaletteItems(partsDoc.parts, propsDoc.props);
 const byKey = new Map(items.map(i => [i.key, i]));
 
 // --- construction: provenance + reality split ---
-assert.equal(items.length, 53);
+assert.equal(items.length, 153);
 assert.equal(items.filter(i => i.hasModel).length, 3);
 assert.equal(byKey.get('prop:crate').reality, 'sim_only');
 assert.equal(byKey.get('prop:crate').hasModel, true);
@@ -103,27 +103,29 @@ assert.equal(byKey.get('part:realsense_d435').hasModel, false);
 assert.ok(byKey.get('prop:drill').sourceLabel.includes('SimReady'));
 
 // --- matcher ---
-assert.equal(P.matchPhrase('realsense camera', items).item.refId, 'realsense_d435');
+const realsense = P.matchPhrase('realsense camera', items);
+assert.equal(realsense.status, 'ambiguous');
+assert.deepEqual(realsense.options.map(o => o.refId).sort(), ['realsense_d435', 'realsense_d455']);
 assert.equal(P.matchPhrase('rplidar', items).item.refId, 'rplidar_a1');
 assert.equal(P.matchPhrase('crate', items).item.refId, 'crate');
 assert.equal(P.matchPhrase('flux capacitor', items).status, 'none');
 const wheels = P.matchPhrase('66 mm wheels', items);
 assert.equal(wheels.status, 'ambiguous');
-assert.deepEqual(wheels.options.map(o => o.refId).sort(), ['mecanum_wheel_100mm', 'wheel_100mm']);
+assert.deepEqual(wheels.options.map(o => o.refId).sort(), ['mecanum_wheel_100mm', 'mecanum_wheel_48mm', 'omni_wheel_60mm', 'wheel_100mm', 'wheel_130mm_pneumatic', 'wheel_65mm']);
 const battery = P.matchPhrase('battery', items);
 assert.equal(battery.status, 'ambiguous');
 assert.ok(battery.options.length >= 3);
 
 // --- chat request parsing ---
 const robots = ['Omega1', 'Andino'];
-const r1 = P.parseBuildRequest('add a RealSense camera and two 66 mm wheels to my build', items, robots);
+const r1 = P.parseBuildRequest('add a RealSense D435 camera and two 66 mm wheels to my build', items, robots);
 assert.deepEqual(r1.adds.map(a => [a.item.refId, a.qty]), [['realsense_d435', 1]]);
 assert.equal(r1.ambiguous.length, 1);
 assert.equal(r1.ambiguous[0].phrase, '66 mm wheels');
 assert.equal(r1.ambiguous[0].qty, 2);
 assert.deepEqual(r1.notFound, []);
 
-const r2 = P.parseBuildRequest('Add a RealSense camera and an RPLIDAR A1 to my build', items, robots);
+const r2 = P.parseBuildRequest('Add a RealSense D435 camera and an RPLIDAR A1 to my build', items, robots);
 assert.deepEqual(r2.adds.map(a => [a.item.refId, a.qty]), [['realsense_d435', 1], ['rplidar_a1', 1]]);
 
 const r3 = P.parseBuildRequest('add 2 cordless drills and a storage crate', items, robots);
@@ -181,7 +183,7 @@ for (let i = 0; i < 8; i++) {
 const text = P.buildConfirmationText(r1);
 assert.ok(text.includes('1 × Intel RealSense D435 depth camera'));
 assert.ok(text.includes('66 mm wheels'));
-assert.ok(text.includes('Wheel 100 mm diameter'));
+assert.ok(text.includes('Mecanum wheel 100 mm'));
 const emptyText = P.buildConfirmationText(r4);
 assert.ok(emptyText.includes('Nothing was added'));
 assert.ok(emptyText.includes('flux capacitor'));

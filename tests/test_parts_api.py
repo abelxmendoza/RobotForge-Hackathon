@@ -152,7 +152,7 @@ def test_cli_build_writes_the_records_file(tmp_path):
     assert "3 records (2 with estimates, 1 with photos)" in r.stdout
 
 
-def test_real_catalogue_seeds_fifty_records_three_priced():
+def test_real_catalogue_seeds_150_records_three_priced():
     """Against the real catalogue: every part seeds. Prices arrive
     only through applied gather proposals — exactly three records
     are priced so far, each from an Abel-approved apply on
@@ -168,7 +168,7 @@ def test_real_catalogue_seeds_fifty_records_three_priced():
     AI-illustration `image` field."""
     catalog = json.loads((REPO / "catalog" / "parts.json").read_text())
     records = seed.build_records(catalog, [], seeded_at="2026-11-01T10:00:00Z")
-    assert len(records) == 50
+    assert len(records) == 150
     priced = {r["id"]: r["estimates"] for r in records if r["estimates"]}
     assert set(priced) == {"driver_tb6612fng", "pla_filament",
                            "petg_filament"}

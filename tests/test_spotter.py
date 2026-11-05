@@ -155,12 +155,11 @@ def test_guess_parts_catalog_spec():
     lidar = next(g for g in guess_parts(_catalog_spec("Andino"))
                  if "lidar_2d" in g.label)
     assert lidar.catalog_id == "rplidar_a1"
-    # encoders have no catalog part: the guess must stay free text
+    # the catalogue's generic hall encoder covers the encoder guess
     enc = next(g for g in guess_parts(_catalog_spec("Andino"))
                if "encoder" in g.label)
-    assert enc.catalog_id is None
-    assert enc.provenance == PHOTO_ESTIMATED
-    assert enc.free_text
+    assert enc.catalog_id == "encoder_hall"
+    assert enc.provenance == CATALOG
 
 
 def test_guess_parts_photo_spec_normalizes_chemistry():
