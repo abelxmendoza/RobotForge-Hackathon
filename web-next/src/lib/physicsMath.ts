@@ -227,3 +227,208 @@ export function settleVerdict(tiltDeg: number): SettleVerdict {
   if (tiltDeg < 45) return "settles-tilted";
   return "topples";
 }
+
+/* ---- inertia tensors -------------------------------------------------- */
+
+/* A link's inertia tensor in URDF order. The tensor a URDF declares
+ * lives in the link's inertial frame (the inertial origin's rpy,
+ * relative to the link frame); before tensors from different links
+ * can be composed they must be rotated into one frame and shifted to
+ * one point — rotateInertia + parallelAxis below. Mat3 is row-major
+ * number[9], R[row * 3 + col]. */
+export interface InertiaTensor {
+  ixx: number; ixy: number; ixz: number;
+  iyy: number; iyz: number; izz: number;
+}
+
+export type Mat3 = number[];
+
+export function mat3FromQuat(q: Quat): Mat3 {
+  const [x, y, z, w] = q;
+  return [
+    1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w),
+    2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w),
+    2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y),
+  ];
+}
+
+/** URDF origin rpy (roll about X, pitch about Y, yaw about Z):
+ *  R = Rz(yaw) · Ry(pitch) · Rx(roll). */
+export function rpyToMat3(rpy: Vec3): Mat3 {
+  const [r, p, y] = rpy;
+  const rx: Mat3 = [1, 0, 0, 0, Math.cos(r), -Math.sin(r), 0, Math.sin(r), Math.cos(r)];
+  const ry: Mat3 = [Math.cos(p), 0, Math.sin(p), 0, 1, 0, -Math.sin(p), 0, Math.cos(p)];
+  const rz: Mat3 = [Math.cos(y), -Math.sin(y), 0, Math.sin(y), Math.cos(y), 0, 0, 0, 1];
+  return mat3Multiply(mat3Multiply(rz, ry), rx);
+}
+
+export function mat3Multiply(a: Mat3, b: Mat3): Mat3 {
+  const out = new Array(9).fill(0);
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 3; c++)
+      for (let k = 0; k < 3; k++) out[r * 3 + c] += a[r * 3 + k] * b[k * 3 + c];
+  return out;
+}
+
+function tensorToMat3(t: InertiaTensor): Mat3 {
+  return [t.ixx, t.ixy, t.ixz, t.ixy, t.iyy, t.iyz, t.ixz, t.iyz, t.izz];
+}
+
+function mat3ToTensor(m: Mat3): InertiaTensor {
+  return { ixx: m[0], ixy: m[1], ixz: m[2], iyy: m[4], iyz: m[5], izz: m[8] };
+}
+
+/** The same rigid body's tensor expressed in a rotated frame:
+ *  I' = R · I · Rᵀ. */
+export function rotateInertia(r: Mat3, t: InertiaTensor): InertiaTensor {
+  const rt: Mat3 = [r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8]];
+  return mat3ToTensor(mat3Multiply(mat3Multiply(r, tensorToMat3(t)), rt));
+}
+
+/** Parallel-axis (Steiner) shift: the tensor about a point displaced
+ *  by d from the point the tensor is currently about.
+ *  I' = I + m · (|d|²·E − d·dᵀ). */
+export function parallelAxis(t: InertiaTensor, mass: number, d: Vec3): InertiaTensor {
+  const [x, y, z] = d;
+  return {
+    ixx: t.ixx + mass * (y * y + z * z),
+    ixy: t.ixy - mass * x * y,
+    ixz: t.ixz - mass * x * z,
+    iyy: t.iyy + mass * (x * x + z * z),
+    iyz: t.iyz - mass * y * z,
+    izz: t.izz + mass * (x * x + y * y),
+  };
+}
+
+/** Closed-form inertia of a solid primitive about its own centre,
+ *  in the primitive's local frame. Box dims are full extents;
+ *  cylinder dims are [radius, height] with the axis on +Y — the
+ *  three.js unit-cylinder convention sampleShape documents. */
+export function inertiaOfPrimitive(
+  kind: "box" | "sphere" | "cylinder",
+  dims: number[],
+  mass: number,
+): InertiaTensor {
+  const zero = { ixy: 0, ixz: 0, iyz: 0 };
+  if (kind === "box") {
+    const [sx, sy, sz] = dims;
+    return {
+      ...zero,
+      ixx: (mass * (sy * sy + sz * sz)) / 12,
+      iyy: (mass * (sx * sx + sz * sz)) / 12,
+      izz: (mass * (sx * sx + sy * sy)) / 12,
+    };
+  }
+  if (kind === "sphere") {
+    const v = (2 / 5) * mass * dims[0] * dims[0];
+    return { ...zero, ixx: v, iyy: v, izz: v };
+  }
+  const [r, h] = dims;
+  return {
+    ...zero,
+    ixx: (mass * (3 * r * r + h * h)) / 12,
+    iyy: (mass * r * r) / 2,
+    izz: (mass * (3 * r * r + h * h)) / 12,
+  };
+}
+
+export function isZeroInertia(t: InertiaTensor): boolean {
+  return t.ixx === 0 && t.ixy === 0 && t.ixz === 0 &&
+    t.iyy === 0 && t.iyz === 0 && t.izz === 0;
+}
+
+/* Physical plausibility of one declared tensor. Every rigid body's
+ * inertia obeys: positive principal moments; the triangle
+ * inequalities (each moment ≤ the sum of the other two); and
+ * positive-semidefiniteness (each product of inertia bounded by the
+ * moments it couples: Ixy² ≤ Ixx·Iyy, and det ≥ 0). A tensor that
+ * breaks one of these is not an approximation — it cannot be the
+ * inertia of any rigid body. Slack scales with the trace so honest
+ * rounding in a published model does not trip it. Returns the list
+ * of violated conditions, in plain terms; empty means plausible. */
+export function auditInertia(t: InertiaTensor): string[] {
+  const vals = [t.ixx, t.ixy, t.ixz, t.iyy, t.iyz, t.izz];
+  if (!vals.every(Number.isFinite)) return ["a non-finite entry"];
+  const problems: string[] = [];
+  const trace = t.ixx + t.iyy + t.izz;
+  const slack1 = 1e-9 + 1e-6 * Math.abs(trace);
+  if (t.ixx <= 0 || t.iyy <= 0 || t.izz <= 0) {
+    problems.push("a principal moment (ixx, iyy, izz) is not positive");
+  }
+  if (t.ixx + t.iyy < t.izz - slack1) problems.push("ixx + iyy < izz");
+  if (t.iyy + t.izz < t.ixx - slack1) problems.push("iyy + izz < ixx");
+  if (t.izz + t.ixx < t.iyy - slack1) problems.push("izz + ixx < iyy");
+  const slack2 = slack1 * slack1;
+  if (t.ixx * t.iyy - t.ixy * t.ixy < -slack2) problems.push("ixy² > ixx·iyy");
+  if (t.iyy * t.izz - t.iyz * t.iyz < -slack2) problems.push("iyz² > iyy·izz");
+  if (t.ixx * t.izz - t.ixz * t.ixz < -slack2) problems.push("ixz² > ixx·izz");
+  const det =
+    t.ixx * (t.iyy * t.izz - t.iyz * t.iyz) -
+    t.ixy * (t.ixy * t.izz - t.iyz * t.ixz) +
+    t.ixz * (t.ixy * t.iyz - t.iyy * t.ixz);
+  if (det < -slack1 * slack2) problems.push("the tensor's determinant is negative");
+  return problems;
+}
+
+export interface LinkInertia extends LinkMass {
+  /** The link's declared tensor rotated into the world frame, still
+   *  about the link's own centre of mass. A link whose model records
+   *  no inertia carries the zero tensor and composes as a point mass
+   *  — the same fallback the settle test uses. */
+  inertia: InertiaTensor;
+}
+
+/** The whole model's tensor about its own centre of mass, in the
+ *  world frame at the zero pose. */
+export function composeInertia(
+  links: LinkInertia[],
+): { com: Vec3; aboutCom: InertiaTensor } | null {
+  const com = centerOfMass(links);
+  if (!com) return null;
+  let acc: InertiaTensor = { ixx: 0, ixy: 0, ixz: 0, iyy: 0, iyz: 0, izz: 0 };
+  for (const l of links) {
+    if (l.mass <= 0) continue;
+    const shifted = parallelAxis(l.inertia, l.mass, [
+      l.com[0] - com[0], l.com[1] - com[1], l.com[2] - com[2],
+    ]);
+    acc = {
+      ixx: acc.ixx + shifted.ixx, ixy: acc.ixy + shifted.ixy,
+      ixz: acc.ixz + shifted.ixz, iyy: acc.iyy + shifted.iyy,
+      iyz: acc.iyz + shifted.iyz, izz: acc.izz + shifted.izz,
+    };
+  }
+  return { com, aboutCom: acc };
+}
+
+function frobenius(t: InertiaTensor): number {
+  return Math.sqrt(
+    t.ixx * t.ixx + t.iyy * t.iyy + t.izz * t.izz +
+    2 * (t.ixy * t.ixy + t.ixz * t.ixz + t.iyz * t.iyz),
+  );
+}
+
+/** Symmetric relative Frobenius distance between two tensors about
+ *  the same point: ||a − b|| / max(||a||, ||b||), bounded by 2.
+ *  The symmetric denominator keeps the figure honest when one side
+ *  is a near-zero placeholder: the tensors then disagree completely
+ *  (≈100%+), instead of by thousands of percent against a tiny
+ *  reference. Null only when both are the zero tensor. */
+export function inertiaDeviation(a: InertiaTensor, b: InertiaTensor): number | null {
+  const denom = Math.max(frobenius(a), frobenius(b));
+  if (denom === 0) return null;
+  return frobenius({
+    ixx: a.ixx - b.ixx, ixy: a.ixy - b.ixy, ixz: a.ixz - b.ixz,
+    iyy: a.iyy - b.iyy, iyz: a.iyz - b.iyz, izz: a.izz - b.izz,
+  }) / denom;
+}
+
+/* The declared-vs-geometry band, printed wherever the cross-check
+ * is shown (same convention as MASS_AGREE_PCT). */
+export const INERTIA_GEOMETRY_AGREE = 0.25;
+
+/* The cross-check runs only on links carrying at least this share
+ * of the model's mass: below it a link cannot move the whole-body
+ * tensor materially, and near-zero placeholder tensors (a 5 g
+ * caster recorded as 0.001 on every axis) would swamp the findings
+ * that matter. Printed wherever the cross-check is shown. */
+export const INERTIA_CROSSCHECK_MIN_MASS_SHARE = 0.01;

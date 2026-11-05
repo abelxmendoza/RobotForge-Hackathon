@@ -1,9 +1,13 @@
 /* In-browser physics checks: parse a robot's official URDF with
- * urdf-loader, reduce it to masses + collision shapes, and run three
+ * urdf-loader, reduce it to masses + collision shapes, and run four
  * checks on the result —
  *   1. mass audit (URDF link-mass sum vs the catalogue's figure),
- *   2. static stability (centre of mass vs support polygon),
- *   3. a settle test in Rapier: the model, joints locked at the
+ *   2. inertia audit (each link's declared tensor must be one a
+ *      rigid body can have; the tensors are composed about the
+ *      model's centre of mass, and single-primitive links are
+ *      cross-checked against their own collision shape's inertia),
+ *   3. static stability (centre of mass vs support polygon),
+ *   4. a settle test in Rapier: the model, joints locked at the
  *      URDF's zero pose, dropped 30 mm onto a ground plane.
  * Everything is computed in this browser from the model file itself;
  * nothing is recorded or replayed. All geometry/mass math that can
@@ -14,6 +18,9 @@
  *  - A link's mass comes only from its URDF <inertial>. Links with
  *    mass but no collision shape still count: their mass rides on a
  *    collision-disabled point at their centre of mass.
+ *  - A link whose model records no inertia at all composes as a
+ *    point mass and is named as missing-inertia, never silently
+ *    given a tensor it does not have.
  *  - Mesh collision geometry is approximated by the mesh's own
  *    bounding box, and the count of approximated (and unresolvable)
  *    shapes is reported with the results, never hidden.
@@ -22,9 +29,13 @@
  */
 import type { PhysicsEntry } from "./types";
 import {
-  centerOfMass, sampleShape, staticStability, settleVerdict, tiltDegFromQuat,
-  totalMass, type LinkMass, type ShapeSamples, type StabilityResult,
-  type Vec3,
+  auditInertia, centerOfMass, composeInertia, inertiaDeviation,
+  inertiaOfPrimitive, isZeroInertia, mat3FromQuat, mat3Multiply,
+  parallelAxis, rotateInertia, rpyToMat3, sampleShape, staticStability,
+  settleVerdict, tiltDegFromQuat, totalMass, INERTIA_GEOMETRY_AGREE,
+  INERTIA_CROSSCHECK_MIN_MASS_SHARE,
+  type InertiaTensor, type LinkInertia, type LinkMass, type ShapeSamples,
+  type StabilityResult, type Vec3,
 } from "./physicsMath";
 import { assetPath } from "../components/home/asset";
 
@@ -46,11 +57,28 @@ export interface SettleResult {
   finalZM: number;
 }
 
+export interface InertiaReport {
+  /** The model's tensor composed about its own centre of mass
+   *  (world frame, zero pose). Null when no link carries mass. */
+  aboutCom: InertiaTensor | null;
+  /** Links with mass > 0 whose model records no inertia at all:
+   *  composed as point masses, the settle test's fallback. */
+  missing: string[];
+  /** Links whose declared tensor cannot be the inertia of any
+   *  rigid body, with the conditions it violates. */
+  impossible: { link: string; problems: string[] }[];
+  /** Links with exactly one primitive collision shape whose
+   *  declared tensor disagrees with that shape's own inertia by
+   *  more than the printed band. */
+  geometryMismatch: { link: string; deviationPct: number }[];
+}
+
 export interface PhysicsResult {
   robotName: string;
   links: LinkRow[];
   totalMassKg: number;
   com: Vec3;
+  inertia: InertiaReport;
   stability: StabilityResult | null;
   settle: SettleResult | null;
   settleUnavailable: string | null;
@@ -141,18 +169,51 @@ export async function runPhysicsChecks(
 
   const rootInv = new THREE.Matrix4().copy(robot.matrixWorld).invert();
 
-  // ---- link masses + centres of mass --------------------------------
+  // ---- link masses + centres of mass + declared inertia ----------
   const links: LinkMass[] = [];
   const linkRows: LinkRow[] = [];
+  const linkInertias: LinkInertia[] = [];
+  const inertiaMissing: string[] = [];
+  const inertiaImpossible: { link: string; problems: string[] }[] = [];
+  const _q = new THREE.Quaternion();
   for (const link of Object.values<any>(robot.links)) {
     const mass = Number(link.inertial?.mass) || 0;
     const o = link.inertial?.origin?.xyz ?? [0, 0, 0];
     const com = link.localToWorld(new THREE.Vector3(o[0], o[1], o[2]));
-    links.push({ name: link.urdfName || link.name, mass, com: [com.x, com.y, com.z] });
-    if (mass > 0) linkRows.push({ name: link.urdfName || link.name, massKg: mass });
+    const name = link.urdfName || link.name;
+    const comV: Vec3 = [com.x, com.y, com.z];
+    links.push({ name, mass, com: comV });
+    if (mass > 0) linkRows.push({ name, massKg: mass });
+    // The declared tensor lives in the inertial frame: rotate it by
+    // the inertial origin's rpy, then by the link's world rotation,
+    // so every link's tensor shares the world frame before composing.
+    const decl = link.inertial?.inertia;
+    const declared: InertiaTensor = {
+      ixx: Number(decl?.ixx) || 0, ixy: Number(decl?.ixy) || 0,
+      ixz: Number(decl?.ixz) || 0, iyy: Number(decl?.iyy) || 0,
+      iyz: Number(decl?.iyz) || 0, izz: Number(decl?.izz) || 0,
+    };
+    link.getWorldQuaternion(_q);
+    const world = rotateInertia(
+      mat3Multiply(
+        mat3FromQuat([_q.x, _q.y, _q.z, _q.w]),
+        rpyToMat3(link.inertial?.origin?.rpy ?? [0, 0, 0]),
+      ),
+      declared,
+    );
+    linkInertias.push({ name, mass, com: comV, inertia: world });
+    if (mass > 0) {
+      if (isZeroInertia(declared)) {
+        inertiaMissing.push(name);
+      } else {
+        const problems = auditInertia(declared);
+        if (problems.length) inertiaImpossible.push({ link: name, problems });
+      }
+    }
   }
   linkRows.sort((a, b) => b.massKg - a.massKg);
   const com = centerOfMass(links) ?? [0, 0, 0];
+  const composed = composeInertia(linkInertias);
 
   // ---- collision shapes ----------------------------------------------
   const shapes: ShapeRec[] = [];
@@ -233,6 +294,58 @@ export async function runPhysicsChecks(
     }
   }
 
+  // ---- inertia cross-check against collision geometry -------------
+  // For a link with exactly one primitive collision shape, the
+  // shape's own closed-form inertia (the link's recorded mass, the
+  // shape's recorded size) is an independent second opinion on the
+  // declared tensor. Both are carried to the link's centre of mass
+  // in the world frame before comparing. A collision shape is an
+  // envelope, not a mass distribution, so a disagreement flags where
+  // the model's two descriptions of itself diverge — it does not by
+  // itself convict either number. Mesh and multi-shape links are not
+  // cross-checked (no honest closed form exists for them), and links
+  // under INERTIA_CROSSCHECK_MIN_MASS_SHARE of the model's mass are
+  // skipped: they cannot move the whole-body tensor materially.
+  const inertiaGeometryMismatch: { link: string; deviationPct: number }[] = [];
+  {
+    const byName = new Map(linkInertias.map((l) => [l.name, l]));
+    const minMassKg = INERTIA_CROSSCHECK_MIN_MASS_SHARE * totalMass(links);
+    const shapesByLink = new Map<string, ShapeRec[]>();
+    for (const s of shapes) {
+      const arr = shapesByLink.get(s.linkName) ?? [];
+      arr.push(s);
+      shapesByLink.set(s.linkName, arr);
+    }
+    const v = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const sc = new THREE.Vector3();
+    for (const [linkName, recs] of shapesByLink) {
+      if (recs.length !== 1) continue;
+      const rec = recs[0];
+      if (rec.kind === "meshbox") continue;
+      const link = byName.get(linkName);
+      if (!link || link.mass < minMassKg || isZeroInertia(link.inertia)) continue;
+      new THREE.Matrix4().fromArray(rec.matrix).decompose(v, q, sc);
+      const dims =
+        rec.kind === "box"
+          ? [Math.abs(sc.x), Math.abs(sc.y), Math.abs(sc.z)]
+          : rec.kind === "sphere"
+            ? [Math.abs(sc.x)]
+            : [Math.abs(sc.x), Math.abs(sc.y)];
+      const local = inertiaOfPrimitive(rec.kind, dims, link.mass);
+      const worldTensor = rotateInertia(mat3FromQuat([q.x, q.y, q.z, q.w]), local);
+      const aboutLinkCom = parallelAxis(worldTensor, link.mass, [
+        link.com[0] - v.x, link.com[1] - v.y, link.com[2] - v.z,
+      ]);
+      const dev = inertiaDeviation(link.inertia, aboutLinkCom);
+      if (dev !== null && dev > INERTIA_GEOMETRY_AGREE) {
+        inertiaGeometryMismatch.push({
+          link: linkName, deviationPct: Math.round(dev * 1000) / 10,
+        });
+      }
+    }
+  }
+
   // ---- static stability ----------------------------------------------
   const samples: Vec3[] = [];
   for (const s of shapes) {
@@ -264,6 +377,12 @@ export async function runPhysicsChecks(
     links: linkRows,
     totalMassKg: totalMass(links),
     com,
+    inertia: {
+      aboutCom: composed?.aboutCom ?? null,
+      missing: inertiaMissing,
+      impossible: inertiaImpossible,
+      geometryMismatch: inertiaGeometryMismatch,
+    },
     stability,
     settle,
     settleUnavailable,
