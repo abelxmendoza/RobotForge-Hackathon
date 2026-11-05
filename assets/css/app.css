@@ -870,6 +870,14 @@ details.raw[open] summary{margin-bottom:var(--s3)}
 .ai-card-not h3{margin-bottom:var(--s2)}
 @media (max-width:960px){.ai-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.ai-cards{grid-template-columns:minmax(0,1fr)}}
+/* Capabilities, plain-terms version (landing page): a compact 3×3
+   grid of one-line cards, same card language as .ai-cards. */
+.cap-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s3)}
+.cap-card{padding:var(--s4)}
+.cap-card h3{font-size:var(--fs-md);margin:0 0 var(--s2)}
+.cap-card p{color:var(--text-muted);font-size:var(--fs-sm);margin:0}
+@media (max-width:960px){.cap-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.cap-cards{grid-template-columns:minmax(0,1fr)}}
 /* Landing status cards: a drawn scene on top, one line, short facts. */
 .status-card{display:flex;flex-direction:column;gap:var(--s2)}
 .status-card .ai-card-head{margin-bottom:0}

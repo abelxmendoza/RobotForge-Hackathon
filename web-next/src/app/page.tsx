@@ -8,6 +8,7 @@ import StatusCards from "@/components/home/StatusCards";
 import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import FounderVideo from "@/components/home/FounderVideo";
+import CapabilityCards from "@/components/home/Capabilities";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 
 /**
@@ -139,6 +140,24 @@ export default function HomePage() {
               carry real, credited photos.
             </figcaption>
           </figure>
+        </div>
+      </section>
+
+      {/* ============ CAPABILITIES — what the product does, in
+           plain terms (Abel, Nov 4, 2026: "add to the landing page
+           and make it simple"). Nine one-line cards, no numbers, no
+           badges; the closing line names what is NOT built yet. */}
+      <section className="band" id="capabilities">
+        <div className="wrap">
+          <div className="section-head">
+            <div className="eyebrow">In plain terms</div>
+            <h2>What RobotForge does</h2>
+          </div>
+          <CapabilityCards />
+          <p className="section-more muted">
+            Still to come: shopping links with sourced prices, and
+            manufacturing-ready wire harnesses.
+          </p>
         </div>
       </section>
 
