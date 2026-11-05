@@ -86,6 +86,7 @@ import { cadFromText } from "@/lib/cadGen";
 import { activeRecords } from '@/lib/lifecycle';
 import { readActiveRobots } from '@/lib/robotLifecycleRepository';
 import { REPO_IMPORT_EVENT, repoLinkIn } from '@/lib/repoLink';
+import { SAMPLE_CHIP, SAMPLE_PROMPT, isSampleAsk, sampleAnswerHtml } from '@/lib/sampleRobot';
 import { applyOperation, parseCommand, proposeCommand, undoOperation, type Preview } from '@/lib/operations';
 import { appendFreshBaseline, buildDexEntry, copyAsNew, isOmega1Name, parseSaveChoice, parseSaveCommand, planSave, recordAddedPart, resolveCataloguePart, resolveSaveTarget, uniqueCopyName, type DexRobotRef } from '@/lib/saveRobot';
 import { forgeValidateSpec } from '@/components/forge/validate';
@@ -284,7 +285,22 @@ export function useForgeAssistant() {
       const ws = readWorkshopContext();
       if (ws) return workshopTabChips(ws);
     }
-    return wrench.contextChips(pathname || "", mem);
+    const { contextChips } = wrench;
+    const base = contextChips(pathname || "", mem);
+    /* The first sample robot (lib/sampleRobot.ts): while the
+     * current store has no robots of its own — a demo first visit
+     * before seeding lands, or a new account's empty Garage — the
+     * FIRST chip offers the Omega1 sample. Tapping it sends
+     * SAMPLE_PROMPT (see ask), whose repo link opens the importer. */
+    try {
+      const mine = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
+      if (mine.length === 0 && !base.includes(SAMPLE_CHIP)) {
+        return [SAMPLE_CHIP, ...base];
+      }
+    } catch {
+      /* storage unreadable: fall back to the plain suggestions */
+    }
+    return base;
   };
   const memoryRef = useRef<TurnMemory>(carry.memory);
   useEffect(() => () => { carry.memory = memoryRef.current; }, []);
@@ -1406,9 +1422,14 @@ export function useForgeAssistant() {
 
   const ask = useCallback(
     (question: string, displayText?: string) => {
-      const q = String(question || "").trim();
+      let q = String(question || "").trim();
       if (!q) return;
       appendMsg({ who: "user", text: displayText || q });
+      /* The sample chip's label carries no link; the message it
+       * sends does (lib/sampleRobot.ts), so the repo-link detection
+       * below fires and the importer opens. The bubble keeps the
+       * chip's own wording. */
+      if (q === SAMPLE_CHIP) q = SAMPLE_PROMPT;
       if (upgradeProposal) {
         const facts = parseUpgradeFacts(q);
         if (facts) {
@@ -1492,6 +1513,15 @@ export function useForgeAssistant() {
         } else {
           router.push('/import/?repo=' + encodeURIComponent(slug));
         }
+        return;
+      }
+      /* Sample / example / first-robot asks: the recorded Omega1
+       * sample card (lib/sampleRobot.ts), served before every live
+       * path — deterministic, so it answers in demo mode too. (The
+       * engine/wrench modules are import-locked by their eval
+       * harnesses, so the card lives in the lib, not the engine.) */
+      if (isSampleAsk(q)) {
+        appendMsg({ who: "bot", html: sampleAnswerHtml() });
         return;
       }
       const designPrompt = spawnDesignPrompt(q, messagesRef.current);

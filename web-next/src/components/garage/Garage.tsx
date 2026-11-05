@@ -10,6 +10,7 @@ import Link from 'next/link';
 import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import {requireRobotVersion} from '@/lib/versionGuard';
 import RobodexPicker from './RobodexPicker';
+import SampleRobotCard from '@/components/sample/SampleRobotCard';
 import RobotAvatar from './RobotAvatar';
 import SpecsDialog from './SpecsDialog';
 import WrenchStart from './WrenchStart';
@@ -159,6 +160,10 @@ function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spe
   return (
     <div className="garage-add">
       {firstRobot && <EmptyBench />}
+      {/* First run only: the Omega1 sample card leads, above every
+          other way in (lib/sampleRobot.ts). Later "+ Add a robot"
+          renders skip it — firstRobot is false once a robot exists. */}
+      {firstRobot && <SampleRobotCard />}
       <h2>Your next robot starts in Wrench</h2>
       <p className="sub">Attach photos, a mesh scan or a spec file; bring one in from your Robodex; scan with Scaniverse on your phone or hook up an Intel RealSense camera; or describe a robot that doesn’t exist yet.</p>
       <button type="button" className="btn btn-primary" onClick={() => promptWrench({mode:'chat',text:'',attach:true})}>Attach files to Wrench</button>
