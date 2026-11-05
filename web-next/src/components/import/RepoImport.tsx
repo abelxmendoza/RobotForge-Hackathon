@@ -19,6 +19,7 @@ import {
   type ImportSdfBundle, type RepoRef, type RepoSpecimen, type Snapshot,
 } from "@/lib/repoImport";
 import { REPO_IMPORT_EVENT } from "@/lib/repoLink";
+import { SAMPLE_REPO_URL } from "@/lib/sampleRobot";
 import { repoImportFixture, RECORDED_SNAPSHOT_LABEL } from "@/lib/repoImportFixture";
 import { parts as catalogParts, simReadyProps } from "@/lib/data";
 import { attachRepo, detachRepo, GARAGE_KEY, robotRepos, sameRepo, type GarageRobot } from "@/lib/garage";
@@ -1004,6 +1005,9 @@ export default function RepoImport() {
         )}
         <button type="submit" className="btn btn-primary" disabled={Boolean(busy)}>
           {busy || (repoCount > 1 ? `Import ${repoCount} repos` : "Import the repo")}
+        </button>
+        <button type="button" className="btn" onClick={() => setInput(SAMPLE_REPO_URL)} disabled={Boolean(busy)}>
+          No repo handy? Use the Omega1 sample
         </button>
         {demo && (
           <button type="button" className="btn" onClick={loadFixture} disabled={Boolean(busy)}>

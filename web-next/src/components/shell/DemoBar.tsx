@@ -34,6 +34,13 @@ import {
   useDemoMode,
 } from "@/lib/demoMode";
 import { AUTH_EVENT, loadSession, requestSignIn } from "@/lib/auth";
+import {
+  SAMPLE_DEMO_NOTE,
+  SAMPLE_PROMPT,
+  SAMPLE_REPO_URL,
+} from "@/lib/sampleRobot";
+import { promptWrench } from "@/lib/wrenchPrompt";
+import CopyButton from "@/components/chat/CopyButton";
 
 const WELCOMED_KEY = "rf.demo.welcomed";
 
@@ -151,10 +158,30 @@ export default function DemoBar() {
             and your own data is never touched. Try this:
           </p>
           <ol className="demo-steps">
+            <li>
+              Import the Omega1 sample: copy its repo link, paste it into Wrench, and
+              RobotForge builds its digital twin in your demo Workshop.{" "}
+              {SAMPLE_DEMO_NOTE}{" "}
+              <a href={SAMPLE_REPO_URL} target="_blank" rel="noreferrer">{SAMPLE_REPO_URL}</a>{" "}
+              <CopyButton
+                getText={() => SAMPLE_REPO_URL}
+                label="Copy"
+                title="Copy the Omega1 sample repo link"
+              />{" "}
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  dismissWelcome();
+                  promptWrench({ mode: "chat", text: SAMPLE_PROMPT, send: true });
+                }}
+              >
+                Send it to Wrench
+              </button>
+            </li>
             <li><Link href="/garage/" onClick={dismissWelcome}>Open the TurtleBot in the Workshop</Link> and spin it in 3D.</li>
             <li>Ask Wrench to change something, like &ldquo;make the wheels 80 mm&rdquo;.</li>
-            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Simulate it</Link> on a slope and a kerb.</li>
-            <li><Link href="/garage/#tab=bom" onClick={dismissWelcome}>See its parts list</Link> and what you already have.</li>
+            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Simulate it</Link> on a slope and a kerb, then <Link href="/garage/#tab=bom" onClick={dismissWelcome}>see its parts list</Link> and what you already have.</li>
           </ol>
           <button type="button" className="btn btn-primary btn-sm" onClick={dismissWelcome}>
             Start exploring
