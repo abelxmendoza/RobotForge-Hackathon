@@ -495,7 +495,7 @@ export default function KitViewer() {
             open in OpenSCAD or FreeCAD, edit, and print. Geometry: TurtleBot3
             Burger dims — the robot the gate passed. Open the{' '}
             <b>Parts palette</b> to drag bench props onto the stage and
-            build a parts list — or ask the assistant in chat to add
+            build a parts list — or ask Wrench in chat to add
             parts to your build. Flip on <b>Wiring</b> to cable that
             build list together — a schematic diagram from the parts'
             recorded interfaces, checked as you go.

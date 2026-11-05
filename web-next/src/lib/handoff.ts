@@ -5,6 +5,12 @@
  * The file never leaves the browser here. It is kept in memory for one
  * client-side navigation to /forge/, where the Workspace takes it once
  * and runs the same flow its own attach button would. */
+/* The composer chatbot's name is Wrench — Abel's call, locked
+ * 2026-11-04 ("make sure the composer ai chatbot is called Wrench
+ * and that name stays"). Every surface that names the chatbot
+ * renders THIS constant; do not rename it, and do not hardcode a
+ * different name in a component. tests/test_wrench_name.py pins
+ * the value and its use. */
 export const ASSISTANT_NAME = 'Wrench';
 
 export type HandoffKind = 'photo' | 'doc' | 'spec' | 'scan';

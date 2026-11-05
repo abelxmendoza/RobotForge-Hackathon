@@ -137,7 +137,7 @@ export default function PartsPalette({
         </button>
       </div>
       <p className="palette-note">
-        Drag a card onto the stage, tap Add, or tell the assistant —
+        Drag a card onto the stage, tap Add, or tell Wrench —
         “add a RealSense camera and two wheels to my build”. Bench
         props have real 3D models and land in the scene; catalogue
         parts join the build list only. Catalogue part pictures are
@@ -237,7 +237,7 @@ export default function PartsPalette({
         ) : (
           <p className="palette-note">
             Empty — add parts from the grid above, by dragging them
-            onto the stage, or by asking the assistant in chat.
+            onto the stage, or by asking Wrench in chat.
           </p>
         )}
       </div>
