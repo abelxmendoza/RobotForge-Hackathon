@@ -28,8 +28,9 @@ assert.equal(validGazeboRun({status:'complete',robotId:'other',versionId:'v'},'r
 def test_browser_drive_has_actual_contact_motion(tmp_path):
     import os
     lib=ROOT/'web-next/src/lib'
-    for name in ['drivePhysics','simulation']:
-        (tmp_path/f'{name}.ts').write_text((lib/f'{name}.ts').read_text().replace("from './simulation'","from './simulation.ts'"))
+    for name in ['drivePhysics','simulation','driveMath']:
+        text=(lib/f'{name}.ts').read_text().replace("from './simulation'","from './simulation.ts'").replace("from './driveMath'","from './driveMath.ts'")
+        (tmp_path/f'{name}.ts').write_text(text)
     os.symlink(ROOT/'web-next/node_modules',tmp_path/'node_modules',target_is_directory=True)
     (tmp_path/'package.json').write_text('{"type":"module"}')
     import json

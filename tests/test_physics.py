@@ -8,15 +8,17 @@ runs in node against the real catalogue data):
    off — a silent no-colliders trap), the BOM wizard calls both the
    live and local matchers, the five vendor hosts are the ones in
    lib/sourcing.ts.
-2. Node unit tests: physicsMath (hull / CoM / stability / tilt),
-   sourcing URL builders, BOM assembly + export, the zod gate on
-   the /list shape, the AI-SDK structured step against a fake
-   endpoint, and the deterministic local matcher.
+2. Node unit tests: physicsMath (hull / CoM / stability / tilt /
+   inertia tensors), driveMath (required torque / traction / step
+   geometry), sourcing URL builders, BOM assembly + export, the zod
+   gate on the /list shape, the AI-SDK structured step against a
+   fake endpoint, and the deterministic local matcher.
 3. Node integration: the REAL engine (URDFLoader + Rapier) on pinned
    fixture copies of the official Burger and Go2 models plus the generated
-   Pathfinder — asserting the masses the catalogue independently records
-   and that the settle test lands the body at its stance height. The
-   upstream commit URLs remain recorded in catalog/physics.json; CI stays
+   Pathfinder — asserting the masses the catalogue independently records,
+   the composed inertia tensors and cross-check findings, and that the
+   settle test lands the body at its stance height. The upstream commit
+   URLs remain recorded in catalog/physics.json; CI stays
    deterministic and offline.
 """
 import json
@@ -70,6 +72,24 @@ def test_bom_wizard_is_retired():
     assert "/garage/#tab=bom" in page
 
 
+def test_inertia_and_drive_analysis_are_wired():
+    # Stage 1: the physics section shows the inertia audit, and the
+    # engine composes declared tensors (it does not just sum masses).
+    section = (WEB / "src/components/robots/PhysicsSection.tsx").read_text()
+    assert "Inertia audit" in section
+    engine = (LIB / "physicsEngine.ts").read_text()
+    assert "composeInertia" in engine and "auditInertia" in engine
+    # Stage 2: the drive workspace shows the analysis panel, and the
+    # sandbox's friction / usable-torque constants have ONE source —
+    # driveMath — imported by drivePhysics, never re-typed there.
+    workspace = (WEB / "src/components/simulation/SimulationWorkspace.tsx").read_text()
+    assert "DriveAnalysis" in workspace
+    drive = (LIB / "drivePhysics.ts").read_text()
+    assert "from './driveMath'" in drive
+    assert ".setFriction(.85)" not in drive
+    assert "stall_torque_nm*.6" not in drive
+
+
 # ---------------------------------------------------------------- node units
 
 UNIT_SCRIPT = r"""
@@ -80,6 +100,7 @@ const load = p => JSON.parse(fs.readFileSync(root + '/' + p, 'utf8'));
 const partsDoc = load('catalog/parts.json');
 const kitsDoc = load('catalog/parts-kits.json');
 const M = await import('./physicsMath.ts');
+const D = await import('./driveMath.ts');
 const S = await import('./sourcing.ts');
 const B = await import('./bom.ts');
 const partsById = new Map(partsDoc.parts.map(p => [p.id, p]));
@@ -108,6 +129,52 @@ assert.ok(Math.abs(M.tiltDegFromQuat([Math.SQRT1_2,0,0,Math.SQRT1_2]) - 90) < 1e
 assert.equal(M.settleVerdict(5), 'stands');
 assert.equal(M.settleVerdict(30), 'settles-tilted');
 assert.equal(M.settleVerdict(80), 'topples');
+
+// --- physicsMath: inertia tensors ---
+const box12 = M.inertiaOfPrimitive('box', [1, 2, 3], 12);
+assert.equal(box12.ixx, 13); assert.equal(box12.iyy, 10); assert.equal(box12.izz, 5);
+assert.ok(Math.abs(M.inertiaOfPrimitive('sphere', [0.5], 5).ixx - 0.5) < 1e-12);
+const cyl = M.inertiaOfPrimitive('cylinder', [0.1, 0.4], 2);
+assert.ok(Math.abs(cyl.iyy - 0.01) < 1e-12);
+assert.ok(Math.abs(cyl.ixx - 2 * (3 * 0.01 + 0.16) / 12) < 1e-12);
+const pa = M.parallelAxis({ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}, 2, [1, 0, 0]);
+assert.equal(pa.ixx, 0); assert.equal(pa.iyy, 2); assert.equal(pa.izz, 2);
+const rotZ = M.rotateInertia(M.rpyToMat3([0, 0, Math.PI / 2]), box12);
+assert.ok(Math.abs(rotZ.ixx - 10) < 1e-9 && Math.abs(rotZ.iyy - 13) < 1e-9);
+assert.deepEqual(M.mat3FromQuat([0, 0, 0, 1]), [1,0,0, 0,1,0, 0,0,1]);
+assert.equal(M.auditInertia(box12).length, 0);
+assert.ok(M.auditInertia({ixx:1,ixy:0,ixz:0,iyy:1,iyz:0,izz:3}).some(p => p === 'ixx + iyy < izz'));
+assert.ok(M.auditInertia({ixx:1,ixy:2,ixz:0,iyy:1,iyz:0,izz:1}).length >= 1);
+assert.ok(M.auditInertia({ixx:-1,ixy:0,ixz:0,iyy:1,iyz:0,izz:1}).length >= 1);
+assert.equal(M.isZeroInertia({ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}), true);
+const twoPts = M.composeInertia([
+  {name:'a', mass:1, com:[1,0,0], inertia:{ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}},
+  {name:'b', mass:1, com:[-1,0,0], inertia:{ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}},
+]);
+assert.equal(twoPts.aboutCom.izz, 2); assert.equal(twoPts.aboutCom.ixx, 0);
+assert.equal(M.inertiaDeviation(box12, box12), 0);
+assert.equal(M.inertiaDeviation(box12, {ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}), 1);
+assert.equal(M.inertiaDeviation({ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}, {ixx:0,ixy:0,ixz:0,iyy:0,iyz:0,izz:0}), null);
+
+// --- driveMath ---
+const dspec = {massKg: 4, wheelRadiusM: 0.05, wheelCount: 4, motorCount: 2, stallTorqueNm: 1.0};
+assert.ok(Math.abs(D.requiredForceN(4, {slopeDeg: 0, accelMps2: 0.5}) - 2.5886) < 1e-9);
+const da = D.driveAnalysis(dspec);
+const flat = da.cases.find(c => c.id === 'flat-accel');
+assert.ok(Math.abs(flat.torquePerMotorNm - 0.0647150) < 1e-6);
+assert.equal(flat.band, 'within-usable');
+const ramp = da.cases.find(c => c.id === 'ramp-climb');
+assert.ok(Math.abs(ramp.torquePerMotorNm - 0.18484) < 1e-4);
+assert.ok(Math.abs(da.traction.requiredMu - 0.48617) < 1e-4);
+assert.equal(da.traction.drivenWeightFraction, 0.5);
+assert.equal(da.traction.ok, true);
+assert.equal(D.torqueBand(0.5, 1.0), 'within-usable');
+assert.equal(D.torqueBand(0.8, 1.0), 'above-usable');
+assert.equal(D.torqueBand(1.2, 1.0), 'beyond-stall');
+assert.equal(D.stepAssessment(0.05, 0.03).rollsQuasiStatically, true);
+assert.equal(D.stepAssessment(0.05, 0.05).rollsQuasiStatically, false);
+assert.ok(Math.abs(D.stepAssessment(0.05, 0.03).ratioToRadius - 0.6) < 1e-12);
+console.log('drive/inertia unit checks passed');
 
 // --- sourcing ---
 const links = S.sourcingLinks('LiPo battery 4S');
@@ -169,6 +236,7 @@ def _prep_unit_dir(tmp: Path) -> None:
     (tmp / "lib").mkdir(parents=True)
     (tmp / "package.json").write_text('{"type":"module"}')
     (tmp / "physicsMath.ts").write_text((LIB / "physicsMath.ts").read_text())
+    (tmp / "driveMath.ts").write_text((LIB / "driveMath.ts").read_text())
     (tmp / "sourcing.ts").write_text((LIB / "sourcing.ts").read_text())
     bom = (LIB / "bom.ts").read_text().replace('"./sourcing"', '"./sourcing.ts"')
     (tmp / "bom.ts").write_text(bom)
@@ -225,6 +293,11 @@ for (const [file, slug] of [['burger', 'turtlebot3-burger'], ['go2', 'unitree-go
     verdict: r.settle ? r.settle.verdict : null,
     restGapM: r.settle ? Math.abs(r.settle.finalZM - r.settle.restZM) : null,
     shapes: r.shapesUsed, massOnly: r.massOnlyLinks,
+    inertiaHas: r.inertia.aboutCom !== null,
+    inertiaDiag: r.inertia.aboutCom ? [r.inertia.aboutCom.ixx, r.inertia.aboutCom.iyy, r.inertia.aboutCom.izz] : null,
+    inertiaMissing: r.inertia.missing.length,
+    inertiaImpossible: r.inertia.impossible.map(f => f.link),
+    inertiaMismatch: r.inertia.geometryMismatch.map(f => [f.link, f.deviationPct]),
   };
 }
 console.log(JSON.stringify(out));
@@ -280,6 +353,19 @@ def test_engine_end_to_end_in_node(tmp_path):
     assert burger["verdict"] == "stands"
     assert burger["shapes"] == 5
     assert burger["restGapM"] < 0.02
+    # Inertia audit: every Burger link records a physically possible
+    # tensor; the composed Izz is ~0.0045 kg·m². The cross-check
+    # flags base_link (plate-stack inertia vs its solid-box envelope)
+    # and base_scan (a round 0.001 placeholder vs the lidar puck's
+    # own geometry) — and NOT the 5 g caster, whose placeholder
+    # tensor sits under the 1%-of-mass scope gate.
+    assert burger["inertiaHas"] is True
+    assert burger["inertiaMissing"] == 0 and burger["inertiaImpossible"] == []
+    assert abs(burger["inertiaDiag"][2] - 0.00453) < 0.0002
+    burger_mismatch = {link for link, _ in burger["inertiaMismatch"]}
+    assert "${namespace}base_link" in burger_mismatch
+    assert "${namespace}base_scan" in burger_mismatch
+    assert "${namespace}caster_back_link" not in burger_mismatch
 
     go2 = out["unitree-go2"]
     # 16.087 kg is the sum recorded in the catalogue's provenance
@@ -288,9 +374,33 @@ def test_engine_end_to_end_in_node(tmp_path):
     assert go2["verdict"] == "stands"
     assert go2["shapes"] >= 25
     assert go2["massOnly"] >= 5
+    # Inertia audit: all tensors physically possible; the
+    # cross-check flags exactly the eight hip/thigh links, whose
+    # CAD-recorded tensors diverge from their collision envelopes.
+    # (The calf links, 0.154 kg of 16.087 kg, sit just under the
+    # cross-check's printed 1%-of-mass scope gate.)
+    assert go2["inertiaHas"] is True
+    assert go2["inertiaMissing"] == 0 and go2["inertiaImpossible"] == []
+    assert abs(go2["inertiaDiag"][2] - 0.53868) < 0.01
+    go2_mismatch = {link for link, _ in go2["inertiaMismatch"]}
+    assert go2_mismatch == {
+        f"{leg}_{part}" for leg in ("FL", "FR", "RL", "RR")
+        for part in ("hip", "thigh")
+    }
 
     pf = out["pathfinder"]
     # Generated twin: 3.4 kg chassis link + 4 x 0.125 kg wheels.
     assert abs(pf["mass"] - 3.9) < 0.01
     assert pf["verdict"] == "stands"
     assert pf["shapes"] == 5
+    # Inertia audit on RobotForge's own generated URDF: tensors are
+    # physically possible and compose to Izz ~0.105 kg·m². The
+    # generator records wheel inertia as a solid box while the wheel
+    # collision shape is a cylinder — a real 24% divergence, just
+    # inside the printed 25% band, so the cross-check stays silent;
+    # the figure is pinned here so a drift in either the generator
+    # or the math trips this test instead of passing unnoticed.
+    assert pf["inertiaHas"] is True
+    assert pf["inertiaMissing"] == 0 and pf["inertiaImpossible"] == []
+    assert abs(pf["inertiaDiag"][2] - 0.10509) < 0.002
+    assert pf["inertiaMismatch"] == []
