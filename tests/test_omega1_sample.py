@@ -126,3 +126,42 @@ def test_honesty_copy():
     assert "documented/estimated until measured" in SAMPLE
     assert "no autonomy" in SAMPLE  # the header comment states the rule
     assert not re.search(r"autonomous|self-driving", SAMPLE_BLURB if False else SAMPLE.split("SAMPLE_BLURB")[1].split(";")[0])
+
+
+# ---- One-click Omega1 (2026-11-05: make the sample prominent) ----
+
+def test_one_click_constants_and_helpers():
+    assert "export const SAMPLE_OPEN_HREF = '/garage/#omega1';" in SAMPLE
+    assert "export function openSampleInWorkshop" in SAMPLE
+    assert "export function requestSampleOpen" in SAMPLE
+    assert "export function takeSampleOpenRequest" in SAMPLE
+
+
+def test_card_leads_with_open_now():
+    card = (SRC / "components" / "sample" / "SampleRobotCard.tsx").read_text()
+    assert "SAMPLE_OPEN_LABEL" in card and "openSampleInWorkshop" in card
+    assert "OMEGA1_PHOTO" in card
+
+
+def test_landing_spotlight_and_hero_button():
+    page = (SRC / "app" / "page.tsx").read_text()
+    assert "<SampleSpotlight />" in page
+    assert "<SampleOpenLink" in page
+    spot = (SRC / "components" / "home" / "SampleSpotlight.tsx").read_text()
+    assert "<SampleOpenLink" in spot
+    link = (SRC / "components" / "home" / "SampleOpenLink.tsx").read_text()
+    # signed-in visitors keep their session; others enter the demo first
+    assert "if (isDemoMode() || loadSession()) return;" in link
+    assert "saveSession" not in link and "router.push(SAMPLE_OPEN_HREF)" in link
+
+
+def test_gate_robodex_and_workshop_list_offer_the_sample():
+    gate = (SRC / "components" / "shell" / "AppGate.tsx").read_text()
+    assert "onBeforeEnter={requestSampleOpen}" in gate
+    dex = (SRC / "components" / "robots" / "DexSources.tsx").read_text()
+    assert "<SampleRobotCard />" in dex
+    garage = (SRC / "components" / "garage" / "Garage.tsx").read_text()
+    assert "takeSampleOpenRequest()" in garage
+    assert "!storedOmega1 && !archivedOmega1" in garage and "g-sample-add" in garage
+    # the hash is dropped after adopting, so a later delete doesn't re-adopt
+    assert "window.history.replaceState(null, '', window.location.pathname + window.location.search);" in garage

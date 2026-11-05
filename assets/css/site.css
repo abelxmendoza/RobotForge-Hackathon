@@ -247,6 +247,17 @@ footer.site-footer p{max-width:60ch}
 .hero h1.hero-verbs{max-width:22ch}
 .hero:has(.hero-verbs){padding-top:var(--s7)}
 .hero-verbs span{color:var(--accent)}
+.sample-spotlight{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:var(--s6);align-items:center;max-width:1000px;margin:var(--s7) auto 0;padding:var(--s5);text-align:left;background:linear-gradient(135deg,var(--accent-soft),transparent 60%),var(--surface);border:1px solid rgba(66,214,196,.45);border-radius:var(--r-lg);box-shadow:0 0 60px rgba(66,214,196,.10)}
+.sample-spotlight-photo{position:relative;display:block;border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;border:1px solid var(--border)}
+.sample-spotlight-photo img{width:100%;height:100%;object-fit:cover;object-position:20% 92%;transform:scale(1.9);transform-origin:20% 92%;transition:transform .3s}
+.sample-spotlight-photo:hover img,.sample-spotlight-photo:focus-visible img{transform:scale(2)}
+.sample-spotlight-tag{position:absolute;left:8px;bottom:8px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;font-size:var(--fs-xs)}
+.sample-spotlight-eyebrow{color:var(--accent);font:600 12px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.sample-spotlight h2{font-size:clamp(22px,3vw,var(--fs-xl));letter-spacing:-.02em;line-height:1.15;margin:var(--s2) 0 0}
+.sample-spotlight p{color:var(--text-muted);margin:var(--s3) 0 0;line-height:1.55;max-width:60ch}
+.sample-spotlight-ctas{display:flex;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s4)}
+@media (max-width:760px){.sample-spotlight{grid-template-columns:1fr;gap:var(--s4);padding:var(--s4)}.sample-spotlight-photo{aspect-ratio:16/9}.sample-spotlight-photo img{transform:scale(1.5)}.sample-spotlight-ctas .btn{flex:1 1 auto;text-align:center;justify-content:center}}
+@media (prefers-reduced-motion:reduce){.sample-spotlight-photo img{transition:none}}
 .verb-cards{list-style:none;padding:0;margin:var(--s7) auto 0;max-width:1180px;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s4);text-align:left}
 .verb-card{display:flex;flex-direction:column;gap:var(--s2);height:100%;padding:var(--s5) var(--s4);background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text);text-decoration:none;transition:border-color .15s,transform .15s}
 .verb-card:hover,.verb-card:focus-visible{border-color:var(--accent);transform:translateY(-2px)}

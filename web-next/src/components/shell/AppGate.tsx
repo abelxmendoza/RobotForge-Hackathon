@@ -42,6 +42,7 @@ import {
 import { DEMO_EVENT, isDemoMode } from "@/lib/demoMode";
 import { usePathname } from "next/navigation";
 import SignInCard from "./SignInCard";
+import { requestSampleOpen } from "@/lib/sampleRobot";
 import DemoEntryButton from "./DemoEntryButton";
 import ChatBar from "@/components/chat/ChatBar";
 
@@ -193,6 +194,8 @@ function GateScreen({ expired }: { expired: boolean }) {
             </p>
           </div>
           <DemoEntryButton className="btn btn-primary acct-cta" label="Enter the demo" to={pathname || "/garage/"} />
+          {/* The Omega1 sample, one click past the gate (lib/sampleRobot.ts). */}
+          <DemoEntryButton className="btn acct-cta" label="Or start with the Omega1 sample robot" to="/garage/" onBeforeEnter={requestSampleOpen} />
           <p className="acct-note">
             Exit any time from the demo bar. Your own robots and
             inventory are never touched — the demo keeps its own

@@ -11,6 +11,7 @@ import AssemblyWorkspace from '@/components/assembly/AssemblyWorkspace';
 import {requireRobotVersion} from '@/lib/versionGuard';
 import RobodexPicker from './RobodexPicker';
 import SampleRobotCard from '@/components/sample/SampleRobotCard';
+import { takeSampleOpenRequest } from '@/lib/sampleRobot';
 import RobotAvatar from './RobotAvatar';
 import SpecsDialog from './SpecsDialog';
 import WrenchStart from './WrenchStart';
@@ -686,7 +687,17 @@ export default function Garage() {
    * stored copy is the Omega1 you edit, scan and re-run. */
   useEffect(() => {
     const check = () => {
+      /* A queued "open Omega1" from the sign-in gate or another
+       * page (lib/sampleRobot.ts) counts the same as the hash. */
+      if (window.location.hash !== '#omega1') {
+        if (takeSampleOpenRequest()) adoptOmega1();
+        return;
+      }
       if (window.location.hash === '#omega1') adoptOmega1();
+      /* Drop the hash once it has done its job, so deleting Omega1
+       * later doesn't re-adopt it, and the next "Open Omega1 now"
+       * click fires hashchange again. */
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     };
     if (!ready) return;
     check();
@@ -1157,6 +1168,13 @@ export default function Garage() {
          * Wrench's answers between the twin and the stored copy. The
          * stored copy is the only Omega1 here now; #omega1 adopts or
          * opens it (see the hash effect below). */}
+        {/* The Omega1 sample stays one click away after the first
+         * robot too (Abel, 2026-11-05): judges and testers who
+         * brought their own robot can still try the sample. Hidden
+         * once a copy exists, archived ones included. */}
+        {activeRobots.length > 0 && !storedOmega1 && !archivedOmega1 && (
+          <button type="button" className="btn btn-sm g-sample-add" onClick={adoptOmega1} title="Add the Omega1 sample robot from its records">+ Try the Omega1 sample</button>
+        )}
         {activeRobots.length > 0 && <button type="button" className="btn btn-sm" onClick={() => { setAdding(true); setTwinOpen(false); }}>+ Add a robot</button>}
         <Link className="btn btn-sm" href="/import/">Import a repo</Link>
         <p className="faint g-small" style={{ marginTop: 14 }}>Tip: press <strong>Create</strong> in the chat to generate a robot, tests, or a modification.</p>

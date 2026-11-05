@@ -15,11 +15,14 @@ export default function DemoEntryButton({
   className = "btn",
   label = "Try the demo",
   to = "/garage/",
+  onBeforeEnter,
 }: {
   className?: string;
   label?: string;
   /* Where the visitor lands once demo mode is on. */
   to?: string;
+  /* Runs first on click, e.g. to queue the Omega1 sample (AppGate). */
+  onBeforeEnter?: () => void;
 }) {
   const demo = useDemoMode();
   const router = useRouter();
@@ -32,6 +35,7 @@ export default function DemoEntryButton({
       disabled={busy}
       onClick={async () => {
         setBusy(true);
+        onBeforeEnter?.();
         try {
           await seedDemoStores();
         } catch {

@@ -8,6 +8,8 @@ import StatusCards from "@/components/home/StatusCards";
 import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import FounderVideo from "@/components/home/FounderVideo";
+import SampleSpotlight from "@/components/home/SampleSpotlight";
+import SampleOpenLink from "@/components/home/SampleOpenLink";
 import CapabilityCards from "@/components/home/Capabilities";
 import { WRENCH_ART } from "@/lib/wrenchArt";
 import WrenchBot from "@/components/chat/WrenchBot";
@@ -108,6 +110,9 @@ export default function HomePage() {
             <RunDemoLink className="btn">
               Run the demo
             </RunDemoLink>
+            <SampleOpenLink className="btn">
+              Try the Omega1 sample
+            </SampleOpenLink>
           </div>
           <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
             Live AI in the app runs on your account — sign up with an
@@ -115,6 +120,8 @@ export default function HomePage() {
             all: one tap opens the app with sample data and recorded
             answers, and it never touches your own robots or parts.
           </p>
+          {/* The Omega1 sample, one click from the landing. */}
+          <SampleSpotlight />
           {/* The five verbs from the headline, each a door into the
                part of the app that does it (demo mode for visitors
                with no account). */}
