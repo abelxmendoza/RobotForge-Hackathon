@@ -9,6 +9,7 @@ import Term from "@/components/shell/Term";
 import { assetPath } from "@/components/home/asset";
 import FounderVideo from "@/components/home/FounderVideo";
 import CapabilityCards from "@/components/home/Capabilities";
+import { WRENCH_ART } from "@/lib/wrenchArt";
 import LandingChrome, { LandingHeader, LandingFooter } from "@/components/home/LandingChrome";
 
 /**
@@ -158,6 +159,92 @@ export default function HomePage() {
             Still to come: shopping links with sourced prices, and
             manufacturing-ready wire harnesses.
           </p>
+        </div>
+      </section>
+
+      {/* ============ MEET WRENCH — the robot AI in RobotForge
+           (Abel's character design, adopted Nov 4, 2026). His own
+           words from the character sheet; the same face answers in
+           the app's chat, badged with his pass/fail heads on gate
+           verdicts. Art is cropped from his sheet — see
+           lib/wrenchArt.ts for the single source. */}
+      <section className="band" id="wrench">
+        <div className="wrap">
+          <div className="wrench-band">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="wrench-hero-img"
+              src={WRENCH_ART.fullbody}
+              width={490}
+              height={688}
+              alt="Wrench, the RobotForge robot AI — a small white robot with a wrench on its head, giving a thumbs up"
+            />
+            <div>
+              <div className="section-head">
+                <div className="eyebrow">The robot AI in RobotForge</div>
+                <h2>Meet Wrench</h2>
+              </div>
+              <p className="lede">
+                &ldquo;I&rsquo;m Wrench — your robotics co-pilot. I turn
+                your ideas into tested robot designs, spot problems, and
+                suggest fixes.&rdquo;
+              </p>
+              <p className="muted">
+                Wrench is the chat built into RobotForge. Describe a
+                robot or upload a photo and he drafts the design, builds
+                its digital twin, and runs the driving test — then tells
+                you plainly whether it passed, and what to fix if it
+                didn&rsquo;t.
+              </p>
+              <div className="wrench-minis">
+                <figure>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={WRENCH_ART.design} width={200} height={220} alt="Wrench designing a robot from a hologram" />
+                  <figcaption>Design</figcaption>
+                </figure>
+                <figure>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={WRENCH_ART.simulate} width={200} height={220} alt="Wrench running a simulation on a laptop" />
+                  <figcaption>Simulate</figcaption>
+                </figure>
+                <figure>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={WRENCH_ART.report} width={200} height={220} alt="Wrench holding a test report" />
+                  <figcaption>Report &amp; fix</figcaption>
+                </figure>
+              </div>
+              <div className="ctas">
+                <Link className="btn btn-primary" href="/garage/#wrench">
+                  Talk to Wrench →
+                </Link>
+                <a className="btn" href={WRENCH_ART.poster} target="_blank" rel="noreferrer">
+                  Wrench&rsquo;s character sheet
+                </a>
+              </div>
+            </div>
+          </div>
+          <ul className="wrench-moods" aria-label="Wrench's expressions in the app">
+            <li>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={WRENCH_ART.ready} width={156} height={156} alt="" aria-hidden="true" />
+              <span>Ready to build</span>
+            </li>
+            <li>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={WRENCH_ART.analyzing} width={145} height={145} alt="" aria-hidden="true" />
+              <span>Analyzing</span>
+            </li>
+            <li>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={WRENCH_ART.pass} width={156} height={156} alt="" aria-hidden="true" />
+              <span>Pass</span>
+            </li>
+            <li>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={WRENCH_ART.fail} width={156} height={156} alt="" aria-hidden="true" />
+              <span>Fail</span>
+            </li>
+          </ul>
         </div>
       </section>
 

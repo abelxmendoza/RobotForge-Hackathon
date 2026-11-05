@@ -4,6 +4,7 @@
 import type { Hit } from "./engine";
 import type { SourceRef } from "./wrench";
 import CopyButton from "./CopyButton";
+import WrenchAvatar from "./WrenchAvatar";
 import { WebFindCards, WebPics } from "./WebFinds";
 import type { WebFind } from "@/lib/webParts";
 import { msgText } from "@/lib/copytext";
@@ -47,6 +48,7 @@ export default function ChatMessages({
     <>
       {messages.length === 0 && (
         <div className="fc-msg bot">
+          <WrenchAvatar mood="ready" className="fc-avatar" />
           <p>
             Ask me about the robots in the Robodex, the parts catalogue, or
             the recorded gate evidence — or tell me to change something:
@@ -58,6 +60,7 @@ export default function ChatMessages({
       )}
       {messages.map((m) => (
         <div key={m.id} className={"fc-msg " + m.who}>
+          {m.who === "bot" && <WrenchAvatar mood="avatar" className="fc-avatar" />}
           {m.pill && (
             <p><span className="fbadge local">{m.pill}</span></p>
           )}
@@ -77,7 +80,10 @@ export default function ChatMessages({
             </p>
           )}
           {m.grounding && (
-            <p className="fc-grounding">{m.grounding.caption}</p>
+            <p className="fc-grounding">
+              <WrenchAvatar mood={m.grounding.failing ? "fail" : "pass"} className="fc-verdict" />
+              {m.grounding.caption}
+            </p>
           )}
           {m.grounding?.note && onSaveNote && (
             <button type="button" className="btn btn-sm fc-note-btn" onClick={() => onSaveNote(m.grounding!.note!)}>
