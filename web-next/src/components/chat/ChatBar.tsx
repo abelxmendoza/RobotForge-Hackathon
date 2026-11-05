@@ -19,7 +19,8 @@ import { promptWrench, takeWrenchPrompt, WRENCH_PROMPT_EVENT, type WrenchPrompt 
 import AttachButton from "./AttachButton";
 import VoiceButton from "./VoiceButton";
 import CopyButton from "./CopyButton";
-import WrenchAvatar from "./WrenchAvatar";
+import WrenchBot from "./WrenchBot";
+import { useWrenchMood } from "@/lib/wrenchMood";
 import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
 
@@ -32,6 +33,8 @@ export default function ChatBar() {
   const msgsRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [attachRequest,setAttachRequest]=useState(0);
+  /* Wrench's face in the composer follows the conversation. */
+  const mood = useWrenchMood(assistant.messages, text.trim().length > 0);
   useEffect(()=>{
     if(['/garage','/garage/','/forge','/forge/','/chat','/chat/'].includes(pathname))return;
     const prepare=(p:WrenchPrompt)=>{
@@ -87,7 +90,7 @@ export default function ChatBar() {
         <section className="chat-bar-panel" aria-label="Chat conversation">
           <div className="fc-head">
             <div className="fc-head-id">
-              <WrenchAvatar mood={assistant.workingOn ? "analyzing" : "avatar"} />
+              <WrenchBot pose="head" mood={mood} className="wrench-head-avatar" />
               <div>
                 <strong>{ASSISTANT_NAME}</strong>
                 <span className="fc-sub">{assistant.subText}</span>
@@ -146,6 +149,16 @@ export default function ChatBar() {
           send(text);
         }}
       >
+        <button
+          type="button"
+          className="wb-composer-slot"
+          aria-expanded={open}
+          onClick={() => setOpenPersist(!open)}
+          aria-label={open ? `Collapse ${ASSISTANT_NAME}` : `Open ${ASSISTANT_NAME}`}
+          title={mood === "thinking" ? `${ASSISTANT_NAME} is thinking…` : ASSISTANT_NAME}
+        >
+          <WrenchBot pose="head" mood={mood} className="wb-composer" />
+        </button>
         <button
           type="button"
           className="chat-bar-toggle"
