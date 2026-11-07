@@ -2311,3 +2311,11 @@ ol.forge-list{list-style:decimal;padding-left:20px}
   .rx-win{max-width:220px;justify-self:center}
   .rx-hint{font-size:var(--fs-md)}
 }
+
+/* 3D twin check (Checks tab, components/garage/TwinCritic.tsx) */
+.tc summary .verdict{margin-left:8px;font-size:10px;padding:3px 8px;vertical-align:middle}
+.tc-h{margin:14px 0 2px;font-size:13px}
+.tc-row .verdict{font-size:10px;padding:3px 8px}
+.tc-detail{color:var(--muted, inherit)}
+.tc-parts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tc-part{font-size:11px;border:1px solid var(--border);border-radius:999px;padding:2px 8px}

@@ -44,6 +44,7 @@ import PlannedUpgrades from './PlannedUpgrades';
 import ImproveTwin from './ImproveTwin';
 import TakeApartPanel from './TakeApartPanel';
 import WorkshopExplainer from '@/components/explain/WorkshopExplainer';
+import TwinCritic from './TwinCritic';
 import WiringViews from './WiringViews';
 import type { ScanKind, SlotScan } from '@/lib/scan3d';
 import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, OMEGA1_PHOTO, omega1Rover, TWIN_LABEL } from '@/lib/omega1Twin';
@@ -1611,6 +1612,7 @@ export default function Garage() {
               <SavedSimulationRuns robotId={robot.id} /><h3>Engineering checks</h3>
               <p className="g-small faint">Calculated from your specs; these are not physical test results.</p>
               <Findings lines={draftLines} />
+              <TwinCritic key={robot.id} robotId={robot.id} spec={draft as RobotSpec} omega={isOmegaRobot} />
               <details className="ws-disclosure"><summary>Compare with a saved version</summary>
             <ol className="ws-timeline" aria-label="Versions (pick one to compare with the draft)">
               {robot.versions.map((v, i) => (
