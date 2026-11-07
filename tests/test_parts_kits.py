@@ -60,7 +60,7 @@ def test_kitless_entries_are_the_wheelless_classes():
     # aerial, legged, humanoid and arm entries have no wheel block.
     assert kitless == {
         "px4-x500", "crazyflie-2-1", "unitree-go2", "mini-pupper",
-        "unitree-g1", "robotis-op3", "openmanipulator-x",
+        "unitree-g1", "robotis-op3", "openmanipulator-x", "asimov-1",
     }
 
 

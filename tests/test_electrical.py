@@ -40,12 +40,14 @@ def _overvolt(spec):
             and c.volts > nodes[c.dst].rated_max_v]
 
 
-# Wiring is drawn ONLY where a source documents the harness. Two
-# Robodex robots have no publicly documented internal wiring, so
-# their specs honestly carry none — the unwired set is exactly
-# these, and it is asserted so an accidental omission (or an
-# invented harness) both fail loudly.
-UNWIRED = {"Unitree Go2", "Unitree G1"}
+# Wiring is drawn ONLY where a source documents the harness and a
+# wiring block has been recorded for the entry. Go2 and G1 have no
+# publicly documented internal wiring; Asimov 1's wiring files stay
+# upstream under its links-only licence posture and no wiring block
+# is recorded for it — the unwired set is exactly these, and it is
+# asserted so an accidental omission (or an invented harness) both
+# fail loudly.
+UNWIRED = {"Unitree Go2", "Unitree G1", "Asimov 1"}
 
 
 def test_every_robodex_robot_spec_carries_valid_wiring():

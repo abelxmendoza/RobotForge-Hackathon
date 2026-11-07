@@ -583,7 +583,111 @@
       }
       },
       "subtype": "Robotic arm"
+    },
+    {
+      "class": "Legged humanoid",
+      "description": "Menlo Research's open-source humanoid you can build yourself: 1.2 m tall, 25 powered joints, aluminium and MJF nylon structure, and its full CAD, boards and simulation models published. The Robodex's second biped — it walks, so the wheeled motion gate has nothing to grade it with yet. Its hardware licence is strongly reciprocal, so this entry links to Menlo's files instead of copying them.",
+      "gate_status": {
+        "status": "NOT_GATED",
+        "note": "Not gated. The motion gate drives ground robots on wheels and grades drive/turn error; a walking gate for legged robots does not exist yet, so this entry carries no verdict — its spec is validated, and that is all that is claimed."
+      },
+      "key_specs": {
+        "Height (standing)": "1200 mm (Menlo README and docs, at the pinned commit); the pinned model's zero-pose mesh bounding box spans 1254 mm — a model extent at the zero pose, not a standing measurement",
+        "Weight": "~35 kg published by Menlo; the pinned URDF's 26 link masses sum to 35.552 kg — both figures are recorded, neither is hidden",
+        "Joints": "25 powered joints — legs 6 x 2, arms 5 x 2, waist 1, neck 2 (Menlo); the pinned asimov_1_25dof URDF contains exactly 25 joints, all revolute",
+        "Actuators": "25 ENCOS EC-A joint actuators in 5 types on 6 CAN buses (5 @ 1 Mbps + 1 @ 500 kbps, Menlo README at the pinned commit)",
+        "Battery": "13S4P lithium-ion, 491 Wh (Menlo docs / order page); the spec's 46.8 V nominal and 10491 mAh are derived/computed from those figures, not published in that form",
+        "Compute": "Raspberry Pi 5 (media + network) + Radxa CM5 on the motion control board (Menlo README)",
+        "Sensors": "6-DOF IMU in the torso, 2 MP monocular camera in the head, stereo microphone array, speaker (Menlo README)",
+        "Wiring": "Not recorded as a wiring block — Menlo publishes wiring files upstream, but no wiring block is shown for this robot in this entry"
+      },
+      "mobility_class": "Legged",
+      "name": "Asimov 1",
+      "number": 12,
+      "source": "researched",
+      "provenance": {
+        "license": "CERN-OHL-S-2.0 (hardware) / GPL-2.0 (software) — menloresearch/asimov-1; links only, nothing vendored",
+        "note": "Dimensions and equipment from Menlo's published Asimov 1 parameters (README and docs in the upstream repo at the pinned commit): 1.2 m, ~35 kg, 25 powered joints, 13S4P battery, Pi 5 + Radxa CM5 compute, IMU / 2 MP monocular camera / stereo mic array / speaker. The URDF's 26 link masses sum to 35.552 kg, grouped in the spec as trunk 12.337 / legs 13.612 / arms 8.473 / head 1.130 kg — about 1.6% above the published ~35 kg; both figures are stated and neither replaces the other. The spec's length/width (0.258 x 0.424 m) are the zero-pose bounding box of the model's 26 STL meshes, not published dimensions. Battery voltage 46.8 V is the derived 13-string nominal and 10491 mAh is computed from Menlo's published 491 Wh. Hardware is CERN-OHL-S-2.0 and the repo's software is GPL-2.0 — neither is on the project allowlist, so no CAD, meshes, code or images are vendored here; the entry links upstream and the licence badge travels with it. The official BOM is publisher-gated and was not obtained, so no kit is claimed. No photo is recorded: Menlo's own photos are under the hardware licence and their reuse terms for a hotlinked catalogue photo are not unambiguous.",
+        "source_name": "asimov-1 — asimov_1_25dof URDF/MJCF + Menlo Asimov 1 published parameters",
+        "source_url": "https://github.com/menloresearch/asimov-1/blob/43aa368adebcce099c3d80d33b37df68b6d48bf1/sim-model/asimov_1_25dof/urdf/asimov_1_25dof.urdf"
+      },
+      "spec_file": "examples/asimov-1.json",
+      "specimen": {
+        "kind": "imported_description",
+        "manifest": "catalog/specimens/asimov-1.json",
+        "imported_via": "direct clone of Menlo Research's own model repo (no robot_descriptions module covers this robot); description read at the pinned commit",
+        "source_repo": "https://github.com/menloresearch/asimov-1",
+        "source_commit": "43aa368adebcce099c3d80d33b37df68b6d48bf1",
+        "urdf": "sim-model/asimov_1_25dof/urdf/asimov_1_25dof.urdf",
+        "mjcf": "sim-model/asimov_1_25dof/xml/asimov_1_25dof.xml",
+        "license": "CERN-OHL-S-2.0 (hardware) / GPL-2.0 (software)",
+        "imported": "2026-11-06",
+        "source_label": "menloresearch/asimov-1 repository (direct import)",
+        "facts": {
+          "robot_name_in_urdf": "asimov_1_25dof",
+          "link_count": 26,
+          "links_with_inertial": 26,
+          "joint_count": 25,
+          "joints_by_type": {
+            "revolute": 25
+          },
+          "total_mass_kg": 35.552353,
+          "base_link_mass_kg": 3.664279,
+          "link_masses_kg": {
+            "pelvis_link": 3.664279,
+            "left_hip_pitch_link": 1.175304,
+            "left_hip_roll_link": 0.441692,
+            "left_hip_yaw_link": 1.949083,
+            "left_knee_link": 2.477082,
+            "left_ankle_pitch_link": 0.291028,
+            "left_ankle_roll_link": 0.471619,
+            "right_hip_pitch_link": 1.17555,
+            "right_hip_roll_link": 0.441694,
+            "right_hip_yaw_link": 1.948969,
+            "right_knee_link": 2.477073,
+            "right_ankle_pitch_link": 0.291029,
+            "right_ankle_roll_link": 0.471646,
+            "waist_yaw_link": 8.673193,
+            "neck_yaw_link": 0.575651,
+            "neck_pitch_link": 0.554496,
+            "right_shoulder_pitch_link": 0.436608,
+            "right_shoulder_roll_link": 1.34619,
+            "right_shoulder_yaw_link": 1.000934,
+            "right_elbow_link": 0.704338,
+            "right_wrist_yaw_link": 0.748421,
+            "left_shoulder_pitch_link": 0.436608,
+            "left_shoulder_roll_link": 1.346197,
+            "left_shoulder_yaw_link": 1.0009,
+            "left_elbow_link": 0.704348,
+            "left_wrist_yaw_link": 0.748421
+          },
+          "component_mass_kg": {
+            "arms": 8.473,
+            "head": 1.13,
+            "legs": 13.612,
+            "trunk": 12.337
+          },
+          "zero_pose_ankle_separation_m": 0.217,
+          "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements, inertial masses and joint limits; forward kinematics over joint origins at the zero pose (ankle-roll links at y = +/-0.1085 m); and the zero-pose bounding box of the 26 STL link meshes transformed by that kinematics (span x 0.258 m, y 0.424 m, z 1.254 m).",
+          "zero_pose_mesh_bbox_span_m": {
+            "x": 0.258,
+            "y": 0.424,
+            "z": 1.254
+          }
+        }
+      },
+      "subtype": "Humanoid",
+      "checks": [
+        {
+          "type": "static_stability",
+          "date": "2026-11-06",
+          "report": "catalog/stability-reports/asimov-1.json",
+          "grade": "UNSTABLE",
+          "tip_angle_deg": 2.655,
+          "weakest_margin_mm": 30.6,
+          "weakest_direction": "backward"
+        }
+      ]
     }
-  ],
-  "title": "Robodex"
+  ]
 }

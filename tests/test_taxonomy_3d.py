@@ -45,6 +45,7 @@ EXPECTED = {
     "Unitree G1": ("Legged", "Humanoid"),
     "ROBOTIS OP3": ("Legged", "Humanoid"),
     "OpenManipulator-X": ("Stationary", "Robotic arm"),
+    "Asimov 1": ("Legged", "Humanoid"),
 }
 
 
@@ -106,7 +107,7 @@ def test_robodex_page_shows_class_paths_and_class_filters():
         assert f'data-mobility="{r.mobility_class}"' in page, r.name
     # every populated class is an enabled chip with its count
     for cls, n in (("Ground — wheeled", 4), ("Aerial", 2),
-                   ("Legged", 4), ("Stationary", 1)):
+                   ("Legged", 5), ("Stationary", 1)):
         assert f'data-cfilter="{cls}"' in page, cls
         assert f"{cls} ({n})" in page, cls
         assert f"{cls} — none yet" not in page, cls

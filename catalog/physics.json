@@ -5,6 +5,15 @@
    "reason": "Andino's official model ships as xacro (andino.urdf.xacro plus included files) — a format a build tool must expand before anything can parse it. No plain URDF is recorded for this entry, so there is nothing honest to run the checks on.",
    "status": "none"
   },
+  "asimov-1": {
+   "catalog_mass_kg": 35.0,
+   "catalog_mass_label": "Menlo's published figure: ~35 kg (Robodex key specs)",
+   "license": "CERN-OHL-S-2.0 (hardware) / GPL-2.0 (software)",
+   "model_note": "Collision geometry is STL meshes. Each mesh collider is approximated by the mesh's own bounding box, and the results say where that approximation is in play. Meshes load from the pinned upstream commit when the checks run. The model is linked, not vendored: its hardware licence is CERN-OHL-S-2.0 and the repo's software licence is GPL-2.0.",
+   "source_label": "menloresearch/asimov-1 @ 43aa368 — the specimen import's pinned commit",
+   "status": "urdf",
+   "urdf_url": "https://raw.githubusercontent.com/menloresearch/asimov-1/43aa368adebcce099c3d80d33b37df68b6d48bf1/sim-model/asimov_1_25dof/urdf/asimov_1_25dof.urdf"
+  },
   "crazyflie-2-1": {
    "catalog_mass_kg": 0.029,
    "catalog_mass_label": "Bitcraze datasheet takeoff weight: 29 g (Robodex key specs)",
