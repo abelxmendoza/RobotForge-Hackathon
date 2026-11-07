@@ -447,6 +447,48 @@ function workshopRoute(root: string): string {
   return base + "garage/#omega1";
 }
 
+/* "How does Omega1 work?", "how does it work?" — answered with the
+ * step-through explainer (/explain/), drawn from the robot's record. */
+function howWorksAsk(qt: string[]): boolean {
+  return qt.indexOf("how") !== -1 && ["work", "works", "working"].some((w) => qt.indexOf(w) !== -1);
+}
+
+function explainRoute(root: string, slug: string): string {
+  const base = root ? root.replace(/\/?$/, "/") : "/";
+  return base + "explain/?robot=" + encodeURIComponent(slug);
+}
+
+function omega1HowWorks(root: string): AnswerResult {
+  return {
+    html:
+      "<p><strong>Omega1</strong> in five steps, from its own records: the battery " +
+      "(2\u00d7 18650 in series) powers a PCA9685 PWM hat; the Raspberry Pi 4B reads your " +
+      "remote control and tells the hat which way each of the four motors should turn; " +
+      "all four forward rolls it straight, and to turn, one side runs backward. Its " +
+      "ultrasonic sensor and camera report back to the Pi, but you do the driving.</p>" +
+      "<p>Press through it step by step, with the channel numbers from its code:</p>",
+    chips: ["What's wrong with Omega1?", "What sensors does Omega1 have?"],
+    hits: [
+      { kind: "route", label: "How Omega1 works \u2014 step by step", route: explainRoute(root, OMEGA1_SLUG) },
+      { kind: "route", label: "Workshop \u2014 Omega1", route: workshopRoute(root) },
+    ],
+  };
+}
+
+function dexHowWorks(robot: RobotData, root: string): AnswerResult {
+  return {
+    html:
+      "<p>Here is <strong>" + esc(robot.name) + "</strong> as a step-through: power, brain, " +
+      "motor driver, motion and sensors, drawn from its recorded spec. Press each step and " +
+      "watch the part doing the work. Anything its record doesn&rsquo;t hold is marked " +
+      "&ldquo;not recorded&rdquo; instead of guessed.</p>",
+    hits: [
+      { kind: "route", label: "How " + robot.name + " works \u2014 step by step", route: explainRoute(root, slugify(robot.name)) },
+      { kind: "robot", id: slugify(robot.name), label: dexId(robot) + " " + robot.name, route: robotRoute(root, robot) },
+    ],
+  };
+}
+
 function omega1Named(qt: string[]): boolean {
   if (["omega1", "omega", "freenove", "fnk0043"].some((w) => qt.indexOf(w) !== -1)) return true;
   return phraseIn(qt, "built in specimen") || qt.indexOf("specimen") !== -1;
@@ -859,6 +901,19 @@ export function createWrench(data: EngineData): Wrench {
         },
         mem
       );
+    }
+
+    /* "How does <robot> work?" → the step-through explainer. Only when a
+     * robot is named or carried over by "it", so "how does the gate
+     * work?" keeps its own answer. */
+    if (howWorksAsk(qt)) {
+      const dex = matchRobot(qt, robots);
+      const itRef = ["it", "its", "he", "him", "this", "that"].some((w) => qt.indexOf(w) !== -1);
+      if (omega1Named(qt) && !dex) return { ...finish(omega1HowWorks(root), mem), memory: OMEGA1_MEM };
+      if (dex) return finish(dexHowWorks(dex, root), { robotName: dex.name, robotSlug: slugify(dex.name) });
+      if (itRef && mem.robotSlug === OMEGA1_SLUG) return { ...finish(omega1HowWorks(root), mem), memory: OMEGA1_MEM };
+      const remembered = itRef && mem.robotSlug ? robots.find((r) => slugify(r.name) === mem.robotSlug) : null;
+      if (remembered) return finish(dexHowWorks(remembered, root), mem);
     }
 
     /* Omega1: named, or carried over from the last turn by a
