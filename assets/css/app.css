@@ -2211,3 +2211,103 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .fc-find-body strong{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .fc-find-price{color:#fbbf24;font-weight:700}
 .fc-find-body .btn{margin-top:4px}
+
+/* ---------- "How does my robot work?" explainer (web-next components/explain) ----------
+   A blueprint-style figure on its own card. Teal marks what is working
+   right now; power wires are amber, signal wires steel blue. */
+.rx{display:grid;grid-template-columns:200px minmax(0,1fr);gap:var(--s5);align-items:start;
+  --rx-paper:#0f1d2b;--rx-ink:#cfe0ee;--rx-dim:#4e6a83;--rx-power:#f2bc66;--rx-signal:#83b8ff}
+.rx-steps{position:sticky;top:var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+.rx-steps ol{list-style:none;display:flex;flex-direction:column;gap:6px}
+.rx-mode{display:inline-flex;border:1px solid var(--border-strong);border-radius:999px;padding:3px;align-self:flex-start}
+.rx-mode button{font:600 var(--fs-xs)/1 var(--font);padding:7px 12px;border-radius:999px;border:0;background:none;color:var(--text-muted);cursor:pointer}
+.rx-mode button.on{background:var(--accent);color:var(--accent-ink)}
+.rx-step{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:600 var(--fs-sm)/1.25 var(--font);
+  padding:10px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer}
+.rx-step[disabled]{cursor:default;opacity:.45}
+.rx-n{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--mono);background:var(--surface-3);color:var(--text)}
+.rx-now{border-color:var(--accent);background:var(--accent-soft)}
+.rx-now .rx-n{background:var(--accent);color:var(--accent-ink)}
+.rx-done{opacity:.7}
+.rx-done .rx-n{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.rx-next{border-color:var(--accent)}
+.rx-next .rx-n{animation:rx-pulse 1.4s ease-in-out infinite}
+@keyframes rx-pulse{0%,100%{box-shadow:0 0 0 0 rgba(66,214,196,.55)}50%{box-shadow:0 0 0 7px rgba(66,214,196,0)}}
+@media (prefers-reduced-motion:reduce){.rx-next .rx-n{animation:none}}
+.rx-over{align-self:flex-start;background:none;border:0;color:var(--link);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;padding:4px 0}
+.rx-main{min-width:0;display:flex;flex-direction:column;gap:var(--s3)}
+.rx-hint{font-size:var(--fs-lg);line-height:1.4;font-weight:600;min-height:2.8em;color:var(--text)}
+.rx-stage{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:var(--s3);align-items:center;
+  background:var(--rx-paper);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s3)}
+.rx-fig{width:100%;height:auto}
+.rx-win{width:100%;height:auto}
+.rx-gridline{fill:none;stroke:#1d3247;stroke-width:1}
+.rx-body{fill:#172a3d;stroke:#3d5a74;stroke-width:2}
+.rx-nose{fill:none;stroke:#5d7c96;stroke-width:2;stroke-linecap:round}
+.rx-wheel{fill:#0a131c;stroke:#3d5a74;stroke-width:1.5}
+.rx-wheel.on{stroke:var(--accent)}
+.rx-treadline{stroke:#2b4359;stroke-width:3}
+.rx-arrow{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.rx-wire{fill:none;stroke-width:2;stroke-linejoin:round;opacity:.35}
+.rx-wire.rx-power{stroke:var(--rx-power)}
+.rx-wire.rx-signal{stroke:var(--rx-signal)}
+.rx-wire.on{opacity:.95;stroke-width:2.5}
+.rx-wire.inferred{stroke-dasharray:5 4}
+.rx-part rect,.rx-part circle{fill:#20374d;stroke:var(--rx-dim);stroke-width:1.5}
+.rx-part.on rect,.rx-part.on circle{stroke:var(--accent);stroke-width:2.5;fill:#1c4048}
+.rx-battery rect{fill:#2c2a1e}
+.rx-cellsep{stroke:#6b5f3a;stroke-width:1.5}
+.rx-plabel{font:600 12px/1 var(--font);fill:var(--rx-ink);pointer-events:none}
+.rx-m{font:700 11px/1 var(--mono)}
+.rx-pulse{stroke:none}
+.rx-pulse.rx-power{fill:var(--rx-power)}
+.rx-pulse.rx-signal{fill:#bfe0ff}
+.rx-ping{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round}
+.rx-cone{fill:rgba(131,184,255,.18);stroke:var(--rx-signal);stroke-width:1}
+.rx-lidar{stroke:#ff8a8a;stroke-width:2}
+.rx-ir{fill:#ff6b6b}
+.rx-sound{font:italic 700 20px/1 Georgia,"Times New Roman",serif;fill:var(--marginal);letter-spacing:.02em}
+.rx-lens{fill:#0b1622;stroke:none}
+.rx-lensring{fill:none;stroke:var(--accent);stroke-width:3}
+.rx-wtitle{font:700 13px/1 var(--font);fill:var(--text)}
+.rx-wtext{font:600 11px/1.2 var(--font);fill:var(--rx-ink)}
+.rx-wsmall{font:600 10px/1 var(--mono);fill:var(--text-muted)}
+.rx-wbig{font:700 22px/1 var(--mono);fill:var(--rx-power)}
+.rx-cell{fill:#2c2a1e;stroke:var(--rx-power);stroke-width:2}
+.rx-chip{fill:#1b2e42;stroke:var(--rx-signal);stroke-width:2}
+.rx-pin{stroke:var(--rx-dim);stroke-width:3}
+.rx-bar{fill:var(--accent)}
+.rx-pcb{fill:#163a2c;stroke:#2f6b52;stroke-width:2}
+.rx-chpin{fill:#0b1622;stroke:#4f8a72;stroke-width:2}
+.rx-chpin.on{fill:var(--accent);stroke:#bff5ec}
+.rx-tyre{fill:#0a131c;stroke:#3d5a74;stroke-width:3}
+.rx-rim{fill:#1b2e42;stroke:var(--accent);stroke-width:2}
+.rx-spoke{stroke:var(--accent);stroke-width:3;stroke-linecap:round}
+.rx-can{fill:#24394e;stroke:var(--rx-ink);stroke-width:2}
+.rx-lensglass{fill:#0a1520;stroke:var(--rx-signal);stroke-width:3}
+.rx-arm{fill:#20374d;stroke:var(--accent);stroke-width:2}
+.rx-facts{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.rx-fact{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);min-width:0;max-width:100%}
+.rx-fl{font-size:var(--fs-xs);color:var(--text-muted)}
+.rx-fv{font:600 var(--fs-sm)/1.3 var(--mono);color:var(--text);overflow-wrap:anywhere}
+.rx-ev{font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--text-faint)}
+.ev-documented .rx-ev,.ev-spec .rx-ev,.ev-owner .rx-ev{color:var(--pass)}
+.ev-code_default .rx-ev,.ev-estimate .rx-ev{color:var(--marginal)}
+.ev-inferred .rx-ev{color:var(--link)}
+.ev-not_recorded{border-style:dashed}
+.ev-not_recorded .rx-fv{color:var(--text-muted)}
+.rx-big{font-size:var(--fs-md);padding:12px 14px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0}
+.rx-basis{font-size:var(--fs-xs)}
+.rx-empty{display:block}
+.rx-pick{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-xs)}
+.rx-pick select{font:600 var(--fs-sm)/1.2 var(--font);padding:9px 12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);max-width:100%}
+.rx-note{font-size:var(--fs-sm);margin-bottom:var(--s3)}
+@media (max-width:860px){
+  .rx{grid-template-columns:1fr}
+  .rx-steps{position:static}
+  .rx-steps ol{flex-direction:row;flex-wrap:wrap}
+  .rx-step{width:auto;padding:8px 12px 8px 8px}
+  .rx-stage{grid-template-columns:1fr}
+  .rx-win{max-width:220px;justify-self:center}
+  .rx-hint{font-size:var(--fs-md)}
+}

@@ -43,6 +43,7 @@ import ConnectionsSection from './ConnectionsSection';
 import PlannedUpgrades from './PlannedUpgrades';
 import ImproveTwin from './ImproveTwin';
 import TakeApartPanel from './TakeApartPanel';
+import WorkshopExplainer from '@/components/explain/WorkshopExplainer';
 import WiringViews from './WiringViews';
 import type { ScanKind, SlotScan } from '@/lib/scan3d';
 import { OMEGA1_CHECK_LINES, OMEGA1_FACTS, OMEGA1_PHOTO, omega1Rover, TWIN_LABEL } from '@/lib/omega1Twin';
@@ -1388,6 +1389,7 @@ export default function Garage() {
                   ))}
                 </div>
                 <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode: 'chat', text: 'I want to modify this robot: '})}>Describe a change to Wrench</button>
+                <WorkshopExplainer key={robot.id} robotId={robot.id} name={robot.name} spec={draft} estimatedPaths={latest?.estimatedPaths} />
                 {(() => {
                   const notes = notesFor(allNotes, robot.id);
                   return (
