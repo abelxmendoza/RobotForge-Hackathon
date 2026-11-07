@@ -49,13 +49,13 @@ def stage_doc():
     return json.loads((REPO / "catalog/stage-animation.json").read_text())
 
 
-def test_stage_record_covers_all_eleven_robots(stage_doc):
+def test_stage_record_covers_all_twelve_robots(stage_doc):
     robots = stage_doc["robots"]
-    assert len(robots) == 11
+    assert len(robots) == 12
     for slug in (
         "andino", "turtlebot3-burger", "turtlebot3-waffle-pi", "pathfinder",
         "px4-x500", "crazyflie-2-1", "unitree-go2", "mini-pupper",
-        "unitree-g1", "robotis-op3", "openmanipulator-x",
+        "unitree-g1", "robotis-op3", "openmanipulator-x", "asimov-1",
     ):
         assert slug in robots, slug
 
@@ -177,9 +177,9 @@ const props = load('catalog/props/simready/props.json').props;
 const cap = slug => S.robotCapability(doc.robots[slug]);
 const kinds = c => c.tracks.map(t => t.kind);
 
-// --- the map across all 11 robots ---
+// --- the map across all 12 robots ---
 const animated = Object.keys(doc.robots).filter(s => cap(s).tracks.length > 0);
-assert.equal(animated.length, 10, 'exactly one catalog robot is fully static');
+assert.equal(animated.length, 11, 'exactly one catalog robot is fully static');
 assert.deepEqual(cap('robotis-op3').tracks, []);
 assert.ok(cap('robotis-op3').abstentions.length >= 1);
 

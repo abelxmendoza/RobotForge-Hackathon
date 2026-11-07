@@ -40,7 +40,7 @@ def test_entries_have_required_fields():
 
 
 def test_current_entries_are_researched_sources():
-    assert len(dex.robots) == 11
+    assert len(dex.robots) == 12
     assert {r.source for r in dex.robots} == {"researched"}
 
 

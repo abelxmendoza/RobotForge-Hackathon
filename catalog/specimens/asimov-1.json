@@ -1,0 +1,80 @@
+{
+  "specimen": {
+    "robot": "Asimov 1",
+    "dex_id": "#012",
+    "imported_via": "direct clone of Menlo Research's own model repo (no robot_descriptions module covers this robot); description read at the pinned commit",
+    "source": {
+      "repo": "https://github.com/menloresearch/asimov-1",
+      "commit": "43aa368adebcce099c3d80d33b37df68b6d48bf1",
+      "urdf": "sim-model/asimov_1_25dof/urdf/asimov_1_25dof.urdf",
+      "mjcf": "sim-model/asimov_1_25dof/xml/asimov_1_25dof.xml",
+      "package": "asimov_1_25dof",
+      "license": "CERN-OHL-S-2.0 (hardware) / GPL-2.0 (software)",
+      "license_evidence": "HARDWARE-LICENSE.txt at the upstream repo root: 'CERN Open Hardware Licence Version 2 - Strongly Reciprocal'; SOFTWARE-LICENSE.txt at the upstream repo root: 'GNU GENERAL PUBLIC LICENSE'; 'Version 2, June 1991'; README.md badges at the same commit read 'Hardware-CERN--OHL--S--2.0' and 'Software-GPL--2.0'",
+      "retrieved": "2026-11-06"
+    },
+    "facts": {
+      "robot_name_in_urdf": "asimov_1_25dof",
+      "link_count": 26,
+      "links_with_inertial": 26,
+      "joint_count": 25,
+      "joints_by_type": {
+        "revolute": 25
+      },
+      "total_mass_kg": 35.552353,
+      "base_link_mass_kg": 3.664279,
+      "link_masses_kg": {
+        "pelvis_link": 3.664279,
+        "left_hip_pitch_link": 1.175304,
+        "left_hip_roll_link": 0.441692,
+        "left_hip_yaw_link": 1.949083,
+        "left_knee_link": 2.477082,
+        "left_ankle_pitch_link": 0.291028,
+        "left_ankle_roll_link": 0.471619,
+        "right_hip_pitch_link": 1.17555,
+        "right_hip_roll_link": 0.441694,
+        "right_hip_yaw_link": 1.948969,
+        "right_knee_link": 2.477073,
+        "right_ankle_pitch_link": 0.291029,
+        "right_ankle_roll_link": 0.471646,
+        "waist_yaw_link": 8.673193,
+        "neck_yaw_link": 0.575651,
+        "neck_pitch_link": 0.554496,
+        "right_shoulder_pitch_link": 0.436608,
+        "right_shoulder_roll_link": 1.34619,
+        "right_shoulder_yaw_link": 1.000934,
+        "right_elbow_link": 0.704338,
+        "right_wrist_yaw_link": 0.748421,
+        "left_shoulder_pitch_link": 0.436608,
+        "left_shoulder_roll_link": 1.346197,
+        "left_shoulder_yaw_link": 1.0009,
+        "left_elbow_link": 0.704348,
+        "left_wrist_yaw_link": 0.748421
+      },
+      "component_mass_kg": {
+        "arms": 8.473,
+        "head": 1.13,
+        "legs": 13.612,
+        "trunk": 12.337
+      },
+      "zero_pose_ankle_separation_m": 0.217,
+      "fact_source": "Parsed from the URDF at the pinned upstream commit: link/joint elements, inertial masses and joint limits; forward kinematics over joint origins at the zero pose (ankle-roll links at y = +/-0.1085 m); and the zero-pose bounding box of the 26 STL link meshes transformed by that kinematics (span x 0.258 m, y 0.424 m, z 1.254 m).",
+      "zero_pose_mesh_bbox_span_m": {
+        "x": 0.258,
+        "y": 0.424,
+        "z": 1.254
+      }
+    },
+    "annotation_note": "This entry arrived by import, not by hand: Menlo Research's own asimov-1 repository was cloned directly and the facts above were parsed out of its asimov_1_25dof URDF at the pinned commit. The repo also ships a 27-DOF variant (sim-model/asimov_1_27dof) \u2014 that is a different configuration and is not this entry. Nothing here was gated \u2014 importing a description is not a verdict.",
+    "honesty": [
+      "License split, links-only: the hardware is CERN-OHL-S-2.0 (strongly reciprocal) and the software in asimov-1 is GPL-2.0 \u2014 neither is on RobotForge's registry allowlist (MIT/Apache/BSD/CC-BY). No CAD, mesh, code or image from upstream is vendored into this repo; the manifest pins the upstream repo, commit and model paths, the license badge travels with the entry, and only parsed facts and published specs are recorded as data. The separate menlo-sdk is Apache-2.0 per Menlo's published material; it is not part of this repo or this import.",
+      "DOF count, both ways: Menlo publishes 25 powered joints (README at the pinned commit: '25 actuated degrees of freedom'; legs 6 x 2, arms 5 x 2, waist 1, neck 2), and the pinned asimov_1_25dof URDF itself contains exactly 25 joints, all revolute \u2014 for this file the two agree. Secondary write-ups describing a 23-DOF locomotion configuration (neck locked) describe how a policy runs the robot, not what this URDF contains, and are not recorded as model facts.",
+      "Mass, both ways: Menlo publishes approximately 35 kg (README and docs at the pinned commit), and the URDF's 26 link masses sum to 35.552353 kg \u2014 about 1.6% above the published figure. The spec records the URDF sum so its component masses reconcile; the published ~35 kg is stated in the key specs and neither figure is hidden.",
+      "The official BOM is publisher-gated and was NOT obtained: Menlo's README routes self-sourcing to an external BOM/manual, and no priced BOM line set was copied. The parts kit stays undefined (kit: null in catalog/parts-kits.json): the kit generator builds wheeled kits from a spec's wheel block, and this robot has no wheels.",
+      "Gate status stays NOT_GATED: the motion gate grades wheeled ground robots, and no walking gate exists yet.",
+      "Battery figures are derived, not published as a unit: Menlo's docs publish a 13S4P lithium-ion system and its order page (per RobotForge's 2026-11-06 Menlo audit) publishes 491 Wh. The spec's 46.8 V is the 13-string nominal at 3.6 V per cell (the same derivation the G1 entry records), and its 10491 mAh is 491 Wh / 46.8 V computed from those two \u2014 Menlo publishes neither the voltage nor the mAh figure in that form.",
+      "No image is recorded for this entry: the only Asimov photos are Menlo's own (assets/asimov-v1.jpg in the upstream repo, under the CERN-OHL-S-2.0 hardware licence), and their reuse terms for a hotlinked catalogue photo are not unambiguous, so the entry ships without a hotlinked image rather than guessing.",
+      "The URDF/MJCF trees are not vendored into this repo \u2014 the manifest pins the upstream repo, commit and model paths, and the licenses above were read from that repo's HARDWARE-LICENSE.txt and SOFTWARE-LICENSE.txt at that commit, not assumed."
+    ]
+  }
+}

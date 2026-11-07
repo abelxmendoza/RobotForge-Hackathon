@@ -87,7 +87,7 @@ def test_card_labels_agree_with_tabs():
     out = _run_node()
     if out is None:
         return  # no node on this machine; wiring checks above still hold
-    assert len(out) == 11
+    assert len(out) == 12
     # exactly one catalog robot is a photo draft, and it is Waffle Pi
     drafts = [n for n, v in out.items() if v["photoDraft"]]
     assert drafts == ["TurtleBot3 Waffle Pi"]

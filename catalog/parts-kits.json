@@ -833,6 +833,12 @@
       "spec_file": "examples/openmanipulator-x.json",
       "kit": null,
       "reason": "No take-apart kit is defined for this robot yet — the kit generator builds kits for wheeled ground robots from the spec's wheel block, and this spec has no wheels."
+    },
+    "asimov-1": {
+      "robot": "Asimov 1",
+      "spec_file": "examples/asimov-1.json",
+      "kit": null,
+      "reason": "No take-apart kit is defined for this robot yet — the kit generator builds kits for wheeled ground robots from the spec's wheel block, and this spec has no wheels."
     }
   }
 }

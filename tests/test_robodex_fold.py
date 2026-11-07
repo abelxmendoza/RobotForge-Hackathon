@@ -141,7 +141,7 @@ def test_no_catalog_spot_to_double_present():
     # and Researched must never gain a second Spot from the data.
     names = [r["name"] for r in CATALOG["robots"]]
     assert not any("spot" in n.lower() for n in names), names
-    assert len(names) == 11
+    assert len(names) == 12
 
 
 # ------------------------------------------------------- 4. bring into Workshop
