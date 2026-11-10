@@ -164,7 +164,7 @@ def test_open_in_workshop_routing():
     assert "tab: 'simulate'" in CREATE
     assert "Open in Workshop — Simulate tab" in CREATE
     # Garage accepts the combined #robot=<id>&tab=<tab> landing.
-    assert "&tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history)" in GARAGE
+    assert "&tab=(overview|build|wiring|drivetrain|specs|simulate|checks|bom|tools|history)" in GARAGE
 
 
 # --- Declutter ----------------------------------------------------------

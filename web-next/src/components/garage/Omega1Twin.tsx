@@ -21,7 +21,7 @@ import {
 /* The Workshop's nine tabs, mirrored here: Garage owns the tab state
  * while the twin is open (its tab bar controls this component), and
  * each tab below renders one pane from the twin's records only. */
-export type TwinTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
+export type TwinTab = 'overview' | 'build' | 'wiring' | 'drivetrain' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
 
 export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpenGarage, onAdopt }: {
   tab?: TwinTab;
@@ -184,6 +184,14 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
               <li key={p.label}><span className="faint">{p.label}</span> {p.value}</li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {tab === 'drivetrain' && (
+        <section className="dt-tab" aria-label="Omega1 drive train">
+          <h3>Drive train</h3>
+          <p>Omega1&apos;s wheel size, motor torque and gearing are not measured yet, so this twin shows no drive train numbers. Record them on your saved Omega1 and its Drive train tab works them out.</p>
+          {onOpenGarage && <div><button type="button" className="btn btn-sm" onClick={onOpenGarage}>Open my saved Omega1</button></div>}
         </section>
       )}
 

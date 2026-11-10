@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from .schema import RobotSpec, spec_is_estimated
 from .urdf import verify_urdf_clearance
+from .vex import v5rc_budget
 
 ERROR, WARN, INFO = "ERROR", "WARN", "INFO"
 
@@ -132,6 +133,26 @@ def validate(spec: RobotSpec, *, urdf_xml: str | None = None) -> list[Finding]:
                          f"below battery nominal voltage {spec.battery.voltage_v:g} V; "
                          "verify motor-driver output, regulation, and component "
                          "voltage limits before approval"))
+
+    # Gearing: motor.stall_torque_nm is the torque at the wheel. When
+    # the spec also records the motor shaft torque and the gear teeth,
+    # the two must agree, or every torque check reads a stale number.
+    g = spec.gearing
+    if g is not None and g.motor_shaft_stall_nm and spec.motor.stall_torque_nm:
+        expected = g.motor_shaft_stall_nm * g.driven_teeth / g.driving_teeth
+        if abs(expected - spec.motor.stall_torque_nm) > 0.05 * expected:
+            f.append(Finding(WARN, "gearing.torque_mismatch",
+                             f"gearing says {g.motor_shaft_stall_nm:g} N·m at the "
+                             f"motor x {g.driven_teeth}:{g.driving_teeth} = "
+                             f"{expected:.3g} N·m at the wheel, but "
+                             f"motor.stall_torque_nm is "
+                             f"{spec.motor.stall_torque_nm:g} N·m"))
+    budget = v5rc_budget(spec)
+    if budget is not None and not budget["ok"]:
+        f.append(Finding(WARN, "vex.v5rc_motor_power",
+                         f"drive motors alone use {budget['drive_w']:g} W, over "
+                         f"the V5RC {budget['cap_w']:g} W motor-power cap "
+                         "(check the current game manual)"))
 
     # Mass budget: if component masses are given, they must not exceed the
     # declared total, and should account for a plausible share of it.

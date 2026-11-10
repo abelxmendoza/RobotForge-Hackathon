@@ -22,7 +22,7 @@ def test_catalog_loads_and_templates_reference_real_parts():
     assert set(cat.templates) == {
         "rover_skid_steer", "rover_diff_drive", "rc_car",
         "quadcopter_5inch", "humanoid_biped", "quadruped",
-        "robot_arm_6dof"}
+        "robot_arm_6dof", "vex_v5_tank_drive"}
 
 
 def test_gate_pack_honesty():

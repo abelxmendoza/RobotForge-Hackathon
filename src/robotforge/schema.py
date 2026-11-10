@@ -44,6 +44,63 @@ class Motor:
 
 
 @dataclass
+class Gearing:
+    """How the motors turn the wheels: optional, for drive trains whose
+    motor output is geared before the wheel (every VEX drive is).
+
+    ``motor.stall_torque_nm`` stays the torque each motor delivers AT
+    THE WHEEL (what every existing check reads). This block records
+    where that number comes from, so the Drive train tab can show the
+    speed/torque trade and validate.py can flag a stale torque:
+    wheel torque = motor_shaft_stall_nm * driven_teeth / driving_teeth,
+    wheel rpm    = motor_free_rpm * driving_teeth / driven_teeth.
+    """
+    motor_free_rpm: float | None = None       # motor output, no load
+    motor_shaft_stall_nm: float | None = None  # motor output shaft
+    driving_teeth: int = 1                     # gear on the motor
+    driven_teeth: int = 1                      # gear on the wheel
+    motor_power_w: float | None = None         # rated peak power per motor
+    platform: str | None = None                # e.g. "vex_v5"
+
+    FIELDS = ("motor_free_rpm", "motor_shaft_stall_nm", "driving_teeth",
+              "driven_teeth", "motor_power_w", "platform")
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> "Gearing":
+        unknown = set(raw) - set(cls.FIELDS)
+        if unknown:
+            raise SpecError(f"gearing has unknown fields {sorted(unknown)}")
+        g = cls(
+            motor_free_rpm=(None if raw.get("motor_free_rpm") is None
+                            else float(raw["motor_free_rpm"])),
+            motor_shaft_stall_nm=(None if raw.get("motor_shaft_stall_nm") is None
+                                  else float(raw["motor_shaft_stall_nm"])),
+            driving_teeth=int(raw.get("driving_teeth", 1)),
+            driven_teeth=int(raw.get("driven_teeth", 1)),
+            motor_power_w=(None if raw.get("motor_power_w") is None
+                           else float(raw["motor_power_w"])),
+            platform=(None if raw.get("platform") is None
+                      else str(raw["platform"])),
+        )
+        if g.driving_teeth < 1 or g.driven_teeth < 1:
+            raise SpecError("gearing teeth must be >= 1")
+        for name in ("motor_free_rpm", "motor_shaft_stall_nm", "motor_power_w"):
+            v = getattr(g, name)
+            if v is not None and v <= 0:
+                raise SpecError(f"gearing.{name} must be positive")
+        return g
+
+    def to_dict(self) -> dict:
+        d = {k: getattr(self, k) for k in self.FIELDS}
+        return {k: v for k, v in d.items() if v is not None}
+
+    @property
+    def speed_ratio(self) -> float:
+        """Wheel turns per motor-output turn."""
+        return self.driving_teeth / self.driven_teeth
+
+
+@dataclass
 class Battery:
     chemistry: str            # e.g. "lipo", "liion", "nimh", "lead_acid"
     voltage_v: float
@@ -254,6 +311,7 @@ class RobotSpec:
     sensors: list[Sensor] = field(default_factory=list)
     component_mass_kg: dict[str, float] = field(default_factory=dict)
     wiring: Wiring | None = None
+    gearing: Gearing | None = None
 
     # -- parsing ---------------------------------------------------------
     @classmethod
@@ -319,6 +377,8 @@ class RobotSpec:
                                    data.get("component_mass_kg", {}).items()},
                 wiring=(Wiring.from_dict(data["wiring"])
                         if data.get("wiring") is not None else None),
+                gearing=(Gearing.from_dict(data["gearing"])
+                         if data.get("gearing") is not None else None),
             )
         except (KeyError, TypeError, ValueError) as exc:
             if isinstance(exc, SpecError):
@@ -370,6 +430,8 @@ class RobotSpec:
                          "segments": self.arms.segments}
         if self.wiring is not None:
             d["wiring"] = self.wiring.to_dict()
+        if self.gearing is not None:
+            d["gearing"] = self.gearing.to_dict()
         return d
 
 

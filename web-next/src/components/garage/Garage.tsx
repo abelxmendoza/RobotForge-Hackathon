@@ -31,6 +31,8 @@ import { promptWrench } from '@/lib/wrenchPrompt';
 import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_ACTION_EVENT, WORKSHOP_FIX_EVENT, type WorkshopAction } from '@/lib/workshopContext';
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
+import DriveTrainTab from './DriveTrainTab';
+import { VEX_STARTERS, type VexStarter } from '@/lib/vexStarters';
 import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
 import OverviewTurntable, { hasBody } from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
@@ -83,11 +85,12 @@ function counts(lines: string[]) {
   };
 }
 
-type WorkTab = 'overview' | 'build' | 'wiring' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
+type WorkTab = 'overview' | 'build' | 'wiring' | 'drivetrain' | 'specs' | 'simulate' | 'checks' | 'bom' | 'tools' | 'history';
 const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
+  { id: 'drivetrain', label: 'Drive train', icon: 'M7 7a3 3 0 1 0 0 .01M17 17a3 3 0 1 0 0 .01M7 10v4h10M17 14V10' },
   { id: 'bom', label: 'BOM', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4' },
   { id: 'checks', label: 'Test', icon: 'M4 12l5 5L20 6' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
@@ -157,9 +160,20 @@ const STATUS_CLASS: Record<string, string> = { PASS: 'pass', MARGINAL: 'marginal
  * encodes exactly this URL; a guard test pins the three together. */
 const SCANIVERSE_URL = 'https://scaniverse.com';
 
-function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean; onOpenRobot: (id: string) => void }) {
+function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean; onOpenRobot: (id: string) => void }) {
   const [dexOpen, setDexOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [vexOpen, setVexOpen] = useState(false);
+  const [vexError, setVexError] = useState('');
+  const startVex = async (s: VexStarter) => {
+    setVexError('');
+    try {
+      const res = await fetch(assetPath('examples/' + s.file));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const spec = await res.json() as Spec;
+      onAdd(String(spec.name || s.name), spec, 'starter', `VEX V5 starter (examples/${s.file}): VEX's published motor ratings; mass and size are typical values, not measurements.`);
+    } catch (e) { setVexError(`Couldn't load the ${s.name} starter: ${(e as Error).message}`); }
+  };
   return (
     <div className="garage-add">
       {firstRobot && <EmptyBench />}
@@ -176,7 +190,21 @@ function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spe
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
         <Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>
+        <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX V5 robot</button>
       </div>
+      {vexOpen && (
+        <div className="garage-vex">
+          <p className="g-small">VEX V5 robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears later in its Drive train tab.</p>
+          <div className="garage-vex-list">
+            {VEX_STARTERS.map((s) => (
+              <button key={s.file} type="button" className="garage-vex-card" onClick={() => void startVex(s)}>
+                <strong>{s.name}</strong><span className="faint g-small">{s.blurb}</span>
+              </button>
+            ))}
+          </div>
+          {vexError && <p className="g-error" role="alert">{vexError}</p>}
+        </div>
+      )}
       {scanOpen && (
         <div className="garage-scan-how">
           <p><strong>Scan it with Scaniverse on your phone.</strong> Walk around the real robot in the Scaniverse app so it sees every side, export the scan as a PLY or GLB file, then attach that file to Wrench — a scan’s sizes stay estimated until you measure the real thing.</p>
@@ -550,7 +578,7 @@ export default function Garage() {
   useEffect(() => {
     const check = (hash: string) => {
       if (hash === '#assembly') { setTab('build'); setTwinOpen(false); setAdding(false); }
-      const t = hash.match(/^#tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history)$/);
+      const t = hash.match(/^#tab=(overview|build|wiring|drivetrain|specs|simulate|checks|bom|tools|history)$/);
       if (t) { setTab(t[1] as WorkTab); setTwinOpen(false); setAdding(false); }
     };
     check(window.location.hash);
@@ -571,7 +599,7 @@ export default function Garage() {
    * tab") also switches the Workshop tab in the same landing. */
   useEffect(() => {
     const check = () => {
-      const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)(?:&tab=(overview|build|wiring|specs|simulate|checks|bom|tools|history))?$/);
+      const r = window.location.hash.match(/^#robot=([A-Za-z0-9_-]+)(?:&tab=(overview|build|wiring|drivetrain|specs|simulate|checks|bom|tools|history))?$/);
       if (r && activeRobots.some((x) => x.id === r[1])) {
         setSelected(r[1]);
         setTwinOpen(false);
@@ -1545,6 +1573,9 @@ export default function Garage() {
             </SpecsDialog>
             )}
 
+            {tab === 'drivetrain' && (
+              <DriveTrainTab key={robot.id} spec={draft} onApply={(next) => setDraft(next)} />
+            )}
             {tab === 'simulate' && (
               <><SimulationWorkspace spec={draft} robot={robot} robotId={robot.id} versionId={(unsaved.length?'draft:':'')+(latest?.id||'new')} /><details className="ws-disclosure"><summary>Estimates and advanced simulation options</summary><SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} /></details></>
             )}
