@@ -659,6 +659,20 @@ def families_from_dict(data: dict) -> list:
 _EXAMPLE_CONTEXT = {
     "spot-cpp": {"spotted_at": "2026-10-28",
                  "where": "Cal Poly Pomona IRLab"},
+    # Two V5RC teams' robots the owner photographed while spectating a
+    # VEX Robotics competition in early November 2026 (exact day not
+    # recorded). Team numbers come off each robot's licence plate, and
+    # each sighting's identity names its team (so the two robots stay
+    # distinct, e.g. when brought into the Workshop); the family they
+    # share is named for the robot type, not the first team filed.
+    "vex-1658x": {"spotted_at": "2026-11",
+                  "where": "VEX Robotics competition (spectated)",
+                  "family": {"name": "VEX V5 competition robot",
+                             "credit": "Team-built VEX V5RC competition "
+                                       "robots; each sighting names the "
+                                       "team that built it."}},
+    "vex-404s": {"spotted_at": "2026-11",
+                 "where": "VEX Robotics competition (spectated)"},
 }
 
 
@@ -680,4 +694,13 @@ def build_example_families(examples_dir: str | Path | None = None) -> list:
             spotted_at=ctx.get("spotted_at"), where=ctx.get("where"))
         decision = classify_spotting(dossier, families)
         families = apply_decision(families, decision, sighting)
+        fam = ctx.get("family")
+        if fam and decision.outcome == NEW_FAMILY:
+            # a family named for the robot type rather than for the
+            # first sighting's identity (see _EXAMPLE_CONTEXT)
+            family = families[-1]
+            family.name = fam["name"]
+            family.id = slugify(fam["name"])
+            family.credit = fam.get("credit", family.credit)
+            _refresh_variant_labels(family)
     return families
