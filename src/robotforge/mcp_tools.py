@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import asdict
 from pathlib import Path
@@ -123,8 +124,9 @@ class Workspace:
             return
         if isinstance(data, dict) and isinstance(data.get("data"), dict):
             data = data["data"]
-        if isinstance(data, dict) and GARAGE_KEY in data:
-            garage = data[GARAGE_KEY]
+        if isinstance(data, dict) and (GARAGE_KEY in data
+                                       or INVENTORY_KEY in data):
+            garage = data.get(GARAGE_KEY) or []
             if isinstance(garage, str):  # stored as a JSON string
                 try:
                     garage = json.loads(garage)
@@ -313,6 +315,10 @@ def run_checks(ws: Workspace, robot: str, version: str | None = None) -> dict:
             out["wiring"] = {"not_run": str(exc)}
     else:
         out["wiring"] = {"not_run": "the spec has no wiring block"}
+    rover_states = [c.get("status") for c in
+                    out["rover"].get("checks", [])]
+    errors = errors or "FAIL" in rover_states
+    warnings = warnings or "MARGINAL" in rover_states
     out["verdict"] = ("FAIL" if errors else
                       "PASS_WITH_WARNINGS" if warnings else "PASS")
     return out
@@ -348,10 +354,20 @@ def get_parts_list(ws: Workspace, robot: str,
         add("sensor", 1, sensor.get("kind"), position=sensor.get("position"))
     wiring = s.get("wiring") or {}
     for node in wiring.get("nodes") or []:
-        if isinstance(node, dict) and node.get("kind") not in (None, "motor",
-                                                               "battery"):
-            add("electronics", 1, node.get("label") or node.get("id"),
-                kind=node.get("kind"))
+        if not isinstance(node, dict):
+            continue
+        nid = str(node.get("id", ""))
+        label = str(node.get("label") or nid)
+        low = label.lower()
+        # battery and motors are already lines from the spec above
+        if nid == "battery" or "battery" in low:
+            continue
+        if ("motor" in low or "servo" in low) and "driver" not in low:
+            continue
+        qty_match = re.search(r"[×x]\s*(\d+)\s*$", label)
+        add("electronics", int(qty_match.group(1)) if qty_match else 1,
+            re.sub(r"\s*[×x]\s*\d+\s*$", "", label).strip(),
+            node_id=nid, rated_max_v=node.get("rated_max_v"))
     return {"robot": r["name"], "source": r["source"], "parts": lines,
             "prices": "not included: the local server does not price parts. "
                       "Use search_parts for catalog parts and the site's BOM "

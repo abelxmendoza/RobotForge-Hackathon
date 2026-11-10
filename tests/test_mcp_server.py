@@ -118,8 +118,24 @@ def test_robodex_lookups():
     assert {p["part"] for p in parts["parts"]} >= {"motor", "wheel",
                                                    "battery"}
     assert "not included" in parts["prices"]
+    electronics = [p["what"] for p in parts["parts"]
+                   if p["part"] == "electronics"]
+    assert any("L298N" in e for e in electronics)
+    assert any("buck" in e for e in electronics)
+    assert not any("Battery" in e for e in electronics)
+    burger = t.run_checks(ws, "#002")
+    if any(c["status"] == "FAIL" for c in burger["rover"]["checks"]):
+        assert burger["verdict"] == "FAIL"
     assert t.search_parts(ws, "lipo")["total"] >= 1
     assert t.get_part(ws, "lipo_4s_5200")["part"]["id"] == "lipo_4s_5200"
+
+
+def test_inventory_only_account_dump(tmp_path):
+    (tmp_path / "parts.json").write_text(json.dumps(
+        {"rf.inventory.v1": [{"part": "lipo_4s_5200", "qty": 2}]}))
+    ws = t.Workspace(tmp_path)
+    assert ws.load_problems == []
+    assert t.get_inventory(ws)["inventory"][0]["qty"] == 2
 
 
 def test_mine_has_no_recorded_gate_run(robots_dir):
