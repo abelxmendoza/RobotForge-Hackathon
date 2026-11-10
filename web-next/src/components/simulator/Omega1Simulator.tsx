@@ -101,7 +101,8 @@ export default function Omega1Simulator() {
       cleanup = () => { cancelAnimationFrame(raf); observer.disconnect(); controls.dispose(); world?.free(); free(scene); renderer.dispose(); renderer.domElement.remove(); };
 
       try { world = await createDriveWorld(spec, 'flat', walls); } catch (e) { if (!disposed) setError((e as Error).message); return; }
-      if (disposed) return;
+      // Reset or unmount while Rapier was loading: cleanup already ran, so free this world here.
+      if (disposed) { world.free(); world = undefined; return; }
 
       try {
         const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
