@@ -229,37 +229,38 @@ Since 2026-11-03 the keys live only inside version
 `31dfa75d-2453-4bb3-9df1-fbe718f78987`; `wrangler secret list` is empty
 and the latest *uploaded* version has no secrets. A new version takes
 its secrets from the latest uploaded one, so a plain `wrangler deploy`
-would ship a keyless Worker. Upload a version with every secret, test
-its preview, then promote it. Only the owner runs these, at their own
-terminal, on the Mac clone.
+would ship a keyless Worker, and a plain `wrangler secret put` would
+deploy each half-keyed step straight to live. Upload a version, add
+every key to it, test its preview, then promote it. Only the owner runs
+these, at their own terminal, on the Mac clone.
 
 1. **Get main:** `cd ~/Desktop/projects/RobotForge-Hackathon && git checkout main && git pull`.
 2. **Read-only look:** `cd live && npx wrangler deployments list` — the
    live version should be `31dfa75d…`.
-3. **Fill the secrets file** (outside the repo; values never go in chat):
-   `cp secrets.env.example ~/.robotforge-live.secrets.env`, open it in
-   a text editor, replace each `paste-here`, save.
-4. **Upload, not deploy:** `./safe-upload.sh`. It checks it runs from
-   `live/`, checks every required name is filled (it prints names, never
-   values), and runs `wrangler versions upload --secrets-file`. Live
-   traffic does not move. Note the **Version ID** and
-   **Version Preview URL** it prints.
+3. **Upload, not deploy:** `./safe-upload.sh`. It checks it runs from
+   `live/`, uploads the code with `wrangler versions upload`, then runs
+   `wrangler versions secret put NAME` for each key. Wrangler prompts you
+   for each value at your terminal (same as `wrangler secret put`);
+   nothing is saved to a file or printed. Every step makes a new version
+   and none of them is deployed, so live traffic does not move.
+4. **Find the last version:** `npx wrangler versions list`. The newest
+   Version ID is the one with every key; its preview URL is
+   `https://<first 8 characters of the ID>-robotforge-live.abelxmendoza.workers.dev`.
 5. **Test the preview:**
-   `python3 ../tools/check_live_health.py <Version Preview URL>`. It
+   `python3 ../tools/check_live_health.py <preview URL>`. It
    must pass, and `/health` there should show Meta, Baseten, Firecrawl and
    email / Meta / Google login on.
 6. **Promote:** `npx wrangler versions deploy <Version ID>@100% --yes`.
 7. **Check live:**
    `python3 ../tools/check_live_health.py https://robotforge-live.abelxmendoza.workers.dev`,
    then sign in on the site and ask Wrench one question.
-8. **Clean up:** `rm ~/.robotforge-live.secrets.env`.
 
 If step 5 fails, do nothing: live is untouched. If step 7 fails,
 `npx wrangler rollback 31dfa75d-2453-4bb3-9df1-fbe718f78987` puts the old
-Worker back. Once a version with secrets is live, later code updates
-(e.g. a new route plus one new key) can use the same script, or
-`npx wrangler versions secret put NAME` followed by a `versions upload`,
-because the new version will inherit the secrets.
+Worker back. Once a version with secrets is live, later updates (e.g. a
+new route plus one new key) are a `versions upload` plus one
+`npx wrangler versions secret put NAME`, then the same test and promote,
+because new versions inherit the secrets.
 
 If `AUTH_JWT_SECRET` is lost, any long random string works
 (`openssl rand -base64 48`); it only signs session tokens, so the cost is

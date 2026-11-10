@@ -4,15 +4,20 @@
 # Why this exists: since the 2026-11-03 incident the Worker's keys live
 # only inside the old version 31dfa75d. Cloudflare builds a new version's
 # secrets from the latest *uploaded* version, which has none, so a plain
-# `wrangler deploy` would ship a keyless Worker. This script uploads the
-# current code together with every secret from a local file, so nothing
-# is lost, and leaves the live traffic on the old version until you
-# promote the new one yourself (see "Safe deploy" in README.md).
+# `wrangler deploy` would ship a keyless Worker, and a plain
+# `wrangler secret put` would deploy each half-keyed step straight to live.
 #
-# Usage, from anywhere:
-#   live/safe-upload.sh [path/to/secrets.env]
-# Default secrets file: ~/.robotforge-live.secrets.env (outside the repo).
-# The script never prints a secret value.
+# This script instead:
+#   1. uploads the current code as a version (not deployed), then
+#   2. runs `wrangler versions secret put NAME` once per key. Each one
+#      prompts you to type (or paste) the value at your own terminal, the
+#      same way as `wrangler secret put`, and makes a new version that is
+#      also NOT deployed. Nothing is written to a file, nothing is printed.
+# Live traffic stays on the old version until you test the last version's
+# preview and promote it yourself (see "Safe deploy" in README.md).
+#
+# Usage, from anywhere:   live/safe-upload.sh
+# Only the owner runs this (AGENTS.md rules 1 and 4).
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -24,68 +29,48 @@ if [ ! -f wrangler.toml ] || ! grep -q '^name = "robotforge-live"' wrangler.toml
   exit 1
 fi
 
-SECRETS="${1:-$HOME/.robotforge-live.secrets.env}"
-if [ ! -f "$SECRETS" ]; then
-  echo "STOP: no secrets file at $SECRETS" >&2
-  echo "Copy live/secrets.env.example there and fill in the values." >&2
+if ! npx --yes wrangler versions secret put --help >/dev/null 2>&1; then
+  echo "STOP: this wrangler has no 'versions secret put'. Update it:" >&2
+  echo "  npm install -g wrangler@latest   (or use npx wrangler@latest)" >&2
   exit 1
 fi
-case "$(cd "$(dirname "$SECRETS")" && pwd)/" in
-  "$(cd .. && pwd)"/*)
-    echo "STOP: keep the secrets file outside the repo, not in $(cd .. && pwd)." >&2
-    exit 1 ;;
-esac
-chmod 600 "$SECRETS"
 
 # The 8 secrets the known-good version 31dfa75d had, plus GOOGLE_CLIENT_ID,
 # which used to be a dashboard variable and is not in wrangler.toml.
 REQUIRED="AUTH_JWT_SECRET BASETEN_API_KEY FIRECRAWL_API_KEY GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET META_API_KEY META_APP_ID META_APP_SECRET OPERATOR_TOKEN"
-# Worker code reads these too; they are fine to leave out.
+# Worker code reads these too; skip them unless you use them.
 OPTIONAL="FIREWORKS_API_KEY GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET"
 
-missing=0
-echo "Secrets file check (names only, values are never shown):"
-for name in $REQUIRED; do
-  value="$(grep -E "^${name}=" "$SECRETS" | tail -n 1 | cut -d= -f2- || true)"
-  if [ -z "$value" ] || [ "$value" = "paste-here" ]; then
-    echo "  MISSING  $name"; missing=1
-  else
-    echo "  ok       $name"
-  fi
-done
-for name in $OPTIONAL; do
-  if grep -qE "^${name}=.+" "$SECRETS" && ! grep -qE "^${name}=paste-here$" "$SECRETS"; then
-    echo "  ok       $name (optional)"
-  fi
-done
-if grep -qE '^[A-Z_]+=paste-here$' "$SECRETS"; then
-  echo "STOP: some lines still say paste-here. Fill them or delete those lines." >&2
-  exit 1
-fi
-if [ "$missing" -ne 0 ]; then
-  echo "STOP: fill in every MISSING name above, then run this again." >&2
-  exit 1
-fi
-
-if ! npx --yes wrangler versions upload --help 2>/dev/null | grep -q -- '--secrets-file'; then
-  echo "STOP: this wrangler has no 'versions upload --secrets-file'. Update it:" >&2
-  echo "  npm install -g wrangler@latest   (or use npx wrangler@latest)" >&2
-  exit 1
-fi
+echo "Step 1/2: uploading the code as a new version (NOT deploying)..."
+npx --yes wrangler versions upload \
+  --message "Safe upload $(git rev-parse --short HEAD 2>/dev/null || echo local), code only"
 
 echo
-echo "Uploading a new version (NOT deploying; live traffic stays where it is)..."
-npx --yes wrangler versions upload \
-  --secrets-file "$SECRETS" \
-  --message "Safe upload $(git rev-parse --short HEAD 2>/dev/null || echo local) with all secrets"
+echo "Step 2/2: adding each key to a new version (still NOT deploying)."
+echo "Type or paste each value when wrangler asks. It is not shown or saved here."
+for name in $REQUIRED; do
+  echo
+  echo "== $name =="
+  npx --yes wrangler versions secret put "$name" \
+    --message "Safe upload: add $name"
+done
+
+for name in $OPTIONAL; do
+  printf '\nAdd optional %s too? [y/N] ' "$name"
+  read -r answer
+  case "$answer" in
+    y|Y) npx --yes wrangler versions secret put "$name" --message "Safe upload: add $name" ;;
+  esac
+done
 
 cat <<'NEXT'
 
-Uploaded. Nothing is live yet. Next (README.md, "Safe deploy"):
-  1. Copy the "Version ID" and "Version Preview URL" printed above.
-  2. Test the preview:  python3 ../tools/check_live_health.py <Version Preview URL>
+Done. Nothing is live yet. Next (README.md, "Safe deploy"):
+  1. npx wrangler versions list      -> the newest Version ID is the one with every key.
+     Its preview URL is https://<first 8 chars of that ID>-robotforge-live.abelxmendoza.workers.dev
+  2. Test the preview:  python3 ../tools/check_live_health.py <preview URL>
   3. Only if it passes: npx wrangler versions deploy <Version ID>@100% --yes
-  4. Check the live URL:  python3 ../tools/check_live_health.py https://robotforge-live.abelxmendoza.workers.dev
+  4. Check live:        python3 ../tools/check_live_health.py https://robotforge-live.abelxmendoza.workers.dev
   5. If anything is wrong: npx wrangler rollback 31dfa75d-2453-4bb3-9df1-fbe718f78987
 NEXT
