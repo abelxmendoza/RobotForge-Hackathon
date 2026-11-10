@@ -119,9 +119,12 @@ function localSightings(): DexSighting[] {
 /* Owner notes for sightings whose record alone doesn't say whose
  * robot it is. spot-cpp is Cal Poly Pomona IRLab's robotics club
  * Spot — Abel photographed it there; it is not his robot, and the
- * card says so wherever it appears. */
+ * card says so wherever it appears. The vex-* sightings are two
+ * V5RC teams' robots seen while spectating a competition. */
 const SIGHTING_OWNER_NOTES: Record<string, string> = {
   "spot-cpp": "Cal Poly Pomona IRLab's robotics club robot — spotted there in person. Not your robot.",
+  "vex-1658x": "VEX V5RC team 1658X's robot — seen at a VEX competition you spectated. Not your robot.",
+  "vex-404s": "VEX V5RC team 404S's robot — seen at a VEX competition you spectated. Not your robot.",
 };
 
 export interface DexModel {

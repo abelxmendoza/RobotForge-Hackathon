@@ -399,3 +399,31 @@ def test_model_draws_mechanisms_and_plates():
     })()""")
     assert out["n"]["licence-plate"] == 2 and out["n"]["air-tank"] == 2 and out["n"]["mech-motor"] == 2
     assert out["p"]["licence-plate"] == 2 and "air-tank" not in out["p"] and "mech-motor" not in out["p"]
+
+
+# --------------------------------------------- spectated VEX sightings
+
+def test_spectated_vex_robots_are_sightings_not_owned():
+    """The owner spectated a VEX competition and photographed two
+    teams' robots (2026-11). They file as Robodex sightings with a
+    recorded place (so: Sighted), carry a 'Not your robot' note,
+    and add nothing to anyone's parts inventory."""
+    import hashlib
+    fams = json.loads((ROOT / "catalog/families.json").read_text())["families"]
+    vex = next(f for f in fams if f["name"] == "VEX V5 competition robot")
+    sightings = {s["id"]: s for v in vex["variants"] for s in v["sightings"]}
+    assert set(sightings) == {"vex-1658x", "vex-404s"}
+    for sid, team in (("vex-1658x", "1658X"), ("vex-404s", "404S")):
+        s = sightings[sid]
+        assert s["where"] and "spectated" in s["where"]
+        photo = ROOT / s["photo"]
+        assert photo.exists()
+        assert hashlib.sha256(photo.read_bytes()).hexdigest() == s["sha256"]
+        spec = s["dossier"]["draft_spec"]
+        assert spec["vex_team"] == team
+        assert all(f["draft"]["provenance"] == "PHOTO-ESTIMATED"
+                   for f in s["dossier"]["fields"])
+    dex = (ROOT / "web-next/src/components/robots/DexSources.tsx").read_text()
+    for sid in ("vex-1658x", "vex-404s"):
+        line = next(l for l in dex.splitlines() if f'"{sid}":' in l)
+        assert "Not your robot" in line

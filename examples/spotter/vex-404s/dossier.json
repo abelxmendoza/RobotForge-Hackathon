@@ -1,0 +1,255 @@
+{
+  "schema": "robotforge-spotter/1",
+  "generated_at": "2026-11-10T00:00:00+00:00",
+  "honesty_note": "Every value in this dossier carries its provenance. PHOTO-ESTIMATED values were read off a photograph and are not measurements; WEB-SOURCED values come from the public pages named beside them; CATALOG values are RobotForge's own recorded data, shown as a cross-check and never merged into the photo draft.",
+  "identity": {
+    "value": "VEX V5 competition robot",
+    "provenance": "UNKNOWN",
+    "source": "operator-provided: the owner spectated a VEX Robotics competition and photographed team 404S's robot; team number read off its licence plate"
+  },
+  "credit": {
+    "value": "Designed and built by VEX V5RC team 404S. Not the owner's robot; the Robodex records the sighting only.",
+    "provenance": "PHOTO-ESTIMATED",
+    "source": "team number on the robot's licence plate"
+  },
+  "catalog_match": {
+    "verdict": "NEW",
+    "robot": null,
+    "dex_id": null,
+    "score": 0,
+    "evidence": [
+      "a team-built competition robot; no Robodex entry describes team 404S's robot"
+    ]
+  },
+  "photo": {
+    "path": "examples/spotter/vex-404s/spotted-photo.jpg",
+    "sha256": "4a5168437bc4c2fbd40224b0be61c07c41f718b8189c0cfcead7e692481a3ff2",
+    "identity_guess": "VEX V5RC robot, team 404S",
+    "visible_parts": [
+      {
+        "kind": "aluminum C-channel chassis",
+        "count": 1,
+        "position": "base",
+        "notes": "silver perforated VEX C-channel frame with polycarbonate skid plates at the front",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "omni wheel",
+        "count": 4,
+        "position": "drive base sides",
+        "notes": "VEX omni wheels with grey rollers visible down the left side",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "green gear",
+        "count": 6,
+        "position": "intake tower",
+        "notes": "green VEX gears driving the intake / conveyor tower",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "pneumatic cylinder",
+        "count": 1,
+        "position": "front, on the tower",
+        "notes": "silver pneumatic cylinder with a black solenoid valve and air lines",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "air tank",
+        "count": 2,
+        "position": "right side",
+        "notes": "two red-and-silver pressurized air reservoirs ('PSI' label)",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "V5 Brain",
+        "count": 1,
+        "position": "front centre",
+        "notes": "V5 Robot Brain screen visible behind the plate",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "V5 battery",
+        "count": 1,
+        "position": "left tower",
+        "notes": "black V5 battery strapped to the tower with rubber bands",
+        "provenance": "PHOTO-ESTIMATED"
+      },
+      {
+        "kind": "licence plate",
+        "count": 1,
+        "position": "front left",
+        "notes": "blue team plate reading '404S'",
+        "provenance": "PHOTO-ESTIMATED"
+      }
+    ]
+  },
+  "fields": [
+    {
+      "field": "name",
+      "draft": {
+        "value": "VEX V5 robot, team 404S - photo draft",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "drivetrain",
+      "draft": {
+        "value": "skid_steer",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "length_m",
+      "draft": {
+        "value": 0.44,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "width_m",
+      "draft": {
+        "value": 0.42,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "height_m",
+      "draft": {
+        "value": 0.43,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "mass_kg",
+      "draft": {
+        "value": 6.8,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "ground_clearance_m",
+      "draft": {
+        "value": 0.02,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "wheel.diameter_m",
+      "draft": {
+        "value": 0.0826,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "wheel.count",
+      "draft": {
+        "value": 4,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "motor.kind",
+      "draft": {
+        "value": "vex_v5_smart_motor",
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "motor.count",
+      "draft": {
+        "value": 8,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    },
+    {
+      "field": "battery.voltage_v",
+      "draft": {
+        "value": 12.8,
+        "provenance": "PHOTO-ESTIMATED",
+        "source": "read off the owner's photo \u2014 every dimension ESTIMATED, no scale reference beyond the 18 in V5RC size limit"
+      }
+    }
+  ],
+  "parts": [],
+  "sources": [],
+  "draft_spec": {
+    "name": "VEX V5 robot, team 404S - photo draft",
+    "description": "Photo draft (all dimensions ESTIMATED) of team 404S's VEX V5RC robot: omni-wheel tank base, green-gear intake tower, pneumatic cylinder and two air tanks. Sizes assume it fills most of the 18 in V5RC starting size; motor count and gearing are not visible and are guesses.",
+    "drivetrain": "skid_steer",
+    "length_m": 0.44,
+    "width_m": 0.42,
+    "height_m": 0.43,
+    "mass_kg": 6.8,
+    "ground_clearance_m": 0.02,
+    "wheel": {
+      "diameter_m": 0.0826,
+      "width_m": 0.028,
+      "count": 4,
+      "driven": true
+    },
+    "motor": {
+      "kind": "vex_v5_smart_motor",
+      "voltage_v": 12.8,
+      "count": 8,
+      "stall_torque_nm": null
+    },
+    "battery": {
+      "chemistry": "liion",
+      "voltage_v": 12.8,
+      "capacity_mah": 1100
+    },
+    "sensors": [
+      {
+        "kind": "imu",
+        "position": "centre",
+        "range_m": null
+      }
+    ],
+    "component_mass_kg": {},
+    "vex_mechanisms": [
+      "intake",
+      "pneumatics"
+    ],
+    "vex_team": "404S"
+  },
+  "validation": {
+    "verdict": "PASS",
+    "note": "validate() checks physical coherence of the ESTIMATED draft; a PASS means the draft is self-consistent, not that it matches the real robot",
+    "findings": [
+      {
+        "severity": "WARN",
+        "check": "provenance.estimated_dimensions",
+        "message": "every dimension in this spec is ESTIMATED from a photo, not measured \u2014 the checks ran against estimates, so this is not a verdict on the real robot; confirm the dimensions before trusting the spec"
+      }
+    ]
+  },
+  "stages": [
+    {
+      "stage": "photo",
+      "status": "ok",
+      "note": "read by hand from the owner's photo; every dimension is ESTIMATED"
+    },
+    {
+      "stage": "lookup",
+      "status": "skipped",
+      "note": "a team's competition robot has no public spec to look up"
+    },
+    {
+      "stage": "validate",
+      "status": "ok",
+      "note": "draft validation: PASS"
+    }
+  ]
+}

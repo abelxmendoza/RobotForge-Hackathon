@@ -659,6 +659,13 @@ def families_from_dict(data: dict) -> list:
 _EXAMPLE_CONTEXT = {
     "spot-cpp": {"spotted_at": "2026-10-28",
                  "where": "Cal Poly Pomona IRLab"},
+    # Two V5RC teams' robots the owner photographed while spectating a
+    # VEX Robotics competition in early November 2026 (exact day not
+    # recorded). Team numbers come off each robot's licence plate.
+    "vex-1658x": {"spotted_at": "2026-11",
+                  "where": "VEX Robotics competition (spectated)"},
+    "vex-404s": {"spotted_at": "2026-11",
+                 "where": "VEX Robotics competition (spectated)"},
 }
 
 
