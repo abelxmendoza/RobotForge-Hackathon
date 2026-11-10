@@ -2319,3 +2319,30 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .tc-detail{color:var(--muted, inherit)}
 .tc-parts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .tc-part{font-size:11px;border:1px solid var(--border);border-radius:999px;padding:2px 8px}
+
+/* Workshop Drive train tab (components/garage/DriveTrainTab.tsx) */
+.dt-tab{display:flex;flex-direction:column;gap:var(--s4);padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.dt-tab h3{margin:2px 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dt-tab h4{margin:0 0 8px}
+.dt-grid{display:grid;grid-template-columns:minmax(160px,240px) 1fr;gap:var(--s4);align-items:start}
+@media (max-width:640px){.dt-grid{grid-template-columns:1fr}.dt-figure{max-width:260px;margin:0 auto}}
+.dt-figure{margin:0}
+.dt-top{width:100%;height:auto;display:block}
+.dt-body{fill:var(--surface-2);stroke:var(--border-strong);stroke-width:1.5}
+.dt-front{fill:var(--accent)}
+.dt-wheel{fill:none;stroke:var(--text-faint);stroke-width:1.5}
+.dt-wheel.driven{fill:var(--accent);stroke:var(--accent)}
+.dt-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.dt-table th,.dt-table td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.dt-table th[scope=row]{font-weight:500;color:var(--text-faint)}
+.dt-table td.dt-changed{color:var(--accent);font-weight:600}
+.dt-vex-panel{border-top:1px solid var(--border);padding-top:var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+.dt-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--s3)}
+.dt-controls label,.dt-budget label{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-sm)}
+.dt-controls select,.dt-budget select{padding:6px 8px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;max-width:100%}
+.dt-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dt-budget{display:flex;flex-direction:column;gap:8px}
+.dt-meter{display:flex;height:12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden}
+.dt-meter-drive{background:var(--accent)}
+.dt-meter-other{background:var(--marginal)}
+.fbadge.dt-vex{font-size:var(--fs-xs)}

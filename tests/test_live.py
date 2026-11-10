@@ -131,7 +131,7 @@ def test_worker_parts_mirror_matches_the_catalogue():
                                    "/*PARTS_END*/"))
     parts = json.loads((REPO / "catalog" / "parts.json").read_text())["parts"]
     assert embedded == [{"id": p["id"], "name": p["name"]} for p in parts]
-    assert len(embedded) == 150
+    assert len(embedded) == 167  # 150 + 17 VEX V5 parts (2026-11-10)
 
 
 # ------------------------------------------------------------------

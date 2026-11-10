@@ -94,7 +94,7 @@ const items = P.buildPaletteItems(partsDoc.parts, propsDoc.props);
 const byKey = new Map(items.map(i => [i.key, i]));
 
 // --- construction: provenance + reality split ---
-assert.equal(items.length, 153);
+assert.equal(items.length, 170);  // 153 + 17 VEX V5 parts (2026-11-10)
 assert.equal(items.filter(i => i.hasModel).length, 3);
 assert.equal(byKey.get('prop:crate').reality, 'sim_only');
 assert.equal(byKey.get('prop:crate').hasModel, true);

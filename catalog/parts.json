@@ -5366,6 +5366,548 @@
           "url": "https://www.robotshop.com/search?q=2306%201750KV%20motor"
         }
       ]
+    },
+    {
+      "id": "vex_v5_brain",
+      "image": "assets/img/parts/vex_v5_brain.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Robot Brain",
+      "part_class": "microcontrollers",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "smart_ports": 21,
+        "three_wire_ports": 8,
+        "screen": "4.25 in colour touchscreen"
+      },
+      "blurb": "The V5 robot's computer: it runs your program and talks to every motor and sensor through its Smart Ports.",
+      "used_for": "The one controller on every VEX V5 robot.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Any Smart Port takes any Smart device (motor, sensor, radio); program it in VEXcode, PROS or vexide. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Robot%20Brain"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Robot%20Brain"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_m11w",
+      "image": "assets/img/parts/vex_v5_m11w.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Smart Motor (11 W)",
+      "part_class": "actuators",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "kind": "vex_v5_smart_motor",
+        "peak_power_w": 11,
+        "voltage_v": 12.8,
+        "cartridges": {
+          "red_36_1": {
+            "free_rpm": 100,
+            "stall_torque_nm": 2.1
+          },
+          "green_18_1": {
+            "free_rpm": 200,
+            "stall_torque_nm": 1.05
+          },
+          "blue_6_1": {
+            "free_rpm": 600,
+            "stall_torque_nm": 0.35
+          }
+        },
+        "encoder": "built in"
+      },
+      "blurb": "VEX's main motor: a motor, gearbox cartridge, encoder and controller in one box. Swap the cartridge to trade speed for torque.",
+      "used_for": "Drive trains, lifts, intakes and arms on V5 robots.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Red cartridge 100 rpm (most torque), green 200 rpm, blue 600 rpm (fastest). The motor limits its own current, so a stalled motor gets hot and slows down instead of burning out. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Smart%20Motor%2011W"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Smart%20Motor%2011W"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_m5w5",
+      "image": "assets/img/parts/vex_v5_m5w5.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Smart Motor (5.5 W)",
+      "part_class": "actuators",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "kind": "vex_v5_smart_motor",
+        "peak_power_w": 5.5,
+        "voltage_v": 12.8,
+        "free_rpm": 200,
+        "cartridge": "fixed (200 rpm)"
+      },
+      "blurb": "A smaller, half-power V5 motor with a fixed 200 rpm output.",
+      "used_for": "Light jobs like intakes and small mechanisms, so the 11 W motors can go to the drive.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Half the power of the 11 W motor. Competition rules cap the total motor power on a robot, so two 5.5 W motors count the same as one 11 W motor. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Smart%20Motor%205.5W"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Smart%20Motor%205.5W"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_batt",
+      "image": "assets/img/parts/vex_v5_batt.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Robot Battery (Li-ion, 1100 mAh)",
+      "part_class": "power",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "chemistry": "liion",
+        "voltage_v": 12.8,
+        "capacity_mah": 1100
+      },
+      "blurb": "The V5 battery pack. It plugs into the Brain, and the Brain powers every motor.",
+      "used_for": "Powers the whole V5 robot.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Charge it with the V5 charger only. Bring spare charged batteries to matches. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Robot%20Battery"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Robot%20Battery"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_ctrl",
+      "image": "assets/img/parts/vex_v5_ctrl.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Controller",
+      "part_class": "comms",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "joysticks": 2,
+        "buttons": 12,
+        "screen": "monochrome"
+      },
+      "blurb": "The handheld controller the driver uses: two joysticks, buttons, and a small screen.",
+      "used_for": "Driving the robot during driver control.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Pairs with the Brain over the V5 Radio, or with a tether cable. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Controller"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Controller"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_vexnet",
+      "image": "assets/img/parts/vex_v5_vexnet.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Robot Radio",
+      "part_class": "comms",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "link": "VEXnet 3 / Bluetooth; VEXlink robot-to-robot"
+      },
+      "blurb": "The radio that links the Brain to the controller.",
+      "used_for": "Wireless driving, and robot-to-robot messages with VEXlink.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Mount it where metal doesn't block it, away from the motors. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Robot%20Radio"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Robot%20Radio"
+        }
+      ]
+    },
+    {
+      "id": "vex_omni4",
+      "image": "assets/img/parts/vex_omni4.jpg",
+      "license": "proprietary-part",
+      "name": "VEX 4 in omni-directional wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "kind": "omni",
+        "diameter_m": 0.1016,
+        "diameter_in": 4
+      },
+      "blurb": "A wheel with small rollers around its edge. It grips forward and back, and slides sideways.",
+      "used_for": "Tank drives that turn smoothly, and X-drives or H-drives that strafe.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "The size is the nominal diameter; measure the real wheel before trusting speed numbers. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%204%20inch%20omni%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%204%20inch%20omni%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "vex_omni325",
+      "image": "assets/img/parts/vex_omni325.jpg",
+      "license": "proprietary-part",
+      "name": "VEX 3.25 in omni-directional wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "kind": "omni",
+        "diameter_m": 0.08255,
+        "diameter_in": 3.25
+      },
+      "blurb": "A smaller omni wheel, a common choice for fast competition drive trains.",
+      "used_for": "6-wheel V5 tank drives (often with traction wheels in the middle).",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "The size is the nominal diameter; measure the real wheel before trusting speed numbers. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%203.25%20inch%20omni%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%203.25%20inch%20omni%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "vex_omni275",
+      "image": "assets/img/parts/vex_omni275.jpg",
+      "license": "proprietary-part",
+      "name": "VEX 2.75 in omni-directional wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "kind": "omni",
+        "diameter_m": 0.06985,
+        "diameter_in": 2.75
+      },
+      "blurb": "The smallest VEX omni wheel, low and light.",
+      "used_for": "Compact drive trains and tracking wheels for odometry.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Often used unpowered with a Rotation Sensor as a tracking wheel. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%202.75%20inch%20omni%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%202.75%20inch%20omni%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "vex_trac325",
+      "image": "assets/img/parts/vex_trac325.jpg",
+      "license": "proprietary-part",
+      "name": "VEX 3.25 in traction wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "kind": "traction",
+        "diameter_m": 0.08255,
+        "diameter_in": 3.25
+      },
+      "blurb": "A wheel with a grippy tread and no rollers, so it resists being pushed sideways.",
+      "used_for": "The middle wheels of a 6-wheel tank drive, to resist defence.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Use traction wheels in the middle and omni wheels at the corners so the robot can still turn. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%203.25%20inch%20traction%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%203.25%20inch%20traction%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "vex_mec4",
+      "image": "assets/img/parts/vex_mec4.jpg",
+      "license": "proprietary-part",
+      "name": "VEX 4 in mecanum wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "kind": "mecanum",
+        "diameter_m": 0.1016,
+        "diameter_in": 4
+      },
+      "blurb": "A wheel with angled rollers. Four of them, each with its own motor, let the robot drive in any direction.",
+      "used_for": "Holonomic drive trains that strafe sideways.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Needs one motor per wheel, and the rollers must form an X when viewed from above. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%204%20inch%20mecanum%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%204%20inch%20mecanum%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "vex_cchan",
+      "image": "assets/img/parts/vex_cchan.jpg",
+      "license": "proprietary-part",
+      "name": "VEX aluminum C-channel (1x2x1)",
+      "part_class": "structure",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "material": "aluminum",
+        "profile": "1x2x1 C-channel",
+        "hole_pitch_in": 0.5
+      },
+      "blurb": "The standard VEX frame rail: a U-shaped metal beam with square holes every half inch.",
+      "used_for": "Drive train rails, towers and arms.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Aluminum is lighter, steel is stronger. Cut to length and brace with screws and nuts. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20aluminum%20C-channel%201x2x1"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20aluminum%20C-channel%201x2x1"
+        }
+      ]
+    },
+    {
+      "id": "vex_hsgear",
+      "image": "assets/img/parts/vex_hsgear.jpg",
+      "license": "proprietary-part",
+      "name": "VEX high-strength gears (12-84 teeth)",
+      "part_class": "structure",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex",
+        "teeth": [
+          12,
+          36,
+          48,
+          60,
+          72,
+          84
+        ],
+        "shaft": "high-strength square"
+      },
+      "blurb": "Spur gears that change speed and torque between a motor and a wheel.",
+      "used_for": "Gearing a drive train up for speed or down for pushing power.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Speed ratio = driving teeth / driven teeth. 36 on the motor driving 60 on the wheel turns the wheel at 0.6x motor speed with 1.67x the torque. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20high%20strength%20gear"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20high%20strength%20gear"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_imu",
+      "image": "assets/img/parts/vex_v5_imu.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Inertial Sensor",
+      "part_class": "cameras_sensors",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "kind": "imu",
+        "axes": "3-axis gyro + 3-axis accelerometer"
+      },
+      "blurb": "Measures which way the robot is facing and how it is moving.",
+      "used_for": "Accurate turns and heading in autonomous routines.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Calibrate it while the robot sits still at the start of a match. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Inertial%20Sensor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Inertial%20Sensor"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_rot",
+      "image": "assets/img/parts/vex_v5_rot.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Rotation Sensor",
+      "part_class": "cameras_sensors",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "kind": "encoder",
+        "absolute": true
+      },
+      "blurb": "Measures how far a shaft has turned, even across power cycles.",
+      "used_for": "Tracking wheels for odometry, and arm or lift angles.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Pair it with an unpowered 2.75 in omni wheel for odometry. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Rotation%20Sensor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Rotation%20Sensor"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_dist",
+      "image": "assets/img/parts/vex_v5_dist.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Distance Sensor",
+      "part_class": "cameras_sensors",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "kind": "time_of_flight"
+      },
+      "blurb": "A laser time-of-flight sensor that measures how far away an object is.",
+      "used_for": "Lining up with field walls and game objects.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Dark or shiny surfaces can read short; test on the real field elements. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Distance%20Sensor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Distance%20Sensor"
+        }
+      ]
+    },
+    {
+      "id": "vex_v5_opt",
+      "image": "assets/img/parts/vex_v5_opt.jpg",
+      "license": "proprietary-part",
+      "name": "VEX V5 Optical Sensor",
+      "part_class": "cameras_sensors",
+      "source": "VEX Robotics V5 product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_v5",
+        "kind": "colour_proximity"
+      },
+      "blurb": "Sees colour, brightness and how close an object is.",
+      "used_for": "Sorting game objects by colour inside an intake.",
+      "robot_types": [
+        "VEX V5 competition robot"
+      ],
+      "notes": "Has its own LED; turn it on for steady readings. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20V5%20Optical%20Sensor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20V5%20Optical%20Sensor"
+        }
+      ]
     }
   ],
   "templates": [
@@ -5487,6 +6029,32 @@
         "gripper_2finger": 1,
         "servo_sts3215": 6,
         "teensy_41": 1
+      }
+    },
+    {
+      "gate_pack": "live",
+      "label": "VEX V5 tank drive (4-motor, 4 in omni)",
+      "name": "vex_v5_tank_drive",
+      "optional": [
+        "vex_hsgear",
+        "vex_v5_imu",
+        "vex_v5_rot",
+        "vex_v5_dist",
+        "vex_v5_opt",
+        "vex_v5_m5w5",
+        "vex_trac325",
+        "vex_omni325",
+        "vex_omni275",
+        "vex_mec4"
+      ],
+      "required": {
+        "vex_cchan": 4,
+        "vex_omni4": 4,
+        "vex_v5_batt": 1,
+        "vex_v5_brain": 1,
+        "vex_v5_ctrl": 1,
+        "vex_v5_vexnet": 1,
+        "vex_v5_m11w": 4
       }
     }
   ]

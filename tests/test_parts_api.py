@@ -168,7 +168,7 @@ def test_real_catalogue_seeds_150_records_three_priced():
     AI-illustration `image` field."""
     catalog = json.loads((REPO / "catalog" / "parts.json").read_text())
     records = seed.build_records(catalog, [], seeded_at="2026-11-01T10:00:00Z")
-    assert len(records) == 150
+    assert len(records) == 167  # 150 + 17 VEX V5 parts (2026-11-10)
     priced = {r["id"]: r["estimates"] for r in records if r["estimates"]}
     assert set(priced) == {"driver_tb6612fng", "pla_filament",
                            "petg_filament"}

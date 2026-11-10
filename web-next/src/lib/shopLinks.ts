@@ -50,6 +50,7 @@ export const SHOP_VENDORS: ShopVendor[] = [
   { id: 'mcmaster', label: 'McMaster-Carr', domains: ['mcmaster.com'], search: (q) => `https://www.mcmaster.com/${enc(q)}/` },
   { id: 'servocity', label: 'ServoCity', domains: ['servocity.com'], search: (q) => `https://www.servocity.com/search.php?search_query=${enc(q)}` },
   { id: 'gobilda', label: 'goBILDA', domains: ['gobilda.com'], search: (q) => `https://www.gobilda.com/search?q=${enc(q)}` },
+  { id: 'vex', label: 'VEX Robotics', domains: ['vexrobotics.com'], search: (q) => `https://www.vexrobotics.com/catalogsearch/result/?q=${enc(q)}` },
 ];
 
 export function shopVendor(id: string): ShopVendor | undefined {

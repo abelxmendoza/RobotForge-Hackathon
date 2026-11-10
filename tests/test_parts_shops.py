@@ -20,6 +20,7 @@ VENDOR_DOMAINS = {
     "pololu": "pololu.com", "robotshop": "robotshop.com",
     "amazon": "amazon.com", "mcmaster": "mcmaster.com",
     "servocity": "servocity.com", "gobilda": "gobilda.com",
+    "vex": "vexrobotics.com",
 }
 # The only records that carried a price estimate before this change
 # (web-gathered 2026-11-01, with source + fetch time on the record).

@@ -502,6 +502,47 @@
     "How do I take my robot apart?",
     "How do I put my robot back together?"
    ]
+  },
+  {
+   "answer": "RobotForge supports VEX V5 builds. The parts catalogue has the V5 Brain, Battery, Controller and Radio, the 11 W and 5.5 W Smart Motors, 2.75, 3.25 and 4 in omni wheels, traction and mecanum wheels, C-channel, high-strength gears, and the Inertial, Rotation, Distance and Optical sensors. There is also a VEX V5 tank-drive template (4 motors, 4 in omni wheels) and a starter spec, examples/vex-v5-tank-drive.json.\n\nCartridges for the 11 W motor (VEX's ratings): red 36:1 = 100 rpm, 2.1 N·m stall; green 18:1 = 200 rpm, 1.05 N·m; blue 6:1 = 600 rpm, 0.35 N·m. Torque goes down as speed goes up. Most competition drive trains use blue cartridges geared down with gears (for example 36 teeth on the motor driving 60 on the wheel = 360 rpm) to land between 300 and 450 rpm at the wheel.\n\nV5RC caps total motor power at 88 W (since 2024-25; check the current game manual). That is 8 x 11 W, or 6 x 11 W plus 4 x 5.5 W.\n\nOpen your robot's Drive train tab in the Workshop to try cartridges and gear ratios and see the top speed, pushing force and motor-power budget change.",
+   "id": "vex",
+   "keywords": [
+    "vex",
+    "vex v5",
+    "vex robotics",
+    "v5rc",
+    "vrc",
+    "vex competition",
+    "vex cartridge",
+    "which cartridge",
+    "gear cartridge",
+    "vex motor",
+    "vex drive",
+    "vex drivetrain",
+    "88 w",
+    "88w",
+    "motor power limit"
+   ],
+   "samples": [
+    "Can I build a VEX V5 robot here?",
+    "Which VEX cartridge should my drive use?"
+   ]
+  },
+  {
+   "answer": "The Workshop's Drive train tab shows how your robot's motors turn into motion: the wheel layout seen from above (driven wheels filled in), the wheels, motors and gearing, and what they add up to. That is the wheel speed and top speed with no load, the torque each motor puts on its wheel, how hard the robot can push before the motors stall, and how hard before the wheels slip. Whichever limit comes first tells you whether more torque would even help.\n\nThe numbers come from your robot's own spec; anything missing is named, not guessed. Add a gearing block (motor_free_rpm, motor_shaft_stall_nm, driving_teeth, driven_teeth) to see speed for a geared drive. For VEX V5 robots you can switch cartridges, gears and motor type and apply the setup to your draft.",
+   "id": "drive_train",
+   "keywords": [
+    "drive train tab",
+    "drivetrain tab",
+    "the drive train tab",
+    "what does the drive train tab show",
+    "gear ratio",
+    "pushing force"
+   ],
+   "samples": [
+    "What does the Drive train tab show?",
+    "How do I pick a gear ratio?"
+   ]
   }
  ],
  "version": 1
