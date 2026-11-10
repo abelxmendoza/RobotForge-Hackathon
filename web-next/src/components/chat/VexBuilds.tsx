@@ -10,7 +10,7 @@
  * train tab. */
 import { useRef } from "react";
 import { driveNumbers, v5rcBudget } from "@/lib/drivetrain";
-import type { VexBuild } from "@/lib/vexBuilds";
+import { mechPowerW, VEX_MECHS, type VexBuild, type VexMech } from "@/lib/vexBuilds";
 import type { Spec } from "@/lib/garage";
 import VexModel3D from "@/components/garage/VexModel3D";
 
@@ -18,13 +18,13 @@ const f = (v: number | null, d: number, u: string) => (v == null ? "—" : `${Nu
 
 function Numbers({ spec }: { spec: Spec }) {
   const n = driveNumbers(spec);
-  const b = v5rcBudget(spec);
+  const b = v5rcBudget(spec, mechPowerW(spec));
   return (
     <dl className="vexb-nums">
       <div><dt>Top speed</dt><dd>{f(n.freeSpeedMps, 2, "m/s")}</dd></div>
       <div><dt>Wheel speed</dt><dd>{f(n.wheelRpm, 0, "rpm")}</dd></div>
       <div><dt title="Most push the motors can give, and where the wheels start to slip">Push: motors / grip</dt><dd>{n.stallPushN == null ? "—" : Math.round(n.stallPushN)} / {f(n.tractionPushN, 0, "N")}</dd></div>
-      {b && <div><dt>Motor power</dt><dd>{b.driveW} of {b.capW} W</dd></div>}
+      {b && <div><dt>Motor power</dt><dd>{b.usedW} of {b.capW} W</dd></div>}
     </dl>
   );
 }
@@ -38,15 +38,15 @@ export function VexBuildsCard({ builds, onAdd, onClose }: { builds: VexBuild[]; 
           <article key={b.id + i} className="vexb-card">
             <span className="eyebrow">#{i + 1}</span>
             <h4>{b.spec.name}</h4>
-            <VexModel3D spec={b.spec} label={`#${i + 1} ${b.spec.name}`} height={170} />
+            <VexModel3D spec={b.spec} label={`#${i + 1} ${b.spec.name}`} height={190} />
             <p className="g-small">{b.why}</p>
-            <p className="faint g-small">{b.spec.motor.count} motors · {b.spec.wheel.count} × {Math.round(b.spec.wheel.diameter_m / 0.0254 * 100) / 100} in {b.spec.drivetrain === "mecanum" ? "mecanum" : b.spec.wheel.kind ?? "omni"} · {b.spec.gearing.driving_teeth === b.spec.gearing.driven_teeth ? "direct drive" : `${b.spec.gearing.driving_teeth}:${b.spec.gearing.driven_teeth}`} · {b.spec.gearing.motor_free_rpm} rpm cartridge</p>
+            <p className="faint g-small">{b.spec.motor.count} motors · {b.spec.wheel.count} × {Math.round(b.spec.wheel.diameter_m / 0.0254 * 100) / 100} in {b.spec.drivetrain === "mecanum" ? "mecanum" : b.spec.wheel.kind ?? "omni"} · {b.spec.gearing.driving_teeth === b.spec.gearing.driven_teeth ? "direct drive" : `${b.spec.gearing.driving_teeth}:${b.spec.gearing.driven_teeth}`} · {b.spec.gearing.motor_free_rpm} rpm cartridge{Array.isArray(b.spec.vex_mechanisms) && b.spec.vex_mechanisms.length ? " · " + (b.spec.vex_mechanisms as VexMech[]).map((m) => VEX_MECHS[m].label).join(", ") : ""}</p>
             <Numbers spec={b.spec} />
             <button type="button" className="btn btn-primary btn-sm" onClick={() => onAdd(b, i)}>Add #{i + 1} to Workshop</button>
           </article>
         ))}
       </div>
-      <p className="faint g-small">Change one with words, like “make #2 faster”, “give #1 six motors” or “switch #3 to mecanum”. Motor numbers are VEX’s ratings; masses and sizes are typical values, not measurements. The 3D models are drawn from each build’s numbers, not CAD.</p>
+      <p className="faint g-small">Change one with words, like “make #2 faster”, “add an intake to #3”, “give #1 a lift” or “switch #3 to mecanum”. Motor numbers are VEX’s ratings; masses and sizes are typical values, not measurements. The 3D models are drawn from each build’s numbers, not CAD.</p>
     </section>
   );
 }

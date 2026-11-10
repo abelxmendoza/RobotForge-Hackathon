@@ -31,6 +31,25 @@ export interface VexBuildParams {
   driving: number;
   driven: number;
   massKg: number;
+  /** Scoring mechanisms on top of the drive (drawn in 3D, counted in the 88 W budget). */
+  mechs?: VexMech[];
+}
+
+/* Mechanisms seen on real V5RC robots (Abel's photos, 2026-11-10):
+ * a chain-and-sprocket intake/conveyor, a C-channel lift tower, and
+ * pneumatics (air tanks + cylinders, no motor). Watts are the 11 W
+ * motors each one typically uses; kg are typical added masses. */
+export type VexMech = 'intake' | 'lift' | 'pneumatics';
+export const VEX_MECHS: Record<VexMech, { label: string; motors: number; kg: number; what: string }> = {
+  intake: { label: 'intake / conveyor', motors: 1, kg: 0.8, what: 'a chain-and-sprocket intake that pulls game pieces up a conveyor' },
+  lift: { label: 'lift tower', motors: 2, kg: 1.0, what: 'a C-channel tower lift on two motors, helped by rubber bands' },
+  pneumatics: { label: 'pneumatics', motors: 0, kg: 0.6, what: 'air tanks and a cylinder for a clamp or wing (no motor)' },
+};
+const MECH_ORDER: VexMech[] = ['intake', 'lift', 'pneumatics'];
+/** Watts the mechanisms' motors use (11 W each). */
+export function mechPowerW(spec: Spec): number {
+  const list: unknown = spec?.vex_mechanisms;
+  return Array.isArray(list) ? list.reduce((w: number, m) => w + (VEX_MECHS[m as VexMech]?.motors ?? 0) * 11, 0) : 0;
 }
 
 export interface VexBuild { id: string; title: string; why: string; focus: string[]; spec: Spec }
@@ -44,7 +63,8 @@ export function wheelRpmOf(p: Pick<VexBuildParams, 'cartridge' | 'driving' | 'dr
 function describe(p: VexBuildParams): string {
   const gear = p.driving === p.driven ? 'direct drive' : `geared ${p.driving}:${p.driven}`;
   const kind = p.drive === 'mecanum' ? 'mecanum' : `${p.wheelKind}`;
-  return `${p.motors} x 11 W Smart Motors, ${p.cartridge} (${CARTRIDGES[p.cartridge].rpm} rpm) cartridges ${gear} to ${p.wheels} x ${p.wheelIn} in ${kind} wheels (${Math.round(wheelRpmOf(p))} rpm at the wheel).`;
+  const mechs = p.mechs?.length ? ` On top: ${p.mechs.map((m) => VEX_MECHS[m].what).join('; ')}.` : '';
+  return `${p.motors} x 11 W Smart Motors, ${p.cartridge} (${CARTRIDGES[p.cartridge].rpm} rpm) cartridges ${gear} to ${p.wheels} x ${p.wheelIn} in ${kind} wheels (${Math.round(wheelRpmOf(p))} rpm at the wheel).${mechs}`;
 }
 
 /** A complete RobotSpec for a VEX V5 drive base. */
@@ -55,7 +75,7 @@ export function buildVexSpec(title: string, p: VexBuildParams): Spec {
     name: title,
     description: `VEX V5 drive base suggested by Wrench: ${describe(p)} Motor numbers are VEX's published ratings; mass and size are typical values, not measurements of one robot.`,
     drivetrain: p.drive === 'mecanum' ? 'mecanum' : 'skid_steer',
-    length_m: 0.38, width_m: 0.38, height_m: 0.15,
+    length_m: 0.38, width_m: 0.38, height_m: p.mechs?.includes('lift') ? 0.45 : p.mechs?.length ? 0.35 : 0.15,
     mass_kg: p.massKg,
     ground_clearance_m: r4(Math.min(0.025, d / 2 * 0.5)),
     wheel: { diameter_m: d, width_m: p.drive === 'mecanum' ? 0.035 : 0.028, count: p.wheels, driven: true, kind: p.wheelKind },
@@ -64,10 +84,14 @@ export function buildVexSpec(title: string, p: VexBuildParams): Spec {
     battery: { chemistry: 'liion', voltage_v: 12.8, capacity_mah: 1100 },
     sensors: [{ kind: 'imu', position: 'centre' }],
     component_mass_kg: {},
+    ...(p.mechs?.length ? { vex_mechanisms: MECH_ORDER.filter((m) => p.mechs!.includes(m)) } : {}),
   };
 }
 
 const PRESETS: { id: string; title: string; why: string; focus: string[]; p: VexBuildParams }[] = [
+  { id: 'comp6', title: 'VEX Competition Robot', focus: ['competition', 'full', 'speed'],
+    why: 'What real V5RC robots look like: a fast 6-motor omni drive with a chain intake/conveyor and pneumatics on top. Uses 77 of 88 W.',
+    p: { drive: 'tank', motors: 6, wheels: 6, wheelIn: 3.25, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 48, massKg: 6.4, mechs: ['intake', 'pneumatics'] } },
   { id: 'speed6', title: 'VEX Speed Tank (6-motor)', focus: ['speed', 'competition'],
     why: 'The usual fast competition drive: quick across the field, still decent at pushing. Uses 66 of 88 W, leaving 22 W for an intake or lift.',
     p: { drive: 'tank', motors: 6, wheels: 6, wheelIn: 3.25, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 48, massKg: 5.0 } },
@@ -96,6 +120,7 @@ const FOCUS_WORDS: [string, RegExp][] = [
   ['beginner', /\b(beginner|simple|easy|first|starter|basic|new)\b/],
   ['cheap', /\b(cheap|budget|few(?:er)? motors)\b/],
   ['competition', /\b(competition|compete|v5rc|vrc|match)\b/],
+  ['full', /\b(full|complete|real|intake|lift|pneumatics?|mechanisms?|scoring)\b/],
 ];
 const NUM_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, eight: 8, a: 1, an: 1, couple: 2, few: 3 };
 
@@ -139,7 +164,8 @@ export type VexEditOp =
   | { kind: 'wheelKind'; wheelKind: 'omni' | 'traction' }
   | { kind: 'cartridge'; cartridge: CartId }
   | { kind: 'gear'; driving: number; driven: number }
-  | { kind: 'mass'; kg: number };
+  | { kind: 'mass'; kg: number }
+  | { kind: 'addMech'; mech: VexMech } | { kind: 'removeMech'; mech: VexMech };
 
 export interface VexEditRequest { target: number | null; ops: VexEditOp[] }
 
@@ -147,7 +173,7 @@ export interface VexEditRequest { target: number | null; ops: VexEditOp[] }
  *  "build 2", "the second one") or null for the robot on screen. */
 export function parseVexEdit(text: string): VexEditRequest | null {
   const q = text.toLowerCase().replace(/[.!?]+$/, '');
-  if (!/\b(make|use|switch|change|give|put|gear|set|swap|go|try|with|more|less|fewer|add)\b/.test(q)) return null;
+  if (!/\b(make|use|switch|change|give|put|gear|set|swap|go|try|with|more|less|fewer|add|remove|drop|take|without|mount)\b/.test(q)) return null;
   const ops: VexEditOp[] = [];
   if (/\b(faster|quicker|more speed|speed (?:it )?up)\b/.test(q)) ops.push({ kind: 'faster' });
   if (/\b(stronger|more (?:torque|pushing(?: power)?|push(?:ing)? force|power)|slower|push harder)\b/.test(q)) ops.push({ kind: 'stronger' });
@@ -168,6 +194,13 @@ export function parseVexEdit(text: string): VexEditRequest | null {
   if (/\bdirect[- ]drive\b/.test(q)) ops.push({ kind: 'gear', driving: 1, driven: 1 });
   const kg = q.match(/\b(?:weigh(?:s|t)?|mass|weight)(?: (?:it|is|to|of))* ([\d.]+) ?kg\b/) ?? q.match(/\b([\d.]+) ?kg\b/);
   if (kg && /\b(weigh|mass|weight|kg)\b/.test(q)) ops.push({ kind: 'mass', kg: Number(kg[1]) });
+  const MECH_RE: [VexMech, RegExp][] = [
+    ['intake', /\b(intake|conveyor|roller)s?\b/],
+    ['lift', /\b(lift|tower|arm|elevator)s?\b/],
+    ['pneumatics', /\b(pneumatics?|air tanks?|pistons?|cylinders?)\b/],
+  ];
+  const removing = /\b(remove|drop|take (?:off|out)|without|no)\b/.test(q);
+  for (const [mech, re] of MECH_RE) if (re.test(q)) ops.push({ kind: removing ? 'removeMech' : 'addMech', mech });
   if (!ops.length) return null;
   const ORD: Record<string, number> = { first: 1, second: 2, third: 3, '1st': 1, '2nd': 2, '3rd': 3 };
   const t = q.match(/(?:#|\b(?:build|option|idea|number|no\.?) ?)(\d)\b/) ?? q.match(/\b(first|second|third|1st|2nd|3rd)(?: one| build| option| idea)?\b/);
@@ -192,6 +225,7 @@ export function vexParamsOf(spec: Spec): VexBuildParams | null {
     driving: Number(g.driving_teeth) || 1,
     driven: Number(g.driven_teeth) || 1,
     massKg: Number(spec?.mass_kg) || 4,
+    mechs: Array.isArray(spec?.vex_mechanisms) ? MECH_ORDER.filter((m) => spec.vex_mechanisms.includes(m)) : [],
   };
 }
 
@@ -246,6 +280,12 @@ export function editVexSpec(spec: Spec, ops: VexEditOp[]): { spec: Spec; changes
     } else if (op.kind === 'gear') {
       if ((op.driving === 1) !== (op.driven === 1)) { problems.push('Name both gears, like 36:60, or say direct drive.'); continue; }
       p.driving = op.driving; p.driven = op.driven;
+    } else if (op.kind === 'addMech' || op.kind === 'removeMech') {
+      const has = (p.mechs ?? []).includes(op.mech);
+      if (op.kind === 'addMech' && has) { problems.push(`It already has ${VEX_MECHS[op.mech].label === 'pneumatics' ? 'pneumatics' : 'a ' + VEX_MECHS[op.mech].label}.`); continue; }
+      if (op.kind === 'removeMech' && !has) { problems.push(`It has no ${VEX_MECHS[op.mech].label} to remove.`); continue; }
+      p.mechs = op.kind === 'addMech' ? MECH_ORDER.filter((m) => m === op.mech || (p.mechs ?? []).includes(m)) : (p.mechs ?? []).filter((m) => m !== op.mech);
+      p.massKg = Math.round((p.massKg + (op.kind === 'addMech' ? 1 : -1) * VEX_MECHS[op.mech].kg) * 100) / 100;
     } else if (op.kind === 'mass') {
       if (!(op.kg > 0.5 && op.kg < 20)) { problems.push('That mass looks wrong for a VEX robot.'); continue; }
       p.massKg = op.kg;
@@ -255,6 +295,10 @@ export function editVexSpec(spec: Spec, ops: VexEditOp[]): { spec: Spec; changes
   const c = CARTRIDGES[p.cartridge];
   out.drivetrain = p.drive === 'mecanum' ? 'mecanum' : 'skid_steer';
   out.mass_kg = p.massKg;
+  if (p.mechs?.length) {
+    out.vex_mechanisms = p.mechs;
+    out.height_m = Math.max(Number(out.height_m) || 0, p.mechs.includes('lift') ? 0.45 : 0.35);
+  } else delete out.vex_mechanisms;
   out.wheel = { ...(out.wheel ?? {}), diameter_m: r4(p.wheelIn * IN), count: p.wheels, driven: true, kind: p.wheelKind };
   if (out.ground_clearance_m != null) out.ground_clearance_m = r4(Math.min(Number(out.ground_clearance_m), p.wheelIn * IN / 2 * 0.6));
   out.motor = { ...(out.motor ?? {}), count: p.motors, stall_torque_nm: r4(c.nm * p.driven / p.driving) };
@@ -270,9 +314,14 @@ export function editVexSpec(spec: Spec, ops: VexEditOp[]): { spec: Spec; changes
   if (p.wheelKind !== p0.wheelKind) changes.push(`wheel type: ${p0.wheelKind} → ${p.wheelKind}`);
   if (p.cartridge !== p0.cartridge) changes.push(`cartridge: ${p0.cartridge} → ${p.cartridge}`);
   if (p.driving !== p0.driving || p.driven !== p0.driven) changes.push(`gearing: ${p0.driving}:${p0.driven} → ${p.driving}:${p.driven}`);
+  for (const m of MECH_ORDER) {
+    const was = (p0.mechs ?? []).includes(m), now = (p.mechs ?? []).includes(m);
+    if (was !== now) changes.push(`${now ? 'added' : 'removed'} ${VEX_MECHS[m].label}${VEX_MECHS[m].motors ? ` (${VEX_MECHS[m].motors} motor${VEX_MECHS[m].motors > 1 ? 's' : ''})` : ''}`);
+  }
   if (p.massKg !== p0.massKg) changes.push(`mass: ${p0.massKg} kg → ${p.massKg} kg`);
   const rpm1 = wheelRpmOf(p);
   if (Math.round(rpm1) !== Math.round(rpm0)) changes.push(`wheel speed: ${Math.round(rpm0)} → ${Math.round(rpm1)} rpm`);
-  if (p.motors * 11 > CAP_W) problems.push(`${p.motors} drive motors use ${p.motors * 11} W, over the V5RC ${CAP_W} W cap.`);
+  const mechW = (p.mechs ?? []).reduce((w, m) => w + VEX_MECHS[m].motors * 11, 0);
+  if (p.motors * 11 + mechW > CAP_W) problems.push(`${p.motors} drive motors (${p.motors * 11} W)${mechW ? ` plus ${mechW} W of mechanisms` : ''} come to ${p.motors * 11 + mechW} W, over the V5RC ${CAP_W} W cap. Try fewer drive motors.`);
   return { spec: out, changes, problems };
 }

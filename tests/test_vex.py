@@ -356,3 +356,46 @@ def test_3d_models_shown_on_cards_and_drive_train_tab():
     assert "<VexModel3D" in TAB and "applyGearing(spec, whatIf)" in TAB
     viewer = (ROOT / "web-next/src/components/garage/VexModel3D.tsx").read_text()
     assert "prefers-reduced-motion" in viewer and "IntersectionObserver" in viewer
+
+
+# ---- scoring mechanisms (from real V5RC robots: intake, lift, pneumatics) ----
+
+@pytest.mark.parametrize("text,target,ops", [
+    ("add an intake to #1", 1, [("addMech", "intake")]),
+    ("give #2 a lift", 2, [("addMech", "lift")]),
+    ("remove the pneumatics from the first one", 1, [("removeMech", "pneumatics")]),
+    ("add a conveyor and air tanks", None, [("addMech", "intake"), ("addMech", "pneumatics")]),
+])
+def test_mechanism_edits_parse(text, target, ops):
+    e = _ts(f"B.parseVexEdit({json.dumps(text)})")
+    assert e["target"] == target
+    assert [(o["kind"], o.get("mech")) for o in e["ops"]] == ops
+
+
+def test_competition_robot_counts_mechanisms_in_power_and_mass():
+    comp = _ts("B.suggestVexBuilds(1, ['full'])[0]")
+    assert comp["spec"]["vex_mechanisms"] == ["intake", "pneumatics"]
+    assert _ts(f"B.mechPowerW({json.dumps(comp['spec'])})") == 11
+    spec = RobotSpec.from_dict(comp["spec"])  # extra block is ignored by the checker
+    assert [f.check for f in validate(spec)] == ["all"]
+    out = _ts(f"B.editVexSpec({json.dumps(comp['spec'])}, [{{kind:'addMech', mech:'lift'}}])")
+    assert "added lift tower (2 motors)" in out["changes"]
+    assert out["spec"]["mass_kg"] == pytest.approx(comp["spec"]["mass_kg"] + 1.0)
+    assert any("99 W, over the V5RC 88 W cap" in p for p in out["problems"])
+    back = _ts(f"B.editVexSpec({json.dumps(out['spec'])}, [{{kind:'removeMech', mech:'lift'}}])")
+    assert back["spec"]["vex_mechanisms"] == ["intake", "pneumatics"] and not back["problems"]
+    again = _ts(f"B.editVexSpec({json.dumps(comp['spec'])}, [{{kind:'addMech', mech:'intake'}}])")
+    assert again["changes"] == [] and "already has" in again["problems"][0]
+
+
+def test_model_draws_mechanisms_and_plates():
+    out = _model("""(() => {
+      const spec = B.editVexSpec(B.suggestVexBuilds(1, ['full'])[0].spec, [{kind:'addMech', mech:'lift'}]).spec;
+      const g = M.buildVexModel(THREE, spec); const n = {};
+      g.traverse((o) => { if (o.name) n[o.name] = (n[o.name] || 0) + 1; });
+      const plain = M.buildVexModel(THREE, B.suggestVexBuilds(3, [])[1].spec); const p = {};
+      plain.traverse((o) => { if (o.name) p[o.name] = (p[o.name] || 0) + 1; });
+      return { n, p };
+    })()""")
+    assert out["n"]["licence-plate"] == 2 and out["n"]["air-tank"] == 2 and out["n"]["mech-motor"] == 2
+    assert out["p"]["licence-plate"] == 2 and "air-tank" not in out["p"] and "mech-motor" not in out["p"]

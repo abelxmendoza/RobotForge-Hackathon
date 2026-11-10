@@ -21,6 +21,7 @@ export interface VexLayout {
   wheelKind: 'omni' | 'traction' | 'mecanum';
   perSide: number; wheelXs: number[]; motors: number; motorXs: number[];
   cartridge: 'red' | 'green' | 'blue'; driving: number; driven: number;
+  mechs: ('intake' | 'lift' | 'pneumatics')[];
 }
 
 /** Where everything goes, from the spec (pure; tested in tests/test_vex.py). */
@@ -47,6 +48,7 @@ export function vexLayout(spec: Spec): VexLayout {
     length, width, wheelD, wheelW, wheelKind, perSide, wheelXs, motors, motorXs, cartridge,
     driving: Math.round(num(spec?.gearing?.driving_teeth, 1)),
     driven: Math.round(num(spec?.gearing?.driven_teeth, 1)),
+    mechs: Array.isArray(spec?.vex_mechanisms) ? (['intake', 'lift', 'pneumatics'] as const).filter((m) => spec.vex_mechanisms.includes(m)) : [],
   };
 }
 
@@ -164,7 +166,192 @@ export function buildVexModel(THREE: typeof T, spec: Spec): T.Group {
   // Front marker: a small accent bar on the front channel.
   box(0.004, 0.06, 0.01, mat(0x2dd4bf, { emissive: 0x2dd4bf, emissiveIntensity: 0.6 }), L.length / 2 + 0.002, 0, railZ);
 
+  // Team licence plates on both sides, as on every V5RC robot.
+  for (const s of [1, -1]) {
+    const plate = makePlate(THREE, String(spec?.vex_team ?? 'RF 1A'));
+    plate.position.set(-L.length / 4, s * (L.width / 2 + 0.004), 2 * r + 0.026);
+    plate.rotation.z = s > 0 ? Math.PI : 0; // face outwards
+    root.add(plate);
+  }
+
+  if (L.mechs.length) addMechanisms(THREE, root, L, { alu, holeMat, mat, railY, railZ, railH, railW, axleZ });
   return root;
+}
+
+interface Kit {
+  alu: T.Material; holeMat: T.Material; railY: number; railZ: number; railH: number; railW: number; axleZ: number;
+  mat: (c: number, o?: Partial<T.MeshStandardMaterialParameters>) => T.MeshStandardMaterial;
+}
+
+/** A C-channel (1×2) between two points, with its square holes. */
+function beam(THREE: typeof T, root: T.Group, kit: Kit, a: T.Vector3, b: T.Vector3, w = 0.5 * IN, h = 1 * IN): T.Mesh {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const len = dir.length();
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, w, h), kit.alu);
+  m.castShadow = true; m.receiveShadow = true;
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir.normalize());
+  const n = Math.max(1, Math.floor(len / (0.5 * IN)));
+  const holes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.182 * IN, 0.182 * IN, 0.0008), kit.holeMat, n * 2);
+  const mm = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    const x = -len / 2 + (i + 0.5) * (len / n);
+    for (const sy of [1, -1]) {
+      q.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+      mm.compose(new THREE.Vector3(x, sy * (w / 2 + 0.0004), 0), q, one);
+      holes.setMatrixAt(k++, mm);
+    }
+  }
+  m.add(holes);
+  root.add(m);
+  return m;
+}
+
+/** The scoring mechanisms on top of the drive: intake/conveyor, lift tower, pneumatics. */
+function addMechanisms(THREE: typeof T, root: T.Group, L: VexLayout, kit: Kit) {
+  const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+  const top = kit.railZ + kit.railH / 2;
+  const red = kit.mat(0xb3262e, { roughness: 0.5 });
+  const green = kit.mat(0x1f6b3a, { roughness: 0.5 });
+  const chainMat = kit.mat(0x15171b, { roughness: 0.6, metalness: 0.5 });
+  const sprocket = (teeth: number, m: T.Material, x: number, y: number, z: number) => {
+    const g = makeGear(THREE, teeth, m);
+    g.position.set(x, y, z);
+    g.name = 'sprocket';
+    root.add(g);
+    return g;
+  };
+  const chain = (a: T.Vector3, b: T.Vector3, rad: number, y: number) => {
+    // A stadium-shaped loop of links around two sprockets in the xz plane.
+    const pts: T.Vector3[] = [];
+    const d = new THREE.Vector2(b.x - a.x, b.z - a.z);
+    const ang = Math.atan2(d.y, d.x);
+    const arc = (c: T.Vector3, from: number) => { for (let i = 0; i <= 12; i++) { const t = from + (i / 12) * Math.PI; pts.push(V(c.x + Math.cos(t) * rad, y, c.z + Math.sin(t) * rad)); } };
+    arc(b, ang - Math.PI / 2);
+    arc(a, ang + Math.PI / 2);
+    pts.push(pts[0].clone());
+    const curve = new THREE.CatmullRomCurve3(pts, true);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.0035, 6, true), chainMat);
+    tube.castShadow = true;
+    root.add(tube);
+  };
+
+  if (L.mechs.includes('intake')) {
+    // A sloped conveyor from the floor at the front up to the top centre,
+    // driven by chain and sprockets, with green flex rollers at the mouth.
+    const yS = Math.min(0.09, kit.railY - 0.03);
+    const lo = V(L.length / 2 + 0.03, 0, 0.05), hi = V(-0.02, 0, 0.32);
+    for (const s of [1, -1]) {
+      beam(THREE, root, kit, V(lo.x, s * yS, lo.z), V(hi.x, s * yS, hi.z));
+      // Uprights holding the top of the conveyor.
+      beam(THREE, root, kit, V(hi.x + 0.02, s * (yS + 0.02), top), V(hi.x + 0.02, s * (yS + 0.02), hi.z + 0.02));
+      sprocket(24, red, lo.x, s * (yS - 0.012), lo.z);
+      sprocket(24, red, hi.x, s * (yS - 0.012), hi.z);
+      sprocket(84, red, hi.x + 0.02, s * (yS + 0.035), hi.z - 0.06);
+      chain(V(lo.x, 0, lo.z), V(hi.x, 0, hi.z), (24 / 24) * IN / 2 + 0.002, s * (yS - 0.012));
+    }
+    // Flex-wheel rollers across the mouth and a few cross bars on the ramp.
+    for (let i = 0; i < 3; i++) {
+      const t = i / 2;
+      const p = V(lo.x + (hi.x - lo.x) * t * 0.9, 0, lo.z + (hi.z - lo.z) * t * 0.9);
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, yS * 2, 10), kit.mat(0x9aa1aa, { metalness: 0.8 }));
+      bar.position.copy(p);
+      root.add(bar);
+      if (i === 0) for (const yy of [-yS * 0.5, 0, yS * 0.5]) {
+        const flex = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.018, 18), green);
+        flex.position.set(p.x, yy, p.z);
+        flex.castShadow = true;
+        root.add(flex);
+      }
+    }
+  }
+
+  if (L.mechs.includes('lift')) {
+    // Two C-channel towers with a braced top, big green gears at the
+    // base driven by a small one, rubber bands, and an arm reaching forward.
+    const x0 = -0.06, H = 0.44;
+    const y0 = kit.railY - 0.02;
+    for (const s of [1, -1]) {
+      beam(THREE, root, kit, V(x0, s * y0, top), V(x0, s * y0, H));
+      beam(THREE, root, kit, V(x0 - 0.12, s * y0, top), V(x0, s * y0, H - 0.04));
+      sprocket(84, green, x0 + 0.01, s * (y0 - 0.02), H - 0.03);
+      sprocket(12, green, x0 + 0.01 + (84 + 12) / 48 * IN, s * (y0 - 0.02), H - 0.03);
+      // The arm, pivoting at the gear and reaching forward and down.
+      beam(THREE, root, kit, V(x0 + 0.01, s * (y0 - 0.035), H - 0.03), V(L.length / 2 + 0.02, s * (y0 - 0.035), H - 0.12));
+      // Rubber bands from the tower to the arm.
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0018, 0.0018, 0.16, 6), kit.mat(0xd8c08a, { roughness: 0.9 }));
+      band.position.set(x0 + 0.06, s * (y0 - 0.03), H - 0.1);
+      band.rotation.y = 0.9;
+      root.add(band);
+    }
+    beam(THREE, root, kit, V(x0, -y0, H), V(x0, y0, H));
+    beam(THREE, root, kit, V(L.length / 2 + 0.02, -y0 + 0.035, H - 0.12), V(L.length / 2 + 0.02, y0 - 0.035, H - 0.12));
+    // Lift motors on the tower base.
+    for (const s of [1, -1]) {
+      const mtr = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.045, 0.045), kit.mat(0x23262c));
+      mtr.position.set(x0 + 0.05, s * (y0 - 0.06), H - 0.03);
+      mtr.castShadow = true;
+      mtr.name = 'mech-motor';
+      root.add(mtr);
+    }
+  }
+
+  if (L.mechs.includes('pneumatics')) {
+    // Two air tanks across the back, a cylinder (piston) on a clamp,
+    // and black tubing between them.
+    const steel = kit.mat(0xb8bec6, { metalness: 0.85, roughness: 0.3 });
+    const tankY = Math.min(0.12, kit.railY - 0.03);
+    for (const dz of [0, 0.045]) {
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, tankY * 2, 24), steel);
+      tank.position.set(-L.length / 2 + 0.05, 0, top + 0.022 + dz);
+      tank.castShadow = true;
+      tank.name = 'air-tank';
+      root.add(tank);
+      for (const s of [1, -1]) {
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.0195, 0.0195, 0.012, 24), kit.mat(0xb3262e));
+        cap.position.set(tank.position.x, s * (tankY - 0.006), tank.position.z);
+        root.add(cap);
+      }
+    }
+    const a = V(-0.02, kit.railY - 0.04, top + 0.02), b = V(L.length / 2 - 0.03, kit.railY - 0.04, top + 0.11);
+    const dir = new THREE.Vector3().subVectors(b, a);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, dir.length() * 0.6, 18), steel);
+    body.position.copy(a).addScaledVector(dir, 0.3);
+    body.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    body.castShadow = true;
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, dir.length() * 0.45, 10), kit.mat(0xe5e7eb, { metalness: 0.9, roughness: 0.2 }));
+    rod.position.copy(a).addScaledVector(dir, 0.78);
+    rod.quaternion.copy(body.quaternion);
+    root.add(body, rod);
+    const tubeCurve = new THREE.CatmullRomCurve3([V(-L.length / 2 + 0.05, tankY - 0.01, top + 0.04), V(-0.12, tankY, top + 0.12), V(-0.03, kit.railY - 0.04, top + 0.05), a.clone()]);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(tubeCurve, 40, 0.0025, 6, false), kit.mat(0x111317));
+    root.add(tube);
+  }
+}
+
+/** A blue V5RC licence plate with the team number (text needs a DOM). */
+function makePlate(THREE: typeof T, team: string): T.Mesh {
+  let map: T.Texture | null = null;
+  if (typeof document !== 'undefined') {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 96;
+    const g = c.getContext('2d');
+    if (g) {
+      g.fillStyle = '#1f5fbf'; g.fillRect(0, 0, 256, 96);
+      g.strokeStyle = '#9cc3ff'; g.lineWidth = 6; g.strokeRect(6, 6, 244, 84);
+      g.fillStyle = '#ffffff'; g.font = 'bold 54px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(team.slice(0, 6), 128, 52);
+      map = new THREE.CanvasTexture(c);
+      map.colorSpace = THREE.SRGBColorSpace;
+    }
+  }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.045), new THREE.MeshStandardMaterial({ color: map ? 0xffffff : 0x1f5fbf, map, roughness: 0.5 }));
+  m.rotation.x = Math.PI / 2; // stand it up, facing +y
+  m.name = 'licence-plate';
+  const holder = new THREE.Group();
+  holder.add(m);
+  return holder as unknown as T.Mesh;
 }
 
 function makeWheel(THREE: typeof T, L: VexLayout, mat: (c: number, o?: Partial<T.MeshStandardMaterialParameters>) => T.MeshStandardMaterial, index: number, side: number): T.Group {

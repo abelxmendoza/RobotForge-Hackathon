@@ -51,8 +51,9 @@ export default function VexModel3D({ spec, label, height = 190, caption = '3D 36
         // Frame the robot from its own layout (instanced parts make a
         // bounding-box fit unreliable).
         const lay = vexLayout(spec);
-        const centre = new THREE.Vector3(0, 0, lay.wheelD * 0.45);
-        const radius = Math.max(lay.length, lay.width) / 2 + 0.02;
+        const tall = lay.mechs.includes('lift') ? 0.46 : lay.mechs.length ? 0.34 : lay.wheelD + 0.06;
+        const centre = new THREE.Vector3(0, 0, tall * 0.42);
+        const radius = Math.max(lay.length, lay.width, tall * 1.2) / 2 + 0.03;
 
         const key = new THREE.DirectionalLight(0xffffff, 1.7);
         key.position.set(radius * 3, -radius * 3, radius * 6);

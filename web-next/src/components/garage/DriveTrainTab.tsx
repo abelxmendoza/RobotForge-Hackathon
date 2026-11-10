@@ -83,7 +83,7 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
         </div>
       </div>
 
-      {vex && <VexModel3D spec={changed ? applyGearing(spec, whatIf) : spec} label={String(spec?.name ?? 'VEX robot')} height={260} caption={changed ? '3D 360° with your changes · drag to turn · drawn from the spec’s numbers, not CAD' : '3D 360° · drag to turn · drawn from the spec’s numbers, not CAD'} />}
+      {vex && <VexModel3D spec={changed ? applyGearing(spec, whatIf) : spec} label={String(spec?.name ?? 'VEX robot')} height={320} caption={changed ? '3D 360° with your changes · drag to turn · drawn from the spec’s numbers, not CAD' : '3D 360° · drag to turn · drawn from the spec’s numbers, not CAD'} />}
 
       <div className="dt-grid">
         <figure className="dt-figure">
