@@ -413,6 +413,9 @@ def test_spectated_vex_robots_are_sightings_not_owned():
     vex = next(f for f in fams if f["name"] == "VEX V5 competition robot")
     sightings = {s["id"]: s for v in vex["variants"] for s in v["sightings"]}
     assert set(sightings) == {"vex-1658x", "vex-404s"}
+    # distinct names: Bring into Workshop dedupes by name, so two
+    # teams' robots must not share one
+    assert len({s["identity"] for s in sightings.values()}) == 2
     for sid, team in (("vex-1658x", "1658X"), ("vex-404s", "404S")):
         s = sightings[sid]
         assert s["where"] and "spectated" in s["where"]
