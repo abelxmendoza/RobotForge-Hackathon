@@ -215,13 +215,55 @@ badged MEASURED (scan)).
   inputs are length-capped (describe 4000 chars, chat 2000, list
   8000).
 - **Daily budget:** a Workers KV counter caps total live calls per
-  UTC day (`DAILY_LIMIT`; 450 in `wrangler.toml` for judging week, 200 when unset) across *all* routes, plus a
+  UTC day (`DAILY_LIMIT`, 200; it was 450 for judging week, Nov 4-9 2026) across *all* routes, plus a
   per-visitor cap (`PER_IP_DAILY_LIMIT`, default 30). Over budget →
   `503`, and the site falls back to recorded/local modes and says
   so. Counters increment *before* the model call (slow/failed calls
   still count) and **fail closed**: if KV errors, live calls pause
   rather than spend uncounted.
 - **Kill switch:** `LIVE_ENABLED=0` turns every live call away.
+
+## Safe deploy (use this for every update of `robotforge-live`)
+
+Since 2026-11-03 the keys live only inside version
+`31dfa75d-2453-4bb3-9df1-fbe718f78987`; `wrangler secret list` is empty
+and the latest *uploaded* version has no secrets. A new version takes
+its secrets from the latest uploaded one, so a plain `wrangler deploy`
+would ship a keyless Worker. Upload a version with every secret, test
+its preview, then promote it. Only the owner runs these, at their own
+terminal, on the Mac clone.
+
+1. **Get main:** `cd ~/Desktop/projects/RobotForge-Hackathon && git checkout main && git pull`.
+2. **Read-only look:** `cd live && npx wrangler deployments list` — the
+   live version should be `31dfa75d…`.
+3. **Fill the secrets file** (outside the repo; values never go in chat):
+   `cp secrets.env.example ~/.robotforge-live.secrets.env`, open it in
+   a text editor, replace each `paste-here`, save.
+4. **Upload, not deploy:** `./safe-upload.sh`. It checks it runs from
+   `live/`, checks every required name is filled (it prints names, never
+   values), and runs `wrangler versions upload --secrets-file`. Live
+   traffic does not move. Note the **Version ID** and
+   **Version Preview URL** it prints.
+5. **Test the preview:**
+   `python3 ../tools/check_live_health.py <Version Preview URL>`. It
+   must pass, and `/health` there should show Meta, Baseten, Firecrawl and
+   email / Meta / Google login on.
+6. **Promote:** `npx wrangler versions deploy <Version ID>@100% --yes`.
+7. **Check live:**
+   `python3 ../tools/check_live_health.py https://robotforge-live.abelxmendoza.workers.dev`,
+   then sign in on the site and ask Wrench one question.
+8. **Clean up:** `rm ~/.robotforge-live.secrets.env`.
+
+If step 5 fails, do nothing: live is untouched. If step 7 fails,
+`npx wrangler rollback 31dfa75d-2453-4bb3-9df1-fbe718f78987` puts the old
+Worker back. Once a version with secrets is live, later code updates
+(e.g. a new route plus one new key) can use the same script, or
+`npx wrangler versions secret put NAME` followed by a `versions upload`,
+because the new version will inherit the secrets.
+
+If `AUTH_JWT_SECRET` is lost, any long random string works
+(`openssl rand -base64 48`); it only signs session tokens, so the cost is
+that everyone has to sign in again. Accounts and passwords are kept.
 
 ## Deploy steps (the site owner's ~15 minutes)
 
@@ -270,8 +312,8 @@ never paste it into chat, a file, or a commit).
 
 - Cloudflare's free tier includes 100,000 Worker requests/day and
   KV's 100,000 reads / 1,000 writes per day. The defaults here
-  (450 live calls/day during judging, 30/visitor) stay below both:
-  each live call writes two KV counters, so 450 calls is 900 of the
+  (200 live calls/day, 30/visitor) stay below both:
+  each live call writes two KV counters, so 200 calls is 400 of the
   1,000 free daily writes. Do not raise `DAILY_LIMIT` past ~480 on
   the free KV tier. Long model
   waits are network time, not Worker CPU, so they don't threaten
@@ -279,7 +321,7 @@ never paste it into chat, a file, or a commit).
   $5/month — you would see it coming in `/health`'s budget numbers
   long before.
 - The real spend is Baseten (and Meta, if photo is on) credits:
-  at the current cap, at most 450 model calls a day can ever be
+  at the current cap, at most 200 model calls a day can ever be
   made through this endpoint, whoever asks. A typical describe
   call is a few thousand tokens.
 - Strangers *can* call the endpoint directly (CORS stops other
