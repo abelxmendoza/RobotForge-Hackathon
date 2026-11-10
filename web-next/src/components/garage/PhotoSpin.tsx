@@ -137,7 +137,9 @@ export function PhotoSpinEditor({ spin, onSave, compact }: {
     if (!file) return;
     try {
       setBusy(`Taking ${SPIN_VIDEO_FRAMES} frames from the video…`);
-      save(await videoFrames(file, SPIN_VIDEO_FRAMES), 'video');
+      save(await videoFrames(file, SPIN_VIDEO_FRAMES, 560, 0.7, (done, total) => {
+        setBusy(`Reading video frame ${done} of ${total}…`);
+      }), 'video');
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -289,6 +291,13 @@ export function OverviewMedia({ robotId, spin, scan, name, model, modelReady = f
         </div>
       )}
       {photoError && <p className="g-error" role="alert">{photoError}</p>}
+      <section aria-label="Improve robot appearance">
+        <h3>Improve robot appearance</h3>
+        <p className="faint g-small">Add a slow walk-around video for a photo reference, then upload a scan for 3D shape. Extracted frames are saved with your robot and included if you save it to your account. The original video is not saved. A photo view does not change simulation geometry or physics.</p>
+        <PhotoSpinEditor spin={spin} onSave={onSave} />
+        {scan && onApplyScanSize && <ScanMeasure key={scan.addedAt} robotId={robotId} scan={scan} onApply={onApplyScanSize} />}
+        {scan && <p className="faint g-small">Review the scan axes and units before applying size. GLB and OBJ scans can supply the simulation appearance; collisions still use a simplified body. PLY scans show points, not a textured robot.</p>}
+      </section>
       <div className="ps-actions">
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Update this robot with these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add this 3D scan to my robot.',attach:true})}>Upload a scan file</button>
