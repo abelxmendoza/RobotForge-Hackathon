@@ -8,7 +8,7 @@
  * draft, and the drive motors are counted against the V5RC motor
  * power cap. Every number comes from lib/drivetrain.ts on the spec's
  * own fields; missing inputs are named, never guessed. */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Spec } from '@/lib/garage';
 import {
   applyGearing, ASSUMED_TRACTION_MU, currentVexChoice, driveLayout, driveNumbers, isVexV5, readGearing,
@@ -44,6 +44,13 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
   const vex = isVexV5(spec);
   const gearing = readGearing(spec);
   const [choice, setChoice] = useState<VexChoice>(() => currentVexChoice(spec));
+  /* The Garage can mount this tab before the selected robot's draft
+   * arrives, and the draft can change under it (Apply, a version load,
+   * an edit elsewhere). Whenever the recorded setup changes, the
+   * controls start again from it, so one robot's choice never shows
+   * as pending changes on another. */
+  const recordedKey = JSON.stringify(currentVexChoice(spec));
+  useEffect(() => { setChoice(JSON.parse(recordedKey) as VexChoice); }, [recordedKey]);
   const [otherW, setOtherW] = useState(0);
   const whatIf = useMemo(() => vexGearing(choice), [choice]);
   const after = useMemo(() => driveNumbers(spec, whatIf), [spec, whatIf]);

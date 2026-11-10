@@ -196,3 +196,10 @@ def test_starters_cover_different_drive_styles():
             / s["gearing"]["driven_teeth"] for s in specs}
     assert min(rpms) <= 200 and max(rpms) >= 450  # torque and speed builds
     assert "Start a VEX V5 robot" in GARAGE and "VEX_STARTERS.map" in GARAGE
+
+
+def test_setup_controls_follow_the_recorded_setup():
+    # Codex review on #186: the tab can mount before the selected
+    # robot's draft arrives; the controls must re-sync to the draft.
+    assert "const recordedKey = JSON.stringify(currentVexChoice(spec));" in TAB
+    assert "useEffect(() => { setChoice(JSON.parse(recordedKey) as VexChoice); }, [recordedKey]);" in TAB
