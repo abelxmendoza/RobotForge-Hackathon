@@ -68,6 +68,8 @@ import { buildWsContext, groundingCaption, isWorkshopRobotQuestion, parseReassem
 import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNotes";
 import AssemblyProposal from './AssemblyProposal';
 import UpgradeProposal, { type UpgradeRequest } from './UpgradeProposal';
+import { VexBuildsCard, VexEditCard, type VexEditPlan } from './VexBuilds';
+import { editVexSpec, parseVexEdit, parseVexSuggest, suggestVexBuilds, vexParamsOf, type VexBuild } from '@/lib/vexBuilds';
 import { parseUpgradeRequest, parseUpgradeFacts } from '@/lib/upgradeRequest';
 import { ASSEMBLY_KEY, currentAssembly, effectiveAssemblies, parseAssemblyCommand, previewAssembly, undoVersionedAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
 import { FIELD_GROUPS, GARAGE_KEY, fmtValue, getPath, partToChanges, setPath, type GarageRobot, type Spec } from '@/lib/garage';
@@ -265,9 +267,11 @@ const carry: {
   robotDeleteProposal: GarageRobot | null;
   assemblyProposal: AssemblyOperation | null;
   upgradeProposal: UpgradeRequest | null;
+  vexBuilds: VexBuild[] | null;
+  vexEditPlan: VexEditPlan | null;
   lastApplied: Applied;
   memory: TurnMemory;
-} = { messages: [], chips: null, proposal: null, inventoryProposal: null, dexMoveProposal: null, robotDeleteProposal: null, assemblyProposal: null, upgradeProposal: null, lastApplied: null, memory: {} };
+} = { messages: [], chips: null, proposal: null, inventoryProposal: null, dexMoveProposal: null, robotDeleteProposal: null, assemblyProposal: null, upgradeProposal: null, vexBuilds: null, vexEditPlan: null, lastApplied: null, memory: {} };
 
 export function useForgeAssistant() {
   const router = useRouter();
@@ -346,6 +350,8 @@ export function useForgeAssistant() {
   const [robotDeleteProposal,setRobotDeleteProposal]=useState<GarageRobot|null>(() => carry.robotDeleteProposal);
   const [assemblyProposal, setAssemblyProposal] = useState<AssemblyOperation | null>(() => carry.assemblyProposal);
   const [upgradeProposal, setUpgradeProposal] = useState<UpgradeRequest | null>(() => carry.upgradeProposal);
+  const [vexBuilds, setVexBuilds] = useState<VexBuild[] | null>(() => carry.vexBuilds);
+  const [vexEditPlan, setVexEditPlan] = useState<VexEditPlan | null>(() => carry.vexEditPlan);
   const lastApplied = useRef<Applied>(carry.lastApplied);
   useEffect(() => {
     carry.messages = messages;
@@ -356,7 +362,9 @@ export function useForgeAssistant() {
     carry.robotDeleteProposal = robotDeleteProposal;
     carry.assemblyProposal = assemblyProposal;
     carry.upgradeProposal = upgradeProposal;
-  }, [messages, chips, proposal, inventoryProposal, dexMoveProposal, robotDeleteProposal, assemblyProposal, upgradeProposal]);
+    carry.vexBuilds = vexBuilds;
+    carry.vexEditPlan = vexEditPlan;
+  }, [messages, chips, proposal, inventoryProposal, dexMoveProposal, robotDeleteProposal, assemblyProposal, upgradeProposal, vexBuilds, vexEditPlan]);
   /* lastApplied is a ref, so copy it out when this instance unmounts. */
   useEffect(() => () => { carry.lastApplied = lastApplied.current; }, []);
   const proposalRef = useRef<Preview | null>(null);
@@ -1025,7 +1033,79 @@ export function useForgeAssistant() {
    * bubble. Typed commands and live-model proposals share this one path,
    * so a model proposal gets exactly the validation a typed command gets,
    * and nothing applies until the user taps Apply on the preview. */
+  /* VEX V5 build ideas and word edits (lib/vexBuilds.ts). Suggestions
+   * live only in the chat until "Add #N to Workshop"; an edit to a VEX
+   * robot in the Workshop is a preview until "Apply as a new version". */
+  const runVexCommand = (q: string): boolean => {
+    const suggest = parseVexSuggest(q);
+    if (suggest) {
+      const builds = suggestVexBuilds(suggest.count, suggest.focus);
+      setVexBuilds(builds);
+      setVexEditPlan(null);
+      noteBubble(`Here ${builds.length === 1 ? 'is 1 VEX V5 build idea' : `are ${builds.length} different VEX V5 build ideas`}, side by side below. They differ in how many motors drive the wheels, the wheel type and the gearing, which trades top speed for pushing force. Change one with words, like “make #2 faster”, then add the one you like to the Workshop.`);
+      return true;
+    }
+    const edit = parseVexEdit(q);
+    if (!edit) return false;
+    const editBuild = (index: number) => {
+      const builds = vexBuilds ?? [];
+      const b = builds[index];
+      const result = editVexSpec(b.spec, edit.ops);
+      if (result.changes.length) setVexBuilds(builds.map((x, i) => (i === index ? { ...x, spec: result.spec } : x)));
+      noteBubble((result.changes.length ? `Changed #${index + 1}: ${result.changes.join('; ')}. The numbers on its card are updated; nothing is saved until you add it.` : `#${index + 1} is unchanged.`) + (result.problems.length ? ' ' + result.problems.join(' ') : ''));
+      return true;
+    };
+    if (edit.target != null) {
+      if (!vexBuilds?.length) { noteBubble('There are no VEX build ideas on screen. Ask “suggest 3 VEX builds” first.'); return true; }
+      if (edit.target < 1 || edit.target > vexBuilds.length) { noteBubble(`There ${vexBuilds.length === 1 ? 'is only #1' : `are only #1 to #${vexBuilds.length}`} on screen.`); return true; }
+      return editBuild(edit.target - 1);
+    }
+    const ws = (pathname || '').startsWith('/garage') ? readWorkshopContext() : null;
+    const robot = ws?.robotId ? readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, [])).find((r) => r.id === ws.robotId) : undefined;
+    const latest = robot?.versions.at(-1);
+    if (robot && latest && vexParamsOf(latest.spec)) {
+      const result = editVexSpec(latest.spec, edit.ops);
+      setVexEditPlan({ robotId: robot.id, robotName: robot.name, baseVersionId: latest.id, phrase: q, before: latest.spec, after: result.spec, changes: result.changes, problems: result.problems });
+      noteBubble(result.changes.length ? `Review the change to ${robot.name} below. Apply saves it as a new version; the current one stays in History.` : `That would not change ${robot.name}.` + (result.problems.length ? ' ' + result.problems.join(' ') : ''));
+      return true;
+    }
+    if (vexBuilds?.length === 1) return editBuild(0);
+    if (vexBuilds?.length) { noteBubble(`Which one? Say the number, like “make #1 ${q.toLowerCase().replace(/^(make|give|switch|use|change)\s+(it\s+)?/, '').replace(/[.!?]+$/, '')}”.`); return true; }
+    return false;
+  };
+
+  const addVexBuild = (b: VexBuild, index: number) => {
+    const nowIso = new Date().toISOString();
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const taken = new Set(activeRecords(all).map((r) => r.name.toLowerCase()));
+    let name = String(b.spec.name);
+    for (let i = 2; taken.has(name.toLowerCase()); i++) name = `${b.spec.name} ${i}`;
+    const robot: GarageRobot = {
+      id: uid('robot'), name, createdAt: nowIso,
+      versions: [{ id: uid('v'), label: 'Baseline', note: `VEX V5 build idea #${index + 1} from Wrench: ${b.why} Planned, not built.`, source: 'starter', createdAt: nowIso, spec: { ...b.spec, name }, planned: true }],
+    };
+    const err = writeStore(GARAGE_KEY, [...all, robot]);
+    if (err) { noteBubble(`I couldn't save it (${err}). Nothing was saved.`); return; }
+    noteBubble(`Added “${robot.name}” to your Workshop as a planned robot and opened its Drive train tab. Ask me to change it with words while it's open, like “make it faster”.`);
+    openRobot(robot.id, 'drivetrain');
+  };
+
+  const applyVexEdit = (plan: VexEditPlan) => {
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const robot = activeRecords(all).find((r) => r.id === plan.robotId);
+    if (!robot) { setVexEditPlan(null); noteBubble(`${plan.robotName} is no longer in your Workshop, so nothing changed.`); return; }
+    if (robot.versions.at(-1)?.id !== plan.baseVersionId) { setVexEditPlan(null); noteBubble(`${plan.robotName} changed since this preview, so nothing was applied. Ask again to see the change against its current version.`); return; }
+    const versionId = uid('v');
+    const version = { id: versionId, label: 'Wrench: ' + plan.phrase.slice(0, 60), note: 'Drive change from Wrench: ' + plan.changes.join('; ') + '.', source: 'edit' as const, createdAt: new Date().toISOString(), spec: plan.after, planned: true };
+    const err = writeStore(GARAGE_KEY, all.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, version] } : r)));
+    setVexEditPlan(null);
+    if (err) { noteBubble(`I couldn't save it (${err}). ${plan.robotName} is unchanged.`); return; }
+    lastApplied.current = { robotId: robot.id, versionId };
+    noteBubble(`Saved as a new version of ${plan.robotName}. The previous version is unchanged in History; type “undo” to go back to it.`);
+  };
+
   const runCommands = (q: string): boolean => {
+      if (runVexCommand(q)) return true;
       /* "remember that …": a note on the Workshop robot on screen. */
       const remember=parseRememberCommand(q);
       if(remember){
@@ -1442,6 +1522,7 @@ export function useForgeAssistant() {
       setAssemblyProposal(null);
       setUpgradeProposal(null);
       setInventoryProposal(null);
+      setVexEditPlan(null);
       if(pendingLibraryImport.current){
         const pending=pendingLibraryImport.current;pendingLibraryImport.current=null;
         const verdict=classifyProposalReply(q);
@@ -1813,6 +1894,8 @@ export function useForgeAssistant() {
     setInventoryProposal(null);
     setDexMoveProposal(null);
     setRobotDeleteProposal(null);
+    setVexBuilds(null);
+    setVexEditPlan(null);
     lastApplied.current = null;
     memoryRef.current = {};
     carry.messages = [];
@@ -1822,6 +1905,8 @@ export function useForgeAssistant() {
     carry.robotDeleteProposal = null;
     carry.assemblyProposal = null;
     carry.upgradeProposal = null;
+    carry.vexBuilds = null;
+    carry.vexEditPlan = null;
     carry.memory = {};
     setChipsState(chipsFor({}));
   }, [pathname, wrench]);
@@ -1832,6 +1917,8 @@ export function useForgeAssistant() {
   };
 
   return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,saveGroundedNote,workingOn,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
+        {vexBuilds && <VexBuildsCard builds={vexBuilds} onAdd={addVexBuild} onClose={() => setVexBuilds(null)} />}
+        {vexEditPlan && <VexEditCard key={vexEditPlan.baseVersionId + vexEditPlan.phrase} plan={vexEditPlan} onApply={() => applyVexEdit(vexEditPlan)} onCancel={() => { setVexEditPlan(null); noteBubble(`Cancelled. ${vexEditPlan.robotName} is unchanged.`); }} />}
         {upgradeProposal && <UpgradeProposal key={upgradeProposal.robotId+':'+upgradeProposal.expectedRobotVersionId+':'+upgradeProposal.expectedAssemblyRevision} request={upgradeProposal}
           onInputsChange={inputs=>setUpgradeProposal(previous=>previous?{...previous,inputs}:null)}
           onApplied={versionId=>{lastApplied.current={robotId:upgradeProposal.robotId,versionId,scope:'assembly'};setUpgradeProposal(null);noteBubble('Incomplete upgrade plan saved as one robot version: assembly, wiring, evidence and CAD together. It is not ready for power. Open Build or Wiring to review it; type “undo” to restore the previous complete snapshot.');}}

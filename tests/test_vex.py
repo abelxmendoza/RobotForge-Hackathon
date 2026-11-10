@@ -27,6 +27,8 @@ from robotforge.vex import V5_CARTRIDGES, V5RC_MOTOR_POWER_CAP_W, v5rc_budget
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB = ROOT / "web-next/src/lib/drivetrain.ts"
+BUILDS = ROOT / "web-next/src/lib/vexBuilds.ts"
+CHAT = (ROOT / "web-next/src/components/chat/ChatDock.tsx").read_text()
 TAB = (ROOT / "web-next/src/components/garage/DriveTrainTab.tsx").read_text()
 GARAGE = (ROOT / "web-next/src/components/garage/Garage.tsx").read_text()
 EXAMPLE = json.loads((ROOT / "examples/vex-v5-tank-drive.json").read_text())
@@ -45,6 +47,7 @@ def _node():
 
 def _ts(expr: str):
     script = (f"import * as D from {json.dumps(str(LIB))};\n"
+              f"import * as B from {json.dumps(str(BUILDS))};\n"
               f"const out = ({expr});\n"
               "process.stdout.write(JSON.stringify(out));")
     r = subprocess.run([_node(), "--experimental-strip-types", "--no-warnings",
@@ -203,3 +206,100 @@ def test_setup_controls_follow_the_recorded_setup():
     # robot's draft arrives; the controls must re-sync to the draft.
     assert "const recordedKey = JSON.stringify(currentVexChoice(spec));" in TAB
     assert "useEffect(() => { setChoice(JSON.parse(recordedKey) as VexChoice); }, [recordedKey]);" in TAB
+
+
+# ---- Wrench: several VEX build ideas at once, changed with words ----
+
+@pytest.mark.parametrize("text,count", [
+    ("suggest 3 vex builds", 3),
+    ("give me two VEX robot ideas", 2),
+    ("can you suggest a vex drive base", 1),
+    ("show me some vex builds", 3),
+])
+def test_vex_suggest_parses_counts(text, count):
+    assert _ts(f"B.parseVexSuggest({json.dumps(text)})")["count"] == count
+
+
+@pytest.mark.parametrize("text", [
+    "suggest a raspberry pi 5", "make omega1 faster", "what is vex",
+])
+def test_vex_suggest_ignores_other_asks(text):
+    assert _ts(f"B.parseVexSuggest({json.dumps(text)})") is None
+
+
+@pytest.mark.parametrize("n", [2, 3])
+def test_suggestions_are_different_and_valid(n):
+    builds = _ts(f"B.suggestVexBuilds({n}, [])")
+    assert len(builds) == n
+    shapes = {(b["spec"]["drivetrain"], b["spec"]["motor"]["count"],
+               b["spec"]["wheel"].get("kind")) for b in builds}
+    assert len(shapes) == n  # no two ideas are the same drive
+    for b in builds:
+        spec = RobotSpec.from_dict(b["spec"])
+        assert [f.check for f in validate(spec)] == ["all"], b["title"]
+        assert v5rc_budget(spec)["ok"]
+        n_ = _ts(f"D.driveNumbers({json.dumps(b['spec'])})")
+        assert n_["missing"] == [] and n_["torqueMismatch"] is None
+
+
+def test_focus_words_pick_matching_builds():
+    fast = _ts("B.suggestVexBuilds(1, ['speed'])")[0]["spec"]
+    push = _ts("B.suggestVexBuilds(1, ['push'])")[0]["spec"]
+    rpm = lambda s: s["gearing"]["motor_free_rpm"] * s["gearing"]["driving_teeth"] / s["gearing"]["driven_teeth"]
+    assert rpm(fast) > rpm(push)
+
+
+@pytest.mark.parametrize("text,target,kinds", [
+    ("make #2 faster", 2, ["faster"]),
+    ("give the first one six motors", 1, ["motors"]),
+    ("switch build 3 to mecanum", 3, ["drive"]),
+    ("make it stronger", None, ["stronger"]),
+    ("use 3.25 inch traction wheels", None, ["wheelSize", "wheelKind"]),
+])
+def test_vex_edit_parses(text, target, kinds):
+    e = _ts(f"B.parseVexEdit({json.dumps(text)})")
+    assert e["target"] == target
+    assert [o["kind"] for o in e["ops"]] == kinds
+
+
+@pytest.mark.parametrize("text", ["add a raspberry pi 5", "how fast is omega1", "hello"])
+def test_vex_edit_ignores_other_asks(text):
+    assert _ts(f"B.parseVexEdit({json.dumps(text)})") is None
+
+
+@pytest.mark.parametrize("ops", [
+    [{"kind": "faster"}], [{"kind": "stronger"}], [{"kind": "motors", "n": 6}],
+    [{"kind": "drive", "drive": "mecanum"}], [{"kind": "wheelSize", "inches": 2.75}],
+])
+def test_edits_change_the_drive_and_stay_valid(ops):
+    base = json.loads((ROOT / "examples/vex-v5-tank-drive.json").read_text())
+    out = _ts(f"B.editVexSpec({json.dumps(base)}, {json.dumps(ops)})")
+    assert out["changes"] and not out["problems"]
+    spec = RobotSpec.from_dict(out["spec"])
+    assert [f.check for f in validate(spec)] in (["all"], ["vex.v5rc_motor_power"])
+    assert out["spec"]["name"] == base["name"]
+    before = _ts(f"D.driveNumbers({json.dumps(base)})")
+    after = _ts(f"D.driveNumbers({json.dumps(out['spec'])})")
+    assert after["torqueMismatch"] is None
+    if ops[0]["kind"] == "faster":
+        assert after["freeSpeedMps"] > before["freeSpeedMps"]
+    if ops[0]["kind"] == "stronger":
+        assert after["stallPushN"] > before["stallPushN"]
+
+
+def test_impossible_edits_are_refused_not_guessed():
+    mec = json.loads((ROOT / "examples/vex-v5-mecanum.json").read_text())
+    out = _ts(f"B.editVexSpec({json.dumps(mec)}, [{{kind:'motors', n:6}}])")
+    assert out["changes"] == [] and out["problems"]
+    omega = {"name": "x", "drivetrain": "skid_steer", "wheel": {"count": 4, "diameter_m": 0.1}}
+    out = _ts(f"B.editVexSpec({json.dumps(omega)}, [{{kind:'faster'}}])")
+    assert out["changes"] == [] and "not a VEX V5" in out["problems"][0]
+
+
+def test_wrench_wires_vex_cards():
+    assert "if (runVexCommand(q)) return true;" in CHAT
+    assert "<VexBuildsCard" in CHAT and "<VexEditCard" in CHAT
+    # An edit to a saved robot is a preview until Apply, saved as a new
+    # version, and refused if the robot changed since the preview.
+    assert "robot.versions.at(-1)?.id !== plan.baseVersionId" in CHAT
+    assert "lastApplied.current = { robotId: robot.id, versionId };" in CHAT
