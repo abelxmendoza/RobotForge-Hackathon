@@ -2,8 +2,11 @@
  * An uploaded visual shell is not used as a measured collision definition. */
 import type {Spec} from './garage';
 import {simulationIssues,type Scenario,type SimPose} from './simulation';
-import {SIM_TYRE_FRICTION,SIM_USABLE_STALL_FRACTION} from './driveMath';
-export async function createDriveWorld(spec:Spec,scenario:Scenario){
+import {SIM_TYRE_FRICTION,SIM_USABLE_STALL_FRACTION,SIM_DRIVE_CMD_MPS,SIM_TURN_GAIN} from './driveMath';
+/* Extra fixed boxes on the floor (the Omega1 simulator's pen walls):
+ * centre and half-extents in metres, world frame, z up. */
+export type SimWall={x:number;y:number;z:number;hx:number;hy:number;hz:number};
+export async function createDriveWorld(spec:Spec,scenario:Scenario,walls:SimWall[]=[]){
  const issues=simulationIssues(spec);if(issues.length)throw new Error('Physics needs: '+issues.join(', '));
  const R=await import('@dimforge/rapier3d-compat');await R.init();
  const world=new R.World({x:0,y:0,z:-9.81});world.timestep=1/60;
@@ -11,6 +14,7 @@ export async function createDriveWorld(spec:Spec,scenario:Scenario){
  const floor=world.createRigidBody(R.RigidBodyDesc.fixed());world.createCollider(R.ColliderDesc.cuboid(12,12,.1).setTranslation(0,0,-.1).setFriction(SIM_TYRE_FRICTION),floor);
  if(scenario==='ramp'){const a=10*Math.PI/180;world.createCollider(R.ColliderDesc.cuboid(1,.8,.05).setTranslation(1.7,0,Math.sin(a)).setRotation({x:0,y:-Math.sin(a/2),z:0,w:Math.cos(a/2)}).setFriction(SIM_TYRE_FRICTION),floor);}
  if(scenario==='obstacle')world.createCollider(R.ColliderDesc.cuboid(.15,.7,.015).setTranslation(.9,0,.015).setFriction(SIM_TYRE_FRICTION),floor);
+ for(const w of walls)world.createCollider(R.ColliderDesc.cuboid(w.hx,w.hy,w.hz).setTranslation(w.x,w.y,w.z).setFriction(.5),floor);
  const bodyH=Math.max(.01,H-spec.ground_clearance_m),bodyZ=spec.ground_clearance_m+bodyH/2;
  const body=world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(0,0,0).setCanSleep(false));
  world.createCollider(R.ColliderDesc.cuboid(L/2,W/2,bodyH/2).setTranslation(0,0,bodyZ).setMass(mass*.8).setFriction(.4),body);
@@ -25,5 +29,5 @@ export async function createDriveWorld(spec:Spec,scenario:Scenario){
  }
  if(spec.wheel.count===2){const cr=Math.min(spec.ground_clearance_m,r)*.8;for(const x of [-L/2+cr,L/2-cr])world.createCollider(R.ColliderDesc.ball(cr).setTranslation(x,0,cr).setMass(.001).setFriction(0).setFrictionCombineRule(R.CoefficientCombineRule.Min),body);}
  let t=0;
- return {step(throttle:number,turn:number):SimPose{for(const w of wheels)w.joint.configureMotorVelocity((.3*throttle-1.2*turn*w.y)/r,20);world.step();t+=1/60;const p=body.translation(),q=body.rotation();return {t,x:p.x,y:p.y,z:p.z,qx:q.x,qy:q.y,qz:q.z,qw:q.w};},free(){world.free();}};
+ return {step(throttle:number,turn:number):SimPose{for(const w of wheels)w.joint.configureMotorVelocity((SIM_DRIVE_CMD_MPS*throttle-SIM_TURN_GAIN*turn*w.y)/r,20);world.step();t+=1/60;const p=body.translation(),q=body.rotation();return {t,x:p.x,y:p.y,z:p.z,qx:q.x,qy:q.y,qz:q.z,qw:q.w};},free(){world.free();}};
 }

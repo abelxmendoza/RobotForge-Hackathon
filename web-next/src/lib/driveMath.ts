@@ -24,6 +24,11 @@ export const SIM_TYRE_FRICTION = 0.85;
 /** The fraction of stall torque the sandbox's motors may apply. */
 export const SIM_USABLE_STALL_FRACTION = 0.6;
 export const ASSUMED_ACCEL_MPS2 = 0.5;
+/** The sandbox's drive command: full throttle asks each wheel for this
+ *  rim speed, and turning adds TURN_GAIN × the wheel's sideways offset.
+ *  A fixed sandbox setting for every robot, not any robot's top speed. */
+export const SIM_DRIVE_CMD_MPS = 0.3;
+export const SIM_TURN_GAIN = 1.2;
 export const ASSUMED_ROLLING_RESISTANCE = 0.015;
 
 export interface DriveSpec {
