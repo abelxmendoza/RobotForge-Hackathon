@@ -9,6 +9,7 @@
  * power cap. Every number comes from lib/drivetrain.ts on the spec's
  * own fields; missing inputs are named, never guessed. */
 import { useEffect, useMemo, useState } from 'react';
+import VexModel3D from './VexModel3D';
 import type { Spec } from '@/lib/garage';
 import {
   applyGearing, ASSUMED_TRACTION_MU, currentVexChoice, driveLayout, driveNumbers, isVexV5, readGearing,
@@ -81,6 +82,8 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
           <p className="faint">{layout.steering}</p>
         </div>
       </div>
+
+      {vex && <VexModel3D spec={changed ? applyGearing(spec, whatIf) : spec} label={String(spec?.name ?? 'VEX robot')} height={260} caption={changed ? '3D 360° with your changes · drag to turn · drawn from the spec’s numbers, not CAD' : '3D 360° · drag to turn · drawn from the spec’s numbers, not CAD'} />}
 
       <div className="dt-grid">
         <figure className="dt-figure">

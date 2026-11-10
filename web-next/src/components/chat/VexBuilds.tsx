@@ -1,7 +1,7 @@
 "use client";
 /* Wrench cards for VEX V5 builds (lib/vexBuilds.ts):
- *  - VexBuildsCard: 1–3 suggested builds side by side, each with its
- *    drive numbers and "Add to Workshop". Word edits ("make #2 faster")
+ *  - VexBuildsCard: 1–3 suggested builds side by side, each with a
+ *    spinning 3D model and its drive numbers and "Add to Workshop". Word edits ("make #2 faster")
  *    replace a build in place before anything is saved.
  *  - VexEditCard: a word edit to the VEX robot open in the Workshop,
  *    shown as changes + before/after numbers. Apply saves a NEW
@@ -12,6 +12,7 @@ import { useRef } from "react";
 import { driveNumbers, v5rcBudget } from "@/lib/drivetrain";
 import type { VexBuild } from "@/lib/vexBuilds";
 import type { Spec } from "@/lib/garage";
+import VexModel3D from "@/components/garage/VexModel3D";
 
 const f = (v: number | null, d: number, u: string) => (v == null ? "—" : `${Number(v.toFixed(d))} ${u}`);
 
@@ -37,6 +38,7 @@ export function VexBuildsCard({ builds, onAdd, onClose }: { builds: VexBuild[]; 
           <article key={b.id + i} className="vexb-card">
             <span className="eyebrow">#{i + 1}</span>
             <h4>{b.spec.name}</h4>
+            <VexModel3D spec={b.spec} label={`#${i + 1} ${b.spec.name}`} height={170} />
             <p className="g-small">{b.why}</p>
             <p className="faint g-small">{b.spec.motor.count} motors · {b.spec.wheel.count} × {Math.round(b.spec.wheel.diameter_m / 0.0254 * 100) / 100} in {b.spec.drivetrain === "mecanum" ? "mecanum" : b.spec.wheel.kind ?? "omni"} · {b.spec.gearing.driving_teeth === b.spec.gearing.driven_teeth ? "direct drive" : `${b.spec.gearing.driving_teeth}:${b.spec.gearing.driven_teeth}`} · {b.spec.gearing.motor_free_rpm} rpm cartridge</p>
             <Numbers spec={b.spec} />
@@ -44,7 +46,7 @@ export function VexBuildsCard({ builds, onAdd, onClose }: { builds: VexBuild[]; 
           </article>
         ))}
       </div>
-      <p className="faint g-small">Change one with words, like “make #2 faster”, “give #1 six motors” or “switch #3 to mecanum”. Motor numbers are VEX’s ratings; masses and sizes are typical values, not measurements.</p>
+      <p className="faint g-small">Change one with words, like “make #2 faster”, “give #1 six motors” or “switch #3 to mecanum”. Motor numbers are VEX’s ratings; masses and sizes are typical values, not measurements. The 3D models are drawn from each build’s numbers, not CAD.</p>
     </section>
   );
 }
@@ -59,8 +61,8 @@ export function VexEditCard({ plan, onApply, onCancel }: { plan: VexEditPlan; on
       {plan.changes.length ? <ul className="g-small">{plan.changes.map((c) => <li key={c}>{c}</li>)}</ul> : <p className="g-small">Nothing would change.</p>}
       {plan.problems.map((p) => <p key={p} className="g-small" role="alert"><span className="fbadge planned">Check</span> {p}</p>)}
       <div className="vexb-grid">
-        <article className="vexb-card"><span className="eyebrow">Now</span><Numbers spec={plan.before} /></article>
-        <article className="vexb-card"><span className="eyebrow">After</span><Numbers spec={plan.after} /></article>
+        <article className="vexb-card"><span className="eyebrow">Now</span><VexModel3D spec={plan.before} label="Now" height={160} /><Numbers spec={plan.before} /></article>
+        <article className="vexb-card"><span className="eyebrow">After</span><VexModel3D spec={plan.after} label="After" height={160} /><Numbers spec={plan.after} /></article>
       </div>
       <div className="dt-actions">
         <button type="button" className="btn btn-primary btn-sm" disabled={!plan.changes.length} onClick={() => { if (once.current) return; once.current = true; onApply(); }}>Apply as a new version</button>

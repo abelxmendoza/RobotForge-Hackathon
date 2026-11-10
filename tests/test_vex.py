@@ -303,3 +303,56 @@ def test_wrench_wires_vex_cards():
     # version, and refused if the robot changed since the preview.
     assert "robot.versions.at(-1)?.id !== plan.baseVersionId" in CHAT
     assert "lastApplied.current = { robotId: robot.id, versionId };" in CHAT
+
+
+# ---- 3D 360 models of VEX builds ----
+
+MODEL = ROOT / "web-next/src/lib/vexModel3d.ts"
+
+
+def _model(expr: str):
+    script = (f"import * as THREE from 'three';\n"
+              f"import * as M from {json.dumps(str(MODEL))};\n"
+              f"import * as B from {json.dumps(str(BUILDS))};\n"
+              f"const out = ({expr});\n"
+              "process.stdout.write(JSON.stringify(out));")
+    r = subprocess.run([_node(), "--experimental-strip-types", "--no-warnings",
+                        "--input-type=module", "-e", script],
+                       capture_output=True, text=True, cwd=ROOT / "web-next")
+    if "Cannot find package 'three'" in r.stderr:
+        pytest.skip("web-next node_modules not installed")
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+def test_model_layout_follows_the_spec():
+    six = json.loads((ROOT / "examples/vex-v5-speed-tank-6m.json").read_text())
+    lay = _model(f"M.vexLayout({json.dumps(six)})")
+    assert lay["perSide"] == 3 and len(lay["motorXs"]) == 3
+    assert lay["cartridge"] == "blue" and (lay["driving"], lay["driven"]) == (36, 48)
+    mec = _model(f"M.vexLayout({json.dumps(json.loads((ROOT / 'examples/vex-v5-mecanum.json').read_text()))})")
+    assert mec["wheelKind"] == "mecanum"
+    two = _model("M.vexLayout(B.suggestVexBuilds(3, ['cheap'])[0].spec)")
+    assert two["perSide"] == 2 and len(two["motorXs"]) == 1  # 2-motor bot: one per side
+
+
+def test_model_draws_every_wheel_motor_and_gear():
+    out = _model("""B.suggestVexBuilds(3, []).map((b) => {
+      const g = M.buildVexModel(THREE, b.spec); const n = {};
+      g.traverse((o) => { if (o.name) n[o.name] = (n[o.name] || 0) + 1; });
+      return { wheels: b.spec.wheel.count, motors: b.spec.motor.count,
+               geared: b.spec.gearing.driving_teeth !== b.spec.gearing.driven_teeth, n };
+    })""")
+    for b in out:
+        assert b["n"]["wheel"] == b["wheels"]
+        assert b["n"]["motor"] == b["motors"]
+        assert b["n"].get("gear", 0) == (2 * b["motors"] if b["geared"] else 0)
+        assert b["n"]["brain"] == 1
+
+
+def test_3d_models_shown_on_cards_and_drive_train_tab():
+    cards = (ROOT / "web-next/src/components/chat/VexBuilds.tsx").read_text()
+    assert cards.count("<VexModel3D") == 3  # each build, Now and After
+    assert "<VexModel3D" in TAB and "applyGearing(spec, whatIf)" in TAB
+    viewer = (ROOT / "web-next/src/components/garage/VexModel3D.tsx").read_text()
+    assert "prefers-reduced-motion" in viewer and "IntersectionObserver" in viewer

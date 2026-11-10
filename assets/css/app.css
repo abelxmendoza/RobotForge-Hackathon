@@ -2362,3 +2362,9 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .vexb-nums dt{color:var(--text-faint)}
 .vexb-nums dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
 .vexb ul{margin:0;padding-left:18px}
+.vex3d{margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.vex3d-stage{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#161b23;cursor:grab;touch-action:pan-y}
+.vex3d-stage:active{cursor:grabbing}
+.vex3d-stage canvas{display:block;width:100%!important;height:100%!important}
+.vex3d-fail{position:absolute;inset:0;display:grid;place-items:center;padding:12px;text-align:center;margin:0}
+.vex3d figcaption{font-size:var(--fs-xs)}
