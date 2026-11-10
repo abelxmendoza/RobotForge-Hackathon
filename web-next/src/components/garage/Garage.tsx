@@ -32,6 +32,7 @@ import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKS
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
 import SimulateTab from './SimulateTab';
 import DriveTrainTab from './DriveTrainTab';
+import { VEX_STARTERS, type VexStarter } from '@/lib/vexStarters';
 import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
 import OverviewTurntable, { hasBody } from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
@@ -159,9 +160,20 @@ const STATUS_CLASS: Record<string, string> = { PASS: 'pass', MARGINAL: 'marginal
  * encodes exactly this URL; a guard test pins the three together. */
 const SCANIVERSE_URL = 'https://scaniverse.com';
 
-function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean; onOpenRobot: (id: string) => void }) {
+function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spec, source: VersionSource, note: string) => void; firstRobot: boolean; onOpenRobot: (id: string) => void }) {
   const [dexOpen, setDexOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [vexOpen, setVexOpen] = useState(false);
+  const [vexError, setVexError] = useState('');
+  const startVex = async (s: VexStarter) => {
+    setVexError('');
+    try {
+      const res = await fetch(assetPath('examples/' + s.file));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const spec = await res.json() as Spec;
+      onAdd(String(spec.name || s.name), spec, 'starter', `VEX V5 starter (examples/${s.file}): VEX's published motor ratings; mass and size are typical values, not measurements.`);
+    } catch (e) { setVexError(`Couldn't load the ${s.name} starter: ${(e as Error).message}`); }
+  };
   return (
     <div className="garage-add">
       {firstRobot && <EmptyBench />}
@@ -178,7 +190,21 @@ function AddRobot({ firstRobot, onOpenRobot }: { onAdd: (name: string, spec: Spe
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
         <Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>
+        <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX V5 robot</button>
       </div>
+      {vexOpen && (
+        <div className="garage-vex">
+          <p className="g-small">VEX V5 robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears later in its Drive train tab.</p>
+          <div className="garage-vex-list">
+            {VEX_STARTERS.map((s) => (
+              <button key={s.file} type="button" className="garage-vex-card" onClick={() => void startVex(s)}>
+                <strong>{s.name}</strong><span className="faint g-small">{s.blurb}</span>
+              </button>
+            ))}
+          </div>
+          {vexError && <p className="g-error" role="alert">{vexError}</p>}
+        </div>
+      )}
       {scanOpen && (
         <div className="garage-scan-how">
           <p><strong>Scan it with Scaniverse on your phone.</strong> Walk around the real robot in the Scaniverse app so it sees every side, export the scan as a PLY or GLB file, then attach that file to Wrench — a scan’s sizes stay estimated until you measure the real thing.</p>

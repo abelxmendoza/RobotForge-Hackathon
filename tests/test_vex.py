@@ -13,6 +13,7 @@ Pins:
 - applying a VEX setup keeps motor.stall_torque_nm in step with it.
 """
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -166,3 +167,32 @@ def test_workshop_has_a_drive_train_tab():
     # the tab names its basis and never claims a measurement
     assert "not measurements" in TAB
     assert "check the current game manual" in TAB
+
+
+STARTERS = (ROOT / "web-next/src/lib/vexStarters.ts").read_text()
+
+
+@pytest.mark.parametrize("fname", sorted(
+    re.findall(r"file: '([^']+)'",
+               (Path(__file__).resolve().parents[1]
+                / "web-next/src/lib/vexStarters.ts").read_text())))
+def test_every_vex_starter_is_a_clean_v5_spec(fname):
+    data = json.loads((ROOT / "examples" / fname).read_text())
+    spec = RobotSpec.from_dict(data)
+    assert spec.gearing.platform == "vex_v5"
+    assert [f.check for f in validate(spec)] == ["all"], fname
+    budget = v5rc_budget(spec)
+    assert budget and budget["ok"], fname
+    n = _ts(f"D.driveNumbers({json.dumps(data)})")
+    assert n["missing"] == [] and n["torqueMismatch"] is None, fname
+
+
+def test_starters_cover_different_drive_styles():
+    files = re.findall(r"file: '([^']+)'", STARTERS)
+    assert len(files) >= 4
+    specs = [json.loads((ROOT / "examples" / f).read_text()) for f in files]
+    assert {s["drivetrain"] for s in specs} >= {"skid_steer", "mecanum"}
+    rpms = {s["gearing"]["motor_free_rpm"] * s["gearing"]["driving_teeth"]
+            / s["gearing"]["driven_teeth"] for s in specs}
+    assert min(rpms) <= 200 and max(rpms) >= 450  # torque and speed builds
+    assert "Start a VEX V5 robot" in GARAGE and "VEX_STARTERS.map" in GARAGE
