@@ -2368,3 +2368,44 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .vex3d-stage canvas{display:block;width:100%!important;height:100%!important}
 .vex3d-fail{position:absolute;inset:0;display:grid;place-items:center;padding:12px;text-align:center;margin:0}
 .vex3d figcaption{font-size:var(--fs-xs)}
+/* Omega1 simulator page (/simulator/, 2026-11-10) */
+.o1sim{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0}
+.o1sim-sources .fbadge{white-space:normal}
+.o1sim-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.o1sim-head h1{margin:6px 0 8px}.o1sim-head p{margin:0;max-width:62ch}.o1sim-head .eyebrow{color:var(--accent)}
+.o1sim-badges{display:flex;gap:8px;flex-wrap:wrap}
+.o1sim-stage{min-width:0}
+.o1sim-scene{margin:0;position:relative;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#09131e}
+.o1sim-canvas{height:min(62vh,540px);min-height:300px;position:relative}
+.o1sim-canvas canvas{display:block;touch-action:none;max-width:100%}
+.o1sim-scene figcaption{padding:10px 14px;color:var(--text-muted);font-size:12px;overflow-wrap:anywhere}
+.o1sim-caption{position:absolute;left:12px;right:12px;bottom:46px;max-width:560px;padding:12px 14px;border-radius:12px;background:rgba(8,15,22,.86);border:1px solid rgba(66,214,196,.35);backdrop-filter:blur(4px)}
+.o1sim-caption p{margin:0;font-size:14px;line-height:1.45}.o1sim-caption.done{border-color:var(--border)}
+.o1sim-step{color:var(--accent);font:600 12px/1.2 var(--mono)!important;letter-spacing:.04em;margin-bottom:6px!important}
+.o1sim-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.o1sim-follow{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-muted)}
+.o1sim-pad{display:flex;gap:6px;margin-left:auto}
+.o1sim-pad button{touch-action:none;min-width:48px;min-height:44px;font-size:20px}
+.o1sim-gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.o1sim-gauge{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2,var(--surface));min-width:0}
+.o1sim-gauge h3{margin:0 0 10px;font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.o1sim-gauge p{margin:6px 0 0}
+.o1sim-big{font:700 30px/1.1 var(--mono);margin:4px 0 8px!important}.o1sim-big.warn{color:var(--fail)}
+.o1sim-mid{font:600 16px/1.3 var(--mono)}
+.o1sim-meter{display:block;height:6px;border-radius:3px;background:#1b2a35;overflow:hidden}
+.o1sim-meter span{display:block;height:100%;background:var(--accent);transition:width .15s linear}
+.o1sim-wheels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.o1sim-wheel{display:grid;grid-template-columns:1fr auto;gap:4px 8px;padding:8px;border-radius:10px;border:1px solid var(--border);background:#0e1922}
+.o1sim-wheel-name{font-size:12px;color:var(--text-muted)}
+.o1sim-wheel-dir{grid-row:span 2;align-self:center;font-size:18px;color:var(--text-muted)}
+.o1sim-wheel-ch{font:600 14px/1.2 var(--mono)}
+.o1sim-wheel .o1sim-meter{grid-column:1/-1}
+.o1sim-wheel.forward{border-color:rgba(66,214,196,.6)}.o1sim-wheel.forward .o1sim-wheel-dir{color:var(--accent)}
+.o1sim-wheel.backward{border-color:rgba(251,191,36,.6)}.o1sim-wheel.backward .o1sim-wheel-dir{color:#fbbf24}.o1sim-wheel.backward .o1sim-meter span{background:#fbbf24}
+.o1sim-dial{width:120px;height:120px;display:block;margin:0 auto}
+.o1sim-dial .ring{fill:#0e1922;stroke:var(--border);stroke-width:2}.o1sim-dial .tick{stroke:var(--text-muted);stroke-width:2}
+.o1sim-dial .needle{stroke:var(--accent);stroke-width:4;stroke-linecap:round;transition:transform .15s linear}.o1sim-dial .hub{fill:var(--accent)}
+.o1sim-gauge .o1sim-mid{text-align:center}
+.o1sim-sources h2{margin:0 0 8px}.o1sim-sources>p{max-width:72ch}
+.o1sim-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:640px){.o1sim-sources table,.o1sim-sources tbody,.o1sim-sources tr,.o1sim-sources td{display:block;width:auto}.o1sim-sources thead{display:none}.o1sim-sources tr{padding:10px 0;border-bottom:1px solid var(--border)}.o1sim-sources td{border:0;padding:2px 0;text-align:left}.o1sim-sources td:first-child{font-weight:600}.o1sim-canvas{height:340px}.o1sim-pad{margin-left:0;width:100%;justify-content:center}.o1sim-caption{position:static;max-width:none;border-radius:0;border-width:1px 0 0;backdrop-filter:none;padding:10px 14px}.o1sim-caption p{font-size:13px}.o1sim-big{font-size:24px}}

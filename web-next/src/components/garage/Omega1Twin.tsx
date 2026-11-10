@@ -195,7 +195,7 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
         </section>
       )}
 
-      {tab === 'simulate' && <><SimulationWorkspace spec={omega1SeedSpec()} robotId="builtin-omega1" versionId="built-in-documented-spec" /><details className="ws-disclosure"><summary>Twin physics — ProjectSim estimates, not measurements</summary><p><span className="fbadge planned">NOT GATED</span> No recorded driving gate is claimed for this built-in specimen. Missing measured mass, wheel diameter and motor data stay NOT_CHECKED until recorded in your saved robot.</p><ul>{omega1Rover.physics.map(p=><li key={p.label}>{p.label}: {p.value}</li>)}</ul></details></>}
+      {tab === 'simulate' && <><p className="twin-sim-link"><a className="btn btn-primary btn-sm" href="/simulator/">Drive the twin in the Omega1 simulator</a> <span className="faint g-small">Live motor and sensor gauges, plus a self-running tour. Uses sizes read off the 3D twin.</span></p><SimulationWorkspace spec={omega1SeedSpec()} robotId="builtin-omega1" versionId="built-in-documented-spec" /><details className="ws-disclosure"><summary>Twin physics — ProjectSim estimates, not measurements</summary><p><span className="fbadge planned">NOT GATED</span> No recorded driving gate is claimed for this built-in specimen. Missing measured mass, wheel diameter and motor data stay NOT_CHECKED until recorded in your saved robot.</p><ul>{omega1Rover.physics.map(p=><li key={p.label}>{p.label}: {p.value}</li>)}</ul></details></>}
 
       {tab === 'checks' && (
         <section aria-label="Omega1 checks — from its records">
