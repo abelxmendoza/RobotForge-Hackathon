@@ -2530,6 +2530,15 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .g-robot-menu-pop{position:absolute;right:0;top:32px;z-index:20;width:max-content;padding:6px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2);box-shadow:0 12px 32px #0008}
 .g-robot-menu-pop .btn{width:100%;justify-content:flex-start;text-align:left;line-height:1.3;color:var(--fail)}
 .garage-list .g-robot{padding-right:34px}
+/* phones: the robot list is a sideways-scrolling strip that clips
+   anything absolutely placed, so the open menu sits in the chip's
+   own flow and the chip grows to hold it */
+@media(max-width:760px){
+  .g-robot-menu{position:static}
+  .g-robot-menu>summary{position:absolute;top:6px;right:4px}
+  .g-robot-menu-pop{position:static;width:auto;margin-top:6px;box-shadow:none}
+  .g-robot-menu-pop .btn{white-space:normal}
+}
 
 @media(max-width:640px){
   .ip-dials{grid-template-columns:repeat(3,minmax(0,1fr))}
