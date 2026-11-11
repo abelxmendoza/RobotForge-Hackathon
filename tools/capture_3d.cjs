@@ -22,7 +22,9 @@
  * Options: --base http://localhost:8765  --fps 60  --width 1920 --height 1080
  *          --dpr 1|2 (page pixel ratio; teardown defaults to 2 for a sharp 3D view)
  *          --sheet (also write <out>.sheet.png)
- * Needs: Node 20+, Playwright with Chromium, ffmpeg on PATH. */
+ * Needs: Node 20+, Playwright with Chromium, ffmpeg on PATH. The film shot
+ * imports its TypeScript script directly, so it needs Node 22.18+ (built-in
+ * type stripping). */
 const { spawn, execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
 
@@ -146,6 +148,8 @@ async function record(page, selector, seconds, label, cues = {}, out = OUT) {
     const path = require('node:path');
     const fs = require('node:fs');
     const cut = String(args.cut || 'full');
+    const [major, minor] = process.versions.node.split('.').map(Number);
+    if (major < 22 || (major === 22 && minor < 18)) throw new Error(`--shot film needs Node 22.18+ to load omega1Film.ts (this is ${process.versions.node})`);
     const film = await import(path.join(__dirname, '..', 'web-next', 'src', 'lib', 'omega1Film.ts'));
     const css = CLEAN_CSS + '.demo-bar{display:none!important}.o1film-scene{border:0!important;border-radius:0!important}';
     // /film/ sits behind the sign-in gate; the no-account demo opens it.

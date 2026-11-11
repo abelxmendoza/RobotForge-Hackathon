@@ -52,9 +52,11 @@ export default function Omega1Film() {
     void a.ctx.resume();
     const src = a.ctx.createBufferSource();
     src.buffer = a.buffers[c]!; src.connect(a.ctx.destination);
-    src.start(0, Math.max(0, from));
+    // Rendering the score takes a few hundred ms the first time while the
+    // film clock runs on, so start the sound where the picture is now.
+    src.start(0, Math.max(0, clock.current.playing ? filmTime() : from));
     a.src = src;
-  }, [stopAudio]);
+  }, [stopAudio, filmTime]);
 
   const play = useCallback((from?: number) => {
     const c = clock.current;
