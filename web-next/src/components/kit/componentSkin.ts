@@ -62,6 +62,37 @@ export function addComponentSkin(
     }
   };
 
+  if (componentId.startsWith('catalog--')) {
+    // Catalogue previews are shape cues only; no invented holes, pinout or connectors.
+    const id=componentId.slice(9);
+    if (/wheel|vex_omni|vex_mec|vex_trac|caster/.test(id)) {
+      const radius=Math.min(l,h)*.48;
+      const tire=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,w*.92,32),black);
+      mesh.add(tire);
+      const hub=new THREE.Mesh(new THREE.CylinderGeometry(radius*.42,radius*.42,w*.98,24),silver);
+      mesh.add(hub);
+    } else if (/gearmotor|motor_|stepper|brushed_motor|brushless/.test(id)&&!/mount/.test(id)) {
+      const r=Math.min(w,h)*.42;
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l*.7,24),silver);
+      body.rotation.z=Math.PI/2;body.position.x=-l*.08;mesh.add(body);
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(r*.22,r*.22,l*.2,16),metal);
+      shaft.rotation.z=Math.PI/2;shaft.position.x=l*.36;mesh.add(shaft);
+    } else if (/chassis|mount|bracket|plate/.test(id)) {
+      box([l*.98,w*.98,h*.98],[0,0,0],material(0x9b753b,.45,.5));
+    } else if (/lipo|liion|nimh|batt/.test(id)&&!/charger|alarm/.test(id)) {
+      box([l*.96,w*.96,h*.96],[0,0,0],black);
+      box([l*.55,w*.65,h*.015],[0,0,h*.48],pcbTeal);
+    } else if (/camera|lidar|realsense|ultrasonic/.test(id)) {
+      box([l*.92,w*.92,h*.92],[0,0,0],darkAnodized);
+      const lens=new THREE.Mesh(new THREE.CylinderGeometry(Math.min(w,h)*.25,Math.min(w,h)*.25,l*.08,24),accentCyan);
+      lens.rotation.z=Math.PI/2;lens.position.x=l*.45;mesh.add(lens);
+    } else {
+      box([l*.94,w*.94,h*.25],[0,0,-h*.3],pcbTeal);
+      box([l*.55,w*.55,h*.5],[0,0,h*.02],darkAnodized);
+    }
+    return;
+  }
+
   if (componentId.startsWith('jetson')) {
     // Carrier PCB + SOM + finned black heatsink + +X USB/RJ45/DP I/O cluster
     box([l * 0.96, w * 0.96, h * 0.10], [0, 0, -h * 0.40], pcbGreen);

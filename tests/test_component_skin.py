@@ -34,3 +34,21 @@ for(const comp of COMPONENTS){{
     (tmp_path/'run.mjs').write_text(script)
     result=subprocess.run([node,'--experimental-strip-types',str(tmp_path/'run.mjs')],capture_output=True,text=True)
     assert result.returncode==0,result.stdout+result.stderr
+
+
+def test_catalogue_wheel_has_motion_geometry_not_battery_skin(tmp_path):
+    node=shutil.which('node')
+    three=ROOT/'web-next/node_modules/three/build/three.module.js'
+    if not node or not three.exists(): pytest.skip('Optional web dependencies unavailable')
+    script=f"""
+import assert from 'node:assert/strict';
+import * as THREE from {json.dumps(str(three))};
+import {{addComponentSkin}} from {json.dumps(str(ROOT/'web-next/src/components/kit/componentSkin.ts'))};
+const root=new THREE.Group();addComponentSkin(THREE,root,[.1,.032,.1],'catalog--wheel_100mm');
+assert.ok(root.children.some(c=>c.geometry?.type==='CylinderGeometry'),'Rover wheel must look like a wheel, not the generic battery fallback');
+const box=new THREE.Box3().setFromObject(root);
+for(const [key,limit] of [['x',.05],['y',.016],['z',.05]]){{assert.ok(box.min[key]>=-limit-1e-7);assert.ok(box.max[key]<=limit+1e-7);}}
+"""
+    (tmp_path/'run.mjs').write_text(script)
+    result=subprocess.run([node,'--experimental-strip-types',str(tmp_path/'run.mjs')],capture_output=True,text=True)
+    assert result.returncode==0,result.stdout+result.stderr

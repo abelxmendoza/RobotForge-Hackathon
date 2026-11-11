@@ -16,6 +16,7 @@ import { assetPath } from '@/components/home/asset';
 import { snapPlacement, shortestYaw, terminalWorldPoint, evaluatePlacementIntelligence } from '@/lib/spatial';
 import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
+import { roverComponentDefinition } from '@/lib/roverDesign';
 import { swayAt } from '@/lib/stageAnimation';
 import type { RobotSpec } from '../forge/model';
 import { taBuildParts, taGeom3d, elecBad, elecDepths } from './takeapart';
@@ -130,6 +131,9 @@ export default function Robot3D({
   restoreRequest?: { id: string; nonce: number } | null;
   onDetachedChange?: (ids: string[]) => void;
 }) {
+  const managed=spec as RobotSpec & {roverDesign?:unknown;assembly?:{components:ComponentInstance[];connections:Connection[]}};
+  instances ??= managed.roverDesign ? managed.assembly?.components : undefined;
+  connections ??= managed.roverDesign ? managed.assembly?.connections : undefined;
   const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag});
   motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag};
   const previousRef = useRef<ComponentInstance[]>([]);
@@ -183,14 +187,16 @@ export default function Robot3D({
         if (disposed) { lidarGeometry?.dispose(); return; }
         const studio=quality==='high';
         const built = taBuildParts(spec);
-        const units = taGeom3d(spec, built.parts, built.pos);
+        const managedRover=!!(spec as RobotSpec & {roverDesign?:unknown}).roverDesign;
+        const units = managedRover ? [] : taGeom3d(spec, built.parts, built.pos);
 
         const previous = previousRef.current;
         previousRef.current = instances ?? [];
         const renderInstances=[...(instances??[]),...(comparison??[]).filter(old=>!instances?.some(c=>c.id===old.id))];
         for (const [index,instance] of renderInstances.entries()) {
-          const part = componentById(instance.componentId);
-          if (!part) continue;
+          const definition = componentById(instance.componentId);
+          if (!definition) continue;
+          const part = (managedRover ? roverComponentDefinition(spec,instance) : definition) || definition;
           units.push({ part: instance.id, explode: [0, 0, 1 + index*0.35], meshes: [{
             kind: 'box', size: part.sizeM, center: instance.positionM,
             rot: [0, 0, instance.yawDeg * Math.PI / 180],
@@ -358,7 +364,7 @@ export default function Robot3D({
             const component=renderInstances.find(c=>c.id===u.part);
             if(component){
               mesh.castShadow=false;
-              addComponentSkin(THREE,mesh,componentById(component.componentId)!.sizeM,component.componentId);
+              addComponentSkin(THREE,mesh,(managedRover?roverComponentDefinition(spec,component):componentById(component.componentId))!.sizeM,component.componentId);
             }
             if (m.kind === 'box') {
               const edges = new THREE.LineSegments(

@@ -1734,6 +1734,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       ) : panel}
       <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
         {submitting && <p className="faint g-small" role="status">{attach ? 'Adding your file…' : 'Working on your request…'}</p>}
+        <a className="btn btn-sm" href="/design/">Guided rover designer →</a>
         <div className="g-tabs" aria-label="Message mode" hidden={docked && !open}><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>{setInputMode('design');setText('Generate a robot ');inputRef.current?.focus();}} aria-label="Create: generate a robot, acceptance tests, or a modification" title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)">✦ Create</button></div>
         {/* The assistant's suggestion chips belong to THIS surface on
             /garage: the bottom ChatBar that renders them on other
