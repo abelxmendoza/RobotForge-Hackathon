@@ -11,11 +11,11 @@ export const PART_GROUPS = [
 ] as const;
 export type PartGroupId = typeof PART_GROUPS[number]['id'];
 const map: Record<string, PartGroupId> = {
-  computer: 'compute', controller: 'compute', microcontroller: 'compute', cpu: 'compute',
-  drive: 'motion', motor: 'motion', servo: 'motion', actuator: 'motion', wheel: 'motion', gearbox: 'motion',
+  storage: 'compute', flight_controller: 'compute', computer: 'compute', controller: 'compute', microcontroller: 'compute', cpu: 'compute',
+  propulsion: 'motion', drive: 'motion', motor: 'motion', servo: 'motion', actuator: 'motion', wheel: 'motion', gearbox: 'motion',
   sensor: 'sensing', lidar: 'sensing', camera: 'sensing', imu: 'sensing', gps: 'sensing',
   battery: 'energy', power: 'energy', bms: 'energy',
-  frame: 'structure', chassis: 'structure', mechanical: 'structure', mount: 'structure',
+  material: 'structure', frame: 'structure', chassis: 'structure', mechanical: 'structure', mount: 'structure',
   motor_driver: 'electronics', cable: 'electronics', radio: 'electronics', pcb: 'electronics', wiring: 'electronics',
   safety: 'electronics', gripper: 'tools', end_effector: 'tools', tool: 'tools',
 };

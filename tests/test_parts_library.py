@@ -75,3 +75,40 @@ assert.equal(old.quantity,2);
 ''')
     r=subprocess.run(['node','--experimental-strip-types',str(tmp_path/'run.mjs')],capture_output=True,text=True)
     assert r.returncode==0,r.stdout+r.stderr
+
+
+def test_catalogue_is_complete_nested_and_preserves_saved_stock(tmp_path):
+    lib = ROOT / 'web-next/src/lib'
+    for name in ['partsLibrary', 'inventory', 'shopLinks', 'partTaxonomy']:
+        text = (lib / f'{name}.ts').read_text()
+        for dep in ['inventory', 'shopLinks', 'partTaxonomy']:
+            text = text.replace(f"from './{dep}'", f"from './{dep}.ts'")
+        (tmp_path / f'{name}.ts').write_text(text)
+    (tmp_path / 'package.json').write_text('{"type":"module"}')
+    (tmp_path / 'catalogue.json').write_text((ROOT / 'catalog/parts.json').read_text())
+    (tmp_path / 'organize.mjs').write_text('''
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {catalogItems,organizedLibraryItems,categoryFor} from './partsLibrary.ts';
+import {PART_CATEGORIES} from './inventory.ts';
+import {PART_GROUPS,partGroup} from './partTaxonomy.ts';
+const raw=JSON.parse(readFileSync(new URL('./catalogue.json',import.meta.url))).parts;
+const cat=catalogItems(raw);
+const rows=organizedLibraryItems([],[],cat);
+assert.equal(rows.length,raw.length);
+assert.equal(new Set(rows.map(p=>p.catalog_part_id)).size,raw.length);
+for(const p of rows){assert.ok(PART_CATEGORIES.includes(p.category),p.name);assert.notEqual(p.category,'other',p.name);assert.ok(PART_GROUPS.some(g=>g.id===partGroup(p.category)));assert.notEqual(p.ownership,'owned');}
+const expected={lipo_balance_charger:'power',charger_imax_b6:'power',lipo_4s_5200:'battery',liion_21700_cell:'battery',nimh_pack_72:'battery',vex_v5_batt:'battery',motor_mount:'frame',lidar_mount:'frame',camera_bracket:'frame',pico_rp2040:'controller',camera_rpi_v2:'sensor',servo_mg996r:'servo',driver_pca9685:'motor_driver',microsd_128gb:'storage',pla_filament:'material',gripper_parallel_kit:'end_effector',propeller_5040:'propulsion',fc_f405_stack:'flight_controller',custom_pcb_kicad:'pcb',fuse_inline:'safety',elrs_receiver:'radio',xt60_pigtail:'cable'};
+for(const [id,category] of Object.entries(expected))assert.equal(rows.find(p=>p.catalog_part_id===id).category,category,id);
+assert.equal(categoryFor('tools','Motor screwdriver'),'tool');
+const owned={...cat[0],id:'owned',ownership:'owned',reality:'real',quantity:4,category:'other',parent_id:'kit'};
+const archived={...cat[1],id:'archived',archivedAt:'today'};
+const merged=organizedLibraryItems([owned,archived],[],cat);
+assert.equal(merged.length,cat.length-1);
+assert.strictEqual(merged.find(p=>p.catalog_part_id===owned.catalog_part_id),owned);
+assert.equal(merged.filter(p=>p.catalog_part_id===owned.catalog_part_id).length,1);
+assert.ok(!merged.some(p=>p.catalog_part_id===archived.catalog_part_id));
+assert.equal(owned.quantity,4);assert.equal(owned.parent_id,'kit');
+''')
+    result = subprocess.run(['node', '--experimental-strip-types', str(tmp_path / 'organize.mjs')], capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr
