@@ -30,6 +30,7 @@ import { downloadJSON, readStore, writeStore, uid, useStore } from '@/lib/store'
 import { promptWrench } from '@/lib/wrenchPrompt';
 import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_ACTION_EVENT, WORKSHOP_FIX_EVENT, type WorkshopAction } from '@/lib/workshopContext';
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
+import { HealthGauges, TestRun } from './InstrumentPanel';
 import SimulateTab from './SimulateTab';
 import DriveTrainTab from './DriveTrainTab';
 import { VEX_STARTERS, type VexStarter } from '@/lib/vexStarters';
@@ -1188,7 +1189,12 @@ export default function Garage() {
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(null)}>Cancel</button>
                 </span>
               ) : (
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => deleteForever(r)}>Delete</button>
+                <details className="g-robot-menu">
+                  <summary aria-label={`More actions for ${r.name}`} title="More actions"><span aria-hidden="true">⋯</span></summary>
+                  <div className="g-robot-menu-pop">
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute('open'); deleteForever(r); }} aria-label={`Delete ${r.name}`}>Delete robot…</button>
+                  </div>
+                </details>
               )}
             </li>
           ))}
@@ -1354,6 +1360,12 @@ export default function Garage() {
                     ? { title: 'Map your connections', text: 'Record how power and signals reach each part.', action: 'Open wiring', tab: 'wiring' as WorkTab }
                     : { title: counts(draftLines).errors ? 'Review the issues' : 'Check your robot', text: 'Review engineering checks and explore a simulation.', action: 'Open Test', tab: 'checks' as WorkTab };
                   return <div className="ws-next"><div><span className="eyebrow">Next step</span><h3>{next.title}</h3><p>{next.text}</p></div><button type="button" className="btn btn-primary" onClick={() => { if ('prompt' in next) promptWrench({mode:'chat',text:next.prompt}); else setTab(next.tab); }}>{next.action}</button></div>;
+                })()}
+                {(() => {
+                  /* Recorded numbers vs the ones still guessed from a photo. */
+                  const numeric = FIELD_GROUPS.flatMap((g) => g.fields).filter((f) => f.kind === 'number' || f.kind === 'integer');
+                  const recorded = numeric.filter((f) => Number.isFinite(Number(getPath(draft, f.path))) && getPath(draft, f.path) != null);
+                  return <HealthGauges verdict={verdictOf(draftLines)} roverChecks={roverDraft} targets={rover} recorded={recorded.length} measured={recorded.filter((f) => !estimated.has(f.path)).length} />;
                 })()}
                 {(() => {
                   const art = drawingFor(draft?.name, robot.name, robot.id);
@@ -1640,6 +1652,7 @@ export default function Garage() {
 
             {tab === 'checks' && (
             <section className="g-compare ws-pane" aria-label="Checks">
+              <TestRun verdict={verdictOf(draftLines)} roverChecks={roverDraft} targets={rover} />
               <SavedSimulationRuns robotId={robot.id} /><h3>Engineering checks</h3>
               <p className="g-small faint">Calculated from your specs; these are not physical test results.</p>
               <Findings lines={draftLines} />

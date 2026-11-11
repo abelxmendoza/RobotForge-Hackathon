@@ -2435,3 +2435,143 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .o1film-shots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
 .o1film-shots .chip.on{border-color:var(--accent);color:var(--accent)}
 @media(max-width:640px){.o1film-caption{position:static;max-width:none;border-radius:0;border-width:1px 0 0;backdrop-filter:none;padding:10px 14px}.o1film-caption p{font-size:13px}.o1film-canvas{min-height:0}}
+
+/* =========================================================
+   Instrument panel (2026-11-11, Abel picked direction A).
+   Blueprint grid behind the app, mono readouts, dial gauges
+   on the Workshop Overview and a test-run track on Test.
+   Every dial reads a number the Workshop already computed.
+   ========================================================= */
+.main{position:relative;isolation:isolate}
+.main::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px),
+    linear-gradient(var(--grid-minor) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-minor) 1px,transparent 1px);
+  background-size:120px 120px,120px 120px,24px 24px,24px 24px;
+  -webkit-mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.55) 420px,rgba(0,0,0,.25) 100%);
+          mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.55) 420px,rgba(0,0,0,.25) 100%);
+}
+/* section labels read like panel engraving: a short rule before them */
+.content .eyebrow{display:inline-flex;align-items:center;gap:8px}
+.content .eyebrow::before{content:"";width:14px;height:1px;background:currentColor;opacity:.7}
+
+/* readout tiles: mono digits, a scale rule underneath */
+.ws-tile strong{font-family:var(--readout);font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ws-tile-label{font-family:var(--readout);font-size:11px;letter-spacing:.12em}
+.ws-tile-unit{font-family:var(--readout)}
+.workshop .ws-tile{border-left:1px solid var(--border)}
+.workshop .ws-tile:first-child{border-left:0}
+.workshop .ws-tile::after{
+  content:"";position:absolute;left:16px;right:16px;bottom:4px;height:5px;opacity:.55;
+  background:repeating-linear-gradient(90deg,var(--border-strong) 0 1px,transparent 1px 8px);
+}
+.ws-vchip{font-family:var(--readout)}
+
+/* ---- dial gauges ---- */
+.ip-panel,.ip-run{
+  position:relative;margin:0 0 var(--s5);padding:16px 18px 14px;
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  background:linear-gradient(180deg,rgba(20,35,51,.92),rgba(14,26,39,.92));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+/* corner registration marks, like a drawing sheet */
+.ip-panel::before,.ip-run::before{
+  content:"";position:absolute;inset:6px;pointer-events:none;border-radius:10px;
+  background:
+    linear-gradient(var(--border-strong),var(--border-strong)) top left/10px 1px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) top left/1px 10px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) top right/10px 1px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) top right/1px 10px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) bottom left/10px 1px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) bottom left/1px 10px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) bottom right/10px 1px no-repeat,
+    linear-gradient(var(--border-strong),var(--border-strong)) bottom right/1px 10px no-repeat;
+}
+.ip-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.ip-note{font:12px/1.3 var(--readout);color:var(--text-faint)}
+.ip-note b{color:var(--text);font-weight:600}
+.ip-dials{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.ip-dial{position:relative;display:grid;justify-items:center;margin:0;padding:4px 2px 0;--tone:var(--norun)}
+.ip-dial.pass{--tone:var(--pass)}.ip-dial.marginal{--tone:var(--marginal)}.ip-dial.fail{--tone:var(--fail)}
+.ip-dial svg{width:112px;height:auto;overflow:visible}
+.ip-tick{stroke:var(--border-strong);stroke-width:1}
+.ip-track{fill:none;stroke:var(--surface-3);stroke-width:7;stroke-linecap:round}
+.ip-fill{fill:none;stroke:var(--tone);stroke-width:7;stroke-linecap:round;filter:drop-shadow(0 0 4px color-mix(in srgb,var(--tone) 55%,transparent));animation:ip-sweep .9s var(--ease) both}
+.ip-dial.norun .ip-fill{stroke-dasharray:3 4;filter:none}
+.ip-target{stroke:var(--text);stroke-width:2;stroke-linecap:round}
+@keyframes ip-sweep{from{stroke-dasharray:0 400}to{stroke-dasharray:400 0}}
+.ip-dial.norun .ip-fill{animation:none}
+.ip-read{position:absolute;top:36px;left:0;right:0;display:grid;justify-items:center;line-height:1.05;pointer-events:none}
+.ip-read strong{font:600 26px/1 var(--readout);letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums}
+.ip-unit{font-size:12px;color:var(--text-muted);margin-left:2px;letter-spacing:0}
+.ip-read small{font:11px/1.3 var(--readout);color:var(--text-faint);margin-top:4px;max-width:96px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ip-dial figcaption{display:grid;justify-items:center;gap:1px;margin-top:-6px;text-align:center}
+.ip-label{font:700 11px/1.2 var(--readout);letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
+.ip-sub{font-size:12px;color:var(--tone)}
+.ip-dial.norun .ip-sub{color:var(--text-faint)}
+
+/* ---- test-run track ---- */
+.ip-track-line{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;margin:10px 0 2px;position:relative}
+.ip-track-line li{position:relative;display:grid;gap:3px;padding:30px 10px 4px 0;--tone:var(--norun)}
+.ip-track-line li.pass{--tone:var(--pass)}.ip-track-line li.marginal{--tone:var(--marginal)}.ip-track-line li.fail{--tone:var(--fail)}
+/* the rail */
+.ip-track-line li::before{content:"";position:absolute;top:11px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--tone),color-mix(in srgb,var(--tone) 25%,var(--surface-3)))}
+.ip-track-line li:last-child::before{right:auto;width:24px}
+.ip-station{position:absolute;top:0;left:0;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  font:700 10px/1 var(--readout);color:var(--bg);background:var(--tone);box-shadow:0 0 0 4px var(--surface),0 0 12px color-mix(in srgb,var(--tone) 60%,transparent)}
+.ip-track-line li.norun .ip-station{background:var(--surface-3);color:var(--text-muted);box-shadow:0 0 0 4px var(--surface);border:1px dashed var(--norun)}
+.ip-st-label{font-weight:700;font-size:var(--fs-sm)}
+.ip-st-read{font:13px/1.35 var(--readout);color:var(--text-muted);font-variant-numeric:tabular-nums}
+.ip-st-tone{font:700 10px/1 var(--readout);letter-spacing:.12em;text-transform:uppercase;color:var(--tone)}
+.ip-track-line li.norun .ip-st-tone{color:var(--text-faint)}
+
+/* findings read like a run log */
+.g-findings{counter-reset:find}
+.g-findings li{counter-increment:find}
+.g-findings li::before{content:counter(find,decimal-leading-zero);font:600 11px/1 var(--readout);color:var(--text-faint);margin-right:8px}
+
+/* ---- Workshop tabs: fit the row instead of running off the edge ---- */
+@media(min-width:761px){
+  .workshop .ws-tabs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));overflow:visible}
+  .workshop .ws-tabs button{justify-content:center;padding:10px 4px;gap:6px;min-width:0;font-size:14px}
+  .workshop .ws-tabs button>svg{flex-shrink:0}
+}
+@media(min-width:761px) and (max-width:1360px){
+  .workshop .ws-tabs button>svg{display:none}
+}
+
+/* ---- per-robot actions menu (replaces the bare Delete link) ---- */
+.garage-list li{position:relative}
+.g-robot-menu{position:absolute;top:8px;right:6px}
+.g-robot-menu>summary{list-style:none;display:grid;place-items:center;width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--text-faint);font-size:18px;line-height:1}
+.g-robot-menu>summary::-webkit-details-marker{display:none}
+.g-robot-menu>summary:hover,.g-robot-menu[open]>summary{background:var(--surface-3);color:var(--text)}
+.g-robot-menu-pop{position:absolute;right:0;top:32px;z-index:20;width:max-content;padding:6px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2);box-shadow:0 12px 32px #0008}
+.g-robot-menu-pop .btn{width:100%;justify-content:flex-start;text-align:left;line-height:1.3;color:var(--fail)}
+.garage-list .g-robot{padding-right:34px}
+/* phones: the robot list is a sideways-scrolling strip that clips
+   anything absolutely placed, so the open menu sits in the chip's
+   own flow and the chip grows to hold it */
+@media(max-width:760px){
+  .g-robot-menu{position:static}
+  .g-robot-menu>summary{position:absolute;top:6px;right:4px}
+  .g-robot-menu-pop{position:static;width:auto;margin-top:6px;box-shadow:none}
+  .g-robot-menu-pop .btn{white-space:normal}
+}
+
+@media(max-width:640px){
+  .ip-dials{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ip-dial svg{width:92px}
+  .ip-read{top:30px}
+  .ip-read strong{font-size:20px}
+  .ip-sub{font-size:11px;line-height:1.3}
+  .ip-label{font-size:10px;letter-spacing:.1em}
+  .ip-track-line{grid-template-columns:1fr;gap:4px}
+  .ip-track-line li{padding:2px 0 8px 36px;min-height:34px}
+  .ip-track-line li::before{top:24px;bottom:-4px;left:11px;right:auto;width:2px;height:auto}
+  .ip-track-line li:last-child::before{display:none}
+}
+@media(prefers-reduced-motion:reduce){.ip-fill{animation:none}}
