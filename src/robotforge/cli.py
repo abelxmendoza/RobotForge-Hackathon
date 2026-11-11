@@ -378,7 +378,16 @@ def main(argv: list[str] | None = None) -> int:
     nw.add_argument("--json", action="store_true",
                     help="wrap the output with kind metadata")
 
+    mc = sub.add_parser("mcp", help="run the read-only RobotForge MCP "
+                        "server on stdio (for Claude Desktop / Claude Code)")
+    mc.add_argument("--robots", help="folder of robots exported from the "
+                    "Workshop (default: $ROBOTFORGE_ROBOTS_DIR; without "
+                    "one, only the Robodex is served)")
+
     args = p.parse_args(argv)
+    if args.cmd == "mcp":
+        from .mcp_server import main as mcp_main
+        return mcp_main(args.robots)
     try:
         if args.cmd == "describe":
             if args.document:
