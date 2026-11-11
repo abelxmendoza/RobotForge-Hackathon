@@ -298,6 +298,7 @@ export default function Omega1Simulator() {
         <p className="faint g-small">Not used on purpose: the wheel radius (50 mm), track (200 mm) and 300 rpm defaults in Omega1&apos;s code. The repo extraction flags them as wrong-sized. When Omega1 is measured, its saved copy in the Workshop runs the same sandbox on real numbers.</p>
         <div className="o1sim-links">
           <a className="btn btn-sm" href="/explain/?robot=omega1">How does Omega1 work?</a>
+          <a className="btn btn-sm" href="/film/">Watch Omega1 come apart</a>
           <a className="btn btn-sm" href="/garage/#omega1">Open Omega1 in the Workshop</a>
           <a className="btn btn-sm" href={OMEGA1_PHOTO.source} target="_blank" rel="noreferrer">The real robot&apos;s photo ↗</a>
         </div>

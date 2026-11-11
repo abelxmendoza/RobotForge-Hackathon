@@ -53,6 +53,10 @@ export interface GarageRobot {
    * under per-slot keys. `scan` mirrors the most recent slot so the
    * Overview viewer keeps showing the newest scan. */
   scans?: import('./scan3d').SlotScan[];
+  /* Parts whose 3D look was regenerated from words by Wrench
+   * (lib/partMesh.ts). Appearance only: the spec is unchanged, and
+   * the GLB files live in this browser's IndexedDB. */
+  partLooks?: import('./partMesh').PartLook[];
 }
 
 type Specimen = import('./repoImport').RepoSpecimen;

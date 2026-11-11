@@ -69,6 +69,11 @@ import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNo
 import AssemblyProposal from './AssemblyProposal';
 import UpgradeProposal, { type UpgradeRequest } from './UpgradeProposal';
 import { VexBuildsCard, VexEditCard, type VexEditPlan } from './VexBuilds';
+import { PartEditCard, PartLookCard, type PartEditRequest, type PartLookRequest } from './PartEditCard';
+import { applyPartEdit, describeChanges, parseLookEdit, parsePartEdit, pickRobot } from '@/lib/partEdit';
+import { partMeshAvailable, readLookFiles, saveLookFile, type MeshJob } from '@/lib/partMesh';
+import { taBuildParts } from '@/components/kit/takeapart';
+import type { RobotSpec } from '@/components/forge/model';
 import { editVexSpec, parseVexEdit, parseVexSuggest, suggestVexBuilds, vexParamsOf, type VexBuild } from '@/lib/vexBuilds';
 import { parseUpgradeRequest, parseUpgradeFacts } from '@/lib/upgradeRequest';
 import { ASSEMBLY_KEY, currentAssembly, effectiveAssemblies, parseAssemblyCommand, previewAssembly, undoVersionedAssembly, type Assemblies, type AssemblyOperation } from '@/lib/assembly';
@@ -352,6 +357,10 @@ export function useForgeAssistant() {
   const [upgradeProposal, setUpgradeProposal] = useState<UpgradeRequest | null>(() => carry.upgradeProposal);
   const [vexBuilds, setVexBuilds] = useState<VexBuild[] | null>(() => carry.vexBuilds);
   const [vexEditPlan, setVexEditPlan] = useState<VexEditPlan | null>(() => carry.vexEditPlan);
+  /* One-part edits (lib/partEdit.ts): a size change waiting for
+   * Apply, or a look being generated / waiting for Keep. */
+  const [partEditReq, setPartEditReq] = useState<PartEditRequest | null>(null);
+  const [partLookReq, setPartLookReq] = useState<PartLookRequest | null>(null);
   const lastApplied = useRef<Applied>(carry.lastApplied);
   useEffect(() => {
     carry.messages = messages;
@@ -1104,8 +1113,126 @@ export function useForgeAssistant() {
     noteBubble(`Saved as a new version of ${plan.robotName}. The previous version is unchanged in History; type “undo” to go back to it.`);
   };
 
+  /* One-part edits: "make the wheels bigger" (size, from the spec's
+   * own fields, no AI) or "make the wheels look like …" (a new 3D
+   * shape for that part from the Worker's /part-mesh). The robot is
+   * the one named in the words, else the one open in the Workshop.
+   * Nothing is saved until Apply / Keep. */
+  const runPartEditCommand = (q: string): boolean => {
+    const robots = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
+    const openId = (pathname || '').startsWith('/garage') ? readWorkshopContext()?.robotId : undefined;
+    const robot = pickRobot(q, robots, openId ?? undefined);
+    const latest = robot?.versions.at(-1);
+    if (!robot || !latest) {
+      /* Only claim the phrase if it really is a one-part edit. */
+      const probe = { length_m: 0.3, width_m: 0.2, height_m: 0.15, ground_clearance_m: 0.02, wheel: { diameter_m: 0.065, width_m: 0.026, count: 4 }, rotors: { count: 4, prop_diameter_m: 0.127 } };
+      let shaped = false;
+      try { shaped = Boolean(parsePartEdit(q, probe) || parseLookEdit(q, ['wheel', 'rotor', 'camera', 'lidar', 'ultrasonic', 'caster', 'mount', 'plate', 'frame', 'body', 'battery', 'fc', 'arm', 'leg', 'head', 'gripper'])); } catch { shaped = true; }
+      if (!shaped) return false;
+      noteBubble('Which robot? Open one in the Workshop, or name it, like “make Omega1’s wheels bigger”.');
+      return true;
+    }
+    const spec = latest.spec;
+    let present: string[] = [];
+    try { present = taBuildParts(spec as RobotSpec).parts.map((p) => p.id); } catch { present = []; }
+    let look: ReturnType<typeof parseLookEdit> = null;
+    let size: ReturnType<typeof parsePartEdit> = null;
+    try {
+      look = parseLookEdit(q, present);
+      if (!look) size = parsePartEdit(q, spec);
+    } catch (e) {
+      noteBubble((e as Error).message + ' Nothing changed.');
+      return true;
+    }
+    if (!look && !size) return false;
+    setPartEditReq(null);
+    setPartLookReq(null);
+    void (async () => {
+      const looks = await readLookFiles(robot.id, robot.partLooks).catch(() => ({}));
+      if (size) {
+        const after = applyPartEdit(spec, size);
+        const lines = (s: unknown) => { try { return forgeValidateSpec(s as RobotSpec).lines.filter((l: string) => /^\[(ERROR|WARN)\]/.test(l)); } catch { return []; } };
+        const had = new Set(lines(spec));
+        setPartEditReq({ robotId: robot.id, robotName: robot.name, baseVersionId: latest.id, before: spec, after, plan: size, newChecks: lines(after).filter((l) => !had.has(l)), looks });
+        noteBubble(`Here is ${size.partLabel} on ${robot.name} before and after: ${describeChanges(size)}. Nothing else changes. Apply saves it as a new version.`);
+        return;
+      }
+      if (!look) return;
+      if (isDemoMode()) { noteBubble('Making a new 3D look for a part uses the live 3D service, which is off in demo mode. Size changes like “make the wheels bigger” work here. Nothing changed.'); return; }
+      if (!(await partMeshAvailable())) {
+        noteBubble('Making a new 3D look for a part needs the 3D service on the live endpoint, and it is not switched on yet. Size changes like “make the wheels bigger” work now. Nothing changed.');
+        return;
+      }
+      setPartLookReq({ robotId: robot.id, robotName: robot.name, spec, plan: look, looks });
+      noteBubble(`Making a new 3D look for ${look.partLabel} on ${robot.name}. Only that part is regenerated; the rest of the model and the spec stay as they are.`);
+    })();
+    return true;
+  };
+
+  const applyPartEditReq = (req: PartEditRequest) => {
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const robot = activeRecords(all).find((r) => r.id === req.robotId);
+    setPartEditReq(null);
+    if (!robot) { noteBubble(`${req.robotName} is no longer in your Workshop, so nothing changed.`); return; }
+    const base = robot.versions.at(-1);
+    if (base?.id !== req.baseVersionId) { noteBubble(`${req.robotName} changed since this preview, so nothing was applied. Ask again to see the change against its current version.`); return; }
+    const versionId = uid('v');
+    const changed = req.plan.changes.map((c) => c.path);
+    const version = {
+      id: versionId, createdAt: new Date().toISOString(), source: 'edit' as const,
+      label: 'Wrench: ' + req.plan.phrase.slice(0, 60),
+      note: `One-part change from Wrench (${req.plan.partLabel} only): ${describeChanges(req.plan)}. Browser checks are a subset, not hardware validation.`,
+      spec: req.after,
+      ...(base.planned ? { planned: true } : {}),
+      ...(base.estimatedPaths ? { estimatedPaths: base.estimatedPaths.filter((p) => !changed.includes(p)) } : {}),
+    };
+    const err = writeStore(GARAGE_KEY, all.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, version] } : r)));
+    if (err) { noteBubble(`I couldn't save it (${err}). ${req.robotName} is unchanged.`); return; }
+    lastApplied.current = { robotId: robot.id, versionId };
+    noteBubble(`Saved as a new version of ${req.robotName}: ${describeChanges(req.plan)}. The previous version is unchanged in History; type “undo” to go back to it.`);
+  };
+
+  const keepPartLook = async (req: PartLookRequest, data: ArrayBuffer, job: MeshJob) => {
+    setPartLookReq(null);
+    try {
+      await saveLookFile(req.robotId, req.plan.viewId, data);
+    } catch (e) {
+      noteBubble(`I couldn't keep it (${(e as Error).message}). Nothing changed.`);
+      return;
+    }
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const robot = activeRecords(all).find((r) => r.id === req.robotId);
+    if (!robot) { noteBubble(`${req.robotName} is no longer in your Workshop, so nothing changed.`); return; }
+    const entry = { viewId: req.plan.viewId, partLabel: req.plan.partLabel, description: req.plan.description, provider: 'meshy' as const, jobId: job.id, createdAt: new Date().toISOString(), bytes: data.byteLength };
+    const err = writeStore(GARAGE_KEY, all.map((r) => (r.id === robot.id ? { ...r, partLooks: [...(r.partLooks ?? []).filter((l) => l.viewId !== entry.viewId), entry] } : r)));
+    if (err) { noteBubble(`I couldn't keep it (${err}). Nothing changed.`); return; }
+    noteBubble(`Kept the new look for ${req.plan.partLabel} on ${req.robotName}. It shows on the Workshop Overview in this browser. The spec did not change. Say “remove the new look for ${req.plan.partLabel}” to go back to the plain part.`);
+  };
+
+  /* "remove the new look for the wheels": back to the plain part. */
+  const runRemoveLook = (q: string): boolean => {
+    const m = q.trim().replace(/[.!?]+$/, '').match(/^(?:remove|undo|reset|drop|clear)\s+(?:the\s+)?(?:new\s+|generated\s+)?(?:3d\s+)?looks?\s+(?:for|of|on)\s+(.+)$/i);
+    if (!m) return false;
+    const robots = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
+    const openId = (pathname || '').startsWith('/garage') ? readWorkshopContext()?.robotId : undefined;
+    const robot = pickRobot(q, robots, openId ?? undefined);
+    if (!robot) { noteBubble('Which robot? Open one in the Workshop first.'); return true; }
+    let look: ReturnType<typeof parseLookEdit> = null;
+    try { look = parseLookEdit(`make ${m[1]} look like x`, (robot.partLooks ?? []).map((l) => l.viewId)); } catch { look = null; }
+    if (!look) { noteBubble(`${robot.name} has no generated look for that part.`); return true; }
+    const viewId = look.viewId;
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const err = writeStore(GARAGE_KEY, all.map((r) => (r.id === robot.id ? { ...r, partLooks: (r.partLooks ?? []).filter((l) => l.viewId !== viewId) } : r)));
+    if (err) { noteBubble(`I couldn't change it (${err}).`); return true; }
+    void import('@/lib/partMesh').then((pm) => pm.removeLookFile(robot.id, viewId)).catch(() => {});
+    noteBubble(`Removed the generated look. ${look.partLabel[0].toUpperCase() + look.partLabel.slice(1)} on ${robot.name} are drawn from the spec again.`);
+    return true;
+  };
+
   const runCommands = (q: string): boolean => {
       if (runVexCommand(q)) return true;
+      if (runRemoveLook(q)) return true;
+      if (runPartEditCommand(q)) return true;
       /* "remember that …": a note on the Workshop robot on screen. */
       const remember=parseRememberCommand(q);
       if(remember){
@@ -1523,6 +1650,7 @@ export function useForgeAssistant() {
       setUpgradeProposal(null);
       setInventoryProposal(null);
       setVexEditPlan(null);
+      setPartEditReq(null);
       if(pendingLibraryImport.current){
         const pending=pendingLibraryImport.current;pendingLibraryImport.current=null;
         const verdict=classifyProposalReply(q);
@@ -1896,6 +2024,8 @@ export function useForgeAssistant() {
     setRobotDeleteProposal(null);
     setVexBuilds(null);
     setVexEditPlan(null);
+    setPartEditReq(null);
+    setPartLookReq(null);
     lastApplied.current = null;
     memoryRef.current = {};
     carry.messages = [];
@@ -1918,6 +2048,8 @@ export function useForgeAssistant() {
 
   return {prepareLibraryImport,ask,messages,chips,onHitClick,fixGroundedAnswer,saveGroundedNote,workingOn,postCreateResult,openRobot,subText,resetConversation,actions: <div className="main-chat-actions">
         {vexBuilds && <VexBuildsCard builds={vexBuilds} onAdd={addVexBuild} onClose={() => setVexBuilds(null)} />}
+        {partEditReq && <PartEditCard key={partEditReq.baseVersionId + partEditReq.plan.phrase} req={partEditReq} onApply={() => applyPartEditReq(partEditReq)} onCancel={() => { setPartEditReq(null); noteBubble(`Cancelled. ${partEditReq.robotName} is unchanged.`); }} />}
+        {partLookReq && <PartLookCard key={partLookReq.robotId + partLookReq.plan.phrase} req={partLookReq} onKeep={(data, job) => { void keepPartLook(partLookReq, data, job); }} onCancel={(why) => { setPartLookReq(null); noteBubble(why ? `No new look this time: ${why}` : `Stopped. ${partLookReq.robotName} is unchanged.`); }} />}
         {vexEditPlan && <VexEditCard key={vexEditPlan.baseVersionId + vexEditPlan.phrase} plan={vexEditPlan} onApply={() => applyVexEdit(vexEditPlan)} onCancel={() => { setVexEditPlan(null); noteBubble(`Cancelled. ${vexEditPlan.robotName} is unchanged.`); }} />}
         {upgradeProposal && <UpgradeProposal key={upgradeProposal.robotId+':'+upgradeProposal.expectedRobotVersionId+':'+upgradeProposal.expectedAssemblyRevision} request={upgradeProposal}
           onInputsChange={inputs=>setUpgradeProposal(previous=>previous?{...previous,inputs}:null)}

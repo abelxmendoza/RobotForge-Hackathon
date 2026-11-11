@@ -34,7 +34,9 @@ Rules:
 3. Never let wrangler "auto-configure" or create a config for
    `robotforge-live`. If wrangler says it can't find a config, stop.
 4. Never print, log, commit or paste a secret value. Set secrets only with
-   `npx wrangler secret put NAME`, typed by the owner at their terminal.
+   `npx wrangler secret put NAME` or `npx wrangler versions secret put NAME`
+   (adds the key to a new, undeployed version; `live/safe-upload.sh` uses
+   it), typed by the owner at their terminal. Never from a file.
 5. Don't connect this repo to Cloudflare Workers Builds (git
    auto-deploy). It builds from the repo root and caused the incident
    above. Deploys of `live/` are manual.

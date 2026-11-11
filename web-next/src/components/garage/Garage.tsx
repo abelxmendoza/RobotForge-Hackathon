@@ -1404,7 +1404,7 @@ export default function Garage() {
                         ? 'Omega1 digital twin · generated from a photo of the real rover, so its shape and size are estimates, not measurements. Drag to look around it, or use its Turn control for the full 360.'
                         : latest?.planned ? undefined
                         : 'Model built from this robot\u2019s recorded spec · approximate geometry, not a measured twin. Drag to look around it.'}
-                      model={isOmegaRobot ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
+                      model={isOmegaRobot ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} robotId={robot.id} looks={robot.partLooks} />}
                       onSave={(next) => patchRobot(robot.id, (r) => {
                         if (next) return { ...r, spin: next };
                         const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
