@@ -287,11 +287,13 @@ python3 -m http.server 8765 -d web-next/out &        # then serve the static bui
 until curl -sf http://localhost:8765/ >/dev/null; do sleep 1; done
 node tools/capture_3d.cjs --shot demo --out demo-replay.mp4 --sheet
 node tools/capture_3d.cjs --shot teardown --robot turtlebot3-burger --out teardown.mp4
+node tools/capture_3d.cjs --shot film --cut full --out omega1-teardown-20s.mp4   # or --cut short (10 s)
 ```
 
 The output is 1920×1080, 60 fps H.264 (yuv420p, faststart). `--sheet` also
 writes a contact sheet with one frame per second. It needs Node 20+,
-Playwright with Chromium, and ffmpeg.
+Playwright with Chromium, and ffmpeg. The Omega1 film shot (`/film/`, with its
+score muxed in) needs Node 22.18+, because it loads its TypeScript script directly.
 
 ## License
 

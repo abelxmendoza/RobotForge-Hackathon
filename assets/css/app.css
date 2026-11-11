@@ -2419,3 +2419,19 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .o1sim-sources h2{margin:0 0 8px}.o1sim-sources>p{max-width:72ch}
 .o1sim-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 @media(max-width:640px){.o1sim-sources table,.o1sim-sources tbody,.o1sim-sources tr,.o1sim-sources td{display:block;width:auto}.o1sim-sources thead{display:none}.o1sim-sources tr{padding:10px 0;border-bottom:1px solid var(--border)}.o1sim-sources td{border:0;padding:2px 0;text-align:left}.o1sim-sources td:first-child{font-weight:600}.o1sim-canvas{height:340px}.o1sim-pad{margin-left:0;width:100%;justify-content:center}.o1sim-caption{position:static;max-width:none;border-radius:0;border-width:1px 0 0;backdrop-filter:none;padding:10px 14px}.o1sim-caption p{font-size:13px}.o1sim-big{font-size:24px}}
+/* Omega1 teardown film (/film/) */
+.o1film{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0}
+.o1film-scene{margin:0;position:relative;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#0a1520}
+.o1film-canvas{aspect-ratio:16/9;width:100%;max-height:72vh;min-height:220px;position:relative}
+.o1film-canvas canvas{display:block;max-width:100%}
+.o1film-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;color:var(--text-muted)}
+.o1film-caption{position:absolute;left:14px;bottom:14px;max-width:min(560px,calc(100% - 28px));padding:12px 14px;border-radius:12px;background:rgba(8,15,22,.84);border:1px solid rgba(66,214,196,.35);backdrop-filter:blur(4px)}
+.o1film-caption p{margin:0;font-size:14px;line-height:1.45}
+.o1film-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.o1film-scrub{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.o1film-time{font:600 13px/1 var(--mono);color:var(--text-muted)}
+.o1film-cuts{display:flex;gap:6px}
+.o1film-cuts .btn[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+.o1film-shots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.o1film-shots .chip.on{border-color:var(--accent);color:var(--accent)}
+@media(max-width:640px){.o1film-caption{position:static;max-width:none;border-radius:0;border-width:1px 0 0;backdrop-filter:none;padding:10px 14px}.o1film-caption p{font-size:13px}.o1film-canvas{min-height:0}}
