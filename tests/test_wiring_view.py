@@ -143,7 +143,7 @@ def test_jetson_orin_nano_in_catalogue():
     assert "5 V" in p.specs["supply"]
     assert "25 W" in p.specs["power_modes"]
     assert "69.6" in p.specs["size"]
-    assert len(cat.parts) == 167  # 150 + 17 VEX V5 parts (2026-11-10)
+    assert len(cat.parts) == 178  # 150 + 17 VEX V5 + 11 VEX IQ parts (2026-11-10)
 
 
 def test_wiring_view_ships_on_robot_and_forge_pages():

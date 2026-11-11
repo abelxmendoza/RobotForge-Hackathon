@@ -63,6 +63,9 @@ export function readGearing(spec: Spec): Gearing | null {
 }
 
 export const isVexV5 = (spec: Spec): boolean => (readGearing(spec)?.platform ?? '').toLowerCase() === 'vex_v5';
+export const isVexIq = (spec: Spec): boolean => (readGearing(spec)?.platform ?? '').toLowerCase() === 'vex_iq';
+/** VEX IQ Smart Motor (kb.vex.com): 120 rpm, 0.414 N·m stall, 1.4 W. Mirrors src/robotforge/vex.py. */
+export const IQ_MOTOR = { freeRpm: 120, stallTorqueNm: 0.414, powerW: 1.4 } as const;
 
 export interface WheelSpot { x: number; y: number; driven: boolean; side: 'left' | 'right' }
 
@@ -106,7 +109,9 @@ export function driveLayout(spec: Spec): DriveLayout | null {
     label: `${n}-wheel ${text.label.toLowerCase()}`,
     steering: text.steering,
     wheels,
-    twinWheelNote: n > 4 ? `The 3D twin and the Gazebo model draw 4 of these ${n} wheels; the numbers on this tab use all ${n}.` : null,
+    // The 3D twin, URDF and Gazebo model draw every wheel (6-wheel drives
+    // included); only the browser drive simulator stops at 6.
+    twinWheelNote: n > 6 ? `The drive simulator handles up to 6 wheels; the 3D twin, the Gazebo model and the numbers on this tab use all ${n}.` : null,
   };
 }
 

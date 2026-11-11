@@ -190,11 +190,11 @@ function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, sp
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
         <Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>
-        <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX V5 robot</button>
+        <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX robot</button>
       </div>
       {vexOpen && (
         <div className="garage-vex">
-          <p className="g-small">VEX V5 robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears later in its Drive train tab.</p>
+          <p className="g-small">VEX robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears on V5 robots later in the Drive train tab, which also checks the robot against this season&apos;s competition rules.</p>
           <div className="garage-vex-list">
             {VEX_STARTERS.map((s) => (
               <button key={s.file} type="button" className="garage-vex-card" onClick={() => void startVex(s)}>

@@ -2342,6 +2342,10 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .dt-controls select,.dt-budget select{padding:6px 8px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);font:inherit;max-width:100%}
 .dt-actions{display:flex;gap:8px;flex-wrap:wrap}
 .dt-budget{display:flex;flex-direction:column;gap:8px}
+.dt-rules{margin-top:var(--s4);display:flex;flex-direction:column;gap:8px}
+.dt-rules-table td{vertical-align:top}
+.fbadge.ok{color:var(--pass);border-color:var(--pass)}
+.fbadge.fail{color:var(--fail);border-color:var(--fail)}
 .dt-meter{display:flex;height:12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden}
 .dt-meter-drive{background:var(--accent)}
 .dt-meter-other{background:var(--marginal)}

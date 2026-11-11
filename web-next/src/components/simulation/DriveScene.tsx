@@ -37,8 +37,8 @@ export default function DriveScene({spec,robot,identity,scenario,running,resetKe
    // Fallback geometry is explicitly a proxy, never presented as a detailed twin.
    const proxy=new THREE.Group();const bodyH=Number(spec.height_m)||.18,clear=Number(spec.ground_clearance_m)||.02,L=Number(spec.length_m)||.3,W=Number(spec.width_m)||.2;
    const body=new THREE.Mesh(new THREE.BoxGeometry(L,W,Math.max(.01,bodyH-clear)),new THREE.MeshStandardMaterial({color:0x2da99c,metalness:.3,roughness:.5}));body.position.z=clear+(bodyH-clear)/2;body.castShadow=true;proxy.add(body);
-   const n=[2,4].includes(spec.wheel?.count)?spec.wheel.count:4,r=Number(spec.wheel?.diameter_m)/2||.04,ww=Number(spec.wheel?.width_m)||.02;
-   for(let i=0;i<n;i++){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(r,r,ww,24),new THREE.MeshStandardMaterial({color:0x11191f,roughness:.9}));wheel.position.set(n===2?0:(i<2?1:-1)*(L/2-r),(i%2===0?1:-1)*(W/2+ww/2),r);proxy.add(wheel);wheel.castShadow=true;}
+   const n=[2,4,6].includes(spec.wheel?.count)?spec.wheel.count:4,per=Math.ceil(n/2),r=Number(spec.wheel?.diameter_m)/2||.04,ww=Number(spec.wheel?.width_m)||.02;
+   for(let i=0;i<n;i++){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(r,r,ww,24),new THREE.MeshStandardMaterial({color:0x11191f,roughness:.9}));wheel.position.set(n===2?0:n===4?(i<2?1:-1)*(L/2-r):(L/2-r)*(1-2*Math.floor(i/2)/(per-1)),(i%2===0?1:-1)*(W/2+ww/2),r);proxy.add(wheel);wheel.castShadow=true;}
    shell.add(proxy);setCaption('Physics proxy · no detailed model attached');
    const tick=(now:number)=>{
     if(disposed)return;elapsed+=Math.min((now-last)/1000,.05);last=now;

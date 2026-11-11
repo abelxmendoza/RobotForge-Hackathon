@@ -140,14 +140,15 @@ def test_drive_numbers_name_what_is_missing():
         assert field in n["missing"]
 
 
-def test_layout_is_none_without_wheels_and_notes_six_wheels():
+def test_layout_is_none_without_wheels_and_draws_six_wheels():
     assert _ts('D.driveLayout({"drivetrain":"multirotor"})') is None
     six = json.loads(json.dumps(EXAMPLE))
     six["wheel"]["count"] = 6
     six["motor"]["count"] = 6
     lay = _ts(f"D.driveLayout({json.dumps(six)})")
     assert len(lay["wheels"]) == 6 and all(w["driven"] for w in lay["wheels"])
-    assert lay["twinWheelNote"] and "4 of these 6" in lay["twinWheelNote"]
+    # the 3D twin and the Gazebo model now draw all six, so no note
+    assert lay["twinWheelNote"] is None
     xs = sorted({round(w["x"], 4) for w in lay["wheels"]})
     assert len(xs) == 3  # three axles, evenly spread
 
@@ -182,10 +183,11 @@ STARTERS = (ROOT / "web-next/src/lib/vexStarters.ts").read_text()
 def test_every_vex_starter_is_a_clean_v5_spec(fname):
     data = json.loads((ROOT / "examples" / fname).read_text())
     spec = RobotSpec.from_dict(data)
-    assert spec.gearing.platform == "vex_v5"
+    assert spec.gearing.platform in ("vex_v5", "vex_iq")
     assert [f.check for f in validate(spec)] == ["all"], fname
-    budget = v5rc_budget(spec)
-    assert budget and budget["ok"], fname
+    if spec.gearing.platform == "vex_v5":
+        budget = v5rc_budget(spec)
+        assert budget and budget["ok"], fname
     n = _ts(f"D.driveNumbers({json.dumps(data)})")
     assert n["missing"] == [] and n["torqueMismatch"] is None, fname
 
@@ -198,7 +200,7 @@ def test_starters_cover_different_drive_styles():
     rpms = {s["gearing"]["motor_free_rpm"] * s["gearing"]["driving_teeth"]
             / s["gearing"]["driven_teeth"] for s in specs}
     assert min(rpms) <= 200 and max(rpms) >= 450  # torque and speed builds
-    assert "Start a VEX V5 robot" in GARAGE and "VEX_STARTERS.map" in GARAGE
+    assert "Start a VEX robot" in GARAGE and "VEX_STARTERS.map" in GARAGE
 
 
 def test_setup_controls_follow_the_recorded_setup():
@@ -232,7 +234,8 @@ def test_suggestions_are_different_and_valid(n):
     builds = _ts(f"B.suggestVexBuilds({n}, [])")
     assert len(builds) == n
     shapes = {(b["spec"]["drivetrain"], b["spec"]["motor"]["count"],
-               b["spec"]["wheel"].get("kind")) for b in builds}
+               b["spec"]["wheel"].get("kind"), b["spec"]["wheel"]["count"],
+               bool(b["spec"].get("vex_mechanisms"))) for b in builds}
     assert len(shapes) == n  # no two ideas are the same drive
     for b in builds:
         spec = RobotSpec.from_dict(b["spec"])
@@ -268,7 +271,7 @@ def test_vex_edit_ignores_other_asks(text):
 
 
 @pytest.mark.parametrize("ops", [
-    [{"kind": "faster"}], [{"kind": "stronger"}], [{"kind": "motors", "n": 6}],
+    [{"kind": "faster"}], [{"kind": "stronger"}], [{"kind": "motors", "n": 2}],
     [{"kind": "drive", "drive": "mecanum"}], [{"kind": "wheelSize", "inches": 2.75}],
 ])
 def test_edits_change_the_drive_and_stay_valid(ops):
@@ -276,7 +279,7 @@ def test_edits_change_the_drive_and_stay_valid(ops):
     out = _ts(f"B.editVexSpec({json.dumps(base)}, {json.dumps(ops)})")
     assert out["changes"] and not out["problems"]
     spec = RobotSpec.from_dict(out["spec"])
-    assert [f.check for f in validate(spec)] in (["all"], ["vex.v5rc_motor_power"])
+    assert [f.check for f in validate(spec)] == ["all"]
     assert out["spec"]["name"] == base["name"]
     before = _ts(f"D.driveNumbers({json.dumps(base)})")
     after = _ts(f"D.driveNumbers({json.dumps(out['spec'])})")
@@ -326,9 +329,9 @@ def _model(expr: str):
 
 
 def test_model_layout_follows_the_spec():
-    six = json.loads((ROOT / "examples/vex-v5-speed-tank-6m.json").read_text())
+    six = json.loads((ROOT / "examples/vex-v5-speed-tank.json").read_text())
     lay = _model(f"M.vexLayout({json.dumps(six)})")
-    assert lay["perSide"] == 3 and len(lay["motorXs"]) == 3
+    assert lay["perSide"] == 3 and len(lay["motorXs"]) == 2  # 4 motors on 6 wheels
     assert lay["cartridge"] == "blue" and (lay["driving"], lay["driven"]) == (36, 48)
     mec = _model(f"M.vexLayout({json.dumps(json.loads((ROOT / 'examples/vex-v5-mecanum.json').read_text()))})")
     assert mec["wheelKind"] == "mecanum"
@@ -381,7 +384,9 @@ def test_competition_robot_counts_mechanisms_in_power_and_mass():
     out = _ts(f"B.editVexSpec({json.dumps(comp['spec'])}, [{{kind:'addMech', mech:'lift'}}])")
     assert "added lift tower (2 motors)" in out["changes"]
     assert out["spec"]["mass_kg"] == pytest.approx(comp["spec"]["mass_kg"] + 1.0)
-    assert any("99 W, over the V5RC 88 W cap" in p for p in out["problems"])
+    assert not out["problems"]  # 44 W drive + 33 W mechanisms = 77 of 88 W
+    six = _ts(f"B.editVexSpec({json.dumps(out['spec'])}, [{{kind:'motors', n:8}}])")
+    assert any("121 W, over the V5RC 88 W cap" in p for p in six["problems"])
     back = _ts(f"B.editVexSpec({json.dumps(out['spec'])}, [{{kind:'removeMech', mech:'lift'}}])")
     assert back["spec"]["vex_mechanisms"] == ["intake", "pneumatics"] and not back["problems"]
     again = _ts(f"B.editVexSpec({json.dumps(comp['spec'])}, [{{kind:'addMech', mech:'intake'}}])")
@@ -430,3 +435,13 @@ def test_spectated_vex_robots_are_sightings_not_owned():
     for sid in ("vex-1658x", "vex-404s"):
         line = next(l for l in dex.splitlines() if f'"{sid}":' in l)
         assert "Not your robot" in line
+
+
+def test_six_drive_motors_break_the_2026_27_drivetrain_limit():
+    """V5RC 2026-27 (Override manual v0.2, R11): drivetrain motors at
+    most 55 W, so 6 x 11 W (66 W) is refused with the rule named."""
+    base = json.loads((ROOT / "examples/vex-v5-tank-drive.json").read_text())
+    out = _ts(f"B.editVexSpec({json.dumps(base)}, [{{kind:'motors', n:6}}])")
+    assert any("55 W drivetrain limit (R11)" in p for p in out["problems"])
+    checks = [f.check for f in validate(RobotSpec.from_dict(out["spec"]))]
+    assert checks == ["vex.v5rc_drivetrain_motors"]

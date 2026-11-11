@@ -10,9 +10,10 @@
  * own fields; missing inputs are named, never guessed. */
 import { useEffect, useMemo, useState } from 'react';
 import VexModel3D from './VexModel3D';
+import { rulebookCheck, type RuleReport } from '@/lib/vexRules';
 import type { Spec } from '@/lib/garage';
 import {
-  applyGearing, ASSUMED_TRACTION_MU, currentVexChoice, driveLayout, driveNumbers, isVexV5, readGearing,
+  applyGearing, ASSUMED_TRACTION_MU, currentVexChoice, driveLayout, driveNumbers, isVexIq, isVexV5, readGearing,
   v5rcBudget, V5_CARTRIDGES, V5_MOTOR_POWERS_W, VEX_GEAR_TEETH, vexGearing, type DriveLayout, type VexChoice,
 } from '@/lib/drivetrain';
 
@@ -39,10 +40,42 @@ function TopView({ layout, spec }: { layout: DriveLayout; spec: Spec }) {
   );
 }
 
+/* The robot against its competition's rulebook (lib/vexRules.ts):
+ * each rule the spec can answer, plus the ones only an inspector can. */
+function RulesPanel({ report }: { report: RuleReport }) {
+  const rb = report.rulebook;
+  const mark = { pass: 'Pass', fail: 'Fails', unknown: 'Not recorded' } as const;
+  return (
+    <div className="dt-rules" data-testid="vex-rules">
+      <h4>{rb.competition} {rb.season} rules <span className="faint g-small">({rb.game})</span></h4>
+      <p className={'g-small ' + (report.ok ? '' : 'g-error')}>
+        {report.ok ? 'This spec passes every rule it can be checked against.' : 'This robot would not pass inspection as specified.'}
+      </p>
+      <table className="dt-table dt-rules-table">
+        <tbody>
+          {report.results.map((r) => (
+            <tr key={r.rule + r.label}>
+              <th scope="row">{r.rule} · {r.label}</th>
+              <td><span className={'fbadge ' + (r.verdict === 'pass' ? 'ok' : r.verdict === 'fail' ? 'fail' : 'planned')}>{mark[r.verdict]}</span></td>
+              <td className="g-small">{r.detail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <details className="g-small">
+        <summary>Checked at inspection, not from the spec</summary>
+        <ul>{report.inspectOnly.map((s) => <li key={s}>{s}</li>)}</ul>
+      </details>
+      <p className="faint g-small">From the {rb.manual}. Game manuals change every season: <a href={rb.url} target="_blank" rel="noreferrer">check the current manual</a>.</p>
+    </div>
+  );
+}
+
 export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: (next: Spec) => void }) {
   const layout = useMemo(() => driveLayout(spec), [spec]);
   const nums = useMemo(() => driveNumbers(spec), [spec]);
   const vex = isVexV5(spec);
+  const iq = isVexIq(spec);
   const gearing = readGearing(spec);
   const [choice, setChoice] = useState<VexChoice>(() => currentVexChoice(spec));
   /* The Garage can mount this tab before the selected robot's draft
@@ -58,6 +91,7 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
   const budget = v5rcBudget(spec, otherW, vex ? { motorPowerW: choice.motorPowerW } : undefined);
   const now = currentVexChoice(spec);
   const changed = vex && JSON.stringify(now) !== JSON.stringify(choice);
+  const rules = useMemo(() => rulebookCheck(changed ? applyGearing(spec, whatIf) : spec), [spec, changed, whatIf]);
 
   if (!layout) {
     return (
@@ -78,12 +112,12 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
       <div className="dt-head">
         <div>
           <span className="eyebrow">Drive train</span>
-          <h3 id="dt-title">{layout.label}{vex && <span className="fbadge dt-vex">VEX V5</span>}</h3>
+          <h3 id="dt-title">{layout.label}{vex && <span className="fbadge dt-vex">VEX V5</span>}{iq && <span className="fbadge dt-vex">VEX IQ</span>}</h3>
           <p className="faint">{layout.steering}</p>
         </div>
       </div>
 
-      {vex && <VexModel3D spec={changed ? applyGearing(spec, whatIf) : spec} label={String(spec?.name ?? 'VEX robot')} height={320} caption={changed ? '3D 360° with your changes · drag to turn · drawn from the spec’s numbers, not CAD' : '3D 360° · drag to turn · drawn from the spec’s numbers, not CAD'} />}
+      {(vex || iq) && <VexModel3D spec={changed ? applyGearing(spec, whatIf) : spec} label={String(spec?.name ?? 'VEX robot')} height={320} caption={changed ? '3D 360° with your changes · drag to turn · drawn from the spec’s numbers, not CAD' : '3D 360° · drag to turn · drawn from the spec’s numbers, not CAD'} />}
 
       <div className="dt-grid">
         <figure className="dt-figure">
@@ -96,7 +130,7 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
             {vex && <thead><tr><th /><th scope="col">Now</th><th scope="col">With your changes</th></tr></thead>}
             <tbody>
               {row('Wheels', `${layout.wheels.length} × ${fmt((Number(spec?.wheel?.diameter_m) || 0) * 1000, 0, 'mm')}`)}
-              {row('Drive motors', vex ? `${motorCount} × V5 ${now.motorPowerW} W` : `${motorCount || '—'}${spec?.motor?.kind ? ' × ' + String(spec.motor.kind).replace(/_/g, ' ') : ''}`, vex ? `${motorCount} × V5 ${choice.motorPowerW} W` : undefined)}
+              {row('Drive motors', iq ? `${motorCount} × IQ Smart Motor` : vex ? `${motorCount} × V5 ${now.motorPowerW} W` : `${motorCount || '—'}${spec?.motor?.kind ? ' × ' + String(spec.motor.kind).replace(/_/g, ' ') : ''}`, vex ? `${motorCount} × V5 ${choice.motorPowerW} W` : undefined)}
               {row('Gearing (motor : wheel)', gearing ? `${gearing.drivingTeeth}:${gearing.drivenTeeth}` : 'direct (not recorded)', vex ? `${choice.drivingTeeth}:${choice.drivenTeeth}` : undefined)}
               {row('Wheel speed, no load', fmt(nums.wheelRpm, 0, 'rpm'), vex ? fmt(after.wheelRpm, 0, 'rpm') : undefined)}
               {row('Top speed, no load', fmt(nums.freeSpeedMps, 2, 'm/s'), vex ? fmt(after.freeSpeedMps, 2, 'm/s') : undefined)}
@@ -172,6 +206,8 @@ export default function DriveTrainTab({ spec, onApply }: { spec: Spec; onApply: 
           )}
         </div>
       )}
+
+      {rules && <RulesPanel report={rules} />}
     </section>
   );
 }

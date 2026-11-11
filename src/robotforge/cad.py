@@ -83,15 +83,10 @@ def kit_slug(name: str) -> str:
 
 
 def wheel_positions(spec: RobotSpec) -> list[tuple[float, float]]:
-    """Wheel (x, y) centres in metres — mirrors urdf.py exactly: a 2-wheel
-    layout gets the pair at the chassis centre; anything else gets the
-    front/rear corner pairs truncated to the spec's wheel count."""
-    wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0
-    wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
-    if spec.wheel.count == 2:
-        return [(0.0, wheel_y), (0.0, -wheel_y)]
-    return [(wheel_x, wheel_y), (wheel_x, -wheel_y),
-            (-wheel_x, wheel_y), (-wheel_x, -wheel_y)][:spec.wheel.count]
+    """Wheel (x, y) centres in metres: the same layout as the URDF
+    (urdf.wheel_layout), including the middle wheels of a 6-wheel drive."""
+    from .urdf import wheel_layout
+    return wheel_layout(spec)
 
 
 @dataclass
