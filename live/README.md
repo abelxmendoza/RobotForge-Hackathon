@@ -30,6 +30,7 @@ one constant lights the live steps up.
 | `POST /part-chat` | `{part, message, history?}` → `{reply, update, confirmed}`: talk a part through until its owner confirms it | any one chain key |
 | `POST /photo` | `{image_data_url, note?, mode?}` → photo draft spec (Meta Model API vision, `muse-spark-1.3`; Muse Spark Open on Baseten as the backup, and the reply's `model` names whichever answered). `mode` omitted/`"photo"`: an ESTIMATED draft from a robot photo. `mode: "document"`: a TRANSCRIBED draft from a spec-sheet/blueprint photo (below) | `META_API_KEY` or `BASETEN_API_KEY` (**optional**) |
 | `POST /transcribe` | `{audio_b64}` → `{transcript, model}`: one spoken description transcribed by Muse Voice Transcribe (`muse-voice-transcribe-1.0`). WAV only — the batch endpoint rejects MP3/WebM containers (verified 2026-10-31), so the site encodes recordings to WAV in the browser. If Meta fails, Muse Spark Open's audio input on Baseten transcribes it instead (`model` says which) | `META_API_KEY` or `BASETEN_API_KEY` (**optional**) |
+| `POST /part-mesh` (+ `/status`, `/file`) | `{part, description}` → starts one Meshy text-to-3D job for a single robot part; `{id}` → its status; `{id}` → the finished GLB. Powers Wrench's "make the wheels look like …" (below) | `MESHY_API_KEY` (**optional**) |
 | `POST /web` | `{mode: "scrape", url}` → one public page as bounded markdown, or `{mode: "search", query, limit?}` → up to 5 web results (Firecrawl API v2). Powers the chat's web search / page reading (below) | `FIRECRAWL_API_KEY` (**optional**) |
 
 `/photo` without the Meta key answers `501 photo_not_configured`
@@ -177,6 +178,39 @@ Until the secret exists, `/web` answers
 `501 firecrawl_not_configured` and `/health` reports
 `routes.web: false` — the designed off state, not an error: the
 chat simply answers without the web, exactly as before.
+
+## One-part 3D regeneration (`/part-mesh`, Meshy)
+
+Wrench can change ONE part of a robot's 3D model with words. Size
+edits ("make the wheels bigger") need nothing from this Worker: the
+site maps the words to spec fields. Look edits ("make the wheels
+look like knobby off-road tyres") need a new mesh, which this Worker
+asks Meshy's text-to-3D API for (`POST /openapi/v2/text-to-3d`,
+`mode: "preview"`, GLB only, remeshed to ~12k faces, moderation on).
+
+- The client sends only a part id from a fixed list (`MESH_PARTS`)
+  and the owner's words (≤ 200 chars). The prompt is built here;
+  no robot record, name or id leaves the site.
+- Each job counts against the normal live budget **and** a small
+  mesh-only cap: `MESH_DAILY_LIMIT` (default 10 a day in total) and
+  `MESH_PER_IP_DAILY_LIMIT` (default 3 a day per visitor), counted
+  before the upstream call and failing closed like the others.
+- `/part-mesh/status` and `/part-mesh/file` serve only job ids this
+  Worker started (kept in KV for 2 days). `/file` downloads the GLB
+  from Meshy's own https `*.meshy.ai` link (20 MB cap) and serves it
+  with this site's CORS, because Meshy's links are signed and expire.
+- The site saves the GLB in the visitor's browser (IndexedDB) and
+  fits it into that part's space in the 3D model, captioned as a
+  generated look. The spec is never changed by a look edit.
+
+**To switch it on (the site owner's step):** create an API key at
+<https://www.meshy.ai> (API settings; API use needs a paid plan with
+credits), then add `MESHY_API_KEY` as a secret **as part of a safe
+deploy** (see `AGENTS.md`: never a plain `wrangler deploy`, never
+from outside this folder). `/health` then reports
+`routes.part_mesh: true` and `providers.meshy: true`. Until then
+`/part-mesh` answers `501 mesh_not_configured` and Wrench says
+size edits still work.
 
 ## Document mode (`/photo` with `mode: "document"`)
 

@@ -43,6 +43,20 @@
  *                     content is UNTRUSTED external data: the client
  *                     passes it to /chat only as a labelled
  *                     web_context block with its source URL(s).
+ *   POST /part-mesh -> { part, description } => { id, status }
+ *                     starts ONE text-to-3D job on Meshy for a single
+ *                     robot part (key: MESHY_API_KEY). The prompt is
+ *                     built HERE from a fixed part list and the
+ *                     owner's words (<= 200 chars); the client cannot
+ *                     send its own prompt. Counts against the live
+ *                     budget AND its own smaller daily cap
+ *                     (MESH_DAILY_LIMIT, default 10; per visitor 3),
+ *                     because each job spends 3D credits.
+ *   POST /part-mesh/status -> { id } => { id, status, progress }
+ *   POST /part-mesh/file   -> { id } => the GLB bytes (model/gltf-binary)
+ *                     Only job ids this Worker started are served.
+ *                     Without the key: 501 mesh_not_configured and
+ *                     /health reports routes.part_mesh false.
  *   POST /part-chat-> { part, message, history? } => { reply, update,
  *                     confirmed, model } — talk a part through until
  *                     the owner confirms what it is.
@@ -147,6 +161,19 @@ const WEB_URL_MAX_CHARS = 2000;
 const WEB_MARKDOWN_CAP = 12000; // one scraped page, chars of markdown
 const WEB_RESULT_MARKDOWN_CAP = 2000; // per search result excerpt
 const WEB_SEARCH_MAX_LIMIT = 5;
+const MESHY_URL = 'https://api.meshy.ai/openapi/v2/text-to-3d';
+const MESH_DESCRIPTION_MAX_CHARS = 200;
+const MESH_FILE_MAX_BYTES = 20 * 1024 * 1024;
+const MESH_TASK_TTL_SECONDS = 2 * 24 * 3600;
+/* The parts /part-mesh will generate, by the take-apart part id the
+ * site's 3D model uses, as the one-part noun the prompt starts with. */
+const MESH_PARTS = {
+  wheel: 'robot wheel with its tyre', rotor: 'propeller', camera: 'camera module',
+  lidar: 'lidar sensor', ultrasonic: 'ultrasonic distance sensor', caster: 'ball caster',
+  mount: 'motor mount bracket', battery: 'battery pack', fc: 'flight controller board',
+  arm: 'robot arm', leg: 'robot leg', head: 'robot head', gripper: 'robot gripper',
+  plate: 'flat chassis deck plate', frame: 'drone frame', body: 'robot body shell',
+};
 const FIREWORKS_MODEL = 'accounts/fireworks/models/muse-spark-open';
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 const ALLOWED_ORIGINS = [
@@ -1603,6 +1630,199 @@ async function firecrawlCall(env, path, payload) {
   }
 }
 
+/* ---------------- one-part 3D regeneration (/part-mesh) ---------------- */
+
+function meshNotConfigured(request) {
+  return err(request, 501, 'mesh_not_configured',
+    'Regenerating a part in 3D is not switched on at this endpoint yet (no 3D service key). Size edits like "make the wheels bigger" still work.');
+}
+
+/* The words go to a third-party 3D service, so they are cleaned to
+ * one line of printable text, and the prompt itself is fixed here. */
+function meshPrompt(partId, description) {
+  const noun = MESH_PARTS[partId];
+  const words = String(description).replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  return 'A single ' + noun + ' for a small hobby robot: ' + words +
+    '. One isolated part on its own, no robot body, no stand, no base, centred.';
+}
+
+/* The mesh-only cap, on top of gateBudget: each job spends 3D
+ * credits, so it gets its own small daily limit (global and per
+ * visitor). Counted before the upstream call, like gateBudget. */
+async function gateMeshBudget(env, request) {
+  const kv = env.RF_LIVE_KV;
+  if (!kv) return null;
+  try {
+    const day = dayStamp();
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const limit = intEnv(env.MESH_DAILY_LIMIT, 10);
+    const perIp = intEnv(env.MESH_PER_IP_DAILY_LIMIT, 3);
+    const used = await readCount(kv, 'mesh:' + day);
+    const ipUsed = await readCount(kv, 'mesh-ip:' + day + ':' + ip);
+    if (ipUsed >= perIp) {
+      return err(request, 429, 'mesh_rate_limited',
+        'You have regenerated ' + perIp + ' parts today, which is the daily limit. Size edits still work.');
+    }
+    if (used >= limit) {
+      return err(request, 503, 'mesh_budget_exhausted',
+        'Today\'s 3D generation budget is used up. Size edits still work.');
+    }
+    const ttl = { expirationTtl: 172800 };
+    await kv.put('mesh:' + day, String(used + 1), ttl);
+    await kv.put('mesh-ip:' + day + ':' + ip, String(ipUsed + 1), ttl);
+    return null;
+  } catch (e) {
+    return err(request, 503, 'guardrail_error',
+      'The 3D budget guardrail is unavailable, so 3D generation is paused.');
+  }
+}
+
+async function meshyFetch(env, url, init = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    return await fetch(url, {
+      ...init,
+      headers: { 'Authorization': 'Bearer ' + env.MESHY_API_KEY,
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const MESH_ID_RE = /^[A-Za-z0-9-]{8,64}$/;
+
+/* Only ids this Worker started (and still remembers) are served,
+ * so the key can't be used to read anyone else's Meshy jobs. */
+async function knownMeshTask(env, id) {
+  if (typeof id !== 'string' || !MESH_ID_RE.test(id)) return false;
+  if (!env.RF_LIVE_KV) return true; // dev without KV: nothing to check against
+  return (await env.RF_LIVE_KV.get('meshtask:' + id)) !== null;
+}
+
+async function handlePartMesh(request, env) {
+  if (!env.MESHY_API_KEY) return meshNotConfigured(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  const partId = data && data.part;
+  if (typeof partId !== 'string' || !Object.prototype.hasOwnProperty.call(MESH_PARTS, partId)) {
+    return err(request, 400, 'bad_part',
+      'part must be one of: ' + Object.keys(MESH_PARTS).join(', ') + '.');
+  }
+  const description = typeof data.description === 'string' ? data.description.trim() : '';
+  if (!description) {
+    return err(request, 400, 'missing_description', 'Say what the part should look like.');
+  }
+  if (description.length > MESH_DESCRIPTION_MAX_CHARS) {
+    return err(request, 413, 'too_large',
+      'The description is over ' + MESH_DESCRIPTION_MAX_CHARS + ' characters.');
+  }
+  const gate = await gateBudget(env, request);
+  if (gate) return gate;
+  const meshGate = await gateMeshBudget(env, request);
+  if (meshGate) return meshGate;
+  let res;
+  try {
+    res = await meshyFetch(env, MESHY_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        mode: 'preview',
+        prompt: meshPrompt(partId, description),
+        should_remesh: true,
+        target_polycount: 12000,
+        target_formats: ['glb'],
+        moderation: true,
+      }),
+    });
+  } catch (e) {
+    return err(request, 502, 'upstream_error', 'The 3D service did not answer. Try again later.');
+  }
+  if (res.status === 402) return err(request, 502, 'mesh_no_credits', 'The 3D service account is out of credits.');
+  if (res.status === 403) return err(request, 422, 'mesh_moderated', 'The 3D service declined that description. Try different words.');
+  if (res.status === 429) return err(request, 429, 'mesh_upstream_busy', 'The 3D service is busy. Try again in a minute.');
+  if (!res.ok) return err(request, 502, 'upstream_error', 'The 3D service answered HTTP ' + res.status + '.');
+  const body = await res.json().catch(() => null);
+  const id = body && typeof body.result === 'string' ? body.result : '';
+  if (!MESH_ID_RE.test(id)) return err(request, 502, 'upstream_error', 'The 3D service sent no job id.');
+  if (env.RF_LIVE_KV) {
+    await env.RF_LIVE_KV.put('meshtask:' + id, partId, { expirationTtl: MESH_TASK_TTL_SECONDS });
+  }
+  return json(request, 200, { id, status: 'PENDING', progress: 0, provider: 'meshy' });
+}
+
+async function readMeshTask(env, id) {
+  const res = await meshyFetch(env, MESHY_URL + '/' + encodeURIComponent(id));
+  if (!res.ok) return { error: res.status };
+  return { task: await res.json().catch(() => null) };
+}
+
+async function handlePartMeshStatus(request, env) {
+  if (!env.MESHY_API_KEY) return meshNotConfigured(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  if (!(await knownMeshTask(env, data && data.id))) {
+    return err(request, 404, 'unknown_job', 'No such 3D job here.');
+  }
+  let out;
+  try { out = await readMeshTask(env, data.id); } catch (e) {
+    return err(request, 502, 'upstream_error', 'The 3D service did not answer.');
+  }
+  if (!out.task) return err(request, 502, 'upstream_error', 'The 3D service answered HTTP ' + out.error + '.');
+  const t = out.task;
+  const status = ['PENDING', 'IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'CANCELED'].includes(t.status) ? t.status : 'FAILED';
+  return json(request, 200, {
+    id: data.id, status,
+    progress: Math.max(0, Math.min(100, Number(t.progress) || 0)),
+    ready: status === 'SUCCEEDED' && Boolean(t.model_urls && t.model_urls.glb),
+  });
+}
+
+/* A download link the service handed back: https on meshy.ai only. */
+function meshFileUrl(u) {
+  try {
+    const url = new URL(String(u));
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    if (host !== 'meshy.ai' && !host.endsWith('.meshy.ai')) return null;
+    return url.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function handlePartMeshFile(request, env) {
+  if (!env.MESHY_API_KEY) return meshNotConfigured(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  if (!(await knownMeshTask(env, data && data.id))) {
+    return err(request, 404, 'unknown_job', 'No such 3D job here.');
+  }
+  let out;
+  try { out = await readMeshTask(env, data.id); } catch (e) {
+    return err(request, 502, 'upstream_error', 'The 3D service did not answer.');
+  }
+  const t = out.task;
+  if (!t || t.status !== 'SUCCEEDED') return err(request, 409, 'not_ready', 'That 3D job has not finished.');
+  const fileUrl = meshFileUrl(t.model_urls && t.model_urls.glb);
+  if (!fileUrl) return err(request, 502, 'upstream_error', 'The 3D service sent no usable GLB link.');
+  let file;
+  try {
+    file = await fetch(fileUrl);
+  } catch (e) {
+    return err(request, 502, 'upstream_error', 'Could not download the 3D file.');
+  }
+  if (!file.ok) return err(request, 502, 'upstream_error', 'The 3D file download answered HTTP ' + file.status + '.');
+  const bytes = await file.arrayBuffer();
+  if (bytes.byteLength > MESH_FILE_MAX_BYTES) return err(request, 502, 'too_large', 'The generated 3D file is too big to serve.');
+  return new Response(bytes, {
+    status: 200,
+    headers: { 'Content-Type': 'model/gltf-binary', 'Cache-Control': 'no-store', ...corsHeaders(request) },
+  });
+}
+
 async function handleWeb(request, env) {
   if (!env.FIRECRAWL_API_KEY) {
     return err(request, 501, 'firecrawl_not_configured',
@@ -2696,7 +2916,8 @@ async function handleBomEstimate(request, env) {
  * account gate guards. /health, /auth/* and /admin/* are NOT in
  * this list on purpose (see the header comment). */
 const MODEL_PATHS = ['/describe', '/chat', '/list', '/photo', '/fix',
-  '/part', '/part-chat', '/transcribe', '/web'];
+  '/part', '/part-chat', '/transcribe', '/web',
+  '/part-mesh', '/part-mesh/status', '/part-mesh/file'];
 
 async function handle(request, env) {
   if (originRejected(request)) {
@@ -2736,7 +2957,8 @@ async function handle(request, env) {
        * them); photo/part/transcribe run Meta -> Baseten (either
        * key lights them); web needs the Firecrawl key. */
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY),
-        firecrawl: Boolean(env.FIRECRAWL_API_KEY) },
+        firecrawl: Boolean(env.FIRECRAWL_API_KEY),
+        meshy: Boolean(env.MESHY_API_KEY) },
       /* Accounts: on when the JWT secret + KV exist. Each social
        * login stays off until the founder adds that provider's
        * app secrets. */
@@ -2751,6 +2973,8 @@ async function handle(request, env) {
         transcribe: visionConfigured(env),
         /* Web search/scrape needs the Firecrawl key (optional). */
         web: Boolean(env.FIRECRAWL_API_KEY),
+        /* One-part 3D regeneration needs the Meshy key (optional). */
+        part_mesh: Boolean(env.MESHY_API_KEY),
         /* The Parts API serves from KV: on when the namespace
          * exists (records themselves land at seed time). */
         parts: Boolean(env.RF_LIVE_KV),
@@ -2790,6 +3014,15 @@ async function handle(request, env) {
   }
   if (url.pathname === '/web' && request.method === 'POST') {
     return handleWeb(request, env);
+  }
+  if (url.pathname === '/part-mesh' && request.method === 'POST') {
+    return handlePartMesh(request, env);
+  }
+  if (url.pathname === '/part-mesh/status' && request.method === 'POST') {
+    return handlePartMeshStatus(request, env);
+  }
+  if (url.pathname === '/part-mesh/file' && request.method === 'POST') {
+    return handlePartMeshFile(request, env);
   }
   if (url.pathname === '/auth/register' && request.method === 'POST') {
     return handleAuthRegister(request, env);
@@ -2846,7 +3079,7 @@ async function handle(request, env) {
   if (url.pathname === '/bom/estimate' && request.method === 'POST') {
     return handleBomEstimate(request, env);
   }
-  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe, /web, /parts, /bom/estimate or /auth/*.');
+  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe, /web, /part-mesh, /parts, /bom/estimate or /auth/*.');
 }
 
 export default { fetch: handle };
