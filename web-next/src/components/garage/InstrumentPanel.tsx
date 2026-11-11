@@ -107,7 +107,7 @@ export function HealthGauges({ verdict, roverChecks, targets, measured, recorded
             </Dial>
           );
         })}
-        <Dial fill={recorded ? measured / recorded : 0} tone={recorded && measured === recorded ? 'pass' : 'marginal'} label="Numbers" sub={recorded ? `${recorded - measured} guessed from a photo` : 'none recorded yet'}
+        <Dial fill={recorded ? measured / recorded : 0} tone={recorded && measured === recorded ? 'pass' : 'marginal'} label="Numbers" sub={recorded ? `${recorded - measured} estimated` : 'none recorded yet'}
           title="Spec numbers you typed or imported, out of all recorded ones. The rest were estimated from a photo and still need a measurement.">
           <strong>{measured}<span className="ip-unit">/{recorded}</span></strong>
         </Dial>

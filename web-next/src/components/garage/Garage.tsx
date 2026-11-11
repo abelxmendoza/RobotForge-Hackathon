@@ -1192,7 +1192,7 @@ export default function Garage() {
                 <details className="g-robot-menu">
                   <summary aria-label={`More actions for ${r.name}`} title="More actions"><span aria-hidden="true">⋯</span></summary>
                   <div className="g-robot-menu-pop">
-                    <button type="button" className="btn btn-sm btn-ghost" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute('open'); deleteForever(r); }}>Delete {r.name}…</button>
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute('open'); deleteForever(r); }} aria-label={`Delete ${r.name}`}>Delete robot…</button>
                   </div>
                 </details>
               )}
