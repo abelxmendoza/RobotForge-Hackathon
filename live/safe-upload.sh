@@ -40,7 +40,8 @@ fi
 REQUIRED="AUTH_JWT_SECRET BASETEN_API_KEY FIRECRAWL_API_KEY GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET META_API_KEY META_APP_ID META_APP_SECRET OPERATOR_TOKEN"
 # Worker code reads these too; skip them unless you use them.
-OPTIONAL="FIREWORKS_API_KEY GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET"
+# MESHY_API_KEY turns on Wrench one-part 3D edits (PR #192).
+OPTIONAL="FIREWORKS_API_KEY GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET MESHY_API_KEY"
 
 echo "Step 1/2: uploading the code as a new version (NOT deploying)..."
 npx --yes wrangler versions upload \
