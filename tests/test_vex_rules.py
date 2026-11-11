@@ -226,3 +226,33 @@ def test_six_wheel_takeapart_matches_python():
     assert len(ts) == 6
     for (px, py), (tx, ty) in zip(wheel_layout(spec), ts):
         assert tx == pytest.approx(px) and ty == pytest.approx(py)
+
+
+# ------------------------------------------------- review fixes (PR #191)
+
+def test_starting_size_counts_the_wheels_outside_the_chassis():
+    spec = json.loads(json.dumps(V5))
+    spec["width_m"] = 0.45  # chassis fits 18 in, wheels push it past
+    py = rulebook_check(RobotSpec.from_dict(spec))
+    assert ("R3", "fail") in _verdicts(py)
+    ts = _ts(f"R.rulebookCheck({json.dumps(spec)})")
+    r3 = next(r for r in ts["results"] if r["rule"] == "R3")
+    assert r3["verdict"] == "fail" and "wheels included" in r3["detail"]
+
+
+def test_r11_edit_warning_uses_the_recorded_motor_rating():
+    spec = json.loads(json.dumps(V5))
+    spec["gearing"]["motor_power_w"] = 5.5
+    ops = '[{kind: "motors", n: 6}]'
+    res = _ts(f"B.editVexSpec({json.dumps(spec)}, {ops})")
+    assert res["spec"]["motor"]["count"] == 6
+    assert not any("R11" in p for p in res["problems"]), res["problems"]
+    assert _ts(f"R.rulebookCheck({json.dumps(res['spec'])})")["ok"]
+    # the same edit on 11 W motors is still flagged
+    res11 = _ts(f"B.editVexSpec({json.dumps(V5)}, {ops})")
+    assert any("R11" in p and "66 W" in p for p in res11["problems"])
+
+
+def test_six_wheel_simulator_drives_every_wheel_with_shared_torque():
+    src = (ROOT / "web-next/src/lib/drivePhysics.ts").read_text()
+    assert "chained" in src and "spec.motor.count/nW" in src

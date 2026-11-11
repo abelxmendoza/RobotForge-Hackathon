@@ -107,14 +107,20 @@ export function rulebookCheck(spec: Spec, id?: RulebookId): RuleReport | null {
   const motorW = Number(spec?.gearing?.motor_power_w);
 
   // Starting size
-  const L = Number(spec?.length_m), W = Number(spec?.width_m), H = Number(spec?.height_m);
+  // The whole robot, as the twin draws it: wheels stick out past the
+  // chassis sides (urdf.wheel_layout), and the chassis sits
+  // ground_clearance_m off the floor (src/robotforge/vex.py
+  // robot_envelope_m does the same).
+  const ww = Number(spec?.wheel?.width_m) > 0 ? Number(spec.wheel.width_m) : 0;
+  const clear = Number(spec?.ground_clearance_m) > 0 ? Number(spec.ground_clearance_m) : 0;
+  const L = Number(spec?.length_m), W = Number(spec?.width_m) + 2 * ww, H = Number(spec?.height_m) + clear;
   if ([L, W, H].every((v) => Number.isFinite(v) && v > 0)) {
     const over: string[] = [];
     if (L > rb.size.lengthM + 1e-6) over.push(`length ${inches(L)}`);
-    if (W > rb.size.widthM + 1e-6) over.push(`width ${inches(W)}`);
-    if (H > rb.size.heightM + 1e-6) over.push(`height ${inches(H)}`);
+    if (W > rb.size.widthM + 1e-6) over.push(`width ${inches(W)} (wheels included)`);
+    if (H > rb.size.heightM + 1e-6) over.push(`height ${inches(H)} (from the floor)`);
     results.push({ rule: rb.size.rule, label: 'Starting size', verdict: over.length ? 'fail' : 'pass',
-      detail: over.length ? `Over the ${rb.size.text} limit: ${over.join(', ')}.` : `${inches(L)} long × ${inches(W)} wide × ${inches(H)} tall fits ${rb.size.text}.` });
+      detail: over.length ? `Over the ${rb.size.text} limit: ${over.join(', ')}.` : `${inches(L)} long × ${inches(W)} wide (wheels included) × ${inches(H)} tall fits ${rb.size.text}.` });
   } else {
     results.push({ rule: rb.size.rule, label: 'Starting size', verdict: 'unknown', detail: 'The spec does not record all three sizes.' });
   }

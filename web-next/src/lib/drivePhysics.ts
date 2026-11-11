@@ -26,8 +26,11 @@ export async function createDriveWorld(spec:Spec,scenario:Scenario,walls:SimWall
   const wheel=world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(x,y,r).setCanSleep(false));
   world.createCollider(R.ColliderDesc.cylinder(ww/2,r).setMass(mass*.2/spec.wheel.count).setFriction(SIM_TYRE_FRICTION),wheel);
   const joint=world.createImpulseJoint(R.JointData.revolute({x,y,z:r},{x:0,y:0,z:0},{x:0,y:1,z:0}),body,wheel,true) as import('@dimforge/rapier3d-compat').RevoluteImpulseJoint;
-  joint.setContactsEnabled(false);if(i>=spec.motor.count)continue;
-  joint.configureMotorModel(R.MotorModel.ForceBased);joint.configureMotorVelocity(0,20);joint.setMotorMaxForce(spec.motor.stall_torque_nm*SIM_USABLE_STALL_FRACTION);wheels.push({joint,y});
+  // Fewer motors than wheels on a 6-wheel drive: the chain or gears drive every wheel, so all wheels turn and share the motors' total torque (never more torque than the motors give).
+  const chained=nW>4&&spec.motor.count<nW;
+  joint.setContactsEnabled(false);if(!chained&&i>=spec.motor.count)continue;
+  const share=chained?spec.motor.count/nW:1;
+  joint.configureMotorModel(R.MotorModel.ForceBased);joint.configureMotorVelocity(0,20);joint.setMotorMaxForce(spec.motor.stall_torque_nm*SIM_USABLE_STALL_FRACTION*share);wheels.push({joint,y});
  }
  if(spec.wheel.count===2){const cr=Math.min(spec.ground_clearance_m,r)*.8;for(const x of [-L/2+cr,L/2-cr])world.createCollider(R.ColliderDesc.ball(cr).setTranslation(x,0,cr).setMass(.001).setFriction(0).setFrictionCombineRule(R.CoefficientCombineRule.Min),body);}
  let t=0;

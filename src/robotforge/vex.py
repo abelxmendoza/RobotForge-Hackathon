@@ -139,6 +139,18 @@ def rulebook_for(spec) -> str | None:
     return None
 
 
+def robot_envelope_m(spec) -> tuple[float, float, float]:
+    """The whole robot's size, as the twin draws it: wheels sit outside
+    the chassis (urdf.wheel_layout puts their centres at width/2 +
+    wheel width/2), and the chassis sits ground_clearance_m off the
+    floor. Wheel centres are inset by a radius, so length is the
+    chassis length."""
+    wheel = getattr(spec, "wheel", None)
+    w = spec.width_m + (2 * wheel.width_m if wheel is not None else 0.0)
+    h = spec.height_m + (spec.ground_clearance_m or 0.0)
+    return spec.length_m, w, h
+
+
 def rulebook_check(spec, rulebook_id: str | None = None) -> dict | None:
     """Check a VEX spec against its platform's rulebook.
 
@@ -160,13 +172,14 @@ def rulebook_check(spec, rulebook_id: str | None = None) -> dict | None:
     res = []
 
     lim_l, lim_w, lim_h = rb["size_m"]
+    L, W, H = robot_envelope_m(spec)
     over = []
-    if spec.length_m > lim_l + 1e-6:
-        over.append(f"length {r1(spec.length_m / _IN):g} in")
-    if spec.width_m > lim_w + 1e-6:
-        over.append(f"width {r1(spec.width_m / _IN):g} in")
-    if spec.height_m > lim_h + 1e-6:
-        over.append(f"height {r1(spec.height_m / _IN):g} in")
+    if L > lim_l + 1e-6:
+        over.append(f"length {r1(L / _IN):g} in")
+    if W > lim_w + 1e-6:
+        over.append(f"width {r1(W / _IN):g} in (wheels included)")
+    if H > lim_h + 1e-6:
+        over.append(f"height {r1(H / _IN):g} in (from the floor)")
     res.append({"rule": "R3", "label": "Starting size",
                 "verdict": "fail" if over else "pass",
                 "detail": (f"over the {rb['size_text']} limit: "

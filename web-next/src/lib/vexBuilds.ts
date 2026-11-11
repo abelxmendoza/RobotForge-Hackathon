@@ -329,7 +329,11 @@ export function editVexSpec(spec: Spec, ops: VexEditOp[]): { spec: Spec; changes
   const rpm1 = wheelRpmOf(p);
   if (Math.round(rpm1) !== Math.round(rpm0)) changes.push(`wheel speed: ${Math.round(rpm0)} → ${Math.round(rpm1)} rpm`);
   const mechW = (p.mechs ?? []).reduce((w, m) => w + VEX_MECHS[m].motors * 11, 0);
-  if (p.motors * 11 > DRIVE_CAP_W) problems.push(`${p.motors} drive motors use ${p.motors * 11} W, over the V5RC 2026-27 ${DRIVE_CAP_W} W drivetrain limit (R11): at most ${Math.floor(DRIVE_CAP_W / 11)} of the 11 W motors may drive the wheels. Check the current game manual.`);
-  if (p.motors * 11 + mechW > CAP_W) problems.push(`${p.motors} drive motors (${p.motors * 11} W)${mechW ? ` plus ${mechW} W of mechanisms` : ''} come to ${p.motors * 11 + mechW} W, over the V5RC ${CAP_W} W cap. Try fewer drive motors.`);
+  // Use the motor rating the edited spec records (11 W or 5.5 W), so a
+  // warning here agrees with rulebookCheck on the same spec.
+  const motorW = Number(out?.gearing?.motor_power_w) > 0 ? Number(out.gearing.motor_power_w) : 11;
+  const driveW = Math.round(p.motors * motorW * 10) / 10;
+  if (driveW > DRIVE_CAP_W + 1e-9) problems.push(`${p.motors} drive motors use ${driveW} W, over the V5RC 2026-27 ${DRIVE_CAP_W} W drivetrain limit (R11): at most ${Math.floor(DRIVE_CAP_W / motorW)} of the ${motorW} W motors may drive the wheels. Check the current game manual.`);
+  if (driveW + mechW > CAP_W + 1e-9) problems.push(`${p.motors} drive motors (${driveW} W)${mechW ? ` plus ${mechW} W of mechanisms` : ''} come to ${driveW + mechW} W, over the V5RC ${CAP_W} W cap. Try fewer drive motors.`);
   return { spec: out, changes, problems };
 }
