@@ -35,12 +35,36 @@ def _box_inertial(mass: float, x: float, y: float, z: float) -> str:
             f'iyz="0" izz="{izz:.6f}"/></inertial>')
 
 
+def wheel_layout(spec: RobotSpec) -> list[tuple[float, float]]:
+    """Wheel (x, y) centres in metres, shared by the URDF, the Gazebo SDF
+    (twin.py), the take-apart kit (cad.py) and, in TypeScript, the 3D
+    views and the simulator.
+
+    - 2 wheels: one pair at the chassis centre (casters carry the ends).
+    - 3 or 4 wheels: front and rear corner pairs, cut to the count.
+    - 5 or more (6-wheel VEX drives): ceil(n/2) wheels per side, evenly
+      spaced from front to rear, left/right pairs, cut to the count.
+    """
+    n = spec.wheel.count
+    wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0
+    wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
+    if n == 2:
+        return [(0.0, wheel_y), (0.0, -wheel_y)]
+    if n <= 4:
+        return [(wheel_x, wheel_y), (wheel_x, -wheel_y),
+                (-wheel_x, wheel_y), (-wheel_x, -wheel_y)][:n]
+    per_side = math.ceil(n / 2)
+    out: list[tuple[float, float]] = []
+    for k in range(per_side):
+        x = wheel_x - 2.0 * wheel_x * k / (per_side - 1)
+        out += [(round(x, 9), wheel_y), (round(x, 9), -wheel_y)]
+    return out[:n]
+
+
 def generate_urdf(spec: RobotSpec) -> str:
     name = escape(spec.name)
     r = spec.wheel.diameter_m / 2.0
     chassis_z = spec.ground_clearance_m + spec.height_m / 2.0
-    wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0
-    wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
 
     parts = ['<?xml version="1.0"?>',
              f'<robot name="{name}">',
@@ -52,13 +76,7 @@ def generate_urdf(spec: RobotSpec) -> str:
              f'    {_box_inertial(spec.mass_kg, spec.length_m, spec.width_m, spec.height_m)}',
              '  </link>']
 
-    # Wheel placement: front/rear pairs; a 2-wheel differential layout gets
-    # the pair at the chassis centre plus the caller adds casters later.
-    if spec.wheel.count == 2:
-        positions = [(0.0, wheel_y), (0.0, -wheel_y)]
-    else:
-        positions = [(wheel_x, wheel_y), (wheel_x, -wheel_y),
-                     (-wheel_x, wheel_y), (-wheel_x, -wheel_y)][:spec.wheel.count]
+    positions = wheel_layout(spec)
 
     wheel_mass = spec.component_mass_kg.get("wheels", 0.4) / max(len(positions), 1)
     for i, (x, y) in enumerate(positions):

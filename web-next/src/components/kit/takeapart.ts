@@ -92,11 +92,18 @@ export const TA_DEFAULT_VIEW: TaViewState = {
 export function taWheelPositions(spec: RobotSpec): [number, number][] {
   const wx = spec.length_m / 2 - (spec.wheel?.diameter_m ?? 0) / 2;
   const wy = spec.width_m / 2 + (spec.wheel?.width_m ?? 0) / 2;
-  if (spec.wheel?.count === 2) return [[0, wy], [0, -wy]];
-  return ([[wx, wy], [wx, -wy], [-wx, wy], [-wx, -wy]] as [number, number][]).slice(
-    0,
-    spec.wheel?.count ?? 0,
-  );
+  const n = spec.wheel?.count ?? 0;
+  if (n === 2) return [[0, wy], [0, -wy]];
+  if (n <= 4) return ([[wx, wy], [wx, -wy], [-wx, wy], [-wx, -wy]] as [number, number][]).slice(0, n);
+  // 6-wheel drives: ceil(n/2) wheels a side, evenly spaced front to rear
+  // (the same rule as urdf.wheel_layout in the Python package).
+  const per = Math.ceil(n / 2);
+  const out: [number, number][] = [];
+  for (let k = 0; k < per; k++) {
+    const x = wx - (2 * wx * k) / (per - 1);
+    out.push([x, wy], [x, -wy]);
+  }
+  return out.slice(0, n);
 }
 
 export function taPosXY(position: string | undefined, spec: RobotSpec): [number, number] {

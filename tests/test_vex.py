@@ -140,14 +140,15 @@ def test_drive_numbers_name_what_is_missing():
         assert field in n["missing"]
 
 
-def test_layout_is_none_without_wheels_and_notes_six_wheels():
+def test_layout_is_none_without_wheels_and_draws_six_wheels():
     assert _ts('D.driveLayout({"drivetrain":"multirotor"})') is None
     six = json.loads(json.dumps(EXAMPLE))
     six["wheel"]["count"] = 6
     six["motor"]["count"] = 6
     lay = _ts(f"D.driveLayout({json.dumps(six)})")
     assert len(lay["wheels"]) == 6 and all(w["driven"] for w in lay["wheels"])
-    assert lay["twinWheelNote"] and "4 of these 6" in lay["twinWheelNote"]
+    # the 3D twin and the Gazebo model now draw all six, so no note
+    assert lay["twinWheelNote"] is None
     xs = sorted({round(w["x"], 4) for w in lay["wheels"]})
     assert len(xs) == 3  # three axles, evenly spread
 

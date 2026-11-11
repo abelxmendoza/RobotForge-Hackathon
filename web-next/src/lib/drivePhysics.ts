@@ -19,8 +19,10 @@ export async function createDriveWorld(spec:Spec,scenario:Scenario,walls:SimWall
  const body=world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(0,0,0).setCanSleep(false));
  world.createCollider(R.ColliderDesc.cuboid(L/2,W/2,bodyH/2).setTranslation(0,0,bodyZ).setMass(mass*.8).setFriction(.4),body);
  const wheels:{joint:import('@dimforge/rapier3d-compat').RevoluteImpulseJoint;y:number}[]=[];
- for(let i=0;i<spec.wheel.count;i++){
-  const side=i%2===0?1:-1;const x=spec.wheel.count===2?0:(i<2?1:-1)*(L/2-r),y=side*(W/2+ww/2);
+ // Wheel x: centre pair for 2 wheels, corner pairs for 4, and for 6 (VEX) three evenly spaced pairs, as urdf.wheel_layout places them.
+ const nW=spec.wheel.count,perSide=Math.ceil(nW/2);
+ for(let i=0;i<nW;i++){
+  const side=i%2===0?1:-1;const k=Math.floor(i/2);const x=nW===2?0:nW<=4?(i<2?1:-1)*(L/2-r):(L/2-r)*(1-2*k/(perSide-1)),y=side*(W/2+ww/2);
   const wheel=world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(x,y,r).setCanSleep(false));
   world.createCollider(R.ColliderDesc.cylinder(ww/2,r).setMass(mass*.2/spec.wheel.count).setFriction(SIM_TYRE_FRICTION),wheel);
   const joint=world.createImpulseJoint(R.JointData.revolute({x,y,z:r},{x:0,y:0,z:0},{x:0,y:1,z:0}),body,wheel,true) as import('@dimforge/rapier3d-compat').RevoluteImpulseJoint;
