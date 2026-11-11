@@ -10,7 +10,9 @@ import {
   mountedCenterZ,
   normalizeYawDeg,
 } from '@/lib/spatial';
-import { COMPONENTS, componentById, type ComponentDefinition } from '@/lib/components';
+import { COMPONENTS, CATALOGUE_COMPONENTS, componentById, type ComponentDefinition } from '@/lib/components';
+import { roverComponentDefinition } from '@/lib/roverDesign';
+import { categoryFor } from '@/lib/partsLibrary';
 import { PART_GROUPS, partGroup } from '@/lib/partTaxonomy';
 import {
   ASSEMBLY_KEY,
@@ -268,6 +270,9 @@ export default function AssemblyWorkspace({
   const [spin, setSpin] = useState(false);
   const robot = robots.find((r) => r.id === robotId);
   const spec = robot?.versions.at(-1)?.spec;
+  const palette = spec?.roverDesign ? CATALOGUE_COMPONENTS : COMPONENTS;
+  const componentGroup=(c:ComponentDefinition)=>{const record=spec?.roverDesign?.catalogueLibrary?.find((p:{id:string})=>'catalog--'+p.id===c.id);return partGroup(record?categoryFor(record.part_class||'',record.name||record.id):c.category,c.name);};
+  useEffect(()=>{if(spec?.roverDesign)setComponentId('catalog--ultrasonic_hcsr04');},[robotId,!!spec?.roverDesign]);
   const saved = useMemo(() => currentAssembly(all, robotId), [all, robotId]);
   const { preview, previewError } = useMemo(() => {
     if (!proposal) return { preview: saved, previewError: '' };
@@ -299,7 +304,7 @@ export default function AssemblyWorkspace({
     const t = setTimeout(() => setTdOff((n) => n + tdDir), 1500);
     return () => clearTimeout(t);
   }, [tdPlaying, tdOff, tdDir, td.steps.length]);
-  const definition = instance ? componentById(instance.componentId) : null;
+  const definition = instance ? roverComponentDefinition(spec,instance) : null;
   const activePartDef = componentById(componentId) ?? COMPONENTS[0];
 
   const intelligence = useMemo(() => {
@@ -491,7 +496,7 @@ export default function AssemblyWorkspace({
         <summary>Add a component</summary>
         <label className="g-field"><span>Component</span>
           <select value={componentId} onChange={(e) => setComponentId(e.target.value)}>
-            {PART_GROUPS.map((g) => <optgroup key={g.id} label={g.label}>{COMPONENTS.filter((c) => partGroup(c.category, c.name) === g.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
+            {PART_GROUPS.map((g) => <optgroup key={g.id} label={g.label}>{palette.filter((c) => componentGroup(c) === g.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
           </select>
         </label>
         <div className="ws-component-preview">
@@ -501,7 +506,7 @@ export default function AssemblyWorkspace({
         </div>
         <details className="ws-disclosure"><summary>Dimensions and mounting</summary>
           <PartBlueprintSVG part={activePartDef} yawDeg={activePartDef.orientation.preferredYawDeg ?? 0} />
-          <p>{activePartDef.mounting.fastener} · {Math.round(activePartDef.massKg * 1000)} g</p>
+          <p>{activePartDef.mounting.fastener} · {activePartDef.massKg>0?Math.round(activePartDef.massKg*1000)+' g':'mass unknown'}</p>
           <p className="faint g-small">{activePartDef.note}</p>
           <button type="button" className="btn btn-sm" onClick={addCenter}>Preview at centre</button>
         </details>
@@ -939,7 +944,7 @@ export default function AssemblyWorkspace({
         <button type="button" className="btn btn-primary btn-sm" onClick={() => promptWrench({mode: 'chat', text: `Plan a Raspberry Pi 5 upgrade for "${robot!.name}"`})}>Plan a Raspberry Pi 5 upgrade</button>
         <label className="g-field"><span>Design a printable part for</span>
           <select value={(definition ?? activePartDef).id} onChange={e => { setSelected(null); setSelectedWire(null); setComponentId(e.target.value); }}>
-            {PART_GROUPS.map(g => <optgroup key={g.id} label={g.label}>{COMPONENTS.filter(c => partGroup(c.category,c.name) === g.id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
+            {PART_GROUPS.map(g => <optgroup key={g.id} label={g.label}>{palette.filter(c => componentGroup(c) === g.id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
           </select>
         </label>
         <BuildArtifacts
@@ -1121,7 +1126,7 @@ export default function AssemblyWorkspace({
               <p style={{ margin: '0 0 6px' }}>{definition.note}</p>
               <p style={{ margin: 0, fontSize: 13 }}>
                 <strong>Envelope:</strong> {definition.sizeM.map((v) => Math.round(v * 1000)).join(' × ')} mm ·{' '}
-                <strong>Mass:</strong> {Math.round(definition.massKg * 1000)} g ·{' '}
+                <strong>Mass:</strong> {definition.massKg>0?Math.round(definition.massKg*1000)+' g':'unknown'} ·{' '}
                 {definition.geometry === 'published-envelope'
                   ? 'Published envelope; simplified geometry'
                   : 'ESTIMATED illustrative dimensions'}
@@ -1196,7 +1201,7 @@ export default function AssemblyWorkspace({
             </p>
           )}
 
-          {definition.source && (
+          {/^https?:\/\//i.test(definition.source) && (
             <p>
               <a href={definition.source} target="_blank" rel="noreferrer">
                 Manufacturer dimension source

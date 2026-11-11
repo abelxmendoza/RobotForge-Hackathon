@@ -13,8 +13,8 @@ def test_assembly_transactions(tmp_path):
     if not node:
         pytest.skip('Node unavailable')
     lib = ROOT / 'web-next/src/lib'
-    for name in ['assembly', 'components']:
-        (tmp_path / f'{name}.ts').write_text((lib / f'{name}.ts').read_text().replace("from './components'", "from './components.ts'"))
+    for name in ['assembly', 'components', 'roverDesign', 'forgeEngine']:
+        (tmp_path / f'{name}.ts').write_text((lib / f'{name}.ts').read_text().replace("from './components'", "from './components.ts'").replace("from './roverDesign'", "from './roverDesign.ts'").replace("from './forgeEngine'", "from './forgeEngine.ts'"))
     (tmp_path / 'package.json').write_text('{"type":"module"}')
     (tmp_path / 'run.mjs').write_text('''
 import assert from 'node:assert/strict';

@@ -15,6 +15,7 @@
     "@dimforge/rapier3d-compat": "^0.21.0",
     "@reduxjs/toolkit": "^2.5.0",
     "ai": "^7.0.159",
+    "fflate": "^0.8.3",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

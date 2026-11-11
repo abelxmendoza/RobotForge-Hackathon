@@ -5,6 +5,11 @@
 import type { ComponentInstance, Pose } from './assembly';
 import { componentById, type ComponentDefinition } from './components';
 
+function instanceDefinition(instance:ComponentInstance) {
+  const base=componentById(instance.componentId),size=instance.sizeM;
+  return base&&size?.length===3&&size.every(n=>Number.isFinite(n)&&n>0&&n<=10)?{...base,sizeM:size}:base;
+}
+
 export interface SpecEnvelopeInput {
   length_m?: number;
   width_m?: number;
@@ -84,8 +89,8 @@ export function snapPlacement(
 }
 
 export function envelopesOverlap(a: ComponentInstance, b: ComponentInstance): boolean {
-  const x = componentById(a.componentId),
-    y = componentById(b.componentId);
+  const x = instanceDefinition(a),
+    y = instanceDefinition(b);
   if (!x || !y) return false;
   if (Math.abs(a.positionM[2] - b.positionM[2]) >= (x.sizeM[2] + y.sizeM[2]) / 2 - 1e-8)
     return false;
@@ -163,7 +168,7 @@ export function terminalWorldPoint(
   instance: ComponentInstance,
   terminalIndex = 0,
 ): Pose {
-  const part = componentById(instance.componentId);
+  const part = instanceDefinition(instance);
   if (!part) return [...instance.positionM];
   const term = part.terminals?.[terminalIndex % Math.max(1, part.terminals.length)];
   if (!term) {
@@ -186,7 +191,7 @@ export function mountingHoleWorldPoints(
   instance: ComponentInstance,
   deckTopZ = 0.033,
 ): { x: number; y: number; zBottom: number; zTop: number; diameterM: number }[] {
-  const part = componentById(instance.componentId);
+  const part = instanceDefinition(instance);
   if (!part || !part.mounting) return [];
   const zTop = instance.positionM[2] - part.sizeM[2] / 2;
   const zBottom = Math.min(deckTopZ, zTop - 0.002);
@@ -221,7 +226,7 @@ export function checkFovObstruction(
   sensor: ComponentInstance,
   others: ComponentInstance[],
 ): string[] {
-  const part = componentById(sensor.componentId);
+  const part = instanceDefinition(sensor);
   if (!part || !part.orientation.fovDeg || !part.orientation.fovRangeM) return [];
   const fovRad = (part.orientation.fovDeg * Math.PI) / 180;
   const rangeM = part.orientation.fovRangeM;
@@ -233,7 +238,7 @@ export function checkFovObstruction(
   const blockedBy: string[] = [];
   for (const other of others) {
     if (other.id === sensor.id) continue;
-    const oPart = componentById(other.componentId);
+    const oPart = instanceDefinition(other);
     if (!oPart) continue;
     const oTop = other.positionM[2] + oPart.sizeM[2] / 2;
     const oBot = other.positionM[2] - oPart.sizeM[2] / 2;
@@ -263,7 +268,7 @@ export function checkPortKeepout(
   instance: ComponentInstance,
   others: ComponentInstance[],
 ): string[] {
-  const part = componentById(instance.componentId);
+  const part = instanceDefinition(instance);
   if (!part || part.orientation.keepoutFrontMm <= 0) return [];
   const keepM = part.orientation.keepoutFrontMm / 1000;
   const probeOffset = part.sizeM[0] / 2 + keepM / 2;
@@ -352,7 +357,7 @@ export function recommendSmartPlacement(
     );
   } else if (zone === 'top-mast') {
     const tallestOtherTop = others.reduce((maxZ, o) => {
-      const op = componentById(o.componentId);
+      const op = instanceDefinition(o);
       return Math.max(maxZ, o.positionM[2] + (op ? op.sizeM[2] / 2 : 0.02));
     }, deckTopZ + 0.02);
     const elevatedZ = Math.round(( Math.max(baseZ, tallestOtherTop + 0.012 + part.sizeM[2] / 2) ) * 10000) / 10000;
@@ -559,7 +564,7 @@ export function evaluatePlacementIntelligence(
   let addedMassKg = 0;
 
   for (const inst of instances) {
-    const part = componentById(inst.componentId);
+    const part = instanceDefinition(inst);
     const m = part?.massKg ?? 0.05;
     addedMassKg += m;
     weightedX += m * inst.positionM[0];
@@ -592,7 +597,7 @@ export function evaluatePlacementIntelligence(
   // 2. Per-part diagnostics
   const overlaps = overlapPairs(instances);
   const diagnostics: PartPlacementDiagnostic[] = instances.map((inst) => {
-    const part = componentById(inst.componentId);
+    const part = instanceDefinition(inst);
     const rec = recommendSmartPlacement(
       inst.componentId,
       instances,
@@ -633,6 +638,7 @@ export function evaluatePlacementIntelligence(
     const zDiffMm = Math.round((actualBottomZ - deckTopZ) * 1000);
     let mountingStatus: 'pass' | 'warn' | 'fail' = 'pass';
     let mountingMessage = `${part.mounting.fastener} (${part.mounting.holePatternMm.length} holes · ${zDiffMm} mm deck gap)`;
+    if(inst.componentId.startsWith('catalog--')&&!part.mounting.holePatternMm.length){mountingStatus='warn';mountingMessage='Mounting coordinates are not recorded; envelope placement does not verify hardware fit.';}
     if (actualBottomZ < deckTopZ - 0.002) {
       mountingStatus = 'fail';
       mountingMessage = `Part bottom penetrates chassis deck by ${Math.abs(zDiffMm)} mm — snap to deck + ${part.mounting.standoffHeightMm} mm standoffs.`;
