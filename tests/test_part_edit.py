@@ -113,6 +113,26 @@ def test_size_phrases_map_to_one_field(text, path, value):
     assert out["check"]["restKept"] is True
 
 
+@pytest.mark.parametrize("text,value", [
+    ("make the wheels 50% smaller", 0.0325),
+    ("make the wheels 20% bigger", 0.078),
+    ("increase the wheel diameter by 10 mm", 0.075),
+    ("make the wheels 10 mm bigger", 0.075),
+    ("reduce the wheels by 1 cm", 0.055),
+    ("make the wheels smaller", 0.052),
+])
+def test_relative_changes_start_from_todays_size(text, value):
+    # Codex review on #192: explicit % cuts and "by N mm" are changes
+    # from the current size, never the new size itself.
+    [c] = _edit(text)["ok"]["plan"]["changes"]
+    assert c["path"] == "wheel.diameter_m"
+    assert c["after"] == pytest.approx(value, abs=1e-4)
+
+
+def test_full_cut_is_refused_not_halved():
+    assert "outside what RobotForge models" in _edit("make the wheels 100% smaller")["error"]
+
+
 def test_bigger_body_is_its_footprint_only():
     out = _edit("make the body bigger")["ok"]
     assert [c["path"] for c in out["plan"]["changes"]] == ["length_m", "width_m"]

@@ -217,15 +217,26 @@ export function parsePartEdit(text: string, spec: Spec): PartEditPlan | null {
         : /\b(a lot|much|way|far)\b/.test(q) ? 0.5
         : /\b(a bit|a little|slightly|a touch|bit)\b/.test(q) ? 0.1
         : 0.25;
-      factor = up ? 1 + amount : 1 / (1 + amount);
+      /* "50% smaller" means half the size; plain "smaller" undoes
+       * "bigger" (1/1.25). An explicit cut of 100% or more reaches the
+       * range check below instead of turning positive. */
+      factor = up ? 1 + amount : pct ? 1 - amount : 1 / (1 + amount);
     }
   } else if (fields.length > 1) {
     throw new Error('Say which way, like “make the body 30 cm long” or “make the body 20 cm wide”.');
   }
 
+  /* "by 10 mm" or "10 mm bigger" is a change from today's size, not
+   * the new size. "30 mm wide" or "to 25 mm" stays an exact size. */
+  const relative = target != null && (/\bby\s+(?:about\s+)?\d/.test(q)
+    || /\d\s*(?:mm|cm|m|in|inch(?:es)?|")?\s*(?:bigger|larger|wider|longer|taller|thicker|smaller|narrower|shorter|thinner|higher|lower|more|less)\b/.test(q));
+  if (relative && up === down) throw new Error('Say which way, like “make the wheels 10 mm bigger” or “10 mm smaller”.');
+
   const changes: PartChange[] = fields.map((f) => {
     const before = num(f.path.split('.').reduce((o: Spec, k) => (o ? o[k] : undefined), spec));
-    let after = target != null ? target : before * (factor as number);
+    let after = target == null ? before * (factor as number)
+      : relative ? before + (up ? target : -target)
+      : target;
     after = Math.round(after * 10000) / 10000; // 0.1 mm
     return { path: f.path, label: f.label, before, after };
   });
