@@ -11,11 +11,14 @@
  * Shots:
  *   demo      /demo/: Run the demo, then the broken -> fixed 3D replay
  *   teardown  /robots/<slug>/: 3D view, "Take it apart, step by step"
+ *   film      /film/: the Omega1 teardown film, with its score muxed in
  *
  * Usage (serve the static build first, e.g. `npx serve web-next/out`
  * or `python3 -m http.server 8765 -d web-next/out`):
  *   node tools/capture_3d.cjs --shot demo --out demo-replay.mp4
  *   node tools/capture_3d.cjs --shot teardown --robot turtlebot3-burger --out teardown.mp4
+ *   node tools/capture_3d.cjs --shot film --cut full --out omega1-teardown-20s.mp4
+ *   node tools/capture_3d.cjs --shot film --cut short --out omega1-teardown-10s.mp4
  * Options: --base http://localhost:8765  --fps 60  --width 1920 --height 1080
  *          --dpr 1|2 (page pixel ratio; teardown defaults to 2 for a sharp 3D view)
  *          --sheet (also write <out>.sheet.png)
@@ -36,7 +39,7 @@ const W = Number(args.width || 1920);
 const H = Number(args.height || 1080);
 const SCALE = Number(args.scale || 1);
 // Device pixel ratio for the page; 2 renders the 3D canvas at twice the pixels.
-const DPR = Number(args.dpr || (SHOT === 'teardown' ? 2 : 1));
+const DPR = Number(args.dpr || (SHOT === 'teardown' || SHOT === 'film' ? 2 : 1));
 const OUT = String(args.out || `${SHOT}.mp4`);
 const ROBOT = String(args.robot || 'turtlebot3-burger');
 const STEP = 1000 / FPS;
@@ -69,9 +72,9 @@ function ffmpegFor(out) {
   return { ff, done };
 }
 
-async function record(page, selector, seconds, label, cues = {}) {
+async function record(page, selector, seconds, label, cues = {}, out = OUT) {
   const frames = Math.round(seconds * FPS);
-  const { ff, done } = ffmpegFor(OUT);
+  const { ff, done } = ffmpegFor(out);
   const target = page.locator(selector).first();
   for (let i = 0; i < frames; i++) {
     if (cues[i]) await cues[i]();
@@ -136,8 +139,37 @@ async function record(page, selector, seconds, label, cues = {}) {
     // 0.4 s before the first part, 1.8 s per part, then a 2.5 s hold.
     const secs = Number(args.seconds || 0.4 + steps * 1.8 + 2.5);
     await record(page, '#ta-3d', secs, `teardown ${ROBOT} (${steps} parts)`);
+  } else if (SHOT === 'film') {
+    // The film page plays from its own clock (performance.now), so the
+    // paused fake clock makes every frame exact. Its score is rendered
+    // from the same script file and muxed in after.
+    const path = require('node:path');
+    const fs = require('node:fs');
+    const cut = String(args.cut || 'full');
+    const film = await import(path.join(__dirname, '..', 'web-next', 'src', 'lib', 'omega1Film.ts'));
+    const css = CLEAN_CSS + '.demo-bar{display:none!important}.o1film-scene{border:0!important;border-radius:0!important}';
+    // /film/ sits behind the sign-in gate; the no-account demo opens it.
+    await page.addInitScript(() => localStorage.setItem('rf.demo.v1', JSON.stringify({ v: 1, since: new Date().toISOString() })));
+    await page.goto(`${BASE}/film/`, { waitUntil: 'domcontentloaded' });
+    await page.addStyleTag({ content: css });
+    await settle(page, '.o1film-canvas canvas');
+    await settle(page, 'button:has-text("Pause")');
+    await page.getByRole('button', { name: cut === 'short' ? /^Short/ : /^Full/ }).click();
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await page.locator('.o1film-scrub').fill('0');
+    await page.locator('.o1film-scene').scrollIntoViewIfNeeded();
+    for (let i = 0; i < 10; i++) await page.clock.runFor(STEP);
+    await page.getByRole('button', { name: /Play/ }).click();
+    const secs = Number(args.seconds || film.filmLength(cut) + 0.5);
+    const silent = OUT.replace(/\.mp4$/, '') + '.silent.mp4';
+    await record(page, '.o1film-scene', secs, `omega1 film (${cut})`, {}, silent);
+    const wav = OUT.replace(/\.mp4$/, '') + '.wav';
+    fs.writeFileSync(wav, film.scoreWav(cut));
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', wav, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', OUT]);
+    fs.unlinkSync(silent); fs.unlinkSync(wav);
+    console.log('with score ->', OUT);
   } else {
-    throw new Error('unknown --shot ' + SHOT + ' (use demo or teardown)');
+    throw new Error('unknown --shot ' + SHOT + ' (use demo, teardown or film)');
   }
 
   await browser.close();

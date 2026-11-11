@@ -122,6 +122,7 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
           </div>
           <div className="ta-twin-note">
             <h4>Take it apart, put it back</h4>
+            <p><a className="btn btn-primary btn-sm" href="/film/">Watch the teardown film</a> <span className="faint g-small">The twin comes apart piece by piece, then drives off. 20 s, or a 10 s cut.</span></p>
             <p className="faint g-small">
               The Take apart / Assemble diagram works on your own stored copy of Omega1, along the
               connections its record carries — this twin is a fixed specimen and stays assembled.
