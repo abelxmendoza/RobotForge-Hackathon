@@ -2362,6 +2362,12 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .vexb-nums dt{color:var(--text-faint)}
 .vexb-nums dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
 .vexb ul{margin:0;padding-left:18px}
+/* Wrench one-part edits (components/chat/PartEditCard.tsx) */
+.fbadge.pe-ok{color:var(--pass);border-color:var(--pass)}
+.pe-card .pe-model{height:190px;border-radius:8px;overflow:hidden}
+.pe-card .pe-model .assembly-viewport{height:100%}
+.pe-progress{display:block;width:100%;height:6px;margin-top:6px;accent-color:var(--accent)}
+.ws-looks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
 .vex3d{margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
 .vex3d-stage{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#161b23;cursor:grab;touch-action:pan-y}
 .vex3d-stage:active{cursor:grabbing}
