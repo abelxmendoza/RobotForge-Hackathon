@@ -63,6 +63,9 @@ export function readGearing(spec: Spec): Gearing | null {
 }
 
 export const isVexV5 = (spec: Spec): boolean => (readGearing(spec)?.platform ?? '').toLowerCase() === 'vex_v5';
+export const isVexIq = (spec: Spec): boolean => (readGearing(spec)?.platform ?? '').toLowerCase() === 'vex_iq';
+/** VEX IQ Smart Motor (kb.vex.com): 120 rpm, 0.414 N·m stall, 1.4 W. Mirrors src/robotforge/vex.py. */
+export const IQ_MOTOR = { freeRpm: 120, stallTorqueNm: 0.414, powerW: 1.4 } as const;
 
 export interface WheelSpot { x: number; y: number; driven: boolean; side: 'left' | 'right' }
 

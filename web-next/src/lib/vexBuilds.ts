@@ -20,6 +20,8 @@ type CartId = keyof typeof CARTRIDGES;
 const WHEELS_IN = [2.75, 3.25, 4] as const;
 const IN = 0.0254;
 const CAP_W = 88;
+/** V5RC 2026-27 R11: drivetrain motors at most 55 W (lib/vexRules.ts). */
+const DRIVE_CAP_W = 55;
 
 export interface VexBuildParams {
   drive: 'tank' | 'mecanum';
@@ -88,13 +90,17 @@ export function buildVexSpec(title: string, p: VexBuildParams): Spec {
   };
 }
 
+/* Every preset passes the 2026-27 V5RC rules (lib/vexRules.ts):
+ * drivetrain motors at most 55 W (R11), all motors at most 88 W
+ * (R10). The old 6 x 11 W drive (66 W) is over R11, so the six-wheel
+ * builds put four motors on six wheels, the middle pair chained. */
 const PRESETS: { id: string; title: string; why: string; focus: string[]; p: VexBuildParams }[] = [
-  { id: 'comp6', title: 'VEX Competition Robot', focus: ['competition', 'full', 'speed'],
-    why: 'What real V5RC robots look like: a fast 6-motor omni drive with a chain intake/conveyor and pneumatics on top. Uses 77 of 88 W.',
-    p: { drive: 'tank', motors: 6, wheels: 6, wheelIn: 3.25, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 48, massKg: 6.4, mechs: ['intake', 'pneumatics'] } },
-  { id: 'speed6', title: 'VEX Speed Tank (6-motor)', focus: ['speed', 'competition'],
-    why: 'The usual fast competition drive: quick across the field, still decent at pushing. Uses 66 of 88 W, leaving 22 W for an intake or lift.',
-    p: { drive: 'tank', motors: 6, wheels: 6, wheelIn: 3.25, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 48, massKg: 5.0 } },
+  { id: 'comp', title: 'VEX Competition Robot', focus: ['competition', 'full', 'speed'],
+    why: 'What real V5RC robots look like: a fast six-wheel omni drive with a chain intake/conveyor and pneumatics on top. Drive 44 of 55 W, all motors 55 of 88 W.',
+    p: { drive: 'tank', motors: 4, wheels: 6, wheelIn: 3.25, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 48, massKg: 6.2, mechs: ['intake', 'pneumatics'] } },
+  { id: 'speed6w', title: 'VEX Speed Tank (6-wheel)', focus: ['speed', 'competition'],
+    why: 'A fast competition drive: four motors on six wheels, quick across the field and hard to tip. Drive 44 of 55 W, leaving 44 W for an intake or lift.',
+    p: { drive: 'tank', motors: 4, wheels: 6, wheelIn: 3.25, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 48, massKg: 4.8 } },
   { id: 'push4', title: 'VEX Pushing Drive', focus: ['push', 'defence'],
     why: 'Slow and strong on traction wheels: hard to shove around and good at pushing others. Turns scrub more.',
     p: { drive: 'tank', motors: 4, wheels: 4, wheelIn: 3.25, wheelKind: 'traction', cartridge: 'green', driving: 1, driven: 1, massKg: 4.5 } },
@@ -104,9 +110,9 @@ const PRESETS: { id: string; title: string; why: string; focus: string[]; p: Vex
   { id: 'balanced4', title: 'VEX Starter Tank', focus: ['beginner', 'balanced'],
     why: 'A balanced first drive base: simple to build, quick enough, and leaves 44 W for mechanisms.',
     p: { drive: 'tank', motors: 4, wheels: 4, wheelIn: 4, wheelKind: 'omni', cartridge: 'blue', driving: 36, driven: 60, massKg: 4.0 } },
-  { id: 'heavy6', title: 'VEX Heavy Pusher (6-motor)', focus: ['push', 'defence', 'competition'],
-    why: 'Six motors geared down for maximum shove while keeping some speed; built to win pushing matches.',
-    p: { drive: 'tank', motors: 6, wheels: 6, wheelIn: 3.25, wheelKind: 'traction', cartridge: 'blue', driving: 36, driven: 84, massKg: 5.5 } },
+  { id: 'heavy6w', title: 'VEX Heavy Pusher (6-wheel)', focus: ['push', 'defence', 'competition'],
+    why: 'Four motors geared down onto six traction wheels for maximum shove while keeping some speed; built to win pushing matches.',
+    p: { drive: 'tank', motors: 4, wheels: 6, wheelIn: 3.25, wheelKind: 'traction', cartridge: 'blue', driving: 36, driven: 84, massKg: 5.3 } },
   { id: 'clawbot2', title: 'VEX Simple 2-motor Bot', focus: ['beginner', 'cheap'],
     why: 'The simplest build: two motors, one per side. Slow, but cheap and easy, and leaves 66 W for arms and claws.',
     p: { drive: 'tank', motors: 2, wheels: 4, wheelIn: 4, wheelKind: 'omni', cartridge: 'green', driving: 1, driven: 1, massKg: 3.0 } },
@@ -148,7 +154,8 @@ export function suggestVexBuilds(count: number, focus: string[] = []): VexBuild[
   // never two builds with the same drive style and motor count
   for (const { p } of order) {
     if (picked.length >= count) break;
-    if (picked.some((x) => x.p.drive === p.p.drive && x.p.motors === p.p.motors && x.p.wheelKind === p.p.wheelKind)) continue;
+    if (picked.some((x) => x.p.drive === p.p.drive && x.p.motors === p.p.motors && x.p.wheelKind === p.p.wheelKind
+      && x.p.wheels === p.p.wheels && !!x.p.mechs?.length === !!p.p.mechs?.length)) continue;
     picked.push(p);
   }
   return picked.map((x) => ({ id: x.id, title: x.title, why: x.why, focus: x.focus, spec: buildVexSpec(x.title, x.p) }));
@@ -322,6 +329,7 @@ export function editVexSpec(spec: Spec, ops: VexEditOp[]): { spec: Spec; changes
   const rpm1 = wheelRpmOf(p);
   if (Math.round(rpm1) !== Math.round(rpm0)) changes.push(`wheel speed: ${Math.round(rpm0)} → ${Math.round(rpm1)} rpm`);
   const mechW = (p.mechs ?? []).reduce((w, m) => w + VEX_MECHS[m].motors * 11, 0);
+  if (p.motors * 11 > DRIVE_CAP_W) problems.push(`${p.motors} drive motors use ${p.motors * 11} W, over the V5RC 2026-27 ${DRIVE_CAP_W} W drivetrain limit (R11): at most ${Math.floor(DRIVE_CAP_W / 11)} of the 11 W motors may drive the wheels. Check the current game manual.`);
   if (p.motors * 11 + mechW > CAP_W) problems.push(`${p.motors} drive motors (${p.motors * 11} W)${mechW ? ` plus ${mechW} W of mechanisms` : ''} come to ${p.motors * 11 + mechW} W, over the V5RC ${CAP_W} W cap. Try fewer drive motors.`);
   return { spec: out, changes, problems };
 }

@@ -1,0 +1,42 @@
+{
+  "name": "VEX IQ Drive Base",
+  "description": "Starter VEX IQ (2nd generation) drive base: 2 IQ Smart Motors, one per side, driving 200 mm travel wheels directly (120 rpm at the wheel, about 0.4 m/s with no load), with the rear wheels geared to the front. Plastic beams and plates inside the VIQRC 11 x 20 x 15 in starting size. Motor numbers are VEX's published ratings (120 rpm, 0.414 N·m, 1.4 W); mass and size are typical values, not measurements of one robot.",
+  "drivetrain": "skid_steer",
+  "length_m": 0.3,
+  "width_m": 0.2,
+  "height_m": 0.12,
+  "mass_kg": 1.0,
+  "ground_clearance_m": 0.012,
+  "wheel": {
+    "diameter_m": 0.0637,
+    "width_m": 0.02,
+    "count": 4,
+    "driven": true
+  },
+  "motor": {
+    "kind": "vex_iq_smart_motor",
+    "voltage_v": 7.2,
+    "count": 2,
+    "stall_torque_nm": 0.414
+  },
+  "gearing": {
+    "platform": "vex_iq",
+    "motor_free_rpm": 120,
+    "motor_shaft_stall_nm": 0.414,
+    "driving_teeth": 1,
+    "driven_teeth": 1,
+    "motor_power_w": 1.4
+  },
+  "battery": {
+    "chemistry": "liion",
+    "voltage_v": 7.2,
+    "capacity_mah": 2000
+  },
+  "sensors": [
+    {
+      "kind": "imu",
+      "position": "brain (built in)"
+    }
+  ],
+  "component_mass_kg": {}
+}

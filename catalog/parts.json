@@ -5908,6 +5908,352 @@
           "url": "https://www.amazon.com/s?k=VEX%20V5%20Optical%20Sensor"
         }
       ]
+    },
+    {
+      "id": "vex_iq_brain",
+      "image": "assets/img/parts/vex_iq_brain.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Robot Brain (2nd gen)",
+      "part_class": "microcontrollers",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "smart_ports": 12,
+        "inertial": "built-in 6-axis",
+        "screen": "colour",
+        "usb": "USB-C"
+      },
+      "blurb": "The VEX IQ robot's computer: it runs your program and talks to motors and sensors through 12 Smart Ports. The 2nd generation Brain has an inertial sensor built in.",
+      "used_for": "The one controller on every VEX IQ robot.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "Program it in VEXcode IQ (blocks, Python or C++). Any Smart Port takes any IQ Smart device. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Robot%20Brain%202nd%20generation"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Robot%20Brain%202nd%20generation"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_motor",
+      "image": "assets/img/parts/vex_iq_motor.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Smart Motor",
+      "part_class": "actuators",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "kind": "vex_iq_smart_motor",
+        "free_rpm": 120,
+        "stall_torque_nm": 0.414,
+        "peak_power_w": 1.4,
+        "encoder": "built in"
+      },
+      "blurb": "VEX IQ's motor: a small motor, gearbox, encoder and controller in one plastic case. 120 rpm with no load.",
+      "used_for": "Drive wheels, arms, intakes and lifts on IQ robots.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "VEX's ratings: 120 rpm free speed, 0.414 N·m stall torque, 1.4 W peak. VIQRC robots may use at most 6, plugged in or not. Gear it with IQ gears for more speed or torque.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Smart%20Motor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Smart%20Motor"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_batt",
+      "image": "assets/img/parts/vex_iq_batt.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Robot Battery (Li-ion, 2000 mAh)",
+      "part_class": "power",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "chemistry": "liion",
+        "voltage_v": 7.2,
+        "capacity_mah": 2000
+      },
+      "blurb": "The IQ robot's rechargeable battery: 7.2 V, 2000 mAh (the 2nd generation is Li-ion, the 1st was NiMH).",
+      "used_for": "Powers the IQ Brain and everything plugged into it.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "1st and 2nd generation batteries are both 7.2 V, 2000 mAh; VIQRC allows one IQ battery or six AA cells. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Robot%20Battery"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Robot%20Battery"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_ctrl",
+      "image": "assets/img/parts/vex_iq_ctrl.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Controller (2nd gen)",
+      "part_class": "comms",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "joysticks": 2,
+        "link": "Bluetooth 5.0 / VEXnet",
+        "usb": "USB-C"
+      },
+      "blurb": "The handheld controller for driving an IQ robot. The 2nd generation pairs from the Brain's menu with no cable.",
+      "used_for": "Driver control in matches and testing.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "VIQRC robots are driven with one IQ Controller. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Controller"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Controller"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_wheel",
+      "image": "assets/img/parts/vex_iq_wheel.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ 200 mm travel wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "kind": "traction",
+        "travel_mm": 200,
+        "diameter_m": 0.0637
+      },
+      "blurb": "IQ's standard wheel: one turn rolls it 200 mm forward (about 64 mm across).",
+      "used_for": "Most IQ drive bases.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "VEX sizes IQ wheels by travel per turn; the diameter is travel ÷ π. Measure the real wheel before trusting speed numbers.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20200mm%20travel%20wheel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20200mm%20travel%20wheel"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_omni",
+      "image": "assets/img/parts/vex_iq_omni.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ 200 mm travel omni wheel",
+      "part_class": "wheels",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "kind": "omni",
+        "travel_mm": 200,
+        "diameter_m": 0.0637
+      },
+      "blurb": "An IQ wheel with rollers round its edge: it grips forward and back and slides sideways, so the robot turns smoothly.",
+      "used_for": "Turning-friendly IQ drives and strafing H-drives.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "Often paired with plain wheels: omni on one axle, grippy on the other. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20omni%20wheel%20200mm%20travel"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20omni%20wheel%20200mm%20travel"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_beam",
+      "image": "assets/img/parts/vex_iq_beam.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ beams and plates",
+      "part_class": "structure",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "material": "plastic",
+        "hole_pitch_in": 0.5,
+        "joins": "snap pins"
+      },
+      "blurb": "IQ's plastic building pieces: beams and plates on a 0.5 in hole grid, joined with snap-in pins. No tools needed.",
+      "used_for": "Frames, arms and towers on IQ robots.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "Every IQ part lines up on the same 0.5 in grid. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20beams%20plates"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20beams%20plates"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_gears",
+      "image": "assets/img/parts/vex_iq_gears.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ gears (12, 36, 60 teeth)",
+      "part_class": "structure",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "teeth": [
+          12,
+          36,
+          60
+        ],
+        "shaft": "IQ square shaft"
+      },
+      "blurb": "Plastic spur gears for IQ. Small driving big gives torque; big driving small gives speed.",
+      "used_for": "Drive gearing, arms and lifts.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "Example: a 36-tooth gear on the motor driving a 60-tooth gear on the wheel gives 120 × 36 ÷ 60 = 72 rpm and 1.67× the torque. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20gear"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20gear"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_air",
+      "image": "assets/img/parts/vex_iq_air.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Pneumatics Kit",
+      "part_class": "actuators",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "includes": [
+          "air pump",
+          "air tank",
+          "cylinders",
+          "solenoid"
+        ]
+      },
+      "blurb": "Air-powered pistons for IQ: a pump fills the tank and a solenoid fires the cylinders. Fast, strong, two-position moves.",
+      "used_for": "Clamps, kickers and flip-outs that only need two positions.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "VIQRC allows at most two air tanks and one air pump on a robot.",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Pneumatics%20Kit"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Pneumatics%20Kit"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_dist",
+      "image": "assets/img/parts/vex_iq_dist.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Distance Sensor (2nd gen)",
+      "part_class": "cameras_sensors",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "kind": "time_of_flight"
+      },
+      "blurb": "Measures how far away an object is with a laser time-of-flight beam.",
+      "used_for": "Lining up with walls and game pieces.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "Works best on flat targets facing the sensor. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Distance%20Sensor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Distance%20Sensor"
+        }
+      ]
+    },
+    {
+      "id": "vex_iq_opt",
+      "image": "assets/img/parts/vex_iq_opt.jpg",
+      "license": "proprietary-part",
+      "name": "VEX IQ Optical Sensor",
+      "part_class": "cameras_sensors",
+      "source": "VEX Robotics VEX IQ (2nd generation) product documentation (vexrobotics.com, kb.vex.com)",
+      "specs": {
+        "platform": "vex_iq",
+        "kind": "colour_proximity"
+      },
+      "blurb": "Reads colour, brightness and how close an object is, close up.",
+      "used_for": "Sorting game pieces by colour and spotting field lines.",
+      "robot_types": [
+        "VEX IQ competition robot"
+      ],
+      "notes": "Range is short: a few centimetres. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "vex",
+          "url": "https://www.vexrobotics.com/catalogsearch/result/?q=VEX%20IQ%20Optical%20Sensor"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=VEX%20IQ%20Optical%20Sensor"
+        }
+      ]
     }
   ],
   "templates": [
@@ -6055,6 +6401,26 @@
         "vex_v5_ctrl": 1,
         "vex_v5_vexnet": 1,
         "vex_v5_m11w": 4
+      }
+    },
+    {
+      "gate_pack": "live",
+      "label": "VEX IQ drive base (2-motor, 200 mm wheels)",
+      "name": "vex_iq_drive_base",
+      "optional": [
+        "vex_iq_omni",
+        "vex_iq_gears",
+        "vex_iq_air",
+        "vex_iq_dist",
+        "vex_iq_opt"
+      ],
+      "required": {
+        "vex_iq_brain": 1,
+        "vex_iq_motor": 2,
+        "vex_iq_batt": 1,
+        "vex_iq_ctrl": 1,
+        "vex_iq_wheel": 4,
+        "vex_iq_beam": 1
       }
     }
   ]
