@@ -663,7 +663,7 @@ export function useForgeAssistant() {
       const preview=mergeLibraryExport(doc,current,web);
       pendingLibrary.current=null;pendingWebProposal.current=null;
       pendingLibraryImport.current={doc,stock:JSON.stringify(current),web:JSON.stringify(web)};
-      noteBubble(`This export adds ${preview.added} record${preview.added===1?'':'s'} to your Library. Existing IDs stay unchanged. Photos restore as thumbnails. Reply “yes” to import or “no” to cancel.`);
+      noteBubble(`This export adds ${preview.added} record${preview.added===1?'':'s'} to My Parts and Tools. Existing IDs stay unchanged. Photos restore as thumbnails. Reply “yes” to import or “no” to cancel.`);
     }catch(e){noteBubble('Library not imported: '+(e as Error).message);}
   };
 
@@ -1487,7 +1487,7 @@ export function useForgeAssistant() {
           downloadText(cad.filename, cad.source);
           appendMsg({
             who: "bot",
-            html: "<p>" + esc(cad.summary) + " Saved in your Library as a Custom wishlist design.</p>" +
+            html: "<p>" + esc(cad.summary) + " Saved in My Parts and Tools as a Custom wishlist design.</p>" +
               "<details><summary>OpenSCAD source — " + esc(cad.filename) + "</summary><pre>" + esc(cad.source) + "</pre></details>",
           });
           return true;
@@ -1686,7 +1686,7 @@ export function useForgeAssistant() {
             const first=writeStore(INVENTORY_KEY,result.parts);if(first)throw new Error(first);
             const second=writeStore(WEB_PARTS_KEY,result.web);
             if(second){const rollback=writeStore(INVENTORY_KEY,current);throw new Error(second+(rollback?' Inventory was saved but rollback failed; export your current library.':' The inventory change was rolled back.'));}
-            noteBubble(`Imported ${result.added} record${result.added===1?'':'s'} into your Library.`);
+            noteBubble(`Imported ${result.added} record${result.added===1?'':'s'} into My Parts and Tools.`);
           }catch(e){noteBubble('Import did not finish: '+(e as Error).message);}
           return;
         }

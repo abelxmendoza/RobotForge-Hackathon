@@ -22,12 +22,12 @@ export function BrandMark() {
   );
 }
 
-/* App navigation: Workshop, Library, Robots (2026-11-12 simplify).
+/* App navigation: Workshop, My Parts and Tools, Robots (2026-11-12 simplify).
  * Home is the logo. `more` items would fold into the phone bar's
  * More menu; none do now. */
 const NAV = [
   { id: "workshop", label: "Workshop", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
-  { id: "inventory", label: "Library", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
+  { id: "inventory", label: "My Parts and Tools", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
   { id: "robots", label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
 ];
 

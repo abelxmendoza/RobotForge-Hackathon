@@ -42,7 +42,7 @@ def test_side_menu_has_no_demo_entry_but_the_real_doors_stay():
     ids = re.findall(r'id: "(\w+)"', nav)
     # BOM wizard and Evidence left the nav on 2026-11-01; /evidence/
     # stays reachable from robot pages, the demo and Wrench.
-    # 2026-11-12 simplify: Workshop, Library, Robots; Home is the logo.
+    # 2026-11-12 simplify: Workshop, My Parts and Tools, Robots; Home is the logo.
     assert ids == ["workshop", "inventory", "robots"], ids
     # Rover design is Wrench + the Workshop's Kit panel, not a separate flow.
     studio = (SHELL.parent / "garage" / "WorkshopStudio.tsx").read_text()

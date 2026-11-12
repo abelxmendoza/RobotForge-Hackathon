@@ -44,7 +44,7 @@ export default function AttachButton({ text, className, onSent, request = 0 }: {
             return;
           }
           setErr("");
-          setHandoff({ kind, file: f, files, text: text.trim() || (pathname.startsWith('/inventory')?'Identify this part photo for your Library.':'') });
+          setHandoff({ kind, file: f, files, text: text.trim() || (pathname.startsWith('/inventory')?'Identify this part photo for My Parts and Tools.':'') });
           onSent?.();
           router.push("/garage/#wrench");
         }}

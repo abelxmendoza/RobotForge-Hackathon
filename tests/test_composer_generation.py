@@ -203,7 +203,7 @@ def test_garage_panel_removed_hint_and_keeps():
 
 
 def test_nav_dedupe():
-    # 2026-11-12: three destinations (Workshop, Library, Robots) fit the
+    # 2026-11-12: three destinations (Workshop, My Parts and Tools, Robots) fit the
     # phone bar, so the More menu is gone and nothing is folded.
     assert "nav-more-menu" not in APP_SHELL
     assert "more: true" not in APP_SHELL
