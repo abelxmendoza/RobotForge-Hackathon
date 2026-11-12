@@ -53,3 +53,5 @@ The current Unity source provides reference inspection/posing and a static rover
 ## Published player delivery
 
 The `unity-workshop-local-2` GitHub release contains the verified Web player archive with its license/provenance receipts. `scripts/fetch-unity.mjs` consumes the exact URL and SHA-256 in `unity-release.json`; update that pin only after building and testing a new artifact. This keeps future Vercel Git builds from dropping the Unity player. To roll back, restore the previous tested release pin and rebuild. No Unity Editor, Worker change or secret is required on Vercel.
+
+Use the `-portable.tar.gz` release asset. Archives must omit macOS AppleDouble metadata (`._*` entries), which Linux otherwise extracts as duplicate loader/engine files. Package with Python `tarfile` (explicit regular files, relative member names, cleared uid/gid/user/group and extended metadata) or disable macOS metadata when archiving. Verify the actual archive entry list on Linux-compatible extraction before updating the release pin.
