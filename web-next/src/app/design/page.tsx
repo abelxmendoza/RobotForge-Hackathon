@@ -1,7 +1,8 @@
 "use client";
 import {useEffect} from 'react';
-/** Keep existing design bookmarks while the editor lives in Workshop. */
+/* The rover designer is part of Wrench and the Workshop now: old
+ * bookmarks open the Workshop's rover kit panel. */
 export default function DesignPage(){
- useEffect(()=>{window.location.replace('/garage/'+window.location.search+'#rover-design');},[]);
- return <p>The rover designer is now in <a href="/garage/#rover-design">Workshop</a>.</p>;
+ useEffect(()=>{window.location.replace('/garage/'+window.location.search+'#kit');},[]);
+ return <p>Rover design is in the <a href="/garage/#kit">Workshop</a>. Ask Wrench to design a rover.</p>;
 }

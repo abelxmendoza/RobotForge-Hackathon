@@ -159,6 +159,7 @@ export default function Robot3D({
   onDetachedChange,
   partLooks,
   viewHeight,
+  fill = false,
 }: {
   spec: RobotSpec;
   workshop?: boolean;
@@ -206,6 +207,8 @@ export default function Robot3D({
   /* A fixed canvas height in px for small previews (chat cards);
    * omitted, the viewer keeps its own page-sized height. */
   viewHeight?: number;
+  /* Fill the host's own height (the Workshop studio sizes it). */
+  fill?: boolean;
 }) {
   const managed=spec as RobotSpec & {roverDesign?:unknown;assembly?:{components:ComponentInstance[];connections:Connection[]}};
   instances ??= managed.roverDesign ? managed.assembly?.components : undefined;
@@ -1002,7 +1005,7 @@ export default function Robot3D({
         const resize = () => {
           const w = host.clientWidth || 700;
           const viewportHeight=window.visualViewport?.height??window.innerHeight;
-          const h = viewHeight ?? (window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460);
+          const h = fill && host.clientHeight > 120 ? host.clientHeight : viewHeight ?? (window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460);
           renderer.setSize(w, h);
           composer?.setSize(w,h);
           camera.aspect = w / h;
@@ -1263,5 +1266,5 @@ export default function Robot3D({
     if (restoreRequest) sessionRef.current?.restorePart?.(restoreRequest.id);
   }, [restoreRequest]);
 
-  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" className="assembly-viewport" style={{minHeight:viewHeight ?? 220}} />;
+  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" className="assembly-viewport" style={fill ? {height:'100%',minHeight:220,overflow:'hidden'} : {minHeight:viewHeight ?? 220}} />;
 }

@@ -124,8 +124,7 @@ def test_demo_bar_carries_the_signin_switch_action():
     assert "SignInCard" not in bar
     # The plain log-out-of-the-demo action survives, explained.
     assert "Exit demo" in bar
-    assert "logs you out of the demo" in bar
-    assert "nothing here is saved to an account" in bar
+    assert "Your own data is untouched" in bar
 
 
 def test_demo_pill_menu_carries_the_signin_switch_action():
