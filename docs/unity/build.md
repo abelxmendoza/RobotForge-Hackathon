@@ -26,7 +26,7 @@ npm run dev
 
 Staging verifies required license receipts, file hashes, file count/type/size and disallows symlinks. It never manufactures an engine binary. A different build ID must not be used to relabel a compiled player: its ready message must match the manifest or the host rejects it.
 
-Ordinary Next.js builds do not launch Unity. A published environment must explicitly stage its versioned Unity artifact before `npm run build`. Generated player output is ignored by Git. A real local artifact has been built and staged; see `verification.md` for the tested build and limitations.
+Ordinary Next.js builds do not launch Unity. `npm run build` now fetches the pinned public release in `unity-release.json` when needed, checks its archive SHA-256, and stages it before export. Cached staged files are rechecked against their individual receipts; missing, corrupted, or unavailable artifacts fail the build. The compiled artifact is distributed through GitHub Releases rather than Git history. Generated player output is ignored by Git. A real local artifact has been built and staged; see `verification.md` for the tested build and limitations.
 
 ## Tests
 
@@ -49,3 +49,7 @@ Passing synthetic transport/packaging tests is not proof that Unity compiles, lo
 ## Current implementation limits
 
 The current Unity source provides reference inspection/posing and a static rover body proxy. A rover proxy is not a driving simulation. The timed course, physics receipts, real-device performance gate, Blender environment polish, and gait controllers have not been implemented or validated. Existing Rapier and G1 Three.js views remain available. Unity cannot access saved stores or Worker credentials.
+
+## Published player delivery
+
+The `unity-workshop-local-2` GitHub release contains the verified Web player archive with its license/provenance receipts. `scripts/fetch-unity.mjs` consumes the exact URL and SHA-256 in `unity-release.json`; update that pin only after building and testing a new artifact. This keeps future Vercel Git builds from dropping the Unity player. To roll back, restore the previous tested release pin and rebuild. No Unity Editor, Worker change or secret is required on Vercel.
