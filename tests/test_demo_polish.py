@@ -38,11 +38,14 @@ def test_side_menu_has_no_demo_entry_but_the_real_doors_stay():
     nav = shell.split("const NAV = [", 1)[1].split("];", 1)[0]
     assert 'id: "demo"' not in nav
     assert '"/demo/"' not in nav
-    # The rest of the nav is unchanged, in order.
+    # Keep the primary destinations in order; rover design lives in Workshop.
     ids = re.findall(r'id: "(\w+)"', nav)
     # BOM wizard and Evidence left the nav on 2026-11-01; /evidence/
     # stays reachable from robot pages, the demo and Wrench.
-    assert ids == ["home", "workshop", "design", "inventory", "robots"], ids
+    assert ids == ["home", "workshop", "inventory", "robots"], ids
+    workshop = (SHELL.parent / "garage" / "Workshop.tsx").read_text()
+    assert 'id="rover-design"' in workshop
+    assert "<RoverDesigner />" in workshop
     landing = (WEB / "src/app/page.tsx").read_text()
     assert "RunDemoLink" in landing
     chrome = (WEB / "src/components/home/LandingChrome.tsx").read_text()
