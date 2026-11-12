@@ -24,7 +24,7 @@
       ]
     },
     {
-      "source": "/unity/:buildId/:path*",
+      "source": "/unity/:buildId/Build/:path*",
       "headers": [
         {
           "key": "Cache-Control",
