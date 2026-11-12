@@ -2368,3 +2368,25 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .vex3d-stage canvas{display:block;width:100%!important;height:100%!important}
 .vex3d-fail{position:absolute;inset:0;display:grid;place-items:center;padding:12px;text-align:center;margin:0}
 .vex3d figcaption{font-size:var(--fs-xs)}
+
+/* Unified Workshop: one bench, contextual tools, and guided assembly. */
+.ws-design-entry,.ws-guided {border:1px solid rgba(63,185,174,.28);border-radius:14px;padding:18px;background:linear-gradient(135deg,rgba(24,56,62,.5),rgba(9,20,30,.8));margin:16px 0}
+.ws-design-entry {display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ws-design-entry>div {flex:1;min-width:220px}
+.ws-design-entry h3,.ws-guided h3 {margin:6px 0}
+.ws-guided-head {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ws-guided-step {display:grid;gap:10px;background:rgba(0,0,0,.18);padding:16px;margin:14px 0;border-radius:10px}
+.ws-guided-step progress {width:100%;height:7px;accent-color:#32b5ad}
+.ws-part-picks {display:flex;flex-wrap:wrap;gap:8px;padding:12px 0}
+.ws-guided-part {border-left:3px solid #32b5ad;padding:12px 16px;background:rgba(50,181,173,.06);margin:12px 0}
+.ws-taskbar .ws-sections {display:flex;flex-wrap:wrap;gap:6px}
+.assembly-workbench .assembly-viewport {min-height:440px!important}
+@media(max-width:640px){.assembly-workbench .assembly-viewport{min-height:300px!important}.ws-guided,.ws-design-entry{padding:12px}.ws-guided-head{align-items:flex-start}.ws-guided .ta-controls{flex-wrap:wrap}}
+@media(max-width:640px){
+  .demo-bar-row{flex-wrap:wrap;gap:8px}
+  .demo-bar-text{flex:1 1 calc(100% - 110px);min-width:180px}
+  .demo-bar-signin,.demo-bar-exit{flex:1 1 auto}
+  .demo-bar-dismiss{margin-left:auto}
+  .ws-design-proposal{position:fixed;inset:auto 12px 150px;z-index:1000;max-height:55vh;overflow:auto;padding:18px;border:1px solid var(--accent);border-radius:14px;background:var(--surface-2)}
+}
+.ws-design-proposal{padding:18px;border:1px solid var(--accent);border-radius:14px;background:var(--surface-2)}

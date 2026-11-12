@@ -33,7 +33,8 @@ import { parts as intakeParts } from '@/lib/data';
 import { isLibraryExport } from '@/lib/partsLibrary';
 import { mergeCatalogue, WEB_PARTS_KEY, type WebPartRecord } from '@/lib/webParts';
 const intakeCatalogue = () => mergeCatalogue(intakeParts, readStore<WebPartRecord[]>(WEB_PARTS_KEY, []));
-import { applyModification, generateRobot, parseBrief, type ArchetypeId } from '@/lib/forgeEngine';
+import { applyModification } from '@/lib/forgeEngine';
+import { designConcept, canApplyDesign } from '@/lib/workshopDesign';
 import { intakeTarget, friendlyEdit, conceptRequest, mergePhotoDraft, modificationRequest } from '@/lib/wrenchIntake';
 import { OMEGA1_ROBOT_ID, omega1SeedSpec } from '@/lib/omega1Garage';
 import { readWorkshopContext } from '@/lib/workshopContext';
@@ -353,6 +354,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
   assistantRef.current = assistant;
   const assistantEntryIds = useRef(new Map<number,number>());
   const [submitting, setSubmitting] = useState(false);
+  const [conceptEdit,setConceptEdit] = useState<{robotId:string; baseline:string; before:string; spec:Record<string,unknown>; summary:string} | null>(null);
   const [inputMode,setInputMode]=useState<'chat'|'design'>('chat');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [status, setStatus] = useState('Checking what this deployment can do…');
@@ -1408,20 +1410,10 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     const target = regenerate ? intakeTarget(all,readWorkshopContext()) : null;
     if (regenerate && !target) throw new Error('Select a planned robot, then tell me how to regenerate it.');
     if (target && !target.versions.at(-1)?.planned) throw new Error('This is a real-build record. Ask me to create a new concept instead, or describe a modification.');
+    if (target && readWorkshopContext()?.draftDirty) throw new Error('Save or discard the Workshop draft before regenerating this concept.');
     const previous = target?.versions.at(-1)?.spec;
     const brief = value;
-    const priorType: Record<string,ArchetypeId> = {differential:'differential_rover',skid_steer:'differential_rover',mecanum:'mecanum_rover',robotic_arm:'robotic_arm',multirotor:'multirotor'};
-    const parsed = parseBrief(brief);
-    if (previous) {
-      if (!/\b(rover|drone|multirotor|arm|mecanum)\b/i.test(value)) parsed.archetype = priorType[String(previous.drivetrain)] ?? parsed.archetype;
-      if (!/\b(compact|small|mini|tiny|desktop|large|big|heavy|outdoor|bigger|standard)\b/i.test(value)) parsed.size = previous.conceptSize || 'standard';
-      const priorSensors = Object.keys(previous.forge?.ids || {}).filter((key) => ['camera','depth_camera','lidar','imu','ultrasonic'].includes(key));
-      parsed.sensors = [...new Set([...parsed.sensors,...priorSensors])].filter((sensor) => !new RegExp(`(?:without|remove)(?: the| a)? ${sensor.replace('_',' ')}`, 'i').test(value));
-    }
-    const spec = generateRobot(parsed,intakeCatalogue());
-    if (!spec?.forge?.bom?.length) throw new Error('I could not ground that idea in catalogue parts. Describe a rover, robot arm or multirotor.');
-    spec.conceptBrief = brief;
-    spec.conceptSize = parsed.size;
+    const spec = designConcept(brief,intakeCatalogue(),previous);
     if (target) spec.name = target.name;
     const at = new Date().toISOString();
     const v = {id:uid('v'),label:regenerate ? 'Regenerated concept' : 'Generated concept',source:'generated' as const,createdAt:at,spec,planned:true,note:value};
@@ -1481,10 +1473,9 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
           const target = context ? intakeTarget(all,context) : null;
           const mod = target && modificationRequest(value) && applyModification(target.versions.at(-1)?.spec,value,intakeCatalogue());
           if (target && mod) {
-            const at = new Date().toISOString();
-            const version = {id:uid('v'),label:'Text modification',source:'generated' as const,createdAt:at,spec:mod.spec,planned:true,note:mod.summary};
-            const error = writeStore(GARAGE_KEY,all.map((r) => r.id === target.id ? {...r,versions:[...r.versions,version]} : r)); if (error) throw new Error(error);
-            pushUser(<p>{value}</p>); assistant.postCreateResult({pill:'FORGE ENGINE',text:mod.summary+' Saved as a planned version.',openAction:{robotId:target.id,tab:'overview',label:'Open modification'}});
+            if (context?.draftDirty) throw new Error('Save or discard the current Workshop draft before asking Wrench to revise this robot.');
+            setConceptEdit({robotId:target.id,baseline:target.versions.at(-1)!.id,before:JSON.stringify(target.versions.at(-1)!.spec),spec:mod.spec,summary:mod.summary});
+            pushUser(<p>{value}</p>); pushNote('Change prepared. Review it below, then apply it as a new planned version or cancel.');
           } else {pushUser(<p>{value}</p>);assistant.ask(value);}
         }
       }
@@ -1720,6 +1711,16 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
 
   return (
     <>
+      {conceptEdit && <section className="ws-design-proposal" role="region" aria-label="Review robot change"><h3>Review robot change</h3><p>{conceptEdit.summary}</p><p className="faint g-small">Saves a new planned version. Previous versions remain in History.</p><button type="button" className="btn btn-primary" onClick={() => {
+        const all=readStore<GarageRobot[]>(GARAGE_KEY,[]);
+        const target=all.find(r=>r.id===conceptEdit.robotId && !r.archivedAt);
+        const current=readWorkshopContext();
+        if (!target || !canApplyDesign(target.id,conceptEdit.baseline,current?.robotId,target.versions.at(-1)?.id,Boolean(current?.draftDirty)) || JSON.stringify(target.versions.at(-1)?.spec)!==conceptEdit.before) {setConceptEdit(null);pushNote('This robot or its draft changed. Nothing was applied; ask again against the current version.');return;}
+        const version={id:uid('v'),label:'Wrench modification',source:'generated' as const,createdAt:new Date().toISOString(),spec:conceptEdit.spec,planned:true,note:conceptEdit.summary};
+        const error=writeStore(GARAGE_KEY,all.map(r=>r.id===target.id?{...r,versions:[...r.versions,version]}:r));
+        if(error){pushNote(error);return;}
+        setConceptEdit(null);pushNote('Saved a new planned version. The original remains in History.');
+      }}>Apply new version</button><button type="button" className="btn" onClick={()=>setConceptEdit(null)}>Cancel</button></section>}
       {docked ? (
         <section className="chat-bar-panel wrench-panel" aria-label={`${ASSISTANT_NAME} conversation`} hidden={!open}>
           <div className="fc-head">
@@ -1734,7 +1735,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
       ) : panel}
       <form className="forge-composer main-chat-composer" onSubmit={onSubmit}>
         {submitting && <p className="faint g-small" role="status">{attach ? 'Adding your file…' : 'Working on your request…'}</p>}
-        <div className="g-tabs" aria-label="Message mode" hidden={docked && !open}><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>setInputMode('design')}>Design a robot</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>{setInputMode('design');setText('Generate a robot ');inputRef.current?.focus();}} aria-label="Create: generate a robot, acceptance tests, or a modification" title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)">✦ Create</button></div>
+        <div className="g-tabs" aria-label="Message mode" hidden={docked && !open}><button type="button" className="chip" aria-pressed={inputMode==='chat'} onClick={()=>setInputMode('chat')}>Ask & manage</button><button type="button" className="chip" aria-pressed={inputMode==='design'} onClick={()=>{setInputMode('design');setText('Generate a robot ');inputRef.current?.focus();}} aria-label="Create: generate a robot, acceptance tests, or a modification" title="Create — generate a robot, acceptance tests, or a modification (Forge Engine, right here)">✦ Create</button></div>
         {/* The assistant's suggestion chips belong to THIS surface on
             /garage: the bottom ChatBar that renders them on other
             pages returns null on /garage, /forge and /chat, so the

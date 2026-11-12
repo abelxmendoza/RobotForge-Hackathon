@@ -162,9 +162,10 @@ def test_applying_a_vex_setup_keeps_wheel_torque_in_step():
     assert [f.check for f in validate(spec)] == ["all"]
 
 
-def test_workshop_has_a_drive_train_tab():
+def test_workshop_has_a_drive_train_tool_under_build():
     nav = GARAGE.split("const WORK_TABS:", 1)[1].split("];", 1)[0]
-    assert "{ id: 'drivetrain', label: 'Drive train'" in nav
+    assert "{ id: 'drivetrain', label: 'Drive train'" not in nav
+    assert "{ id: 'drivetrain', label: 'Drive train'" in GARAGE
     assert "<DriveTrainTab key={robot.id} spec={draft}" in GARAGE
     assert "drivetrain|" in GARAGE  # deep links #tab=drivetrain
     # the tab names its basis and never claims a measurement

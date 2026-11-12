@@ -37,7 +37,7 @@ def test_module_is_pure_and_wired_into_checks():
                    "export function modelUnits", "'NOT_CHECKED'", "OMEGA1_MODEL"):
         assert marker in SRC, marker
     # Shown in the Checks tab, right after the engineering findings.
-    checks = GARAGE.split("{tab === 'checks' && (")[1]
+    checks = GARAGE.split("{tab === 'checks' && draft.referenceModel !== 'unitree-g1-23' && (")[1]
     assert checks.index("<Findings lines={draftLines} />") < checks.index("<TwinCritic ")
     # Omega1's model is read by a range request, never all 10 MB first.
     assert 'Range: "bytes=0-' in UI

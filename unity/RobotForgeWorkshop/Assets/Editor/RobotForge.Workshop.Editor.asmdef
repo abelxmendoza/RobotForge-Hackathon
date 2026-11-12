@@ -1,0 +1,1 @@
+{"name":"RobotForge.Workshop.Editor","rootNamespace":"RobotForge.Editor","references":["RobotForge.Workshop","Unity.RenderPipelines.Universal.Runtime","Unity.RenderPipelines.Universal.Editor"],"includePlatforms":["Editor"]}

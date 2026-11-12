@@ -1,4 +1,8 @@
 "use client";
+import {UNITY_ASYNC_EVENT} from '@/lib/unityProtocol';
+import type {UnityRequest} from '@/components/unity/UnityWorkshop';
+import {parseHumanoidCommand,requestHumanoid} from '@/lib/humanoid';
+import { parseBenchCommand, requestBench } from '@/lib/workshopBench';
 /* Headless assistant for the primary Forge conversation. Recorded answers,
  * live fallback and validated operation proposals share its single composer.
  * No floating launcher or separate chat panel is mounted. */
@@ -1105,6 +1109,18 @@ export function useForgeAssistant() {
   };
 
   const runCommands = (q: string): boolean => {
+      const humanoidCommand=parseHumanoidCommand(q);
+      if(humanoidCommand){
+        const command=humanoidCommand;
+        const operation=command.kind==='explode'?'setExplode':command.kind==='reset'?'resetView':command.kind==='next'?'nextLink':command.kind==='select'?'selectLink':command.kind==='pose'?'setJointPose':command.kind==='explain'?'explainLink':null;
+        if(operation){const payload=command.kind==='explode'?{amount:1}:command.kind==='select'?{link:command.link}:command.kind==='pose'?{joint:command.joint,radians:command.degrees*Math.PI/180}:{};const request:UnityRequest={operation,payload,handled:false,complete:message=>noteBubble(message)};window.dispatchEvent(new CustomEvent(UNITY_ASYNC_EVENT,{detail:request}));if(request.handled)return true;}
+        const result=requestHumanoid(humanoidCommand);noteBubble(result.handled?result.message:'Open a G1 humanoid in Workshop → Build first.');return true;}
+      const benchCommand = parseBenchCommand(q);
+      if (benchCommand) {
+        const result = requestBench(benchCommand);
+        noteBubble(result.handled ? result.message : 'Open this robot’s Build workbench in Workshop, then ask again.');
+        return true;
+      }
       if (runVexCommand(q)) return true;
       /* "remember that …": a note on the Workshop robot on screen. */
       const remember=parseRememberCommand(q);

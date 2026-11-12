@@ -1,0 +1,1 @@
+{"name":"RobotForge.Workshop.Tests","references":["RobotForge.Workshop","RobotForge.Workshop.Editor"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"],"defineConstraints":["UNITY_INCLUDE_TESTS"]}

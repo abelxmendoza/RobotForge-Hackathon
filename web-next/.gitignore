@@ -13,3 +13,6 @@ public/vanilla/
 
 # Generated at prebuild by scripts/make-sample-scan.mjs — do not commit.
 public/sample-scan.ply
+
+# Versioned Unity Web artifacts (stage locally, publish as build artifacts).
+/public/unity/
