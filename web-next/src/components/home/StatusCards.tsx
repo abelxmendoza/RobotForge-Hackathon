@@ -201,7 +201,7 @@ const CARDS: Card[] = [
     lede: "Your shelf, kept honest: the parts and tools you really own.",
     facts: ["Sim-only entries stay visibly separate"],
     href: "/inventory/",
-    go: "Open My Parts and Tools",
+    go: "Open the Library",
     art: InventoryArt,
   },
   {

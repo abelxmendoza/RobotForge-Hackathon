@@ -15,8 +15,8 @@ const ROWS: { step: string; model: string; route: string; where: string; href: s
   { step: 'Parts list → assembled draft', model: OPEN, route: 'list', where: 'Forge', href: '/garage/' },
   { step: 'Robot photo or spec-sheet photo → draft (ESTIMATED / DOCUMENT-READ)', model: VISION, route: 'photo', where: 'Forge, My robots', href: '/garage/' },
   { step: 'Failed check → proposed fix, up to 3 rounds', model: OPEN, route: 'fix', where: 'Demo, My robots', href: '/demo/' },
-  { step: 'Part photo → identified part, label values read', model: VISION, route: 'part', where: 'My Parts and Tools', href: '/inventory/' },
-  { step: 'Confirm each part in a chat', model: OPEN, route: 'part_chat', where: 'My Parts and Tools', href: '/inventory/' },
+  { step: 'Part photo → identified part, label values read', model: VISION, route: 'part', where: 'Library', href: '/inventory/' },
+  { step: 'Confirm each part in a chat', model: OPEN, route: 'part_chat', where: 'Library', href: '/inventory/' },
   { step: 'Wrench follow-up questions', model: OPEN, route: 'chat', where: 'Every app page', href: '/garage/' },
 ];
 

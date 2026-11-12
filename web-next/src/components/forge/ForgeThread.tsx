@@ -35,6 +35,8 @@ import { mergeCatalogue, WEB_PARTS_KEY, type WebPartRecord } from '@/lib/webPart
 const intakeCatalogue = () => mergeCatalogue(intakeParts, readStore<WebPartRecord[]>(WEB_PARTS_KEY, []));
 import { applyModification } from '@/lib/forgeEngine';
 import { designConcept, canApplyDesign } from '@/lib/workshopDesign';
+import { roverRequirementsFromBrief, roverKitFromBrief, uniqueName } from '@/lib/roverKit';
+import { saveRoverVersion } from '@/lib/roverDesign';
 import { intakeTarget, friendlyEdit, conceptRequest, mergePhotoDraft, modificationRequest } from '@/lib/wrenchIntake';
 import { OMEGA1_ROBOT_ID, omega1SeedSpec } from '@/lib/omega1Garage';
 import { readWorkshopContext } from '@/lib/workshopContext';
@@ -1413,6 +1415,21 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     if (target && readWorkshopContext()?.draftDirty) throw new Error('Save or discard the Workshop draft before regenerating this concept.');
     const previous = target?.versions.at(-1)?.spec;
     const brief = value;
+    /* A new rover is a full rover kit (parts, assembly, chassis CAD,
+     * build package), edited in Workshop → Build → Kit or in words. */
+    const roverReq = !target ? roverRequirementsFromBrief(brief) : null;
+    if (roverReq) {
+      const at = new Date().toISOString(), id = uid('robot'), vid = uid('v');
+      roverReq.name = uniqueName(roverReq.name, all.map((r) => r.name));
+      const spec = roverKitFromBrief(roverReq, intakeCatalogue(), vid, at);
+      const next = saveRoverVersion(all, spec, id, null, vid, at);
+      const error = writeStore(GARAGE_KEY, next); if (error) throw new Error(error);
+      setInputMode('chat');
+      if (docked) window.location.hash = 'robot='+encodeURIComponent(id)+'&tab=kit';
+      pushUser(<p>{value}</p>);
+      assistant.postCreateResult({pill:'ROVER KIT',text:`Designed ${roverReq.name}: ${spec.forge.bom.length} part types from the catalogue, planned (not built). Say “swap the motor for …”, “make the chassis 250 by 180 mm” or “export the build kit”.`,openAction:{robotId:id,tab:'kit',label:'Open the kit'}});
+      return;
+    }
     const spec = designConcept(brief,intakeCatalogue(),previous);
     if (target) spec.name = target.name;
     const at = new Date().toISOString();
@@ -1499,9 +1516,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
     welcomeIdRef.current = welcomeId;
     setEntries((prev) => [{ kind: 'note', id: welcomeId, node: (
       <p>
-        <strong>Ask Wrench.</strong> Ask questions, manage inventory, or change a saved robot here; switch to Design a robot to generate a new spec. Part photos save to inventory. Photo identification and parts-list imports need
-        the live endpoint; spec files, scans and the recorded samples
-        always work.
+        <strong>Ask Wrench</strong> anything, or say what to build: &ldquo;design a rover with a lidar&rdquo;.
       </p>
     ) }, ...prev]);
     (async () => {
@@ -1847,7 +1862,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
                 (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
               }
             }}
-            placeholder={inputMode === 'design' ? 'Describe a robot in plain words…' : (docked ? 'Describe a robot, attach photos, or ask for a change…' : `Message ${ASSISTANT_NAME}…`)}
+            placeholder={inputMode === 'design' ? 'Describe a robot in plain words…' : (docked ? 'Ask Wrench, or describe a robot…' : `Message ${ASSISTANT_NAME}…`)}
           />
           <button
             type="submit"

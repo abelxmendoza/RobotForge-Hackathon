@@ -42,7 +42,7 @@ export function tabFocus(tab: string, f: FocusFacts): TabFocus {
         action: { kind: 'ask', label: 'Check the wiring', text: 'Sanity-check this robot’s wiring' } };
     case 'bom':
     case 'tools':
-      return { job: `What ${f.name} costs, what you already have, and what to buy.`, status: 'Checked against My Parts and Tools', tone: 'info',
+      return { job: `What ${f.name} costs, what you already have, and what to buy.`, status: 'Checked against Library', tone: 'info',
         action: { kind: 'ask', label: 'What do I still need?', text: 'What do I still need to buy for this robot?' } };
     case 'checks':
       return { job: `Does ${f.name}'s design pass its engineering checks?`, ...checks,

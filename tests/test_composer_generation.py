@@ -203,13 +203,10 @@ def test_garage_panel_removed_hint_and_keeps():
 
 
 def test_nav_dedupe():
-    menu = APP_SHELL.split("nav-more-menu")[1].split("</details>")[0]
-    # The folded items render from NAV's `more` entries (Robots) —
-    # and nothing else: the two hard-coded duplicate links are gone.
-    assert "NAV.filter((n) => n.more)" in menu
-    assert '"robots", more: true' in APP_SHELL
-    assert "How it works" not in menu
-    assert "GitHub" not in menu
+    # 2026-11-12: three destinations (Workshop, Library, Robots) fit the
+    # phone bar, so the More menu is gone and nothing is folded.
+    assert "nav-more-menu" not in APP_SHELL
+    assert "more: true" not in APP_SHELL
     # The single remaining copies live in the side-foot.
     foot = APP_SHELL.split('className="side-foot"')[1].split("</div>")[0]
     assert "How it works" in foot

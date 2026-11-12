@@ -17,14 +17,20 @@ import {promptWrench} from '@/lib/wrenchPrompt';
 import {isWiring} from '@/lib/wiring';
 import type {RobotSpec} from '@/components/forge/model';
 import RobotAvatar from './RobotAvatar';
+import RoverKitPanel,{downloadRoverPackage} from './RoverKitPanel';
+import {ROVER_KIT_EVENT,canBeRoverKit,roverKitFromConcept,matchPart,withCad,type RoverKitResult} from '@/lib/roverKit';
+import {roverRoleChoices,swapRoverPart,saveRoverVersion} from '@/lib/roverDesign';
+import {defaultRoverCad} from '@/lib/roverPackage';
+import {parts as catalogueParts} from '@/lib/data';
+import type {CataloguePart} from '@/lib/forgeEngine';
 import HumanoidWorkshop from './HumanoidWorkshop';
 import UnitySceneChoice from '@/components/unity/UnitySceneChoice';
 const Robot3D=dynamic(()=>import('@/components/kit/Robot3D'),{ssr:false});
 const WiringView=dynamic(()=>import('@/components/wiring/WiringView'),{ssr:false});
 const SimulationWorkspace=dynamic(()=>import('@/components/simulation/SimulationWorkspace'),{ssr:false});
-const RoverDesigner=dynamic(()=>import('@/components/design/RoverDesigner'),{ssr:false});
 const Garage=dynamic(()=>import('./Garage'),{ssr:false});
 const clone=(v:Spec):Spec=>JSON.parse(JSON.stringify(v));
+const kitCatalogue=catalogueParts as unknown as CataloguePart[];
 type Draft={robotId:string;baseline:string;spec:Spec;baseSpec:Spec};
 type Mode='build'|'wiring'|'checks';
 const fields=[['mass_kg','Mass','kg'],['length_m','Length','m'],['width_m','Width','m'],['height_m','Height','m'],['wheel.diameter_m','Wheel diameter','m']] as const;
@@ -38,12 +44,14 @@ export default function WorkshopStudio(){
  const [part,setPart]=useState<string|null>(null),[search,setSearch]=useState(''),[explode,setExplode]=useState(0),[cameraReset,setCameraReset]=useState(0),[failed,setFailed]=useState(false);
  const [bench,setBench]=useState<BenchState>({active:false,off:0,direction:1});
  const dialog=useRef<HTMLDialogElement>(null);
+ const [routeRobot,setRouteRobot]=useState<string|null>(null);
  const robot=robots.find(r=>r.id===selectedId)??robots[0],latest=robot?.versions.at(-1);
  const dirty=!!(edit&&robot&&edit.robotId===robot.id&&latest&&JSON.stringify(edit.spec)!==JSON.stringify(edit.baseSpec));
  const spec=edit?.robotId===robot?.id?edit?.spec:latest?.spec;
  const stale=!!(dirty&&edit?.baseline!==latest?.id);
  const identity=robot?.id+':'+latest?.id+':'+demo;
  const humanoid=spec?.referenceModel==='unitree-g1-23';
+ const isKit=!!spec?.roverDesign,canKit=!isKit&&canBeRoverKit(spec,latest?.planned);
  const built=useMemo(()=>{try{return spec&&!humanoid?taBuildParts(spec as RobotSpec):null;}catch{return null;}},[spec,humanoid]);
  const steps=useMemo(()=>teardownSteps(built?.parts.map(p=>p.id)??[]).steps,[built]);
  const target=bench.active?steps[bench.direction<0?bench.off-1:bench.off]:null;
@@ -68,7 +76,7 @@ export default function WorkshopStudio(){
  },[edit,dirty,robot?.id,latest?.planned]);
  useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
  useEffect(()=>{
-  const route=()=>{const r=studioRoute(location.hash);setMode(r.mode);setPanel(r.panel);setLegacy(r.legacy);};route();window.addEventListener('hashchange',route);return()=>window.removeEventListener('hashchange',route);
+  const route=()=>{const r=studioRoute(location.hash);setMode(r.mode);setPanel(r.panel);setLegacy(r.legacy);if(r.robotId)setRouteRobot(r.robotId);};route();window.addEventListener('hashchange',route);return()=>window.removeEventListener('hashchange',route);
  },[]);
  useEffect(()=>{
   if(legacy)return;
@@ -87,11 +95,25 @@ export default function WorkshopStudio(){
    if(r.command==='explain'||r.command==='hint'){r.message=picked?`${picked.name}: ${picked.does}`:'Select a part first.';}else{setBench(b=>benchTransition(b,r.command,steps.length));setPanel('guide');r.message='Updated visual assembly practice. Saved robot unchanged.';}
   };window.addEventListener(BENCH_EVENT,handle);return()=>window.removeEventListener(BENCH_EVENT,handle);
  },[legacy,mode,humanoid,picked,steps.length]);
+ useEffect(()=>{
+  if(legacy)return;
+  const handle=(event:Event)=>{const r=(event as CustomEvent<RoverKitResult>).detail;if(r.handled||!robot||!spec||!latest)return;r.handled=true;const c=r.command;
+   if(!isKit){r.message=canKit?`${robot.name} isn't a rover kit yet. Open Build → Kit and tap “Make it a rover kit”.`:`${robot.name} isn't a planned rover. Ask me to design a rover first.`;return;}
+   setMode('build');setPanel('kit');
+   try{
+    if(c.kind==='open'){r.message='Opened the rover kit.';}
+    else if(c.kind==='export'){if(dirty){r.message='Save your changes first, then ask again.';return;}void downloadRoverPackage(robot.id,latest.id).then(setNotice,e=>setNotice((e as Error).message));r.message=`Exporting ${robot.name}'s build kit (ZIP with parts list, CAD and STL).`;}
+    else if(c.kind==='swap'){const role=roverRoleChoices(spec,kitCatalogue).find(x=>x.role===c.role);if(!role){r.message=`This rover has no ${c.role.replace('_',' ')} to swap.`;return;}const part=matchPart(role.options,c.part);if(!part){r.message=`I couldn't match “${c.part}”. Options: ${role.options.slice(0,4).map(p=>p.name).join(', ')}…`;return;}draftSpec(swapRoverPart(spec,c.role,part.id,kitCatalogue));r.message=`Swapped the ${role.label} for ${part.name}. Press Save to keep it.`;}
+    else if(c.kind==='chassis'){const cad=spec.roverDesign.cad??defaultRoverCad(spec);draftSpec(withCad(spec,{...cad,chassis:{...cad.chassis,lengthMm:c.lengthMm,widthMm:c.widthMm,thicknessMm:c.thicknessMm??cad.chassis.thicknessMm}}));r.message=`Chassis set to ${c.lengthMm} × ${c.widthMm} mm. Press Save to keep it.`;}
+   }catch(e){r.message=(e as Error).message;}
+  };window.addEventListener(ROVER_KIT_EVENT,handle);return()=>window.removeEventListener(ROVER_KIT_EVENT,handle);
+ });
  useEffect(()=>{if(newRobot||pending!==null){dialog.current?.showModal();}else dialog.current?.close();},[newRobot,pending]);
  const save=()=>{
   if(!robot||!edit||!dirty)return true;
-  try{const fresh=readStore<GarageRobot[]>(GARAGE_KEY,[]);const next=saveStudioVersion(fresh,robot.id,edit.baseline,edit.spec,uid('v'),new Date().toISOString());const error=writeStore(GARAGE_KEY,next);if(error)throw new Error(error);const saved=next.find(r=>r.id===robot.id)!.versions.at(-1)!;setEdit({robotId:robot.id,baseline:saved.id,spec:clone(saved.spec),baseSpec:clone(saved.spec)});writeStore(workshopDraftKey(robot.id),null);setNotice('Version saved');return true;}catch(e){setNotice((e as Error).message);return false;}
+  try{const fresh=readStore<GarageRobot[]>(GARAGE_KEY,[]);const next=edit.spec.roverDesign?saveRoverVersion(fresh,edit.spec,robot.id,edit.baseline,uid('v'),new Date().toISOString()):saveStudioVersion(fresh,robot.id,edit.baseline,edit.spec,uid('v'),new Date().toISOString());const error=writeStore(GARAGE_KEY,next);if(error)throw new Error(error);const saved=next.find(r=>r.id===robot.id)!.versions.at(-1)!;setEdit({robotId:robot.id,baseline:saved.id,spec:clone(saved.spec),baseSpec:clone(saved.spec)});writeStore(workshopDraftKey(robot.id),null);setNotice('Version saved');return true;}catch(e){setNotice((e as Error).message);return false;}
  };
+ useEffect(()=>{if(routeRobot&&robots.some(r=>r.id===routeRobot)){switchRobot(routeRobot);setRouteRobot(null);}},[routeRobot,robots]);
  const switchRobot=(id:string)=>{if(id===robot?.id)return;if(dirty){setPending(id);return;}setSelectedId(id);setEdit(null);setNotice('');};
  const addReference=()=>{
   const fresh=readStore<GarageRobot[]>(GARAGE_KEY,[]);const existing=fresh.find(r=>!r.archivedAt&&r.versions.at(-1)?.spec?.referenceModel==='unitree-g1-23');
@@ -99,6 +121,7 @@ export default function WorkshopStudio(){
   const id=uid('g1'),at=new Date().toISOString();const error=writeStore(GARAGE_KEY,[...fresh,{id,name:G1_SPEC.name,createdAt:at,versions:[{id:uid('v'),label:'Manufacturer reference',source:'robodex',createdAt:at,spec:G1_SPEC,planned:true}]}]);
   if(error){setNotice(error);return;}setNewRobot(false);switchRobot(id);
  };
+ const draftSpec=(next:Spec)=>{if(!robot||!latest)return;setEdit({robotId:robot.id,baseline:edit?.baseline??latest.id,spec:next,baseSpec:edit?.baseSpec??clone(latest.spec)});};
  const change=(path:string,value:number)=>{if(!Number.isFinite(value)||!robot||!latest)return;const next=clone(spec);setPath(next,path,value);setEdit({robotId:robot.id,baseline:edit?.baseline??latest.id,spec:next,baseSpec:edit?.baseSpec??clone(latest.spec)});};
  const reset=()=>{setCameraReset(n=>n+1);setExplode(0);setPart(null);setBench({active:false,off:0,direction:1});};
  if(!ready)return <p role="status">Opening workshop…</p>;
@@ -113,11 +136,11 @@ export default function WorkshopStudio(){
    {mode==='build'&&<div className="studio-build">
     {humanoid?<UnitySceneChoice studio robotId={robot.id} versionId={latest?.id??'new'} spec={spec}><HumanoidWorkshop studio/></UnitySceneChoice>:<div className="studio-scene-grid">
      <div className="studio-canvas"><div className="studio-scene-tools"><button onClick={reset}>Fit view</button><button aria-pressed={explode>0} onClick={()=>setExplode(n=>n?0:.8)}>Separate parts</button><button onClick={()=>setPanel('guide')}>Assemble</button></div>
-      {failed?<div className="studio-empty"><h2>3D view unavailable</h2><p>Your parts and project are still available.</p><button onClick={()=>{setFailed(false);setCameraReset(n=>n+1);}}>Retry 3D</button></div>:<Robot3D key={robot.id+':'+cameraReset} spec={spec} workshop cameraReset={cameraReset} viewHeight={undefined} explode={explode} selected={part} onSelect={id=>{setPart(id);setPanel('parts');}} onFail={()=>setFailed(true)} autoRotate={false} showComMarker={false} teardown={bench.active?{removed:steps.slice(0,bench.off),isolate:target??null}:undefined}/>}
+      {failed?<div className="studio-empty"><h2>3D view unavailable</h2><p>Your parts and project are still available.</p><button onClick={()=>{setFailed(false);setCameraReset(n=>n+1);}}>Retry 3D</button></div>:<Robot3D key={robot.id+':'+cameraReset} spec={spec} workshop cameraReset={cameraReset} fill explode={explode} selected={part} onSelect={id=>{setPart(id);setPanel('parts');}} onFail={()=>setFailed(true)} autoRotate={false} showComMarker={false} teardown={bench.active?{removed:steps.slice(0,bench.off),isolate:target??null}:undefined}/>}
       <span className="studio-scene-caption">Drag to orbit · select a part</span>
      </div>
-     <aside className="studio-inspector" aria-label="Robot inspector"><div className="studio-panel-head"><h2>{panel==='guide'?'Assembly practice':panel==='specs'?'Dimensions':panel==='versions'?'Versions':'Parts'}</h2><button onClick={()=>setPanel(panel==='specs'?'parts':'specs')}>{panel==='specs'?'Parts':'Dimensions'}</button></div>
-      {panel==='guide'?<><span className="studio-bay">ILLUSTRATIVE · NOT BUILD INSTRUCTIONS</span><h3>{bench.active?(target?built?.parts.find(p=>p.id===target)?.name:'Practice complete'):'Build it, part by part'}</h3><p>{bench.active?'Add the highlighted part to the model.':'Explore how the model goes together.'}</p><progress aria-label="Assembly progress" max={steps.length||1} value={bench.active?steps.length-bench.off:0}/><span>{bench.active?steps.length-bench.off:0} / {steps.length} part groups</span><div className="studio-inline"><button onClick={()=>{setBench(b=>benchTransition(b,bench.active?'next':'assemble',steps.length));setExplode(0);}} className="studio-primary">{bench.active?'Next part':'Start assembly'}</button><button onClick={()=>setBench(b=>benchTransition(b,'back',steps.length))} disabled={!bench.active}>Back</button><button onClick={reset}>Reset</button></div></>:panel==='specs'?<><p className="studio-muted">Changes save as a new version.</p>{fields.filter(([path])=>typeof getPath(spec,path)==='number').map(([path,label,unit])=><label className="studio-field" key={path}><span>{label} <small>{unit}</small></span><input type="number" min="0.001" step="0.001" value={getPath(spec,path)} onChange={e=>change(path,Number(e.target.value))}/></label>)}</>:panel==='versions'?<>{robot.versions.slice().reverse().map((v,i)=><button className="studio-version" key={v.id} onClick={()=>{setNotice(v.label+' · '+new Date(v.createdAt).toLocaleDateString());}}><strong>v{robot.versions.length-i} · {v.label}</strong><small>{new Date(v.createdAt).toLocaleDateString()}</small></button>)}<button onClick={()=>downloadJSON('robot.json',spec)}>Export project</button><button onClick={()=>{if(dirty&&!save())return;setLegacy(true);}}>Open project records</button></>:<><input className="studio-search" aria-label="Find a part" placeholder="Find a part…" value={search} onChange={e=>setSearch(e.target.value)}/><div className="studio-parts" role="group" aria-label="Robot parts">{built?.parts.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())).map(p=><button key={p.id} aria-pressed={part===p.id} onClick={()=>setPart(p.id)}><span>{p.name}</span><small>×{p.qty}</small></button>)}</div>{picked?<div className="studio-part-card"><span className="studio-bay">SELECTED PART</span><h3>{picked.name}</h3><p>{picked.does}</p><span>{picked.dims}</span><button onClick={()=>promptWrench({mode:'chat',text:'Explain this part',send:true})}>Ask Wrench</button></div>:<p className="studio-muted">Select a part to inspect it.</p>}<button className="studio-primary" onClick={()=>setPanel('guide')}>Start assembly</button></>}
+     <aside className="studio-inspector" aria-label="Robot inspector"><div className="studio-seg" role="group" aria-label="Side panel">{([['parts','Parts'],...(isKit||canKit?[['kit','Kit']]:[]),['specs','Size']] as [string,string][]).map(([id,label])=><button key={id} aria-pressed={panel===id||(id==='parts'&&panel==='guide')} onClick={()=>setPanel(id)}>{label}</button>)}</div>
+      {panel==='kit'?(isKit?<RoverKitPanel key={robot.id} spec={spec} robotId={robot.id} versionId={latest?.id??''} dirty={dirty} onChange={draftSpec} onNotice={setNotice}/>:canKit?<><h3>Make it a rover kit</h3><p>Swap parts, set the chassis and export CAD and a parts list.</p><button className="studio-primary" onClick={()=>{try{draftSpec(roverKitFromConcept(spec,robot.name,kitCatalogue,uid('assembly'),new Date().toISOString()));}catch(e){setNotice((e as Error).message);}}}>Make it a rover kit</button></>:<><h3>No rover kit</h3><p>Ask Wrench to design a rover, like “a compact rover with a camera”.</p><button onClick={()=>promptWrench({mode:'design',text:'Design a rover that '})}>Ask Wrench</button></>):panel==='guide'?<><span className="studio-bay">ILLUSTRATIVE · NOT BUILD INSTRUCTIONS</span><h3>{bench.active?(target?built?.parts.find(p=>p.id===target)?.name:'Practice complete'):'Build it, part by part'}</h3><p>{bench.active?'Add the highlighted part to the model.':'Explore how the model goes together.'}</p><progress aria-label="Assembly progress" max={steps.length||1} value={bench.active?steps.length-bench.off:0}/><span>{bench.active?steps.length-bench.off:0} / {steps.length} part groups</span><div className="studio-inline"><button onClick={()=>{setBench(b=>benchTransition(b,bench.active?'next':'assemble',steps.length));setExplode(0);}} className="studio-primary">{bench.active?'Next part':'Start assembly'}</button><button onClick={()=>setBench(b=>benchTransition(b,'back',steps.length))} disabled={!bench.active}>Back</button><button onClick={reset}>Reset</button></div></>:panel==='specs'?<><p className="studio-muted">Changes save as a new version.</p>{fields.filter(([path])=>typeof getPath(spec,path)==='number').map(([path,label,unit])=><label className="studio-field" key={path}><span>{label} <small>{unit}</small></span><input type="number" min="0.001" step="0.001" value={Number(getPath(spec,path))} onChange={e=>change(path,Number(e.target.value))}/></label>)}</>:panel==='versions'?<>{robot.versions.slice().reverse().map((v,i)=><button className="studio-version" key={v.id} onClick={()=>{setNotice(v.label+' · '+new Date(v.createdAt).toLocaleDateString());}}><strong>v{robot.versions.length-i} · {v.label}</strong><small>{new Date(v.createdAt).toLocaleDateString()}</small></button>)}<button onClick={()=>downloadJSON('robot.json',spec)}>Export project</button><button onClick={()=>{if(dirty&&!save())return;setLegacy(true);}}>Open project records</button></>:<><input className="studio-search" aria-label="Find a part" placeholder="Find a part…" value={search} onChange={e=>setSearch(e.target.value)}/><div className="studio-parts" role="group" aria-label="Robot parts">{built?.parts.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())).map(p=><button key={p.id} aria-pressed={part===p.id} onClick={()=>setPart(p.id)}><span>{p.name}</span><small>×{p.qty}</small></button>)}</div>{picked?<div className="studio-part-card"><span className="studio-bay">SELECTED PART</span><h3>{picked.name}</h3><p>{picked.does}</p><span>{picked.dims}</span><button onClick={()=>promptWrench({mode:'chat',text:'Explain this part',send:true})}>Ask Wrench</button></div>:<p className="studio-muted">Select a part to inspect it.</p>}<button className="studio-primary" onClick={()=>setPanel('guide')}>Start assembly</button></>}
      </aside></div>}
     {humanoid&&panel==='versions'&&<div className="studio-overlay-panel"><button onClick={()=>setPanel('parts')}>Close versions</button>{robot.versions.map(v=><p key={v.id}>{v.label}</p>)}<button onClick={()=>{setPanel('parts');setLegacy(true);}}>Project records</button></div>}
    </div>}
@@ -126,8 +149,7 @@ export default function WorkshopStudio(){
   </>}
   <footer className="studio-fleet" aria-label="Your robot shelf"><span className="studio-bay">MY ROBOTS</span><div>{robots.map(r=><button key={r.id} aria-current={r.id===robot?.id?'true':undefined} onClick={()=>switchRobot(r.id)}><RobotAvatar names={[r.name]} size={40}/><span><strong>{r.name}</strong><small>{r.versions.at(-1)?.planned?'Planned':'Saved project'}</small></span></button>)}</div><button aria-label="Add robot" onClick={()=>setNewRobot(true)}>+</button></footer>
   <dialog ref={dialog} className="studio-dialog" onCancel={()=>{setNewRobot(false);setPending(null);}}>
-   {pending!==null?<><h2>Keep your changes?</h2><p>Your current robot has an unfinished draft.</p><button className="studio-primary" onClick={()=>{if(save()){setSelectedId(pending);setEdit(null);setPending(null);}}}>Save & switch</button><button onClick={()=>{if(robot)writeStore(workshopDraftKey(robot.id),null);setSelectedId(pending);setEdit(null);setPending(null);}}>Discard & switch</button><button onClick={()=>setPending(null)}>Stay here</button></>:<><div className="studio-panel-head"><h2>Bring a robot in</h2><button onClick={()=>setNewRobot(false)}>Close</button></div><button className="studio-new-card" onClick={()=>{setNewRobot(false);setPanel('design');}}><strong>Design a rover</strong><span>Idea → parts → CAD</span></button><button className="studio-new-card" onClick={addReference}><strong>Explore Unitree G1</strong><span>Official humanoid reference</span></button><Link className="studio-new-card" href="/import/"><strong>Import a robot</strong><span>GitHub, photos or a spec</span></Link><button onClick={()=>{setNewRobot(false);promptWrench({mode:'design',text:'Generate a robot '});}}>Describe another robot to Wrench</button></>}
+   {pending!==null?<><h2>Keep your changes?</h2><p>Your current robot has an unfinished draft.</p><button className="studio-primary" onClick={()=>{if(save()){setSelectedId(pending);setEdit(null);setPending(null);}}}>Save & switch</button><button onClick={()=>{if(robot)writeStore(workshopDraftKey(robot.id),null);setSelectedId(pending);setEdit(null);setPending(null);}}>Discard & switch</button><button onClick={()=>setPending(null)}>Stay here</button></>:<><div className="studio-panel-head"><h2>Bring a robot in</h2><button onClick={()=>setNewRobot(false)}>Close</button></div><button className="studio-new-card" onClick={()=>{setNewRobot(false);promptWrench({mode:'design',text:'Design a rover that '});}}><strong>Design a rover</strong><span>Tell Wrench what it should do</span></button><button className="studio-new-card" onClick={addReference}><strong>Explore Unitree G1</strong><span>Official humanoid reference</span></button><Link className="studio-new-card" href="/import/"><strong>Import a robot</strong><span>GitHub, photos or a spec</span></Link></>}
   </dialog>
-  {panel==='design'&&<div className="studio-design"><div className="studio-task-head"><h2>Design a rover</h2><button onClick={()=>setPanel('parts')}>Back to workshop</button></div><RoverDesigner/></div>}
  </div>;
 }

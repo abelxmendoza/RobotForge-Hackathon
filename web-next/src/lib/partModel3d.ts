@@ -1,4 +1,4 @@
-/* Generated 3D models for any part in My Parts and Tools.
+/* Generated 3D models for any part in your Library.
  *
  * Every part gets a 3D model built in the browser from two things
  * the record actually has: what KIND of part it is (its category

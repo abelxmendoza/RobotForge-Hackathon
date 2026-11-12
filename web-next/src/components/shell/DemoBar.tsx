@@ -35,7 +35,6 @@ import {
 } from "@/lib/demoMode";
 import { AUTH_EVENT, loadSession, requestSignIn } from "@/lib/auth";
 import {
-  SAMPLE_DEMO_NOTE,
   SAMPLE_PROMPT,
   SAMPLE_REPO_URL,
 } from "@/lib/sampleRobot";
@@ -122,10 +121,7 @@ export default function DemoBar() {
       <div className="demo-bar-row">
         <span className="demo-bar-tag">Demo</span>
         <span className="demo-bar-text">
-          Sample data — chat answers are recorded from real runs, nothing here
-          is live. Sign in to switch to your own account; Exit demo just
-          logs you out of the demo — nothing here is saved to an account,
-          and your real data is untouched.
+          Sample data, nothing live. Your own data is untouched.
         </span>
         <button type="button" className="demo-bar-signin" onClick={signIn.act}>
           {signIn.hasSession ? "Switch to my account" : "Sign in to your account"}
@@ -151,23 +147,12 @@ export default function DemoBar() {
       {!welcomed && (
         <div className="demo-bar-welcome">
           <p>
-            <strong>Welcome to the RobotForge demo.</strong> No account
-            needed. It&apos;s the real app with two sample TurtleBots and
-            a starter parts shelf. Wrench, your build partner, answers from
-            recorded real runs, so nothing here is live or costs anything,
-            and your own data is never touched. Try this:
+            <strong>Welcome.</strong> Two sample TurtleBots and a parts
+            shelf. Wrench, your build partner, answers from recorded runs.
           </p>
           <ol className="demo-steps">
             <li>
-              Import the Omega1 sample: copy its repo link, paste it into Wrench, and
-              RobotForge builds its digital twin in your demo Workshop.{" "}
-              {SAMPLE_DEMO_NOTE}{" "}
-              <a href={SAMPLE_REPO_URL} target="_blank" rel="noreferrer">{SAMPLE_REPO_URL}</a>{" "}
-              <CopyButton
-                getText={() => SAMPLE_REPO_URL}
-                label="Copy"
-                title="Copy the Omega1 sample repo link"
-              />{" "}
+              Import the Omega1 sample{" "}
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
@@ -177,11 +162,16 @@ export default function DemoBar() {
                 }}
               >
                 Send it to Wrench
-              </button>
+              </button>{" "}
+              <CopyButton
+                getText={() => SAMPLE_REPO_URL}
+                label="Copy"
+                title="Copy the Omega1 sample repo link"
+              />
             </li>
-            <li><Link href="/garage/" onClick={dismissWelcome}>Open the TurtleBot in the Workshop</Link> and spin it in 3D.</li>
-            <li>Ask Wrench to change something, like &ldquo;make the wheels 80 mm&rdquo;.</li>
-            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Simulate it</Link> on a slope and a kerb, then <Link href="/garage/#tab=bom" onClick={dismissWelcome}>see its parts list</Link> and what you already have.</li>
+            <li><Link href="/garage/" onClick={dismissWelcome}>Open the TurtleBot</Link> and spin it in 3D.</li>
+            <li>Ask Wrench to &ldquo;design a compact rover with a camera&rdquo;.</li>
+            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Test it</Link> or <Link href="/garage/#tab=bom" onClick={dismissWelcome}>see its parts list</Link>.</li>
           </ol>
           <button type="button" className="btn btn-primary btn-sm" onClick={dismissWelcome}>
             Start exploring

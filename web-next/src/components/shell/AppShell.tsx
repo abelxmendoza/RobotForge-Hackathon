@@ -22,13 +22,13 @@ export function BrandMark() {
   );
 }
 
-/* App navigation. `more` items fold into the phone bar's More menu;
- * every item shows in the desktop sidebar. */
+/* App navigation: Workshop, Library, Robots (2026-11-12 simplify).
+ * Home is the logo. `more` items would fold into the phone bar's
+ * More menu; none do now. */
 const NAV = [
-  { id: "home", label: "Home", href: "/", icon: (<><path d="M4 11l8-6 8 6" /><path d="M6 10v9h12v-9" /></>) },
   { id: "workshop", label: "Workshop", href: "/garage/", icon: (<><path d="M3 10l9-6 9 6v10H3z" /><path d="M7 20v-6h10v6" /></>) },
-  { id: "inventory", label: "My Parts and Tools", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
-  { id: "robots", more: true, label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
+  { id: "inventory", label: "Library", href: "/inventory/", icon: (<><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></>) },
+  { id: "robots", label: "Robots", href: "/robots/", icon: (<><rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" /><circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /></>) },
 ];
 
 export interface Crumb { label: string; href?: string }
@@ -47,30 +47,13 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
         </Link>
         <nav className="side-nav" aria-label="App">
           {NAV.map((n) => (
-            <Link key={n.id} href={n.href} className={n.more ? "nav-more-item" : undefined}
+            <Link key={n.id} href={n.href}
               aria-current={n.id === active ? "page" : undefined}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{n.icon}</svg>
               <span>{n.label}</span>
             </Link>
           ))}
-          <details className="nav-more">
-            <summary aria-label="More pages">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></svg>
-              <span>More</span>
-            </summary>
-            <div className="nav-more-menu">
-              {/* Only the folded nav items live here: two links used
-               * to be repeated in this menu AND in the side-foot
-               * directly below (one of them is in the topbar too) —
-               * one copy each, in the side-foot, since the
-               * 2026-11-02 declutter. */}
-              {NAV.filter((n) => n.more).map((n) => (
-                <Link key={n.id} href={n.href} aria-current={n.id === active ? "page" : undefined}>{n.label}</Link>
-              ))}
-            </div>
-          </details>
         </nav>
         <div className="side-foot">
           <Link href="/how-it-works/" aria-current={active === "how" ? "page" : undefined}>How it works</Link>
