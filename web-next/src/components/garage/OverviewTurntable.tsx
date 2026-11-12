@@ -24,6 +24,7 @@ import { stageRecordOf } from '@/lib/data';
 import { robotCapability } from '@/lib/stageAnimation';
 import { useStageAnimation } from '@/lib/useStageAnimation';
 import { WORKSHOP_REASSEMBLE_EVENT, type ReassembleResult } from '@/lib/workshopContext';
+import { LOOK_CAPTION, readLookFiles, type PartLook } from '@/lib/partMesh';
 
 const Robot3D = dynamic(() => import('@/components/kit/Robot3D'), {
   ssr: false,
@@ -37,12 +38,26 @@ export function hasBody(spec: unknown): boolean {
   return num(s.length_m) > 0 && num(s.width_m) > 0;
 }
 
-export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }: {
+export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs, robotId, looks }: {
   spec: RobotSpec;
   name: string;
   fallback: React.ReactNode;
   onNeedSpecs: () => void;
+  /* Parts regenerated with Wrench (lib/partMesh.ts): their GLBs are
+   * read from this browser and fitted into the model. */
+  robotId?: string;
+  looks?: PartLook[];
 }) {
+  const [lookFiles, setLookFiles] = useState<Record<string, ArrayBuffer> | undefined>(undefined);
+  const lookSig = (looks ?? []).map((l) => l.viewId + l.createdAt).join('|');
+  useEffect(() => {
+    let live = true;
+    if (!robotId || !looks?.length) { setLookFiles(undefined); return; }
+    void readLookFiles(robotId, looks).then((files) => { if (live) setLookFiles(Object.keys(files).length ? files : undefined); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [robotId, lookSig]);
+  const shownLooks = (looks ?? []).filter((l) => lookFiles && lookFiles[l.viewId]);
   const [failed, setFailed] = useState(false);
   const [spin, setSpin] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -129,6 +144,7 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
             resetNonce={resetNonce}
             restoreRequest={restoreRequest}
             onDetachedChange={setDetachedIds}
+            partLooks={lookFiles}
           />
           <button type="button" className="btn btn-sm ws-turntable-toggle" aria-pressed={!spin} onClick={() => setSpin((s) => !s)}>
             {spin ? 'Pause' : 'Spin'}
@@ -177,6 +193,12 @@ export default function OverviewTurntable({ spec, name, fallback, onNeedSpecs }:
       <figcaption className="faint g-small">
         Concept model built from {name}&apos;s spec, not a photo or a measured twin. Drag empty space to turn it, pinch or scroll to zoom.
         {capability ? ' Moving parts follow the recorded robot data.' : ' Nothing on it moves until recorded data says it can.'}
+        {shownLooks.length > 0 && (
+          <span className="ws-looks">
+            {shownLooks.map((l) => <span key={l.viewId} className="fbadge planned" title={`“${l.description}”`}>New look: {l.partLabel.replace(/^the /, '')}</span>)}
+            <span>{LOOK_CAPTION}</span>
+          </span>
+        )}
       </figcaption>
     </figure>
   );

@@ -122,6 +122,7 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
           </div>
           <div className="ta-twin-note">
             <h4>Take it apart, put it back</h4>
+            <p><a className="btn btn-primary btn-sm" href="/film/">Watch the teardown film</a> <span className="faint g-small">The twin comes apart piece by piece, then drives off. 20 s, or a 10 s cut.</span></p>
             <p className="faint g-small">
               The Take apart / Assemble diagram works on your own stored copy of Omega1, along the
               connections its record carries — this twin is a fixed specimen and stays assembled.
@@ -195,7 +196,7 @@ export default function Omega1Twin({ tab = 'overview', garageScans = null, onOpe
         </section>
       )}
 
-      {tab === 'simulate' && <><SimulationWorkspace spec={omega1SeedSpec()} robotId="builtin-omega1" versionId="built-in-documented-spec" /><details className="ws-disclosure"><summary>Twin physics — ProjectSim estimates, not measurements</summary><p><span className="fbadge planned">NOT GATED</span> No recorded driving gate is claimed for this built-in specimen. Missing measured mass, wheel diameter and motor data stay NOT_CHECKED until recorded in your saved robot.</p><ul>{omega1Rover.physics.map(p=><li key={p.label}>{p.label}: {p.value}</li>)}</ul></details></>}
+      {tab === 'simulate' && <><p className="twin-sim-link"><a className="btn btn-primary btn-sm" href="/simulator/">Drive the twin in the Omega1 simulator</a> <span className="faint g-small">Live motor and sensor gauges, plus a self-running tour. Uses sizes read off the 3D twin.</span></p><SimulationWorkspace spec={omega1SeedSpec()} robotId="builtin-omega1" versionId="built-in-documented-spec" /><details className="ws-disclosure"><summary>Twin physics — ProjectSim estimates, not measurements</summary><p><span className="fbadge planned">NOT GATED</span> No recorded driving gate is claimed for this built-in specimen. Missing measured mass, wheel diameter and motor data stay NOT_CHECKED until recorded in your saved robot.</p><ul>{omega1Rover.physics.map(p=><li key={p.label}>{p.label}: {p.value}</li>)}</ul></details></>}
 
       {tab === 'checks' && (
         <section aria-label="Omega1 checks — from its records">

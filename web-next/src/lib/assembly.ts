@@ -1,9 +1,10 @@
 import type { GarageRobot } from './garage';
 import type { WireNode, WireConn } from './wiring';
 import { componentById, resolveComponent } from './components';
+import { reconcileRoverAssembly } from './roverDesign';
 export const ASSEMBLY_KEY = 'rf.assemblies.v1';
 export type Pose = [number, number, number];
-export interface ComponentInstance { id: string; componentId: string; positionM: Pose; yawDeg: number }
+export interface ComponentInstance { id: string; componentId: string; positionM: Pose; yawDeg: number; sizeM?: Pose }
 export interface Connection { id: string; from: string; to: string }
 export interface AssemblyVersion { id: string; note: string; createdAt: string; components: ComponentInstance[]; connections: Connection[] }
 export type Assemblies = Record<string, AssemblyVersion[]>;
@@ -134,8 +135,9 @@ export function commitAssemblyVersion(robots: GarageRobot[], legacy: Assemblies,
   safeId(versionId);
   const assembly = { ...previewAssembly(robots, effectiveAssemblies(robots, legacy), op), id: versionId, createdAt };
   const base = robot.versions.at(-1)!;
-  const spec = JSON.parse(JSON.stringify(base.spec));
+  let spec = JSON.parse(JSON.stringify(base.spec));
   spec.assembly = assembly;
+  if (spec.roverDesign) spec = reconcileRoverAssembly(spec);
   if (spec.wiring && Array.isArray(spec.wiring.nodes) && Array.isArray(spec.wiring.connections)) {
     if (op.kind === 'remove') {
       spec.wiring.nodes = spec.wiring.nodes.filter((node: WireNode) => node.id !== op.instanceId);

@@ -42,7 +42,7 @@ def test_side_menu_has_no_demo_entry_but_the_real_doors_stay():
     ids = re.findall(r'id: "(\w+)"', nav)
     # BOM wizard and Evidence left the nav on 2026-11-01; /evidence/
     # stays reachable from robot pages, the demo and Wrench.
-    assert ids == ["home", "workshop", "inventory", "robots"], ids
+    assert ids == ["home", "workshop", "design", "inventory", "robots"], ids
     landing = (WEB / "src/app/page.tsx").read_text()
     assert "RunDemoLink" in landing
     chrome = (WEB / "src/components/home/LandingChrome.tsx").read_text()

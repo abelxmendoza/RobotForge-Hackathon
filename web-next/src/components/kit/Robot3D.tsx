@@ -17,6 +17,7 @@ import { assetPath } from '@/components/home/asset';
 import { snapPlacement, shortestYaw, terminalWorldPoint, evaluatePlacementIntelligence } from '@/lib/spatial';
 import { cableControlPoints, animationPhase } from '@/lib/wire3d';
 import { componentById } from '@/lib/components';
+import { roverComponentDefinition } from '@/lib/roverDesign';
 import { swayAt } from '@/lib/stageAnimation';
 import type { RobotSpec } from '../forge/model';
 import { taBuildParts, taGeom3d, elecBad, elecDepths } from './takeapart';
@@ -74,6 +75,63 @@ interface Session {
   resetCamera?: () => void;
 }
 
+/* Fit a generated look into the space a part's plain shape takes.
+ * Generated models come Y-up (glTF); the robot is Z-up. The model's
+ * thinnest axis is turned onto the part's thinnest axis (a wheel's
+ * axle, a plate's thickness), then it is scaled uniformly to fit
+ * inside the part's box and centred on it. The plain meshes stay in
+ * the group, hidden, so picking and the stage animations keep their
+ * targets. */
+function fitLook(THREE: ThreeModule, g: THREE_NS.Group, model: THREE_NS.Object3D, material: THREE_NS.Material) {
+  const target = new THREE.Box3().setFromObject(g);
+  if (target.isEmpty()) return;
+  const tSize = target.getSize(new THREE.Vector3());
+  const tCenter = target.getCenter(new THREE.Vector3());
+  const look = model.clone(true);
+  const holder = new THREE.Group();
+  look.rotation.x = Math.PI / 2; // glTF Y-up -> robot Z-up
+  holder.add(look);
+  holder.updateMatrixWorld(true);
+  const axes = (v: THREE_NS.Vector3) => [v.x, v.y, v.z];
+  let lSize = new THREE.Box3().setFromObject(holder).getSize(new THREE.Vector3());
+  const thin = (a: number[]) => a.indexOf(Math.min(...a));
+  const lt = thin(axes(lSize));
+  const tt = thin(axes(tSize));
+  if (lt !== tt) {
+    const turn = new THREE.Group();
+    turn.add(holder);
+    /* Swap the two axes with a quarter turn about the third one. */
+    const other = [0, 1, 2].find((i) => i !== lt && i !== tt)!;
+    if (other === 0) turn.rotation.x = Math.PI / 2;
+    else if (other === 1) turn.rotation.y = Math.PI / 2;
+    else turn.rotation.z = Math.PI / 2;
+    turn.updateMatrixWorld(true);
+    lSize = new THREE.Box3().setFromObject(turn).getSize(new THREE.Vector3());
+    return place(turn);
+  }
+  return place(holder);
+
+  function place(obj: THREE_NS.Object3D) {
+    const ls = axes(lSize);
+    const ts = axes(tSize);
+    const scale = Math.min(...ts.map((t, i) => (ls[i] > 1e-9 ? t / ls[i] : Infinity)));
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    const wrap = new THREE.Group();
+    wrap.add(obj);
+    wrap.scale.setScalar(scale);
+    wrap.updateMatrixWorld(true);
+    const c = new THREE.Box3().setFromObject(wrap).getCenter(new THREE.Vector3());
+    wrap.position.copy(tCenter.clone().sub(c));
+    wrap.traverse((o) => {
+      const m = o as THREE_NS.Mesh;
+      if (m.isMesh) { m.material = material; m.castShadow = true; m.receiveShadow = true; m.userData.look = true; }
+    });
+    g.children.forEach((child) => { child.visible = false; });
+    wrap.userData.look = true;
+    g.add(wrap);
+  }
+}
+
 export default function Robot3D({
   spec,
   workshop = false,
@@ -99,6 +157,8 @@ export default function Robot3D({
   resetNonce = 0,
   restoreRequest = null,
   onDetachedChange,
+  partLooks,
+  viewHeight,
 }: {
   spec: RobotSpec;
   workshop?: boolean;
@@ -137,7 +197,19 @@ export default function Robot3D({
   resetNonce?: number;
   restoreRequest?: { id: string; nonce: number } | null;
   onDetachedChange?: (ids: string[]) => void;
+  /* Regenerated 3D looks (lib/partMesh.ts), GLB bytes by part id:
+   * each such part's plain shape is hidden and the generated model
+   * is fitted into the same space (same centre, same footprint, the
+   * thin axis matched). Picking still uses the plain shape, so
+   * clicking and dragging the part work as before. */
+  partLooks?: Record<string, ArrayBuffer>;
+  /* A fixed canvas height in px for small previews (chat cards);
+   * omitted, the viewer keeps its own page-sized height. */
+  viewHeight?: number;
 }) {
+  const managed=spec as RobotSpec & {roverDesign?:unknown;assembly?:{components:ComponentInstance[];connections:Connection[]}};
+  instances ??= managed.roverDesign ? managed.assembly?.components : undefined;
+  connections ??= managed.roverDesign ? managed.assembly?.connections : undefined;
   const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag,hiddenParts});
   motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag,hiddenParts};
   const previousRef = useRef<ComponentInstance[]>([]);
@@ -189,16 +261,32 @@ export default function Robot3D({
           }
         }
         if (disposed) { lidarGeometry?.dispose(); return; }
+        const lookModels: Record<string, THREE_NS.Object3D> = {};
+        const lookIds = Object.keys(partLooks ?? {});
+        if (lookIds.length) {
+          const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+          for (const id of lookIds) {
+            try {
+              const gltf = await new GLTFLoader().parseAsync(partLooks![id].slice(0), '');
+              lookModels[id] = gltf.scene;
+            } catch {
+              /* an unreadable file: that part stays plain */
+            }
+          }
+          if (disposed) return;
+        }
         const studio=quality==='high';
         const built = taBuildParts(spec);
-        const units = taGeom3d(spec, built.parts, built.pos);
+        const managedRover=!!(spec as RobotSpec & {roverDesign?:unknown}).roverDesign;
+        const units = managedRover ? [] : taGeom3d(spec, built.parts, built.pos);
 
         const previous = previousRef.current;
         previousRef.current = instances ?? [];
         const renderInstances=[...(instances??[]),...(comparison??[]).filter(old=>!instances?.some(c=>c.id===old.id))];
         for (const [index,instance] of renderInstances.entries()) {
-          const part = componentById(instance.componentId);
-          if (!part) continue;
+          const definition = componentById(instance.componentId);
+          if (!definition) continue;
+          const part = (managedRover ? roverComponentDefinition(spec,instance) : definition) || definition;
           units.push({ part: instance.id, explode: [0, 0, 1 + index*0.35], meshes: [{
             kind: 'box', size: part.sizeM, center: instance.positionM,
             rot: [0, 0, instance.yawDeg * Math.PI / 180],
@@ -369,7 +457,7 @@ export default function Robot3D({
             const component=renderInstances.find(c=>c.id===u.part);
             if(component){
               mesh.castShadow=false;
-              addComponentSkin(THREE,mesh,componentById(component.componentId)!.sizeM,component.componentId);
+              addComponentSkin(THREE,mesh,(managedRover?roverComponentDefinition(spec,component):componentById(component.componentId))!.sizeM,component.componentId);
             }
             if (m.kind === 'box') {
               const edges = new THREE.LineSegments(
@@ -385,6 +473,7 @@ export default function Robot3D({
             g.add(mesh);
             pickMeshes.push(mesh);
           });
+          if (lookModels[u.part]) fitLook(THREE, g, lookModels[u.part], materials[u.part]);
           g.userData = { part: u.part, explode: u.explode, target: new THREE.Vector3(), userOffset: new THREE.Vector3() };
           const old = previous.find(p=>p.id===u.part);
           const current = renderInstances.find(p=>p.id===u.part);
@@ -913,7 +1002,7 @@ export default function Robot3D({
         const resize = () => {
           const w = host.clientWidth || 700;
           const viewportHeight=window.visualViewport?.height??window.innerHeight;
-          const h = window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460;
+          const h = viewHeight ?? (window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460);
           renderer.setSize(w, h);
           composer?.setSize(w,h);
           camera.aspect = w / h;
@@ -1146,7 +1235,7 @@ export default function Robot3D({
       if (cleanup) cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, instances, connections, comparison, quality, workshop]);
+  }, [spec, instances, connections, comparison, quality, workshop, partLooks]);
 
   useEffect(() => {
     const st = sessionRef.current;
@@ -1174,5 +1263,5 @@ export default function Robot3D({
     if (restoreRequest) sessionRef.current?.restorePart?.(restoreRequest.id);
   }, [restoreRequest]);
 
-  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" className="assembly-viewport" style={{minHeight:220}} />;
+  return <div ref={hostRef} role="img" aria-label="Interactive 3D robot assembly and planned cable connections" className="assembly-viewport" style={{minHeight:viewHeight ?? 220}} />;
 }

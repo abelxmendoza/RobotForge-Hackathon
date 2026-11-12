@@ -3,12 +3,16 @@ import { cataloguePartLinks, webPartShopLinks } from './shopLinks';
 import type { WebPartRecord } from './webParts';
 import type { CataloguePart } from './forgeEngine';
 import type { GarageRobot } from './garage';
-export const CATEGORY_NAMES: Record<string,string> = {battery:'Batteries',motor:'Motors',motor_driver:'Motor drivers',controller:'Controllers',computer:'Computers',sensor:'Sensors',wheel:'Wheels',servo:'Servos',power:'Power',radio:'Radios',frame:'Frames & mounts',cable:'Cables & connectors',tool:'Tools',other:'Other'};
+export const CATEGORY_NAMES: Record<string,string> = {battery:'Batteries',motor:'Motors',motor_driver:'Motor drivers',controller:'Controllers',computer:'Computers',sensor:'Sensors',wheel:'Wheels',servo:'Servos',power:'Power',radio:'Radios',frame:'Frames & mounts',cable:'Cables & connectors',tool:'Tools',storage:'Memory & storage',material:'Materials',end_effector:'End effectors',propulsion:'Propellers & air propulsion',flight_controller:'Flight controllers',pcb:'Circuit boards',safety:'Safety & protection',other:'Other'};
 export function categoryFor(category:string,name:string): string {
-  if ((PART_CATEGORIES as readonly string[]).includes(category)) return category;
-  const hint=categoryHint(name);
-  if(hint!=='other')return hint;
-  return ({batteries:'battery',actuators:'motor',drivers:'motor_driver',sbc:'computer',microcontrollers:'controller',cameras_sensors:'sensor',wheels:'wheel',power_protection:'power',communications:'radio',frames:'frame',structural:'frame',connectors:'cable',tools:'tool',printed:'frame'} as Record<string,string>)[category] || 'other';
+  // Catalogue classes are authoritative; names only refine broad classes.
+  const key=category.toLowerCase().replace(/[\s-]+/g,'_');
+  if(key==='power')return !/charger/i.test(name)&&/battery|\blipo\b|li[ -]?ion|\bni[ -]?mh\b|\bcell\b/i.test(name)?'battery':'power';
+  if(key==='actuators')return /servo/i.test(name)?'servo':'motor';
+  const classes:Record<string,string>={batteries:'battery',drivers:'motor_driver',sbc:'computer',microcontrollers:'controller',cameras_sensors:'sensor',wheels:'wheel',power_protection:'safety',communications:'radio',comms:'radio',frames:'frame',structural:'frame',structure:'frame',connectors:'cable',cables_connectors:'cable',tools:'tool',printed:'frame',materials:'material',memory_storage:'storage',end_effectors:'end_effector',propulsion_air:'propulsion',flight_control:'flight_controller',custom_boards:'pcb',safety_protection:'safety'};
+  if(classes[key])return classes[key];
+  if ((PART_CATEGORIES as readonly string[]).includes(key)) return key;
+  return categoryHint(name);
 }
 function base(id:string,name:string,category:string):InventoryPart {
   return {id,name,category,reality:'sim_only',ownership:'wishlist',section:category==='tool'?'tools':'parts',quantity:1,catalog_part_id:null,specs:{},read_from_label:[],condition:'unknown',confidence:'low',status:'needs_confirmation',question:'',photo:null,chat:[],createdAt:'',source:'manual'};
@@ -17,6 +21,13 @@ export function libraryItems(stock:InventoryPart[],web:WebPartRecord[]):Inventor
   const linked=new Set(stock.map(p=>p.web_record_id));
   return [...stock.filter(p=>!p.archivedAt),...web.filter(r=>!linked.has(r.id)).map(r=>({...base('web:'+r.id,r.name,categoryFor(r.category,r.name)),web_record_id:r.id,origin:'web' as const,source_url:r.provenance.sourceUrl,specs:r.specs,createdAt:r.provenance.fetchedAt,notes:r.verification,shops:webPartShopLinks({name:r.name,category:r.category,sourceUrl:r.provenance.sourceUrl}),...(r.images?.length?{image_urls:r.images,image_credit:'Photo: '+(r.store||'the source page')}:{}),...(r.store?{store:r.store}:{}),...(r.priceEstimate?{price_estimate:{text:r.priceEstimate.text,amountUsd:r.priceEstimate.amountUsd,sourceUrl:r.priceEstimate.sourceUrl,fetchedAt:r.priceEstimate.fetchedAt}}:{})}))];
 }
+/** Display the full catalogue without creating stock or changing saved records. */
+export function organizedLibraryItems(stock:InventoryPart[],web:WebPartRecord[],catalogue:InventoryPart[]):InventoryPart[] {
+  const saved=libraryItems(stock,web);
+  const linked=new Set([...stock,...saved].map(p=>p.catalog_part_id).filter(Boolean));
+  return [...saved,...catalogue.filter(p=>!linked.has(p.catalog_part_id))];
+}
+
 export function catalogItems(catalogue:CataloguePart[]):InventoryPart[] {
   return catalogue.map(p=>{const links=cataloguePartLinks(p);return {...base('catalog:'+p.id,p.name||p.id,categoryFor(p.part_class||'',p.name||p.id)),catalog_part_id:p.id,origin:'catalogue' as const,...catalogPhoto(p),...(links.length?{shops:links}:{}),specs:Object.fromEntries(Object.entries(p.specs||{}).filter(([,v])=>typeof v==='number'||typeof v==='string')) as InventoryPart['specs']};});
 }

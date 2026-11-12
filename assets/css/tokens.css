@@ -41,6 +41,12 @@
   --r-sm:8px; --r:12px; --r-lg:16px;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
   --ease:cubic-bezier(.2,.7,.2,1);
+  /* instrument panel (2026-11-11): a faint blueprint grid behind the
+     work, and readouts in the mono face with even-width digits */
+  --grid-minor:rgba(131,184,255,.045);
+  --grid-major:rgba(131,184,255,.085);
+  --grid-size:24px;
+  --readout:var(--mono);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -279,3 +285,15 @@ img{max-width:100%}
    never an empty box (components/robots/RobotPhoto). */
 .ph-fallback{display:grid;place-items:center;gap:8px;color:#6b7280;font-weight:600;font-size:var(--fs-sm);text-align:center;padding:16px}
 .ph-fallback svg{width:64px;height:64px}
+
+/* ---------- instrument panel: blueprint grid ---------- */
+.bp-grid{
+  background-image:
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px),
+    linear-gradient(var(--grid-minor) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-minor) 1px,transparent 1px);
+  background-size:calc(var(--grid-size)*5) calc(var(--grid-size)*5),calc(var(--grid-size)*5) calc(var(--grid-size)*5),var(--grid-size) var(--grid-size),var(--grid-size) var(--grid-size);
+  background-position:-1px -1px;
+}
+.readout,.metric-value,.kv td,.data td.num{font-variant-numeric:tabular-nums}

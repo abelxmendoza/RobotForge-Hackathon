@@ -49,7 +49,7 @@ import time
 from pathlib import Path
 
 from .schema import RobotSpec
-from .urdf import box_inertia
+from .urdf import box_inertia, wheel_layout
 
 
 class TwinError(RuntimeError):
@@ -106,7 +106,6 @@ def generate_sdf(spec: RobotSpec, *,
     chassis_z = spec.ground_clearance_m + spec.height_m / 2.0
     wheel_x = spec.length_m / 2.0 - spec.wheel.diameter_m / 2.0
     wheel_y = spec.width_m / 2.0 + spec.wheel.width_m / 2.0
-    wheel_mass = spec.component_mass_kg.get("wheels", 0.4) / 4.0
 
     def sdf_inertial(m, x, y, z):
         # The inertia math itself is shared with urdf.py: see
@@ -151,10 +150,23 @@ def generate_sdf(spec: RobotSpec, *,
                 '  </joint>',
             ]
     else:
-        wheel_positions = (("front_left", wheel_x, wheel_y),
+        wheel_positions = [("front_left", wheel_x, wheel_y),
                            ("front_right", wheel_x, -wheel_y),
                            ("rear_left", -wheel_x, wheel_y),
-                           ("rear_right", -wheel_x, -wheel_y))
+                           ("rear_right", -wheel_x, -wheel_y)]
+        # A 6-wheel drive (VEX) adds middle pairs between front and rear,
+        # placed exactly as the URDF places them; every wheel on a side
+        # is driven, as on the real chained or geared drive.
+        layout = wheel_layout(spec)
+        if len(layout) > 4:
+            per_side = (len(layout) + 1) // 2
+            mids = layout[2:2 * (per_side - 1)]
+            for k in range(0, len(mids), 2):
+                x = mids[k][0]
+                wheel_positions.insert(2 + k, (f"mid{k // 2 + 1}_left", x, wheel_y))
+                wheel_positions.insert(3 + k, (f"mid{k // 2 + 1}_right", x, -wheel_y))
+    wheel_mass = (spec.component_mass_kg.get("wheels", 0.4)
+                  / max(len(wheel_positions), 1))
     for label, x, y in wheel_positions:
         out += [
             f'  <link name="wheel_{label}"><pose>{x:.4f} {y:.4f} {gr:.4f} 0 0 0</pose>',

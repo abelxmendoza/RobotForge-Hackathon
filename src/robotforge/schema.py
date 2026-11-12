@@ -312,6 +312,9 @@ class RobotSpec:
     component_mass_kg: dict[str, float] = field(default_factory=dict)
     wiring: Wiring | None = None
     gearing: Gearing | None = None
+    # VEX scoring mechanisms on top of the drive ("intake", "lift",
+    # "pneumatics"): counted by the VEX rulebook checks (vex.py).
+    vex_mechanisms: list[str] = field(default_factory=list)
 
     # -- parsing ---------------------------------------------------------
     @classmethod
@@ -379,6 +382,8 @@ class RobotSpec:
                         if data.get("wiring") is not None else None),
                 gearing=(Gearing.from_dict(data["gearing"])
                          if data.get("gearing") is not None else None),
+                vex_mechanisms=[str(m) for m in
+                                (data.get("vex_mechanisms") or [])],
             )
         except (KeyError, TypeError, ValueError) as exc:
             if isinstance(exc, SpecError):
@@ -432,6 +437,8 @@ class RobotSpec:
             d["wiring"] = self.wiring.to_dict()
         if self.gearing is not None:
             d["gearing"] = self.gearing.to_dict()
+        if self.vex_mechanisms:
+            d["vex_mechanisms"] = list(self.vex_mechanisms)
         return d
 
 

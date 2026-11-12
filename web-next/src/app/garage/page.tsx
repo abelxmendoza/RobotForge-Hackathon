@@ -1,5 +1,6 @@
 /* Workshop — your robots and Wrench on one page: bring a robot in, edit
  * it, keep every upgrade as a version, and ask Wrench from the bar at the bottom. */
+import Link from "next/link";
 import type { Metadata } from "next";
 import AppShell from "@/components/shell/AppShell";
 import Workshop from "@/components/garage/Workshop";
@@ -17,6 +18,7 @@ export default function WorkshopPage() {
           <h1>Workshop</h1>
           <p className="lede">Your robots. Change one, check it, save it.</p>
         </div>
+        <Link className="btn btn-primary" href="/garage/#rover-design">Design a rover</Link>
       </div>
       <Workshop />
     </AppShell>

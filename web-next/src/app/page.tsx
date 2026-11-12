@@ -103,17 +103,19 @@ export default function HomePage() {
             checks every change, and its simulated twin has to pass a
             driving test before you build or buy anything.
           </p>
+          {/* One main button; the demo and the sample stay one tap
+           * away as quieter links (instrument panel pass, 2026-11-11). */}
           <div className="ctas">
             <Link className="btn btn-primary" href="/garage/">
               Open the app →
             </Link>
-            <RunDemoLink className="btn">
-              Run the demo
-            </RunDemoLink>
-            <SampleOpenLink className="btn">
-              Try the Omega1 sample
-            </SampleOpenLink>
           </div>
+          <p className="hero-alt">
+            No account?{" "}
+            <RunDemoLink className="hero-alt-link">Run the demo</RunDemoLink>
+            {" "}·{" "}
+            <SampleOpenLink className="hero-alt-link">Try the Omega1 sample</SampleOpenLink>
+          </p>
           <p className="muted" style={{ fontSize: "var(--fs-xs)" }}>
             Live AI in the app runs on your account — sign up with an
             email or continue with Meta. The demo needs no account at

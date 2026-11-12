@@ -18,7 +18,7 @@
  * items by construction (photo or manual entry), so they read
  * back as 'real', sectioned by their category. */
 
-export const PART_CATEGORIES = ['battery', 'motor', 'motor_driver', 'controller', 'computer', 'sensor', 'wheel', 'servo', 'power', 'radio', 'frame', 'cable', 'tool', 'other'] as const;
+export const PART_CATEGORIES = ['battery', 'motor', 'motor_driver', 'controller', 'computer', 'sensor', 'wheel', 'servo', 'power', 'radio', 'frame', 'cable', 'tool', 'storage', 'material', 'end_effector', 'propulsion', 'flight_controller', 'pcb', 'safety', 'other'] as const;
 export const PART_SPEC_KEYS = ['voltage_v', 'capacity_mah', 'current_a', 'stall_torque_nm', 'rpm', 'diameter_mm', 'width_mm', 'mass_g', 'cells', 'chemistry', 'interface', 'range_m', 'model_number'] as const;
 
 export const SPEC_KEY_LABEL: Record<string, string> = {

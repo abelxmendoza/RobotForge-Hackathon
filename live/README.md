@@ -30,6 +30,7 @@ one constant lights the live steps up.
 | `POST /part-chat` | `{part, message, history?}` → `{reply, update, confirmed}`: talk a part through until its owner confirms it | any one chain key |
 | `POST /photo` | `{image_data_url, note?, mode?}` → photo draft spec (Meta Model API vision, `muse-spark-1.3`; Muse Spark Open on Baseten as the backup, and the reply's `model` names whichever answered). `mode` omitted/`"photo"`: an ESTIMATED draft from a robot photo. `mode: "document"`: a TRANSCRIBED draft from a spec-sheet/blueprint photo (below) | `META_API_KEY` or `BASETEN_API_KEY` (**optional**) |
 | `POST /transcribe` | `{audio_b64}` → `{transcript, model}`: one spoken description transcribed by Muse Voice Transcribe (`muse-voice-transcribe-1.0`). WAV only — the batch endpoint rejects MP3/WebM containers (verified 2026-10-31), so the site encodes recordings to WAV in the browser. If Meta fails, Muse Spark Open's audio input on Baseten transcribes it instead (`model` says which) | `META_API_KEY` or `BASETEN_API_KEY` (**optional**) |
+| `POST /part-mesh` (+ `/status`, `/file`) | `{part, description}` → starts one Meshy text-to-3D job for a single robot part; `{id}` → its status; `{id}` → the finished GLB. Powers Wrench's "make the wheels look like …" (below) | `MESHY_API_KEY` (**optional**) |
 | `POST /web` | `{mode: "scrape", url}` → one public page as bounded markdown, or `{mode: "search", query, limit?}` → up to 5 web results (Firecrawl API v2). Powers the chat's web search / page reading (below) | `FIRECRAWL_API_KEY` (**optional**) |
 
 `/photo` without the Meta key answers `501 photo_not_configured`
@@ -178,6 +179,39 @@ Until the secret exists, `/web` answers
 `routes.web: false` — the designed off state, not an error: the
 chat simply answers without the web, exactly as before.
 
+## One-part 3D regeneration (`/part-mesh`, Meshy)
+
+Wrench can change ONE part of a robot's 3D model with words. Size
+edits ("make the wheels bigger") need nothing from this Worker: the
+site maps the words to spec fields. Look edits ("make the wheels
+look like knobby off-road tyres") need a new mesh, which this Worker
+asks Meshy's text-to-3D API for (`POST /openapi/v2/text-to-3d`,
+`mode: "preview"`, GLB only, remeshed to ~12k faces, moderation on).
+
+- The client sends only a part id from a fixed list (`MESH_PARTS`)
+  and the owner's words (≤ 200 chars). The prompt is built here;
+  no robot record, name or id leaves the site.
+- Each job counts against the normal live budget **and** a small
+  mesh-only cap: `MESH_DAILY_LIMIT` (default 10 a day in total) and
+  `MESH_PER_IP_DAILY_LIMIT` (default 3 a day per visitor), counted
+  before the upstream call and failing closed like the others.
+- `/part-mesh/status` and `/part-mesh/file` serve only job ids this
+  Worker started (kept in KV for 2 days). `/file` downloads the GLB
+  from Meshy's own https `*.meshy.ai` link (20 MB cap) and serves it
+  with this site's CORS, because Meshy's links are signed and expire.
+- The site saves the GLB in the visitor's browser (IndexedDB) and
+  fits it into that part's space in the 3D model, captioned as a
+  generated look. The spec is never changed by a look edit.
+
+**To switch it on (the site owner's step):** create an API key at
+<https://www.meshy.ai> (API settings; API use needs a paid plan with
+credits), then add `MESHY_API_KEY` as a secret **as part of a safe
+deploy** (see `AGENTS.md`: never a plain `wrangler deploy`, never
+from outside this folder). `/health` then reports
+`routes.part_mesh: true` and `providers.meshy: true`. Until then
+`/part-mesh` answers `501 mesh_not_configured` and Wrench says
+size edits still work.
+
 ## Document mode (`/photo` with `mode: "document"`)
 
 For a photo of a spec sheet, datasheet or blueprint, the same route
@@ -215,13 +249,56 @@ badged MEASURED (scan)).
   inputs are length-capped (describe 4000 chars, chat 2000, list
   8000).
 - **Daily budget:** a Workers KV counter caps total live calls per
-  UTC day (`DAILY_LIMIT`; 450 in `wrangler.toml` for judging week, 200 when unset) across *all* routes, plus a
+  UTC day (`DAILY_LIMIT`, 200; it was 450 for judging week, Nov 4-9 2026) across *all* routes, plus a
   per-visitor cap (`PER_IP_DAILY_LIMIT`, default 30). Over budget →
   `503`, and the site falls back to recorded/local modes and says
   so. Counters increment *before* the model call (slow/failed calls
   still count) and **fail closed**: if KV errors, live calls pause
   rather than spend uncounted.
 - **Kill switch:** `LIVE_ENABLED=0` turns every live call away.
+
+## Safe deploy (use this for every update of `robotforge-live`)
+
+Since 2026-11-03 the keys live only inside version
+`31dfa75d-2453-4bb3-9df1-fbe718f78987`; `wrangler secret list` is empty
+and the latest *uploaded* version has no secrets. A new version takes
+its secrets from the latest uploaded one, so a plain `wrangler deploy`
+would ship a keyless Worker, and a plain `wrangler secret put` would
+deploy each half-keyed step straight to live. Upload a version, add
+every key to it, test its preview, then promote it. Only the owner runs
+these, at their own terminal, on the Mac clone.
+
+1. **Get main:** `cd ~/Desktop/projects/RobotForge-Hackathon && git checkout main && git pull`.
+2. **Read-only look:** `cd live && npx wrangler deployments list` — the
+   live version should be `31dfa75d…`.
+3. **Upload, not deploy:** `./safe-upload.sh`. It checks it runs from
+   `live/`, uploads the code with `wrangler versions upload`, then runs
+   `wrangler versions secret put NAME` for each key. Wrangler prompts you
+   for each value at your terminal (same as `wrangler secret put`);
+   nothing is saved to a file or printed. Every step makes a new version
+   and none of them is deployed, so live traffic does not move.
+4. **Find the last version:** `npx wrangler versions list`. The newest
+   Version ID is the one with every key; its preview URL is
+   `https://<first 8 characters of the ID>-robotforge-live.abelxmendoza.workers.dev`.
+5. **Test the preview:**
+   `python3 ../tools/check_live_health.py <preview URL>`. It
+   must pass, and `/health` there should show Meta, Baseten, Firecrawl and
+   email / Meta / Google login on.
+6. **Promote:** `npx wrangler versions deploy <Version ID>@100% --yes`.
+7. **Check live:**
+   `python3 ../tools/check_live_health.py https://robotforge-live.abelxmendoza.workers.dev`,
+   then sign in on the site and ask Wrench one question.
+
+If step 5 fails, do nothing: live is untouched. If step 7 fails,
+`npx wrangler rollback 31dfa75d-2453-4bb3-9df1-fbe718f78987` puts the old
+Worker back. Once a version with secrets is live, later updates (e.g. a
+new route plus one new key) are a `versions upload` plus one
+`npx wrangler versions secret put NAME`, then the same test and promote,
+because new versions inherit the secrets.
+
+If `AUTH_JWT_SECRET` is lost, any long random string works
+(`openssl rand -base64 48`); it only signs session tokens, so the cost is
+that everyone has to sign in again. Accounts and passwords are kept.
 
 ## Deploy steps (the site owner's ~15 minutes)
 
@@ -270,8 +347,8 @@ never paste it into chat, a file, or a commit).
 
 - Cloudflare's free tier includes 100,000 Worker requests/day and
   KV's 100,000 reads / 1,000 writes per day. The defaults here
-  (450 live calls/day during judging, 30/visitor) stay below both:
-  each live call writes two KV counters, so 450 calls is 900 of the
+  (200 live calls/day, 30/visitor) stay below both:
+  each live call writes two KV counters, so 200 calls is 400 of the
   1,000 free daily writes. Do not raise `DAILY_LIMIT` past ~480 on
   the free KV tier. Long model
   waits are network time, not Worker CPU, so they don't threaten
@@ -279,7 +356,7 @@ never paste it into chat, a file, or a commit).
   $5/month — you would see it coming in `/health`'s budget numbers
   long before.
 - The real spend is Baseten (and Meta, if photo is on) credits:
-  at the current cap, at most 450 model calls a day can ever be
+  at the current cap, at most 200 model calls a day can ever be
   made through this endpoint, whoever asks. A typical describe
   call is a few thousand tokens.
 - Strangers *can* call the endpoint directly (CORS stops other

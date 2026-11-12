@@ -159,7 +159,9 @@ def test_scan_measure_apply_path():
     assert "showPreviewNote" in SCAN_MEASURE and "slotKind" in SCAN_MEASURE
     # mounted on the stored-robot scan card (generic path)
     assert "onApplyScanSize" in PHOTOSPIN
-    assert "<ScanMeasure" not in PHOTOSPIN
+    assert "scan && onApplyScanSize && <ScanMeasure" in PHOTOSPIN
+    assert "onApply={onApplyScanSize}" in PHOTOSPIN
+    assert "<PhotoSpinEditor spin={spin} onSave={onSave}" in PHOTOSPIN
     assert ">Upload a scan file</button>" in PHOTOSPIN  # the file picker says so; the camera has its own button
     # Garage saves it as ONE new version: measured dims, source
     # 'upload' (dimensions derived from an uploaded file), note

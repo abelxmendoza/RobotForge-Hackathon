@@ -2,8 +2,11 @@
  * An uploaded visual shell is not used as a measured collision definition. */
 import type {Spec} from './garage';
 import {simulationIssues,type Scenario,type SimPose} from './simulation';
-import {SIM_TYRE_FRICTION,SIM_USABLE_STALL_FRACTION} from './driveMath';
-export async function createDriveWorld(spec:Spec,scenario:Scenario){
+import {SIM_TYRE_FRICTION,SIM_USABLE_STALL_FRACTION,SIM_DRIVE_CMD_MPS,SIM_TURN_GAIN} from './driveMath';
+/* Extra fixed boxes on the floor (the Omega1 simulator's pen walls):
+ * centre and half-extents in metres, world frame, z up. */
+export type SimWall={x:number;y:number;z:number;hx:number;hy:number;hz:number};
+export async function createDriveWorld(spec:Spec,scenario:Scenario,walls:SimWall[]=[]){
  const issues=simulationIssues(spec);if(issues.length)throw new Error('Physics needs: '+issues.join(', '));
  const R=await import('@dimforge/rapier3d-compat');await R.init();
  const world=new R.World({x:0,y:0,z:-9.81});world.timestep=1/60;
@@ -11,19 +14,25 @@ export async function createDriveWorld(spec:Spec,scenario:Scenario){
  const floor=world.createRigidBody(R.RigidBodyDesc.fixed());world.createCollider(R.ColliderDesc.cuboid(12,12,.1).setTranslation(0,0,-.1).setFriction(SIM_TYRE_FRICTION),floor);
  if(scenario==='ramp'){const a=10*Math.PI/180;world.createCollider(R.ColliderDesc.cuboid(1,.8,.05).setTranslation(1.7,0,Math.sin(a)).setRotation({x:0,y:-Math.sin(a/2),z:0,w:Math.cos(a/2)}).setFriction(SIM_TYRE_FRICTION),floor);}
  if(scenario==='obstacle')world.createCollider(R.ColliderDesc.cuboid(.15,.7,.015).setTranslation(.9,0,.015).setFriction(SIM_TYRE_FRICTION),floor);
+ for(const w of walls)world.createCollider(R.ColliderDesc.cuboid(w.hx,w.hy,w.hz).setTranslation(w.x,w.y,w.z).setFriction(.5),floor);
  const bodyH=Math.max(.01,H-spec.ground_clearance_m),bodyZ=spec.ground_clearance_m+bodyH/2;
  const body=world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(0,0,0).setCanSleep(false));
  world.createCollider(R.ColliderDesc.cuboid(L/2,W/2,bodyH/2).setTranslation(0,0,bodyZ).setMass(mass*.8).setFriction(.4),body);
  const wheels:{joint:import('@dimforge/rapier3d-compat').RevoluteImpulseJoint;y:number}[]=[];
- for(let i=0;i<spec.wheel.count;i++){
-  const side=i%2===0?1:-1;const x=spec.wheel.count===2?0:(i<2?1:-1)*(L/2-r),y=side*(W/2+ww/2);
+ // Wheel x: centre pair for 2 wheels, corner pairs for 4, and for 6 (VEX) three evenly spaced pairs, as urdf.wheel_layout places them.
+ const nW=spec.wheel.count,perSide=Math.ceil(nW/2);
+ for(let i=0;i<nW;i++){
+  const side=i%2===0?1:-1;const k=Math.floor(i/2);const x=nW===2?0:nW<=4?(i<2?1:-1)*(L/2-r):(L/2-r)*(1-2*k/(perSide-1)),y=side*(W/2+ww/2);
   const wheel=world.createRigidBody(R.RigidBodyDesc.dynamic().setTranslation(x,y,r).setCanSleep(false));
   world.createCollider(R.ColliderDesc.cylinder(ww/2,r).setMass(mass*.2/spec.wheel.count).setFriction(SIM_TYRE_FRICTION),wheel);
   const joint=world.createImpulseJoint(R.JointData.revolute({x,y,z:r},{x:0,y:0,z:0},{x:0,y:1,z:0}),body,wheel,true) as import('@dimforge/rapier3d-compat').RevoluteImpulseJoint;
-  joint.setContactsEnabled(false);if(i>=spec.motor.count)continue;
-  joint.configureMotorModel(R.MotorModel.ForceBased);joint.configureMotorVelocity(0,20);joint.setMotorMaxForce(spec.motor.stall_torque_nm*SIM_USABLE_STALL_FRACTION);wheels.push({joint,y});
+  // Fewer motors than wheels on a 6-wheel drive: the chain or gears drive every wheel, so all wheels turn and share the motors' total torque (never more torque than the motors give).
+  const chained=nW>4&&spec.motor.count<nW;
+  joint.setContactsEnabled(false);if(!chained&&i>=spec.motor.count)continue;
+  const share=chained?spec.motor.count/nW:1;
+  joint.configureMotorModel(R.MotorModel.ForceBased);joint.configureMotorVelocity(0,20);joint.setMotorMaxForce(spec.motor.stall_torque_nm*SIM_USABLE_STALL_FRACTION*share);wheels.push({joint,y});
  }
  if(spec.wheel.count===2){const cr=Math.min(spec.ground_clearance_m,r)*.8;for(const x of [-L/2+cr,L/2-cr])world.createCollider(R.ColliderDesc.ball(cr).setTranslation(x,0,cr).setMass(.001).setFriction(0).setFrictionCombineRule(R.CoefficientCombineRule.Min),body);}
  let t=0;
- return {step(throttle:number,turn:number):SimPose{for(const w of wheels)w.joint.configureMotorVelocity((.3*throttle-1.2*turn*w.y)/r,20);world.step();t+=1/60;const p=body.translation(),q=body.rotation();return {t,x:p.x,y:p.y,z:p.z,qx:q.x,qy:q.y,qz:q.z,qw:q.w};},free(){world.free();}};
+ return {step(throttle:number,turn:number):SimPose{for(const w of wheels)w.joint.configureMotorVelocity((SIM_DRIVE_CMD_MPS*throttle-SIM_TURN_GAIN*turn*w.y)/r,20);world.step();t+=1/60;const p=body.translation(),q=body.rotation();return {t,x:p.x,y:p.y,z:p.z,qx:q.x,qy:q.y,qz:q.z,qw:q.w};},free(){world.free();}};
 }

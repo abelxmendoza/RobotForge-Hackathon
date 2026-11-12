@@ -94,7 +94,7 @@ const items = P.buildPaletteItems(partsDoc.parts, propsDoc.props);
 const byKey = new Map(items.map(i => [i.key, i]));
 
 // --- construction: provenance + reality split ---
-assert.equal(items.length, 170);  // 153 + 17 VEX V5 parts (2026-11-10)
+assert.equal(items.length, 181);  // 153 + 17 VEX V5 + 11 VEX IQ parts (2026-11-10)
 assert.equal(items.filter(i => i.hasModel).length, 3);
 assert.equal(byKey.get('prop:crate').reality, 'sim_only');
 assert.equal(byKey.get('prop:crate').hasModel, true);
@@ -111,7 +111,7 @@ assert.equal(P.matchPhrase('crate', items).item.refId, 'crate');
 assert.equal(P.matchPhrase('flux capacitor', items).status, 'none');
 const wheels = P.matchPhrase('66 mm wheels', items);
 assert.equal(wheels.status, 'ambiguous');
-assert.deepEqual(wheels.options.map(o => o.refId).sort(), ['mecanum_wheel_100mm', 'mecanum_wheel_48mm', 'omni_wheel_60mm', 'wheel_100mm', 'wheel_130mm_pneumatic', 'wheel_65mm']);
+assert.deepEqual(wheels.options.map(o => o.refId).sort(), ['mecanum_wheel_100mm', 'mecanum_wheel_48mm', 'omni_wheel_60mm', 'vex_iq_omni', 'vex_iq_wheel', 'wheel_100mm', 'wheel_130mm_pneumatic', 'wheel_65mm']);
 const battery = P.matchPhrase('battery', items);
 assert.equal(battery.status, 'ambiguous');
 assert.ok(battery.options.length >= 3);

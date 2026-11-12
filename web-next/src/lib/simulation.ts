@@ -10,7 +10,7 @@ export function simulationIssues(spec:Spec,engine:'browser'|'gazebo'='browser'):
  if(!['differential','skid_steer'].includes(spec?.drivetrain))missing.push('a differential or skid-steer drivetrain');
  for(const [key,min,max] of [['length_m',.03,3],['width_m',.03,3],['height_m',.02,3],['mass_kg',.05,200],['ground_clearance_m',.001,.5]] as const){const n=spec?.[key];if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)missing.push(key);}
  for(const [key,min,max] of [['diameter_m',.01,1],['width_m',.005,.5]] as const){const n=spec?.wheel?.[key];if(typeof n!=='number'||!Number.isFinite(n)||n<min||n>max)missing.push('wheel.'+key);}
- if(![2,4].includes(spec?.wheel?.count))missing.push('wheel.count (2 or 4)');
+ if(![2,4,6].includes(spec?.wheel?.count))missing.push('wheel.count (2, 4 or 6)');
  if(engine==='browser'&&(!Number.isInteger(spec?.motor?.count)||spec.motor.count<1||spec.motor.count>spec.wheel?.count))missing.push('motor.count');
  if(engine==='browser'&&(!(spec?.motor?.stall_torque_nm>0)||!Number.isFinite(spec?.motor?.stall_torque_nm)||spec.motor.stall_torque_nm>1000))missing.push('motor.stall_torque_nm');
  if(spec?.ground_clearance_m>=spec?.height_m||spec?.wheel?.diameter_m>spec?.length_m||spec?.wheel?.width_m>spec?.width_m)missing.push('consistent wheel/body dimensions');

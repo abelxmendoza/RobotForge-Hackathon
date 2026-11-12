@@ -20,6 +20,7 @@ export interface NavContext {
 export const WORKSHOP_TABS = ['overview', 'build', 'wiring', 'specs', 'checks'] as const;
 
 const PAGES: { match: string[]; route: string; label: string }[] = [
+  { match: ['designer', 'rover designer', 'design a rover', 'rover design', 'robot designer'], route: '/garage/#rover-design', label: 'the Workshop rover designer' },
   { match: ['robodex', 'robots', 'robot index', 'catalogue of robots'], route: '/robots/', label: 'the Robodex' },
   { match: ['parts', 'parts catalogue', 'parts catalog', 'kit', 'components catalogue'], route: '/kit/', label: 'the parts catalogue' },
   { match: ['evidence'], route: '/evidence/', label: 'the Evidence page' },

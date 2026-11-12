@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from .schema import RobotSpec, spec_is_estimated
 from .urdf import verify_urdf_clearance
-from .vex import v5rc_budget
+from .vex import RULEBOOKS, rulebook_check
 
 ERROR, WARN, INFO = "ERROR", "WARN", "INFO"
 
@@ -147,12 +147,27 @@ def validate(spec: RobotSpec, *, urdf_xml: str | None = None) -> list[Finding]:
                              f"{expected:.3g} N·m at the wheel, but "
                              f"motor.stall_torque_nm is "
                              f"{spec.motor.stall_torque_nm:g} N·m"))
-    budget = v5rc_budget(spec)
-    if budget is not None and not budget["ok"]:
-        f.append(Finding(WARN, "vex.v5rc_motor_power",
-                         f"drive motors alone use {budget['drive_w']:g} W, over "
-                         f"the V5RC {budget['cap_w']:g} W motor-power cap "
-                         "(check the current game manual)"))
+    # VEX competition rulebook (vex.py RULEBOOKS): each failed rule is a
+    # WARN naming the season and rule; the robot still works, it would
+    # just not pass inspection.
+    report = rulebook_check(spec)
+    if report is not None:
+        rb = RULEBOOKS[report["rulebook"]]
+        comp = rb["competition"]
+        for r in report["results"]:
+            if r["verdict"] != "fail":
+                continue
+            if comp == "V5RC" and r["rule"] == "R10":
+                check, msg = "vex.v5rc_motor_power", (
+                    f"motors use {r['detail']}, over the V5RC "
+                    f"{rb['motor_power_cap_w']:g} W motor-power cap")
+            else:
+                check = (f"vex.{comp.lower()}_"
+                         f"{r['label'].lower().replace(' ', '_')}")
+                msg = f"{comp} {r['rule']} {r['label'].lower()}: {r['detail']}"
+            f.append(Finding(WARN, check,
+                             f"{msg} ({comp} {rb['season']} {rb['game']} "
+                             "rules; check the current game manual)"))
 
     # Mass budget: if component masses are given, they must not exceed the
     # declared total, and should account for a plausible share of it.

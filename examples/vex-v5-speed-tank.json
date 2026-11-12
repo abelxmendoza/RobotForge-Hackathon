@@ -1,11 +1,11 @@
 {
-  "name": "VEX V5 Speed Tank (6-motor)",
-  "description": "Fast 6-motor VEX V5 competition drive: 6 x 11 W Smart Motors with blue (600 rpm) cartridges geared 36:48 to 3.25 in wheels (450 rpm at the wheel). Omni wheels on the corners and traction wheels in the middle are the usual mix; the spec records one wheel size. The drive uses 66 of the 88 W V5RC motor budget, leaving 22 W for mechanisms. Motor numbers are VEX's published ratings; mass and size are typical values, not measurements of one robot.",
+  "name": "VEX V5 Speed Tank (6-wheel)",
+  "description": "Fast VEX V5 competition drive on six 3.25 in wheels: 4 x 11 W Smart Motors with blue (600 rpm) cartridges geared 36:48 (450 rpm at the wheel), the middle wheels chained to the motored ones. Omni wheels on the corners and traction wheels in the middle are the usual mix; the spec records one wheel size. The drive uses 44 W: the 2026-27 V5RC rules (Override manual R11) cap drivetrain motors at 55 W and all motors at 88 W, so the older 6 x 11 W drive (66 W) is no longer legal. Motor numbers are VEX's published ratings; mass and size are typical values, not measurements of one robot.",
   "drivetrain": "skid_steer",
   "length_m": 0.38,
   "width_m": 0.38,
   "height_m": 0.15,
-  "mass_kg": 5.0,
+  "mass_kg": 4.8,
   "ground_clearance_m": 0.02,
   "wheel": {
     "diameter_m": 0.08255,
@@ -16,7 +16,7 @@
   "motor": {
     "kind": "vex_v5_smart_motor",
     "voltage_v": 12.8,
-    "count": 6,
+    "count": 4,
     "stall_torque_nm": 0.4667
   },
   "gearing": {

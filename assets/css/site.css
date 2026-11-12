@@ -303,3 +303,22 @@ footer.site-footer p{max-width:60ch}
 .fv-error a{color:var(--accent)}
 @media (max-width:560px){.fv-volume{display:none}.fv-badge{display:none}.fv-time:last-of-type{display:none}.fv-play{width:60px;height:60px}}
 @media (prefers-reduced-motion:reduce){.fv-play{transition:none}}
+
+/* ---------- instrument panel pass (2026-11-11) ---------- */
+/* blueprint grid behind the hero, fading out from the centre */
+.hero{position:relative;isolation:isolate}
+.hero::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background-image:
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px),
+    linear-gradient(var(--grid-minor) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-minor) 1px,transparent 1px);
+  background-size:120px 120px,120px 120px,24px 24px,24px 24px;
+  background-position:center top;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 0,rgba(0,0,0,.4) 55%,transparent 80%);
+          mask-image:radial-gradient(ellipse 70% 60% at 50% 35%,#000 0,rgba(0,0,0,.4) 55%,transparent 80%);
+}
+.hero .eyebrow{font-family:var(--mono);letter-spacing:.16em}
+.hero-alt{margin-top:var(--s3);color:var(--text-muted);font-size:var(--fs-sm)}
+.hero-alt-link{color:var(--link);font-weight:600}

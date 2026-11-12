@@ -316,7 +316,13 @@ def guess_parts(spec: RobotSpec, visible_parts=(),
     wheel). Below that the guess stays free text — a wrong id is worse
     than an honest sentence."""
     cat = catalog or Catalog.load()
-    parts = list(cat.parts.values())
+    # Kit parts (VEX V5, VEX IQ) record a platform: they only fit a robot
+    # built on that platform, never a hobby robot that happens to share
+    # a battery voltage.
+    platform = str(getattr(spec.gearing, "platform", "") or "").lower()
+    parts = [p for p in cat.parts.values()
+             if not p.specs.get("platform")
+             or str(p.specs.get("platform")).lower() == platform]
     guesses: list[PartGuess] = []
 
     def add(label, basis, candidates, scorer, threshold=4):

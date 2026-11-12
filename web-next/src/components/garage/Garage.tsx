@@ -30,6 +30,7 @@ import { downloadJSON, readStore, writeStore, uid, useStore } from '@/lib/store'
 import { promptWrench } from '@/lib/wrenchPrompt';
 import { consumeWorkshopFixRequest, publishWorkshopContext, summarizeSpec, WORKSHOP_ACTION_EVENT, WORKSHOP_FIX_EVENT, type WorkshopAction } from '@/lib/workshopContext';
 import { checkRover, isRover, type RoverCheck } from '@/lib/rover';
+import { HealthGauges, TestRun } from './InstrumentPanel';
 import SimulateTab from './SimulateTab';
 import DriveTrainTab from './DriveTrainTab';
 import { VEX_STARTERS, type VexStarter } from '@/lib/vexStarters';
@@ -190,11 +191,11 @@ function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, sp
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
         <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
         <Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>
-        <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX V5 robot</button>
+        <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX robot</button>
       </div>
       {vexOpen && (
         <div className="garage-vex">
-          <p className="g-small">VEX V5 robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears later in its Drive train tab.</p>
+          <p className="g-small">VEX robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears on V5 robots later in the Drive train tab, which also checks the robot against this season&apos;s competition rules.</p>
           <div className="garage-vex-list">
             {VEX_STARTERS.map((s) => (
               <button key={s.file} type="button" className="garage-vex-card" onClick={() => void startVex(s)}>
@@ -1189,7 +1190,12 @@ export default function Garage() {
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => setConfirmDelete(null)}>Cancel</button>
                 </span>
               ) : (
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => deleteForever(r)}>Delete</button>
+                <details className="g-robot-menu">
+                  <summary aria-label={`More actions for ${r.name}`} title="More actions"><span aria-hidden="true">⋯</span></summary>
+                  <div className="g-robot-menu-pop">
+                    <button type="button" className="btn btn-sm btn-ghost" onClick={(e) => { (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute('open'); deleteForever(r); }} aria-label={`Delete ${r.name}`}>Delete robot…</button>
+                  </div>
+                </details>
               )}
             </li>
           ))}
@@ -1360,6 +1366,12 @@ export default function Garage() {
                   return <div className="ws-next"><div><span className="eyebrow">Next step</span><h3>{next.title}</h3><p>{next.text}</p></div><button type="button" className="btn btn-primary" onClick={() => { if ('prompt' in next) promptWrench({mode:'chat',text:next.prompt}); else setTab(next.tab); }}>{next.action}</button></div>;
                 })()}
                 {(() => {
+                  /* Recorded numbers vs the ones still guessed from a photo. */
+                  const numeric = FIELD_GROUPS.flatMap((g) => g.fields).filter((f) => f.kind === 'number' || f.kind === 'integer');
+                  const recorded = numeric.filter((f) => Number.isFinite(Number(getPath(draft, f.path))) && getPath(draft, f.path) != null);
+                  return <HealthGauges verdict={verdictOf(draftLines)} roverChecks={roverDraft} targets={rover} recorded={recorded.length} measured={recorded.filter((f) => !estimated.has(f.path)).length} />;
+                })()}
+                {(() => {
                   const art = drawingFor(draft?.name, robot.name, robot.id);
                   const drawing = art ? (
                     <figure className="ws-drawing">
@@ -1396,7 +1408,7 @@ export default function Garage() {
                         ? 'Omega1 digital twin · generated from a photo of the real rover, so its shape and size are estimates, not measurements. Drag to look around it, or use its Turn control for the full 360.'
                         : latest?.planned ? undefined
                         : 'Model built from this robot\u2019s recorded spec · approximate geometry, not a measured twin. Drag to look around it.'}
-                      model={isOmegaRobot ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} />}
+                      model={isOmegaRobot ? <TwinView subject={omega1Rover} explode /> : <OverviewTurntable key={robot.id} spec={draft as RobotSpec} name={robot.name} fallback={drawing} onNeedSpecs={() => setTab('specs')} robotId={robot.id} looks={robot.partLooks} />}
                       onSave={(next) => patchRobot(robot.id, (r) => {
                         if (next) return { ...r, spin: next };
                         const { spin: _gone, ...rest } = r; // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -1648,6 +1660,7 @@ export default function Garage() {
             {draft.referenceModel === 'unitree-g1-23' && (tab === 'checks' || tab === 'simulate') && <section className="ws-guided"><h3>Reference model · not physically checked</h3><p>This G1 model supports link inspection and joint posing in Build. Rover calculations and driving tests do not apply. No gait, balance, collisions or hardware behavior have been validated.</p></section>}
             {tab === 'checks' && draft.referenceModel !== 'unitree-g1-23' && (
             <section className="g-compare ws-pane" aria-label="Checks">
+              <TestRun verdict={verdictOf(draftLines)} roverChecks={roverDraft} targets={rover} />
               <SavedSimulationRuns robotId={robot.id} /><h3>Engineering checks</h3>
               <p className="g-small faint">Calculated from your specs; these are not physical test results.</p>
               <Findings lines={draftLines} />

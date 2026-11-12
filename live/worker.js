@@ -43,6 +43,20 @@
  *                     content is UNTRUSTED external data: the client
  *                     passes it to /chat only as a labelled
  *                     web_context block with its source URL(s).
+ *   POST /part-mesh -> { part, description } => { id, status }
+ *                     starts ONE text-to-3D job on Meshy for a single
+ *                     robot part (key: MESHY_API_KEY). The prompt is
+ *                     built HERE from a fixed part list and the
+ *                     owner's words (<= 200 chars); the client cannot
+ *                     send its own prompt. Counts against the live
+ *                     budget AND its own smaller daily cap
+ *                     (MESH_DAILY_LIMIT, default 10; per visitor 3),
+ *                     because each job spends 3D credits.
+ *   POST /part-mesh/status -> { id } => { id, status, progress }
+ *   POST /part-mesh/file   -> { id } => the GLB bytes (model/gltf-binary)
+ *                     Only job ids this Worker started are served.
+ *                     Without the key: 501 mesh_not_configured and
+ *                     /health reports routes.part_mesh false.
  *   POST /part-chat-> { part, message, history? } => { reply, update,
  *                     confirmed, model } — talk a part through until
  *                     the owner confirms what it is.
@@ -147,6 +161,19 @@ const WEB_URL_MAX_CHARS = 2000;
 const WEB_MARKDOWN_CAP = 12000; // one scraped page, chars of markdown
 const WEB_RESULT_MARKDOWN_CAP = 2000; // per search result excerpt
 const WEB_SEARCH_MAX_LIMIT = 5;
+const MESHY_URL = 'https://api.meshy.ai/openapi/v2/text-to-3d';
+const MESH_DESCRIPTION_MAX_CHARS = 200;
+const MESH_FILE_MAX_BYTES = 20 * 1024 * 1024;
+const MESH_TASK_TTL_SECONDS = 2 * 24 * 3600;
+/* The parts /part-mesh will generate, by the take-apart part id the
+ * site's 3D model uses, as the one-part noun the prompt starts with. */
+const MESH_PARTS = {
+  wheel: 'robot wheel with its tyre', rotor: 'propeller', camera: 'camera module',
+  lidar: 'lidar sensor', ultrasonic: 'ultrasonic distance sensor', caster: 'ball caster',
+  mount: 'motor mount bracket', battery: 'battery pack', fc: 'flight controller board',
+  arm: 'robot arm', leg: 'robot leg', head: 'robot head', gripper: 'robot gripper',
+  plate: 'flat chassis deck plate', frame: 'drone frame', body: 'robot body shell',
+};
 const FIREWORKS_MODEL = 'accounts/fireworks/models/muse-spark-open';
 const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
 const ALLOWED_ORIGINS = [
@@ -353,7 +380,7 @@ Hard rules:
  * every part in catalog/parts.json, mirrored here (tests/test_live.py
  * asserts this list matches the catalogue exactly). */
 // BEGIN catalogue parts mirror
-const CATALOG_PARTS = /*PARTS_BEGIN*/[{"id": "lipo_4s_5200", "name": "LiPo battery 4S 5200 mAh"}, {"id": "lipo_4s_1500", "name": "LiPo battery 4S 1500 mAh (5-inch quad)"}, {"id": "lipo_3s_2200", "name": "LiPo battery 3S 2200 mAh"}, {"id": "buck_converter_5v", "name": "Buck converter 5 V / 5 A"}, {"id": "lipo_balance_charger", "name": "LiPo balance charger"}, {"id": "xt60_pigtail", "name": "XT60 pigtail lead"}, {"id": "silicone_wire_14awg", "name": "Silicone wire 14 AWG (per metre)"}, {"id": "driver_tb6612fng", "name": "TB6612FNG dual motor driver"}, {"id": "driver_l298n", "name": "L298N dual motor driver module"}, {"id": "esc_4in1_45a", "name": "4-in-1 ESC 45 A (BLHeli_S class)"}, {"id": "esc_quicrun_1060", "name": "Brushed ESC 60 A (QuicRun 1060 class)"}, {"id": "esp32_devkit", "name": "ESP32 development board"}, {"id": "teensy_41", "name": "Teensy 4.1"}, {"id": "pico_rp2040", "name": "Raspberry Pi Pico (RP2040)"}, {"id": "raspberry_pi_5", "name": "Raspberry Pi 5"}, {"id": "jetson_orin_nano", "name": "NVIDIA Jetson Orin Nano"}, {"id": "microsd_128gb", "name": "microSD card 128 GB (A2/V30)"}, {"id": "sik_telemetry_v3", "name": "SiK telemetry radio pair (915 MHz)"}, {"id": "elrs_receiver", "name": "ExpressLRS receiver"}, {"id": "realsense_d435", "name": "Intel RealSense D435 depth camera"}, {"id": "rplidar_a1", "name": "RPLIDAR A1 2D lidar"}, {"id": "imu_bno055", "name": "BNO055 9-DOF IMU breakout"}, {"id": "ultrasonic_hcsr04", "name": "HC-SR04 ultrasonic ranger"}, {"id": "pla_filament", "name": "PLA filament 1.75 mm, 1 kg"}, {"id": "petg_filament", "name": "PETG filament 1.75 mm, 1 kg"}, {"id": "fuse_inline", "name": "Inline blade fuse holder + fuse"}, {"id": "estop_button", "name": "Emergency stop button (latching)"}, {"id": "bms_4s", "name": "BMS protection board 4S 40 A"}, {"id": "custom_pcb_kicad", "name": "Custom PCB (KiCad import)"}, {"id": "gearmotor_12v", "name": "DC gearmotor 12 V (37 mm class)"}, {"id": "brushed_motor_540", "name": "Brushed motor 540 size"}, {"id": "servo_mg996r", "name": "MG996R servo"}, {"id": "servo_sts3215", "name": "STS3215 serial bus servo (Feetech)"}, {"id": "stepper_nema17", "name": "Stepper motor NEMA 17"}, {"id": "brushless_2207_1960kv", "name": "Brushless motor 2207 1960 KV"}, {"id": "wheel_100mm", "name": "Wheel 100 mm diameter"}, {"id": "mecanum_wheel_100mm", "name": "Mecanum wheel 100 mm"}, {"id": "caster_ball", "name": "Ball caster"}, {"id": "propeller_5040", "name": "Propeller 5x4.0x3 tri-blade"}, {"id": "fc_f405_stack", "name": "Flight controller stack F405"}, {"id": "gripper_2finger", "name": "2-finger parallel gripper kit"}, {"id": "quad_frame_5inch", "name": "Quadcopter frame 5 inch (carbon)"}, {"id": "extrusion_2020", "name": "Aluminium extrusion 2020 (per metre)"}, {"id": "chassis_plate", "name": "Chassis plate (3D-printed)"}, {"id": "motor_mount", "name": "Motor mount bracket (3D-printed)"}, {"id": "lidar_mount", "name": "Lidar mount post (3D-printed)"}, {"id": "camera_bracket", "name": "Camera bracket (3D-printed)"}, {"id": "ultrasonic_bracket", "name": "Ultrasonic bracket (3D-printed)"}, {"id": "camera_rpi_v2", "name": "Raspberry Pi Camera Module V2 (8 MP)"}, {"id": "liion_18650_3s", "name": "18650 Li-ion pack 3S (3 cells)"}, {"id": "servo_sg90", "name": "SG90 micro servo"}, {"id": "servo_mg90s", "name": "MG90S micro servo (metal gear)"}, {"id": "servo_ds3218", "name": "DS3218 high-torque servo (20 kg class)"}, {"id": "stepper_28byj48", "name": "28BYJ-48 stepper motor with ULN2003 driver board"}, {"id": "stepper_nema23", "name": "NEMA 23 stepper motor"}, {"id": "gearmotor_25ga370", "name": "25GA-370 DC gearmotor 12 V"}, {"id": "gearmotor_tt", "name": "TT DC gearmotor (1:48, dual shaft)"}, {"id": "brushless_2212_1000kv", "name": "2212 1000KV brushless outrunner"}, {"id": "motor_775", "name": "775-size DC motor (12-24 V)"}, {"id": "servo_hs645mg", "name": "Hitec HS-645MG servo"}, {"id": "linear_actuator_12v", "name": "Linear actuator 12 V, 100 mm stroke"}, {"id": "solenoid_12v", "name": "Push-pull solenoid 12 V"}, {"id": "driver_a4988", "name": "A4988 stepper driver (Pololu-style carrier)"}, {"id": "driver_drv8825", "name": "DRV8825 stepper driver (Pololu-style carrier)"}, {"id": "driver_tmc2209", "name": "TMC2209 silent stepper driver"}, {"id": "driver_bts7960", "name": "BTS7960 43 A H-bridge module"}, {"id": "driver_pca9685", "name": "PCA9685 16-channel PWM driver board"}, {"id": "driver_l9110s", "name": "L9110S dual H-bridge module"}, {"id": "esc_35a_blheli", "name": "35 A BLHeli_32 ESC"}, {"id": "arduino_uno_r3", "name": "Arduino Uno R3"}, {"id": "arduino_nano", "name": "Arduino Nano (classic)"}, {"id": "stm32_blue_pill", "name": "STM32 Blue Pill board (STM32F103C8T6)"}, {"id": "esp32_s3_devkit", "name": "ESP32-S3 development board"}, {"id": "esp8266_nodemcu", "name": "NodeMCU ESP8266 development board"}, {"id": "pico_w", "name": "Raspberry Pi Pico W"}, {"id": "xiao_rp2040", "name": "Seeed Studio XIAO RP2040"}, {"id": "raspberry_pi_4b", "name": "Raspberry Pi 4 Model B"}, {"id": "raspberry_pi_zero_2_w", "name": "Raspberry Pi Zero 2 W"}, {"id": "jetson_nano", "name": "NVIDIA Jetson Nano developer kit"}, {"id": "realsense_d455", "name": "Intel RealSense Depth Camera D455"}, {"id": "camera_rpi_v3", "name": "Raspberry Pi Camera Module 3"}, {"id": "camera_ov5647", "name": "OV5647 5 MP camera module (Pi camera v1 class)"}, {"id": "tf_luna", "name": "Benewake TF-Luna LiDAR"}, {"id": "vl53l0x_tof", "name": "VL53L0X time-of-flight distance sensor"}, {"id": "imu_mpu6050", "name": "MPU-6050 6-axis IMU module (GY-521)"}, {"id": "sensor_bme280", "name": "BME280 environmental sensor"}, {"id": "sensor_dht22", "name": "DHT22 / AM2302 temperature-humidity sensor"}, {"id": "sensor_ina219", "name": "INA219 current and voltage sensor board"}, {"id": "gps_neom9n", "name": "u-blox NEO-M9N GPS module"}, {"id": "encoder_hall", "name": "Hall-effect motor encoder (pair)"}, {"id": "sensor_qmc5883l", "name": "QMC5883L 3-axis magnetometer"}, {"id": "pir_hcsr501", "name": "HC-SR501 PIR motion sensor"}, {"id": "sharp_gp2y0a21", "name": "Sharp GP2Y0A21YK0F IR distance sensor"}, {"id": "hx711_kit", "name": "HX711 load cell kit (5 kg cell + amplifier)"}, {"id": "lipo_2s_5000", "name": "LiPo battery 2S 5000 mAh"}, {"id": "lipo_6s_1300", "name": "LiPo battery 6S 1300 mAh"}, {"id": "liion_21700_cell", "name": "21700 Li-ion cell 3.7 V (5000 mAh class)"}, {"id": "buck_lm2596", "name": "LM2596 adjustable buck converter module"}, {"id": "boost_mt3608", "name": "MT3608 boost converter module"}, {"id": "pdb_xt60", "name": "Power distribution board with XT60 input"}, {"id": "charger_imax_b6", "name": "iMAX B6 balance charger"}, {"id": "regulator_7805", "name": "7805 voltage regulator (TO-220)"}, {"id": "nimh_pack_72", "name": "NiMH battery pack 7.2 V, 3000 mAh"}, {"id": "xt90_pigtail", "name": "XT90 pigtail (12 AWG)"}, {"id": "xt30_pigtail", "name": "XT30 pigtail (18 AWG)"}, {"id": "jst_ph_set", "name": "JST PH 2.0 mm connector set"}, {"id": "dupont_kit", "name": "Dupont jumper wire kit"}, {"id": "wago_221", "name": "WAGO 221 lever-nut connectors (assortment)"}, {"id": "usb_c_cable_100w", "name": "USB-C to USB-C cable (100 W PD)"}, {"id": "qwiic_cable_set", "name": "QWIIC / STEMMA QT cable set"}, {"id": "heat_shrink_kit", "name": "Heat-shrink tubing kit (assorted)"}, {"id": "wheel_65mm", "name": "Rubber wheel 65 mm (TT-motor fit)"}, {"id": "mecanum_wheel_48mm", "name": "Mecanum wheel 48 mm"}, {"id": "wheel_130mm_pneumatic", "name": "Pneumatic wheel 130 mm"}, {"id": "tank_track_set", "name": "Rubber tank track set (pair)"}, {"id": "omni_wheel_60mm", "name": "Omni wheel 60 mm"}, {"id": "extrusion_3030", "name": "Aluminium extrusion 3030 (per metre)"}, {"id": "extrusion_2040", "name": "Aluminium extrusion 2040 (per metre)"}, {"id": "bearing_608", "name": "608-2RS ball bearing"}, {"id": "gt2_belt", "name": "GT2 timing belt 6 mm (open, per metre)"}, {"id": "gt2_pulley_20t", "name": "GT2 pulley 20T, 5 mm bore"}, {"id": "lead_screw_t8", "name": "T8 lead screw with brass nut (8 mm)"}, {"id": "linear_rail_mgn12", "name": "MGN12 linear rail with carriage"}, {"id": "coupler_5x8", "name": "Flexible shaft coupler 5 x 8 mm"}, {"id": "standoff_kit_m3", "name": "M3 brass standoff kit (assorted)"}, {"id": "screw_kit_m3", "name": "M3 socket-head screw kit (assorted lengths)"}, {"id": "heat_inserts_m3", "name": "M3 heat-set thread inserts"}, {"id": "angle_bracket_2020", "name": "2020 corner bracket set"}, {"id": "carbon_tube_10mm", "name": "Carbon fibre tube 10 mm OD (per metre)"}, {"id": "abs_filament", "name": "ABS filament 1.75 mm, 1 kg"}, {"id": "pc_filament", "name": "Polycarbonate filament 1.75 mm, 1 kg"}, {"id": "hips_filament", "name": "HIPS filament 1.75 mm, 1 kg"}, {"id": "resin_standard", "name": "Standard photopolymer resin, 1 kg (405 nm)"}, {"id": "plywood_baltic_3mm", "name": "Baltic birch plywood sheet 3 mm"}, {"id": "nrf24l01", "name": "nRF24L01+ 2.4 GHz radio module"}, {"id": "lora_rfm95w", "name": "LoRa radio module 915 MHz (RFM95W)"}, {"id": "ble_hm10", "name": "HM-10 BLE Bluetooth module"}, {"id": "can_transceiver_sn65hvd230", "name": "SN65HVD230 CAN bus transceiver board"}, {"id": "usb_ttl_cp2102", "name": "CP2102 USB-to-UART adapter"}, {"id": "lipo_alarm", "name": "LiPo low-voltage alarm (1-8S)"}, {"id": "antispark_xt90s", "name": "XT90-S anti-spark connector (pair)"}, {"id": "breaker_30a", "name": "Manual-reset circuit breaker 30 A"}, {"id": "microsd_256gb", "name": "microSD card 256 GB (V30)"}, {"id": "nvme_1tb", "name": "M.2 2280 NVMe SSD 1 TB"}, {"id": "fc_pixhawk_6c", "name": "Holybro Pixhawk 6C flight controller"}, {"id": "propeller_6040", "name": "Propeller 6x4 (pair)"}, {"id": "electromagnet_12v", "name": "Electromagnet 12 V (holding)"}, {"id": "gripper_parallel_kit", "name": "Parallel gripper kit (servo-driven)"}, {"id": "perfboard_set", "name": "Perfboard / protoboard set"}, {"id": "motor_2306_1750kv", "name": "2306 1750KV brushless motor"}, {"id": "vex_v5_brain", "name": "VEX V5 Robot Brain"}, {"id": "vex_v5_m11w", "name": "VEX V5 Smart Motor (11 W)"}, {"id": "vex_v5_m5w5", "name": "VEX V5 Smart Motor (5.5 W)"}, {"id": "vex_v5_batt", "name": "VEX V5 Robot Battery (Li-ion, 1100 mAh)"}, {"id": "vex_v5_ctrl", "name": "VEX V5 Controller"}, {"id": "vex_v5_vexnet", "name": "VEX V5 Robot Radio"}, {"id": "vex_omni4", "name": "VEX 4 in omni-directional wheel"}, {"id": "vex_omni325", "name": "VEX 3.25 in omni-directional wheel"}, {"id": "vex_omni275", "name": "VEX 2.75 in omni-directional wheel"}, {"id": "vex_trac325", "name": "VEX 3.25 in traction wheel"}, {"id": "vex_mec4", "name": "VEX 4 in mecanum wheel"}, {"id": "vex_cchan", "name": "VEX aluminum C-channel (1x2x1)"}, {"id": "vex_hsgear", "name": "VEX high-strength gears (12-84 teeth)"}, {"id": "vex_v5_imu", "name": "VEX V5 Inertial Sensor"}, {"id": "vex_v5_rot", "name": "VEX V5 Rotation Sensor"}, {"id": "vex_v5_dist", "name": "VEX V5 Distance Sensor"}, {"id": "vex_v5_opt", "name": "VEX V5 Optical Sensor"}]/*PARTS_END*/;
+const CATALOG_PARTS = /*PARTS_BEGIN*/[{"id": "lipo_4s_5200", "name": "LiPo battery 4S 5200 mAh"}, {"id": "lipo_4s_1500", "name": "LiPo battery 4S 1500 mAh (5-inch quad)"}, {"id": "lipo_3s_2200", "name": "LiPo battery 3S 2200 mAh"}, {"id": "buck_converter_5v", "name": "Buck converter 5 V / 5 A"}, {"id": "lipo_balance_charger", "name": "LiPo balance charger"}, {"id": "xt60_pigtail", "name": "XT60 pigtail lead"}, {"id": "silicone_wire_14awg", "name": "Silicone wire 14 AWG (per metre)"}, {"id": "driver_tb6612fng", "name": "TB6612FNG dual motor driver"}, {"id": "driver_l298n", "name": "L298N dual motor driver module"}, {"id": "esc_4in1_45a", "name": "4-in-1 ESC 45 A (BLHeli_S class)"}, {"id": "esc_quicrun_1060", "name": "Brushed ESC 60 A (QuicRun 1060 class)"}, {"id": "esp32_devkit", "name": "ESP32 development board"}, {"id": "teensy_41", "name": "Teensy 4.1"}, {"id": "pico_rp2040", "name": "Raspberry Pi Pico (RP2040)"}, {"id": "raspberry_pi_5", "name": "Raspberry Pi 5"}, {"id": "jetson_orin_nano", "name": "NVIDIA Jetson Orin Nano"}, {"id": "microsd_128gb", "name": "microSD card 128 GB (A2/V30)"}, {"id": "sik_telemetry_v3", "name": "SiK telemetry radio pair (915 MHz)"}, {"id": "elrs_receiver", "name": "ExpressLRS receiver"}, {"id": "realsense_d435", "name": "Intel RealSense D435 depth camera"}, {"id": "rplidar_a1", "name": "RPLIDAR A1 2D lidar"}, {"id": "imu_bno055", "name": "BNO055 9-DOF IMU breakout"}, {"id": "ultrasonic_hcsr04", "name": "HC-SR04 ultrasonic ranger"}, {"id": "pla_filament", "name": "PLA filament 1.75 mm, 1 kg"}, {"id": "petg_filament", "name": "PETG filament 1.75 mm, 1 kg"}, {"id": "fuse_inline", "name": "Inline blade fuse holder + fuse"}, {"id": "estop_button", "name": "Emergency stop button (latching)"}, {"id": "bms_4s", "name": "BMS protection board 4S 40 A"}, {"id": "custom_pcb_kicad", "name": "Custom PCB (KiCad import)"}, {"id": "gearmotor_12v", "name": "DC gearmotor 12 V (37 mm class)"}, {"id": "brushed_motor_540", "name": "Brushed motor 540 size"}, {"id": "servo_mg996r", "name": "MG996R servo"}, {"id": "servo_sts3215", "name": "STS3215 serial bus servo (Feetech)"}, {"id": "stepper_nema17", "name": "Stepper motor NEMA 17"}, {"id": "brushless_2207_1960kv", "name": "Brushless motor 2207 1960 KV"}, {"id": "wheel_100mm", "name": "Wheel 100 mm diameter"}, {"id": "mecanum_wheel_100mm", "name": "Mecanum wheel 100 mm"}, {"id": "caster_ball", "name": "Ball caster"}, {"id": "propeller_5040", "name": "Propeller 5x4.0x3 tri-blade"}, {"id": "fc_f405_stack", "name": "Flight controller stack F405"}, {"id": "gripper_2finger", "name": "2-finger parallel gripper kit"}, {"id": "quad_frame_5inch", "name": "Quadcopter frame 5 inch (carbon)"}, {"id": "extrusion_2020", "name": "Aluminium extrusion 2020 (per metre)"}, {"id": "chassis_plate", "name": "Chassis plate (3D-printed)"}, {"id": "motor_mount", "name": "Motor mount bracket (3D-printed)"}, {"id": "lidar_mount", "name": "Lidar mount post (3D-printed)"}, {"id": "camera_bracket", "name": "Camera bracket (3D-printed)"}, {"id": "ultrasonic_bracket", "name": "Ultrasonic bracket (3D-printed)"}, {"id": "camera_rpi_v2", "name": "Raspberry Pi Camera Module V2 (8 MP)"}, {"id": "liion_18650_3s", "name": "18650 Li-ion pack 3S (3 cells)"}, {"id": "servo_sg90", "name": "SG90 micro servo"}, {"id": "servo_mg90s", "name": "MG90S micro servo (metal gear)"}, {"id": "servo_ds3218", "name": "DS3218 high-torque servo (20 kg class)"}, {"id": "stepper_28byj48", "name": "28BYJ-48 stepper motor with ULN2003 driver board"}, {"id": "stepper_nema23", "name": "NEMA 23 stepper motor"}, {"id": "gearmotor_25ga370", "name": "25GA-370 DC gearmotor 12 V"}, {"id": "gearmotor_tt", "name": "TT DC gearmotor (1:48, dual shaft)"}, {"id": "brushless_2212_1000kv", "name": "2212 1000KV brushless outrunner"}, {"id": "motor_775", "name": "775-size DC motor (12-24 V)"}, {"id": "servo_hs645mg", "name": "Hitec HS-645MG servo"}, {"id": "linear_actuator_12v", "name": "Linear actuator 12 V, 100 mm stroke"}, {"id": "solenoid_12v", "name": "Push-pull solenoid 12 V"}, {"id": "driver_a4988", "name": "A4988 stepper driver (Pololu-style carrier)"}, {"id": "driver_drv8825", "name": "DRV8825 stepper driver (Pololu-style carrier)"}, {"id": "driver_tmc2209", "name": "TMC2209 silent stepper driver"}, {"id": "driver_bts7960", "name": "BTS7960 43 A H-bridge module"}, {"id": "driver_pca9685", "name": "PCA9685 16-channel PWM driver board"}, {"id": "driver_l9110s", "name": "L9110S dual H-bridge module"}, {"id": "esc_35a_blheli", "name": "35 A BLHeli_32 ESC"}, {"id": "arduino_uno_r3", "name": "Arduino Uno R3"}, {"id": "arduino_nano", "name": "Arduino Nano (classic)"}, {"id": "stm32_blue_pill", "name": "STM32 Blue Pill board (STM32F103C8T6)"}, {"id": "esp32_s3_devkit", "name": "ESP32-S3 development board"}, {"id": "esp8266_nodemcu", "name": "NodeMCU ESP8266 development board"}, {"id": "pico_w", "name": "Raspberry Pi Pico W"}, {"id": "xiao_rp2040", "name": "Seeed Studio XIAO RP2040"}, {"id": "raspberry_pi_4b", "name": "Raspberry Pi 4 Model B"}, {"id": "raspberry_pi_zero_2_w", "name": "Raspberry Pi Zero 2 W"}, {"id": "jetson_nano", "name": "NVIDIA Jetson Nano developer kit"}, {"id": "realsense_d455", "name": "Intel RealSense Depth Camera D455"}, {"id": "camera_rpi_v3", "name": "Raspberry Pi Camera Module 3"}, {"id": "camera_ov5647", "name": "OV5647 5 MP camera module (Pi camera v1 class)"}, {"id": "tf_luna", "name": "Benewake TF-Luna LiDAR"}, {"id": "vl53l0x_tof", "name": "VL53L0X time-of-flight distance sensor"}, {"id": "imu_mpu6050", "name": "MPU-6050 6-axis IMU module (GY-521)"}, {"id": "sensor_bme280", "name": "BME280 environmental sensor"}, {"id": "sensor_dht22", "name": "DHT22 / AM2302 temperature-humidity sensor"}, {"id": "sensor_ina219", "name": "INA219 current and voltage sensor board"}, {"id": "gps_neom9n", "name": "u-blox NEO-M9N GPS module"}, {"id": "encoder_hall", "name": "Hall-effect motor encoder (pair)"}, {"id": "sensor_qmc5883l", "name": "QMC5883L 3-axis magnetometer"}, {"id": "pir_hcsr501", "name": "HC-SR501 PIR motion sensor"}, {"id": "sharp_gp2y0a21", "name": "Sharp GP2Y0A21YK0F IR distance sensor"}, {"id": "hx711_kit", "name": "HX711 load cell kit (5 kg cell + amplifier)"}, {"id": "lipo_2s_5000", "name": "LiPo battery 2S 5000 mAh"}, {"id": "lipo_6s_1300", "name": "LiPo battery 6S 1300 mAh"}, {"id": "liion_21700_cell", "name": "21700 Li-ion cell 3.7 V (5000 mAh class)"}, {"id": "buck_lm2596", "name": "LM2596 adjustable buck converter module"}, {"id": "boost_mt3608", "name": "MT3608 boost converter module"}, {"id": "pdb_xt60", "name": "Power distribution board with XT60 input"}, {"id": "charger_imax_b6", "name": "iMAX B6 balance charger"}, {"id": "regulator_7805", "name": "7805 voltage regulator (TO-220)"}, {"id": "nimh_pack_72", "name": "NiMH battery pack 7.2 V, 3000 mAh"}, {"id": "xt90_pigtail", "name": "XT90 pigtail (12 AWG)"}, {"id": "xt30_pigtail", "name": "XT30 pigtail (18 AWG)"}, {"id": "jst_ph_set", "name": "JST PH 2.0 mm connector set"}, {"id": "dupont_kit", "name": "Dupont jumper wire kit"}, {"id": "wago_221", "name": "WAGO 221 lever-nut connectors (assortment)"}, {"id": "usb_c_cable_100w", "name": "USB-C to USB-C cable (100 W PD)"}, {"id": "qwiic_cable_set", "name": "QWIIC / STEMMA QT cable set"}, {"id": "heat_shrink_kit", "name": "Heat-shrink tubing kit (assorted)"}, {"id": "wheel_65mm", "name": "Rubber wheel 65 mm (TT-motor fit)"}, {"id": "mecanum_wheel_48mm", "name": "Mecanum wheel 48 mm"}, {"id": "wheel_130mm_pneumatic", "name": "Pneumatic wheel 130 mm"}, {"id": "tank_track_set", "name": "Rubber tank track set (pair)"}, {"id": "omni_wheel_60mm", "name": "Omni wheel 60 mm"}, {"id": "extrusion_3030", "name": "Aluminium extrusion 3030 (per metre)"}, {"id": "extrusion_2040", "name": "Aluminium extrusion 2040 (per metre)"}, {"id": "bearing_608", "name": "608-2RS ball bearing"}, {"id": "gt2_belt", "name": "GT2 timing belt 6 mm (open, per metre)"}, {"id": "gt2_pulley_20t", "name": "GT2 pulley 20T, 5 mm bore"}, {"id": "lead_screw_t8", "name": "T8 lead screw with brass nut (8 mm)"}, {"id": "linear_rail_mgn12", "name": "MGN12 linear rail with carriage"}, {"id": "coupler_5x8", "name": "Flexible shaft coupler 5 x 8 mm"}, {"id": "standoff_kit_m3", "name": "M3 brass standoff kit (assorted)"}, {"id": "screw_kit_m3", "name": "M3 socket-head screw kit (assorted lengths)"}, {"id": "heat_inserts_m3", "name": "M3 heat-set thread inserts"}, {"id": "angle_bracket_2020", "name": "2020 corner bracket set"}, {"id": "carbon_tube_10mm", "name": "Carbon fibre tube 10 mm OD (per metre)"}, {"id": "abs_filament", "name": "ABS filament 1.75 mm, 1 kg"}, {"id": "pc_filament", "name": "Polycarbonate filament 1.75 mm, 1 kg"}, {"id": "hips_filament", "name": "HIPS filament 1.75 mm, 1 kg"}, {"id": "resin_standard", "name": "Standard photopolymer resin, 1 kg (405 nm)"}, {"id": "plywood_baltic_3mm", "name": "Baltic birch plywood sheet 3 mm"}, {"id": "nrf24l01", "name": "nRF24L01+ 2.4 GHz radio module"}, {"id": "lora_rfm95w", "name": "LoRa radio module 915 MHz (RFM95W)"}, {"id": "ble_hm10", "name": "HM-10 BLE Bluetooth module"}, {"id": "can_transceiver_sn65hvd230", "name": "SN65HVD230 CAN bus transceiver board"}, {"id": "usb_ttl_cp2102", "name": "CP2102 USB-to-UART adapter"}, {"id": "lipo_alarm", "name": "LiPo low-voltage alarm (1-8S)"}, {"id": "antispark_xt90s", "name": "XT90-S anti-spark connector (pair)"}, {"id": "breaker_30a", "name": "Manual-reset circuit breaker 30 A"}, {"id": "microsd_256gb", "name": "microSD card 256 GB (V30)"}, {"id": "nvme_1tb", "name": "M.2 2280 NVMe SSD 1 TB"}, {"id": "fc_pixhawk_6c", "name": "Holybro Pixhawk 6C flight controller"}, {"id": "propeller_6040", "name": "Propeller 6x4 (pair)"}, {"id": "electromagnet_12v", "name": "Electromagnet 12 V (holding)"}, {"id": "gripper_parallel_kit", "name": "Parallel gripper kit (servo-driven)"}, {"id": "perfboard_set", "name": "Perfboard / protoboard set"}, {"id": "motor_2306_1750kv", "name": "2306 1750KV brushless motor"}, {"id": "vex_v5_brain", "name": "VEX V5 Robot Brain"}, {"id": "vex_v5_m11w", "name": "VEX V5 Smart Motor (11 W)"}, {"id": "vex_v5_m5w5", "name": "VEX V5 Smart Motor (5.5 W)"}, {"id": "vex_v5_batt", "name": "VEX V5 Robot Battery (Li-ion, 1100 mAh)"}, {"id": "vex_v5_ctrl", "name": "VEX V5 Controller"}, {"id": "vex_v5_vexnet", "name": "VEX V5 Robot Radio"}, {"id": "vex_omni4", "name": "VEX 4 in omni-directional wheel"}, {"id": "vex_omni325", "name": "VEX 3.25 in omni-directional wheel"}, {"id": "vex_omni275", "name": "VEX 2.75 in omni-directional wheel"}, {"id": "vex_trac325", "name": "VEX 3.25 in traction wheel"}, {"id": "vex_mec4", "name": "VEX 4 in mecanum wheel"}, {"id": "vex_cchan", "name": "VEX aluminum C-channel (1x2x1)"}, {"id": "vex_hsgear", "name": "VEX high-strength gears (12-84 teeth)"}, {"id": "vex_v5_imu", "name": "VEX V5 Inertial Sensor"}, {"id": "vex_v5_rot", "name": "VEX V5 Rotation Sensor"}, {"id": "vex_v5_dist", "name": "VEX V5 Distance Sensor"}, {"id": "vex_v5_opt", "name": "VEX V5 Optical Sensor"}, {"id": "vex_iq_brain", "name": "VEX IQ Robot Brain (2nd gen)"}, {"id": "vex_iq_motor", "name": "VEX IQ Smart Motor"}, {"id": "vex_iq_batt", "name": "VEX IQ Robot Battery (Li-ion, 2000 mAh)"}, {"id": "vex_iq_ctrl", "name": "VEX IQ Controller (2nd gen)"}, {"id": "vex_iq_wheel", "name": "VEX IQ 200 mm travel wheel"}, {"id": "vex_iq_omni", "name": "VEX IQ 200 mm travel omni wheel"}, {"id": "vex_iq_beam", "name": "VEX IQ beams and plates"}, {"id": "vex_iq_gears", "name": "VEX IQ gears (12, 36, 60 teeth)"}, {"id": "vex_iq_air", "name": "VEX IQ Pneumatics Kit"}, {"id": "vex_iq_dist", "name": "VEX IQ Distance Sensor (2nd gen)"}, {"id": "vex_iq_opt", "name": "VEX IQ Optical Sensor"}]/*PARTS_END*/;
 // END catalogue parts mirror
 
 const LIST_SYSTEM_PROMPT = `You import a pasted robot parts list for RobotForge. You are given the site's parts catalogue as lines of "id — name". Match each line of the user's list to at most one catalogue part: use its exact id when the line clearly names that part, otherwise null. Never invent a catalogue id.
@@ -1603,6 +1630,199 @@ async function firecrawlCall(env, path, payload) {
   }
 }
 
+/* ---------------- one-part 3D regeneration (/part-mesh) ---------------- */
+
+function meshNotConfigured(request) {
+  return err(request, 501, 'mesh_not_configured',
+    'Regenerating a part in 3D is not switched on at this endpoint yet (no 3D service key). Size edits like "make the wheels bigger" still work.');
+}
+
+/* The words go to a third-party 3D service, so they are cleaned to
+ * one line of printable text, and the prompt itself is fixed here. */
+function meshPrompt(partId, description) {
+  const noun = MESH_PARTS[partId];
+  const words = String(description).replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  return 'A single ' + noun + ' for a small hobby robot: ' + words +
+    '. One isolated part on its own, no robot body, no stand, no base, centred.';
+}
+
+/* The mesh-only cap, on top of gateBudget: each job spends 3D
+ * credits, so it gets its own small daily limit (global and per
+ * visitor). Counted before the upstream call, like gateBudget. */
+async function gateMeshBudget(env, request) {
+  const kv = env.RF_LIVE_KV;
+  if (!kv) return null;
+  try {
+    const day = dayStamp();
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const limit = intEnv(env.MESH_DAILY_LIMIT, 10);
+    const perIp = intEnv(env.MESH_PER_IP_DAILY_LIMIT, 3);
+    const used = await readCount(kv, 'mesh:' + day);
+    const ipUsed = await readCount(kv, 'mesh-ip:' + day + ':' + ip);
+    if (ipUsed >= perIp) {
+      return err(request, 429, 'mesh_rate_limited',
+        'You have regenerated ' + perIp + ' parts today, which is the daily limit. Size edits still work.');
+    }
+    if (used >= limit) {
+      return err(request, 503, 'mesh_budget_exhausted',
+        'Today\'s 3D generation budget is used up. Size edits still work.');
+    }
+    const ttl = { expirationTtl: 172800 };
+    await kv.put('mesh:' + day, String(used + 1), ttl);
+    await kv.put('mesh-ip:' + day + ':' + ip, String(ipUsed + 1), ttl);
+    return null;
+  } catch (e) {
+    return err(request, 503, 'guardrail_error',
+      'The 3D budget guardrail is unavailable, so 3D generation is paused.');
+  }
+}
+
+async function meshyFetch(env, url, init = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    return await fetch(url, {
+      ...init,
+      headers: { 'Authorization': 'Bearer ' + env.MESHY_API_KEY,
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const MESH_ID_RE = /^[A-Za-z0-9-]{8,64}$/;
+
+/* Only ids this Worker started (and still remembers) are served,
+ * so the key can't be used to read anyone else's Meshy jobs. */
+async function knownMeshTask(env, id) {
+  if (typeof id !== 'string' || !MESH_ID_RE.test(id)) return false;
+  if (!env.RF_LIVE_KV) return true; // dev without KV: nothing to check against
+  return (await env.RF_LIVE_KV.get('meshtask:' + id)) !== null;
+}
+
+async function handlePartMesh(request, env) {
+  if (!env.MESHY_API_KEY) return meshNotConfigured(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  const partId = data && data.part;
+  if (typeof partId !== 'string' || !Object.prototype.hasOwnProperty.call(MESH_PARTS, partId)) {
+    return err(request, 400, 'bad_part',
+      'part must be one of: ' + Object.keys(MESH_PARTS).join(', ') + '.');
+  }
+  const description = typeof data.description === 'string' ? data.description.trim() : '';
+  if (!description) {
+    return err(request, 400, 'missing_description', 'Say what the part should look like.');
+  }
+  if (description.length > MESH_DESCRIPTION_MAX_CHARS) {
+    return err(request, 413, 'too_large',
+      'The description is over ' + MESH_DESCRIPTION_MAX_CHARS + ' characters.');
+  }
+  const gate = await gateBudget(env, request);
+  if (gate) return gate;
+  const meshGate = await gateMeshBudget(env, request);
+  if (meshGate) return meshGate;
+  let res;
+  try {
+    res = await meshyFetch(env, MESHY_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        mode: 'preview',
+        prompt: meshPrompt(partId, description),
+        should_remesh: true,
+        target_polycount: 12000,
+        target_formats: ['glb'],
+        moderation: true,
+      }),
+    });
+  } catch (e) {
+    return err(request, 502, 'upstream_error', 'The 3D service did not answer. Try again later.');
+  }
+  if (res.status === 402) return err(request, 502, 'mesh_no_credits', 'The 3D service account is out of credits.');
+  if (res.status === 403) return err(request, 422, 'mesh_moderated', 'The 3D service declined that description. Try different words.');
+  if (res.status === 429) return err(request, 429, 'mesh_upstream_busy', 'The 3D service is busy. Try again in a minute.');
+  if (!res.ok) return err(request, 502, 'upstream_error', 'The 3D service answered HTTP ' + res.status + '.');
+  const body = await res.json().catch(() => null);
+  const id = body && typeof body.result === 'string' ? body.result : '';
+  if (!MESH_ID_RE.test(id)) return err(request, 502, 'upstream_error', 'The 3D service sent no job id.');
+  if (env.RF_LIVE_KV) {
+    await env.RF_LIVE_KV.put('meshtask:' + id, partId, { expirationTtl: MESH_TASK_TTL_SECONDS });
+  }
+  return json(request, 200, { id, status: 'PENDING', progress: 0, provider: 'meshy' });
+}
+
+async function readMeshTask(env, id) {
+  const res = await meshyFetch(env, MESHY_URL + '/' + encodeURIComponent(id));
+  if (!res.ok) return { error: res.status };
+  return { task: await res.json().catch(() => null) };
+}
+
+async function handlePartMeshStatus(request, env) {
+  if (!env.MESHY_API_KEY) return meshNotConfigured(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  if (!(await knownMeshTask(env, data && data.id))) {
+    return err(request, 404, 'unknown_job', 'No such 3D job here.');
+  }
+  let out;
+  try { out = await readMeshTask(env, data.id); } catch (e) {
+    return err(request, 502, 'upstream_error', 'The 3D service did not answer.');
+  }
+  if (!out.task) return err(request, 502, 'upstream_error', 'The 3D service answered HTTP ' + out.error + '.');
+  const t = out.task;
+  const status = ['PENDING', 'IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'CANCELED'].includes(t.status) ? t.status : 'FAILED';
+  return json(request, 200, {
+    id: data.id, status,
+    progress: Math.max(0, Math.min(100, Number(t.progress) || 0)),
+    ready: status === 'SUCCEEDED' && Boolean(t.model_urls && t.model_urls.glb),
+  });
+}
+
+/* A download link the service handed back: https on meshy.ai only. */
+function meshFileUrl(u) {
+  try {
+    const url = new URL(String(u));
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    if (host !== 'meshy.ai' && !host.endsWith('.meshy.ai')) return null;
+    return url.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function handlePartMeshFile(request, env) {
+  if (!env.MESHY_API_KEY) return meshNotConfigured(request);
+  const { data, error } = await readJsonBody(request, MAX_BODY_BYTES);
+  if (error) return err(request, 413, 'too_large', error);
+  if (!(await knownMeshTask(env, data && data.id))) {
+    return err(request, 404, 'unknown_job', 'No such 3D job here.');
+  }
+  let out;
+  try { out = await readMeshTask(env, data.id); } catch (e) {
+    return err(request, 502, 'upstream_error', 'The 3D service did not answer.');
+  }
+  const t = out.task;
+  if (!t || t.status !== 'SUCCEEDED') return err(request, 409, 'not_ready', 'That 3D job has not finished.');
+  const fileUrl = meshFileUrl(t.model_urls && t.model_urls.glb);
+  if (!fileUrl) return err(request, 502, 'upstream_error', 'The 3D service sent no usable GLB link.');
+  let file;
+  try {
+    file = await fetch(fileUrl);
+  } catch (e) {
+    return err(request, 502, 'upstream_error', 'Could not download the 3D file.');
+  }
+  if (!file.ok) return err(request, 502, 'upstream_error', 'The 3D file download answered HTTP ' + file.status + '.');
+  const bytes = await file.arrayBuffer();
+  if (bytes.byteLength > MESH_FILE_MAX_BYTES) return err(request, 502, 'too_large', 'The generated 3D file is too big to serve.');
+  return new Response(bytes, {
+    status: 200,
+    headers: { 'Content-Type': 'model/gltf-binary', 'Cache-Control': 'no-store', ...corsHeaders(request) },
+  });
+}
+
 async function handleWeb(request, env) {
   if (!env.FIRECRAWL_API_KEY) {
     return err(request, 501, 'firecrawl_not_configured',
@@ -2696,7 +2916,8 @@ async function handleBomEstimate(request, env) {
  * account gate guards. /health, /auth/* and /admin/* are NOT in
  * this list on purpose (see the header comment). */
 const MODEL_PATHS = ['/describe', '/chat', '/list', '/photo', '/fix',
-  '/part', '/part-chat', '/transcribe', '/web'];
+  '/part', '/part-chat', '/transcribe', '/web',
+  '/part-mesh', '/part-mesh/status', '/part-mesh/file'];
 
 async function handle(request, env) {
   if (originRejected(request)) {
@@ -2736,7 +2957,8 @@ async function handle(request, env) {
        * them); photo/part/transcribe run Meta -> Baseten (either
        * key lights them); web needs the Firecrawl key. */
       providers: { baseten, fireworks, meta: Boolean(env.META_API_KEY),
-        firecrawl: Boolean(env.FIRECRAWL_API_KEY) },
+        firecrawl: Boolean(env.FIRECRAWL_API_KEY),
+        meshy: Boolean(env.MESHY_API_KEY) },
       /* Accounts: on when the JWT secret + KV exist. Each social
        * login stays off until the founder adds that provider's
        * app secrets. */
@@ -2751,6 +2973,8 @@ async function handle(request, env) {
         transcribe: visionConfigured(env),
         /* Web search/scrape needs the Firecrawl key (optional). */
         web: Boolean(env.FIRECRAWL_API_KEY),
+        /* One-part 3D regeneration needs the Meshy key (optional). */
+        part_mesh: Boolean(env.MESHY_API_KEY),
         /* The Parts API serves from KV: on when the namespace
          * exists (records themselves land at seed time). */
         parts: Boolean(env.RF_LIVE_KV),
@@ -2790,6 +3014,15 @@ async function handle(request, env) {
   }
   if (url.pathname === '/web' && request.method === 'POST') {
     return handleWeb(request, env);
+  }
+  if (url.pathname === '/part-mesh' && request.method === 'POST') {
+    return handlePartMesh(request, env);
+  }
+  if (url.pathname === '/part-mesh/status' && request.method === 'POST') {
+    return handlePartMeshStatus(request, env);
+  }
+  if (url.pathname === '/part-mesh/file' && request.method === 'POST') {
+    return handlePartMeshFile(request, env);
   }
   if (url.pathname === '/auth/register' && request.method === 'POST') {
     return handleAuthRegister(request, env);
@@ -2846,7 +3079,7 @@ async function handle(request, env) {
   if (url.pathname === '/bom/estimate' && request.method === 'POST') {
     return handleBomEstimate(request, env);
   }
-  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe, /web, /parts, /bom/estimate or /auth/*.');
+  return err(request, 404, 'not_found', 'No such route. Try /health, /describe, /chat, /list, /photo, /fix, /part, /part-chat, /transcribe, /web, /part-mesh, /parts, /bom/estimate or /auth/*.');
 }
 
 export default { fetch: handle };

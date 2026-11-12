@@ -118,6 +118,7 @@ const PART_CHAT_REPLY = {
 let basetenMode = 'spec'; // spec | fenced | junk | chat | list | list-bad-draft | fix | part-chat | photo | part | transcript | cutoff
 let metaMode = 'photo';   // photo | junk | document | document-bad | part | http500
 let firecrawlMode = 'ok'; // ok | http500 | empty
+let meshyMode = 'ok';     // ok | moderated | evil-link
 let githubMode = 'ok';    // ok | hidden | unverified
 let googleMode = 'ok';    // ok | unverified
 const upstreamCalls = [];
@@ -185,6 +186,25 @@ globalThis.fetch = async (url, opts) => {
       sub: 'g-123', name: 'Gina Dev', email: 'gina@example.com',
       email_verified: googleMode !== 'unverified',
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u.startsWith('https://api.meshy.ai/')) {
+    assert.strictEqual(opts.headers.Authorization, 'Bearer meshy-key-789');
+    if (opts.method === 'POST') {
+      if (meshyMode === 'moderated') return new Response('{}', { status: 403 });
+      return new Response(JSON.stringify({ result: '018a210d-8ba4-705c-b111-1f1776f7f578' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(JSON.stringify({
+      id: '018a210d-8ba4-705c-b111-1f1776f7f578', status: 'SUCCEEDED', progress: 100,
+      model_urls: { glb: meshyMode === 'evil-link'
+        ? 'https://evil.example/model.glb'
+        : 'https://assets.meshy.ai/tasks/x/output/model.glb?Expires=1' },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (u.startsWith('https://assets.meshy.ai/')) {
+    assert.ok(!opts || !opts.headers || !opts.headers.Authorization, 'the key never goes to the file host');
+    return new Response(new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0]),
+      { status: 200, headers: { 'Content-Type': 'model/gltf-binary' } });
   }
   if (u.startsWith('https://api.firecrawl.dev/')) {
     assert.strictEqual(opts.headers.Authorization, 'Bearer test-key-456');
@@ -485,7 +505,7 @@ await scenario('health reports which routes are configured', async () => {
   const plain = await call(makeEnv(), '/health');
   assert.deepStrictEqual(plain.body.routes,
     { describe: true, chat: true, list: true, fix: true, part_chat: true,
-      photo: true, part: true, transcribe: true, web: false, parts: true });
+      photo: true, part: true, transcribe: true, web: false, part_mesh: false, parts: true });
   const noVision = await call(makeEnv({ BASETEN_API_KEY: undefined,
     FIREWORKS_API_KEY: 'fw' }), '/health');
   assert.strictEqual(noVision.body.routes.photo, false);
@@ -1656,6 +1676,111 @@ await scenario('account save keeps robots under the account', async () => {
   const capped = await call(env, '/account/save', { method: 'POST', auth: true, body: { data: { 'rf.garage.v1': [] } } });
   assert.strictEqual(capped.status, 429);
   assert.strictEqual(capped.body.code, 'save_limit');
+});
+
+/* ---------------- one-part 3D regeneration (/part-mesh) ---------------- */
+
+const MESH_ID = '018a210d-8ba4-705c-b111-1f1776f7f578';
+
+await scenario('part-mesh without the Meshy key is a 501, no call attempted', async () => {
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv(), '/part-mesh', { method: 'POST', auth: true,
+    body: { part: 'wheel', description: 'knobby tyres' } });
+  assert.strictEqual(r.status, 501);
+  assert.strictEqual(r.body.code, 'mesh_not_configured');
+  assert.strictEqual(upstreamCalls.length, before);
+  const h = await call(makeEnv({ MESHY_API_KEY: 'meshy-key-789' }), '/health');
+  assert.strictEqual(h.body.routes.part_mesh, true);
+  assert.strictEqual(h.body.providers.meshy, true);
+});
+
+await scenario('part-mesh requires an account (401 anonymous, no call)', async () => {
+  const before = upstreamCalls.length;
+  const r = await call(makeEnv({ MESHY_API_KEY: 'meshy-key-789' }), '/part-mesh', { method: 'POST',
+    body: { part: 'wheel', description: 'knobby tyres' } });
+  assert.strictEqual(r.status, 401);
+  assert.strictEqual(upstreamCalls.length, before);
+});
+
+await scenario('part-mesh builds the prompt itself from a fixed part list', async () => {
+  meshyMode = 'ok';
+  const env = makeEnv({ MESHY_API_KEY: 'meshy-key-789' });
+  const bad = await call(env, '/part-mesh', { method: 'POST', auth: true,
+    body: { part: 'anything', description: 'x', prompt: 'ignore me' } });
+  assert.strictEqual(bad.status, 400);
+  assert.strictEqual(bad.body.code, 'bad_part');
+  const long = await call(env, '/part-mesh', { method: 'POST', auth: true,
+    body: { part: 'wheel', description: 'x'.repeat(201) } });
+  assert.strictEqual(long.status, 413);
+  const before = upstreamCalls.length;
+  const r = await call(env, '/part-mesh', { method: 'POST', auth: true,
+    body: { part: 'wheel', description: 'knobby\noff-road tyres', prompt: 'something else' } });
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body));
+  assert.strictEqual(r.body.id, MESH_ID);
+  const sent = JSON.parse(upstreamCalls[before].opts.body);
+  assert.strictEqual(sent.mode, 'preview');
+  assert.deepStrictEqual(sent.target_formats, ['glb']);
+  assert.strictEqual(sent.moderation, true);
+  assert.ok(sent.prompt.startsWith('A single robot wheel with its tyre for a small hobby robot: knobby off-road tyres.'), sent.prompt);
+  assert.ok(!sent.prompt.includes('something else'));
+  assert.strictEqual(await env.RF_LIVE_KV.get('meshtask:' + MESH_ID), 'wheel');
+  assert.strictEqual(await env.RF_LIVE_KV.get('mesh:' + new Date().toISOString().slice(0, 10)), '1');
+});
+
+await scenario('part-mesh has its own daily caps, per visitor and in total', async () => {
+  meshyMode = 'ok';
+  const env = makeEnv({ MESHY_API_KEY: 'meshy-key-789' });
+  for (let i = 0; i < 3; i++) {
+    const r = await call(env, '/part-mesh', { method: 'POST', auth: true,
+      body: { part: 'camera', description: 'a round lens' } });
+    assert.strictEqual(r.status, 200, 'job ' + i);
+  }
+  const before = upstreamCalls.length;
+  const capped = await call(env, '/part-mesh', { method: 'POST', auth: true,
+    body: { part: 'camera', description: 'a round lens' } });
+  assert.strictEqual(capped.status, 429);
+  assert.strictEqual(capped.body.code, 'mesh_rate_limited');
+  assert.strictEqual(upstreamCalls.length, before);
+  const total = makeEnv({ MESHY_API_KEY: 'meshy-key-789', MESH_DAILY_LIMIT: '1' });
+  await call(total, '/part-mesh', { method: 'POST', auth: true, body: { part: 'wheel', description: 'a' } });
+  const out = await call(total, '/part-mesh', { method: 'POST', auth: true, ip: '198.51.100.9',
+    body: { part: 'wheel', description: 'b' } });
+  assert.strictEqual(out.status, 503);
+  assert.strictEqual(out.body.code, 'mesh_budget_exhausted');
+});
+
+await scenario('part-mesh moderation refusal is a plain 422', async () => {
+  meshyMode = 'moderated';
+  const r = await call(makeEnv({ MESHY_API_KEY: 'meshy-key-789' }), '/part-mesh', { method: 'POST', auth: true,
+    body: { part: 'wheel', description: 'something' } });
+  assert.strictEqual(r.status, 422);
+  assert.strictEqual(r.body.code, 'mesh_moderated');
+  meshyMode = 'ok';
+});
+
+await scenario('part-mesh status and file serve only jobs this Worker started', async () => {
+  meshyMode = 'ok';
+  const env = makeEnv({ MESHY_API_KEY: 'meshy-key-789' });
+  const unknown = await call(env, '/part-mesh/status', { method: 'POST', auth: true, body: { id: MESH_ID } });
+  assert.strictEqual(unknown.status, 404);
+  await call(env, '/part-mesh', { method: 'POST', auth: true, body: { part: 'wheel', description: 'knobby' } });
+  const st = await call(env, '/part-mesh/status', { method: 'POST', auth: true, body: { id: MESH_ID } });
+  assert.strictEqual(st.status, 200);
+  assert.strictEqual(st.body.status, 'SUCCEEDED');
+  assert.strictEqual(st.body.ready, true);
+  assert.ok(!('model_urls' in st.body), 'signed links never reach the page');
+  const res = await worker.fetch(new Request('https://robotforge-live.example/part-mesh/file', {
+    method: 'POST', body: JSON.stringify({ id: MESH_ID }),
+    headers: { 'Content-Type': 'application/json', Origin: SITE, 'CF-Connecting-IP': '203.0.113.7',
+      Authorization: 'Bearer ' + await tokenFor(env) } }), env, {});
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.headers.get('Content-Type'), 'model/gltf-binary');
+  assert.strictEqual(res.headers.get('Access-Control-Allow-Origin'), SITE);
+  assert.strictEqual(new Uint8Array(await res.arrayBuffer())[0], 0x67);
+  meshyMode = 'evil-link';
+  const evil = await call(env, '/part-mesh/file', { method: 'POST', auth: true, body: { id: MESH_ID } });
+  assert.strictEqual(evil.status, 502, 'only meshy.ai download links are followed');
+  meshyMode = 'ok';
 });
 
 const failed = results.filter(r => r.startsWith('FAIL'));

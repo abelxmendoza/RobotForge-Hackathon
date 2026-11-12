@@ -68,13 +68,13 @@ def test_chat_and_wizard_share_the_wiring_state():
 def test_data_reality_counts():
     doc = json.loads((REPO / "catalog/parts.json").read_text())
     parts = doc["parts"]
-    assert len(parts) == 167  # 150 + 17 VEX V5 parts (2026-11-10)
+    assert len(parts) == 178  # 150 + 17 VEX V5 + 11 VEX IQ parts (2026-11-10)
     with_iface = [
         p for p in parts
         if (p.get("specs") or {}).get("interface")
         or (p.get("specs") or {}).get("interfaces")
     ]
-    # 13 parts record an interface; the port count (of 167) is higher
+    # 13 parts record an interface; the port count (of 178) is higher
     # because power data (voltage/supply/cells) also makes ports —
     # the exact split is asserted in node, against the real code.
     assert len(with_iface) == 13
@@ -104,8 +104,8 @@ const byId = id => partsById.get(id);
 
 // --- port derivation: the data reality ---
 const withPorts = parts.filter(p => W.portsForPart(p).ports.length > 0);
-assert.equal(withPorts.length, 57);  // +3 VEX V5 parts with voltage data (2026-11-10)
-assert.equal(parts.length - withPorts.length, 110);  // 96 + 14 VEX V5 parts with no port data
+assert.equal(withPorts.length, 58);  // +3 VEX V5, +1 VEX IQ parts with voltage data (2026-11-10)
+assert.equal(parts.length - withPorts.length, 120);  // 96 + 14 VEX V5 + 10 VEX IQ parts with no port data
 const bat = W.portsForPart(byId('lipo_4s_5200')).ports;
 assert.deepEqual(bat.map(p => [p.id, p.dir, p.volts]), [['power-out', 'out', 14.8]]);
 const tb = W.portsForPart(byId('driver_tb6612fng')).ports;
