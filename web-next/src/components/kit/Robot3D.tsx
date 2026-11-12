@@ -8,6 +8,7 @@
  * here — the 2D take-apart still works" instead of breaking.
  * Coordinates are the robot's own (x forward, y left, z up),
  * matching kit.html's Z-up convention. */
+import { addWorkshopScenery, visibleForPicking } from './workshopScenery';
 import { useEffect, useRef } from 'react';
 import type * as THREE_NS from 'three';
 import type { ComponentInstance, Connection } from '@/lib/assembly';
@@ -71,6 +72,7 @@ interface Session {
   applyExplode?: () => void;
   resetParts?: () => void;
   restorePart?: (id: string) => void;
+  resetCamera?: () => void;
 }
 
 /* Fit a generated look into the space a part's plain shape takes.
@@ -132,6 +134,9 @@ function fitLook(THREE: ThreeModule, g: THREE_NS.Group, model: THREE_NS.Object3D
 
 export default function Robot3D({
   spec,
+  workshop = false,
+  cameraReset = 0,
+  hiddenParts = [],
   life,
   explode,
   selected,
@@ -156,6 +161,9 @@ export default function Robot3D({
   viewHeight,
 }: {
   spec: RobotSpec;
+  workshop?: boolean;
+  cameraReset?: number;
+  hiddenParts?: string[];
   life?: RobotLife;
   explode: number;
   selected: string | null;
@@ -202,8 +210,8 @@ export default function Robot3D({
   const managed=spec as RobotSpec & {roverDesign?:unknown;assembly?:{components:ComponentInstance[];connections:Connection[]}};
   instances ??= managed.roverDesign ? managed.assembly?.components : undefined;
   connections ??= managed.roverDesign ? managed.assembly?.connections : undefined;
-  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag});
-  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag};
+  const motionRef = useRef({animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag,hiddenParts});
+  motionRef.current = {animate,xray,collisionIds,dragMode,snapDeck,ghostMount,fov,replay,playing,teardown,autoRotate,showSpecWiring,showComMarker,partDrag,hiddenParts};
   const previousRef = useRef<ComponentInstance[]>([]);
   const cameraRef = useRef<{position:[number,number,number];target:[number,number,number]}|null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -321,6 +329,8 @@ export default function Robot3D({
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, spec.height_m * 0.45);
         if(cameraRef.current) controls.target.set(...cameraRef.current.target);
+        const resetCamera = () => { camera.position.set(span*1.8,-span*2.4,span*1.9); controls.target.set(0,0,spec.height_m*.45); controls.update(); };
+        if (workshop && !cameraRef.current) resetCamera();
         controls.enableDamping = true;
         /* Two-finger pan on a phone-sized canvas loses the robot
          * off-screen too easily; rotate + pinch-zoom stay. */
@@ -356,6 +366,7 @@ export default function Robot3D({
         ground.receiveShadow = true;
         ground.position.z=-0.003;
         scene.add(ground);
+        if (workshop) addWorkshopScenery(THREE, scene, span);
         /* Soft floor glow past the stage disk, fading into the background,
          * so the stage reads as lit floor rather than a coin in space. */
         const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=256;
@@ -768,6 +779,7 @@ export default function Robot3D({
         window.addEventListener('keydown',onEscape);
 
         const st: Session = {
+          resetCamera,
           renderer,
           scene,
           camera,
@@ -849,12 +861,13 @@ export default function Robot3D({
 
         const ray = new THREE.Raycaster();
         const ptr = new THREE.Vector2();
+        const visiblePickMeshes = () => pickMeshes.filter(visibleForPicking);
         const pick = (ev: PointerEvent): string | null => {
           const rect = renderer.domElement.getBoundingClientRect();
           ptr.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
           ptr.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
           ray.setFromCamera(ptr, camera);
-          const hit = ray.intersectObjects(pickMeshes, false)[0];
+          const hit = ray.intersectObjects(visiblePickMeshes(), false)[0];
           return hit ? (hit.object.userData.part as string) : null;
         };
         let downAt: [number, number] | null = null;
@@ -913,7 +926,7 @@ export default function Robot3D({
             ptr.x=((ev.clientX-rect.left)/rect.width)*2-1;
             ptr.y=-((ev.clientY-rect.top)/rect.height)*2+1;
             ray.setFromCamera(ptr,camera);
-            const hit=ray.intersectObjects(pickMeshes,false)[0];
+            const hit=ray.intersectObjects(visiblePickMeshes(),false)[0];
             const id=hit?(hit.object.userData.part as string):null;
             let group: THREE_NS.Group|undefined;
             if(hit){
@@ -1060,12 +1073,19 @@ export default function Robot3D({
               if(g.userData.arrowGroup)(g.userData.arrowGroup as THREE_NS.Group).rotation.z=yaw;
             }
             g.visible=!current || (instances?.some(c=>c.id===current.id)?(old?true:progress>0.001):progress<0.999);
+            if(settings.hiddenParts.includes(g.userData.part)) g.visible = false;
             if(g.userData.tray)(g.userData.tray as THREE_NS.Group).visible=settings.ghostMount||g.userData.part===st.selected;
             const halo=g.userData.halo as THREE_NS.Mesh|undefined;
             if(halo){halo.visible=g.userData.part===st.selected;(halo.material as THREE_NS.MeshBasicMaterial).opacity=effects?0.55+Math.sin(clock.elapsedTime*2.5)*0.12:0.6;}
             const td=settings.teardown;
             if(td&&td.removed.includes(g.userData.part)){
               // Lift the part off and out along its own explode direction.
+              if (workshop) {
+                const index = groups.indexOf(g);
+                const bounds = new THREE.Box3().setFromObject(g);
+                const localBottom = bounds.min.z - g.position.z;
+                target.set((index % 2 ? 1 : -1) * span*1.25, (-.65+Math.floor(index/2)*.25)*span, .07*span-localBottom);
+              } else {
               const v=g.userData.explode as [number,number,number];
               const h=Math.hypot(v[0],v[1]);
               const out=h>0?span*0.5*Math.min(1,h)/h:0;
@@ -1075,6 +1095,7 @@ export default function Robot3D({
                 target.add(new THREE.Vector3(0,-span*0.6,0));
               }else{
                 target.add(new THREE.Vector3(v[0]*out,v[1]*out,v[2]<0?0:span*0.22));
+              }
               }
             }
             if(lifeNow?.hover&&lifeNow.playing) target.z+=Math.sin(lifeTime*2.2)*span*0.02;
@@ -1214,7 +1235,7 @@ export default function Robot3D({
       if (cleanup) cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec, instances, connections, comparison, quality, partLooks]);
+  }, [spec, instances, connections, comparison, quality, workshop, partLooks]);
 
   useEffect(() => {
     const st = sessionRef.current;
@@ -1235,6 +1256,8 @@ export default function Robot3D({
   useEffect(() => {
     if (resetNonce > 0) sessionRef.current?.resetParts?.();
   }, [resetNonce]);
+
+  useEffect(() => { if (cameraReset > 0) sessionRef.current?.resetCamera?.(); }, [cameraReset]);
 
   useEffect(() => {
     if (restoreRequest) sessionRef.current?.restorePart?.(restoreRequest.id);

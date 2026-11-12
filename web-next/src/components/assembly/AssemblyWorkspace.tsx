@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { promptWrench } from '@/lib/wrenchPrompt';
 import { assetPath } from '@/components/home/asset';
@@ -32,7 +32,11 @@ import { activeRecords } from '@/lib/lifecycle';
 import { downloadJSON, readStore, uid, useStore, writeStore } from '@/lib/store';
 import type { RobotSpec } from '@/components/forge/model';
 import { taBuildParts } from '@/components/kit/takeapart';
+import { BENCH_EVENT, BENCH_PROGRESS_KEY, benchTransition, restoreBench, type BenchCommand, type BenchResult, type BenchState } from '@/lib/workshopBench';
+import { WORKSHOP_REASSEMBLE_EVENT, type ReassembleResult } from '@/lib/workshopContext';
 import { teardownSteps } from '@/lib/teardown';
+import UnitySceneChoice from '@/components/unity/UnitySceneChoice';
+import BenchLearning from './BenchLearning';
 import BuildArtifacts from './BuildArtifacts';
 import SavedUpgrade from './SavedUpgrade';
 
@@ -216,8 +220,12 @@ export default function AssemblyWorkspace({
   robotId,
   view,
   onView,
+  draftSpec,
+  draftIdentity,
 }: {
   robotId: string;
+  draftSpec?: Record<string, unknown>;
+  draftIdentity?: string;
   view?: 'components' | 'wiring';
   onView?: (v: 'components' | 'wiring') => void;
 }) {
@@ -269,7 +277,7 @@ export default function AssemblyWorkspace({
   /* Slow idle turn until the person first touches the model. */
   const [spin, setSpin] = useState(false);
   const robot = robots.find((r) => r.id === robotId);
-  const spec = robot?.versions.at(-1)?.spec;
+  const spec = draftSpec ?? robot?.versions.at(-1)?.spec;
   const palette = spec?.roverDesign ? CATALOGUE_COMPONENTS : COMPONENTS;
   const componentGroup=(c:ComponentDefinition)=>{const record=spec?.roverDesign?.catalogueLibrary?.find((p:{id:string})=>'catalog--'+p.id===c.id);return partGroup(record?categoryFor(record.part_class||'',record.name||record.id):c.category,c.name);};
   useEffect(()=>{if(spec?.roverDesign)setComponentId('catalog--ultrasonic_hcsr04');},[robotId,!!spec?.roverDesign]);
@@ -295,15 +303,76 @@ export default function AssemblyWorkspace({
   }, [spec]);
   const td = useMemo(() => teardownSteps(built ? built.parts.map((p) => p.id) : []), [built]);
   useEffect(() => {
-    if (!tdPlaying) return;
+    if (!tdPlaying || view === 'wiring') return;
     const end = tdDir > 0 ? td.steps.length : 0;
     if (tdOff === end) {
       setTdPlaying(false);
       return;
     }
-    const t = setTimeout(() => setTdOff((n) => n + tdDir), 1500);
-    return () => clearTimeout(t);
-  }, [tdPlaying, tdOff, tdDir, td.steps.length]);
+    const t = setTimeout(() => { if (!document.hidden) setTdOff((n) => Math.min(td.steps.length, Math.max(0, n + tdDir))); else setTdPlaying(false); }, 1500);
+    const pauseHidden = () => {if(document.hidden) setTdPlaying(false);};
+    document.addEventListener('visibilitychange',pauseHidden);
+    return () => {clearTimeout(t);document.removeEventListener('visibilitychange',pauseHidden);};
+  }, [tdPlaying, tdOff, tdDir, td.steps.length, view]);
+  const benchIdentity = `${robotId}:${robot?.versions.at(-1)?.id ?? ''}:${draftIdentity ?? JSON.stringify(spec)}`;
+  const hydratedBench = useRef('');
+  const [workshopScene, setWorkshopScene] = useState(true);
+  const [showModel, setShowModel] = useState(true);
+  const [hiddenParts, setHiddenParts] = useState<string[]>([]);
+  const [cameraReset, setCameraReset] = useState(0);
+  useEffect(() => {
+    if (!ready) return;
+    const records = readStore<Record<string, unknown>>(BENCH_PROGRESS_KEY, {});
+    const state = restoreBench(records[robotId], benchIdentity, td.steps.length);
+    setTdOn(state?.active ?? false); setTdOff(state?.off ?? 0); setTdDir(state?.direction ?? 1); setTdPlaying(false);
+    hydratedBench.current = benchIdentity;
+  }, [benchIdentity, robotId, ready, td.steps.length]);
+  useEffect(() => {
+    if (!ready || hydratedBench.current !== benchIdentity) return;
+    // Defer so an identity-change restore renders before a save can run.
+    const timer = setTimeout(() => {
+      const records = readStore<Record<string, unknown>>(BENCH_PROGRESS_KEY, {});
+      const error = writeStore(BENCH_PROGRESS_KEY, {...records, [robotId]: {identity: benchIdentity, state: {active: tdOn, off: tdOff, direction: tdDir}}});
+      if (error) setNotice(error);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [ready, benchIdentity, robotId, tdOn, tdOff, tdDir]);
+  const benchState: BenchState = {active: tdOn, off: tdOff, direction: tdDir};
+  const practicePartId = tdOn ? td.steps[tdDir < 0 ? tdOff - 1 : tdOff] : null;
+  const practicePart = built?.parts.find(p => p.id === practicePartId);
+  const selectedBuiltPart = built?.parts.find(p => p.id === selected);
+  const benchCommand = (command: BenchCommand): string => {
+    if (command === 'explain') return selectedBuiltPart ? `${selectedBuiltPart.name}: ${selectedBuiltPart.does} ${selectedBuiltPart.dims}` : 'Select a part on the robot or in the parts list first.';
+    if (!td.steps.length) return 'This model has no removable part groups. Add a supported spec or use the recorded parts diagram.';
+    if (command === 'hint') {
+      if (practicePart) {setSelected(practicePart.id); return `${tdDir < 0 ? 'Place' : 'Remove'} ${practicePart.name}. ${practicePart.does} This is illustrative assembly practice; fastening details are not recorded.`;}
+      return 'Start guided assembly to get a hint for the next part.';
+    }
+    const next = benchTransition(benchState, command, td.steps.length);
+    setTdPlaying(false); setTdOn(next.active); setTdOff(next.off); setTdDir(next.direction);
+    setExplode(0); setDragMode(false);
+    const part = td.steps[next.direction < 0 ? next.off - 1 : next.off];
+    if (part) setSelected(part);
+    if (command === 'reset') return 'Reset the assembly practice. All model parts are back in place; the saved robot is unchanged.';
+    if (!next.active) return 'Start guided assembly or teardown first.';
+    return `${next.direction < 0 ? 'Assembly' : 'Teardown'}: ${next.direction < 0 ? td.steps.length - next.off : next.off} of ${td.steps.length} part groups complete. ${part ? 'Next: ' + (built?.parts.find(p => p.id === part)?.name ?? part) : 'Practice complete.'} Saved robot and engineering checks are unchanged.`;
+  };
+  useEffect(() => {
+    if (view === 'wiring') return;
+    const onCommand = (event: Event) => {
+      const result = (event as CustomEvent<BenchResult>).detail;
+      if (result.handled) return;
+      result.handled = true; result.message = benchCommand(result.command); setNotice(result.message);
+    };
+    const onReset = (event: Event) => {
+      const result = (event as CustomEvent<ReassembleResult>).detail;
+      if (result.handled) return;
+      result.handled = true; result.message = benchCommand('reset');
+    };
+    window.addEventListener(BENCH_EVENT, onCommand);
+    window.addEventListener(WORKSHOP_REASSEMBLE_EVENT, onReset);
+    return () => {window.removeEventListener(BENCH_EVENT, onCommand); window.removeEventListener(WORKSHOP_REASSEMBLE_EVENT, onReset);};
+  });
   const definition = instance ? roverComponentDefinition(spec,instance) : null;
   const activePartDef = componentById(componentId) ?? COMPONENTS[0];
 
@@ -404,7 +473,7 @@ export default function AssemblyWorkspace({
     setTdOn(true);
     setTdDir(dir);
     setTdOff(dir > 0 ? 0 : td.steps.length);
-    setTdPlaying(true);
+    setTdPlaying(false);
   };
   const stopTd = () => {
     setTdPlaying(false);
@@ -418,77 +487,33 @@ export default function AssemblyWorkspace({
       : tdOff >= td.steps.length
         ? `All ${td.steps.length} parts off · the ${partName(td.core).toLowerCase()} is left on the bench`
         : `${tdOff} of ${td.steps.length} off · ${tdDir > 0 ? 'just removed' : 'next on'}: ${partName(td.steps[tdOff - 1])}`;
-  const motionBar =
-    td.steps.length > 0 && !failed3D ? (
-      <div className="ta-controls ta-teardown ws-motion" aria-label="Animate the robot">
-        {!tdOn ? (
-          <>
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => startTd(1)}>
-              Take it apart
-            </button>
-            <button type="button" className="btn btn-sm" onClick={() => startTd(-1)}>
-              Watch it go together
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={tdOff === 0}
-              onClick={() => {
-                setTdPlaying(false);
-                setTdOff((n) => Math.max(0, n - 1));
-              }}
-            >
-              &larr; Put back
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
-              disabled={tdOff >= td.steps.length}
-              onClick={() => {
-                setTdPlaying(false);
-                setTdOff((n) => Math.min(td.steps.length, n + 1));
-              }}
-            >
-              Next part &rarr;
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => {
-                if (tdPlaying) {
-                  setTdPlaying(false);
-                  return;
-                }
-                const end = tdDir > 0 ? td.steps.length : 0;
-                if (tdOff === end) setTdOff(tdDir > 0 ? 0 : td.steps.length);
-                setTdPlaying(true);
-              }}
-            >
-              {tdPlaying ? 'Pause' : 'Play'}
-            </button>
-            <button type="button" className="btn btn-sm" onClick={stopTd}>
-              Reassemble
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className="btn btn-sm ta-toggle"
-          aria-pressed={spin}
-          onClick={() => setSpin((v) => !v)}
-        >
-          Spin {spin ? 'on' : 'off'}
-        </button>
-        {tdStatus && (
-          <span className="ta-teardown-label" role="status">
-            {tdStatus}
-          </span>
-        )}
+  const motionBar = td.steps.length > 0 ? (
+    <section className="ws-guided" aria-label="Guided assembly">
+      <div className="ws-guided-head"><div><span className="eyebrow">Assembly practice</span><h3>{tdOn ? (tdDir < 0 ? 'Build it, part by part' : 'Take it apart') : 'Your robot on the bench'}</h3></div><span className="fbadge local">CONCEPT MODEL</span></div>
+      <p className="faint g-small">Illustrative part groups from this spec. Steps are a suggested visual order, not verified manufacturing instructions.</p>
+      <div className="ta-controls">
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => setNotice(benchCommand('assemble'))}>Build it step by step</button>
+        <button type="button" className="btn btn-sm" onClick={() => setNotice(benchCommand('disassemble'))}>Take it apart</button>
+        <button type="button" className="btn btn-sm" onClick={() => setNotice(benchCommand('reset'))}>Reassemble</button>
       </div>
-    ) : null;
+      {tdOn && <div className="ws-guided-step" aria-live="polite">
+        <progress max={td.steps.length} value={tdDir < 0 ? td.steps.length - tdOff : tdOff} aria-label="Assembly practice progress" />
+        <strong>{practicePart ? `${tdDir < 0 ? 'Place' : 'Remove'} ${practicePart.name}` : 'Practice complete'}</strong>
+        <p>{practicePart?.does ?? 'All steps in this visual sequence are complete.'}</p>
+        <div className="ta-controls">
+          <button type="button" className="btn btn-sm" disabled={tdDir < 0 ? tdOff === td.steps.length : tdOff === 0} onClick={() => setNotice(benchCommand('back'))}>Back</button>
+          <button type="button" className="btn btn-sm btn-primary" disabled={!practicePart} onClick={() => setNotice(benchCommand('next'))}>Do this step</button>
+          <button type="button" className="btn btn-sm" onClick={() => setNotice(benchCommand('hint'))}>Hint</button>
+          <button type="button" className="btn btn-sm" disabled={!practicePart} onClick={() => setTdPlaying(v => !v)}>{tdPlaying ? 'Pause' : 'Auto-build'}</button>
+        </div>
+      </div>}
+      <details className="ws-disclosure"><summary>Show or hide part groups</summary><div className="ws-part-picks" role="group" aria-label="Part visibility">{built?.parts.map(part => <button type="button" className="chip" key={part.id} aria-pressed={!hiddenParts.includes(part.id)} onClick={() => setHiddenParts(ids => ids.includes(part.id) ? ids.filter(id => id !== part.id) : [...ids,part.id])}>{hiddenParts.includes(part.id) ? 'Show' : 'Hide'} {part.name}</button>)}</div></details>
+      <BenchLearning key={benchIdentity} parts={built?.parts ?? []} onSelect={setSelected} />
+      <details className="ws-disclosure"><summary>Inspect parts · {built?.parts.length ?? 0} groups</summary><div className="ws-part-picks">{built?.parts.map(part => <button type="button" className="chip" key={part.id} aria-pressed={selected === part.id} onClick={() => setSelected(part.id)}>{part.name}</button>)}</div></details>
+      {selectedBuiltPart && <aside className="ws-guided-part" aria-label="Selected part"><strong>{selectedBuiltPart.name}</strong><p>{selectedBuiltPart.does}</p><p className="faint g-small">{selectedBuiltPart.dims}</p><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Explain this part',send:true})}>Ask Wrench about this part</button></aside>}
+      <div className="ta-controls"><button type="button" className="btn btn-sm" aria-pressed={workshopScene} onClick={() => setWorkshopScene(v => !v)}>Workshop setting {workshopScene ? 'on' : 'off'}</button><button type="button" className="btn btn-sm" onClick={() => setCameraReset(n => n + 1)}>Reset camera</button><button type="button" className="btn btn-sm" onClick={() => setShowModel(v => !v)}>{showModel ? 'Use lightweight view' : 'Show 3D'}</button></div>
+    </section>
+  ) : null;
 
   const wiringOrParts =
     tab === 'components' ? (
@@ -589,7 +614,7 @@ export default function AssemblyWorkspace({
       <details className="g-howto">
         <summary>How the bench works</summary>
         <p>
-          This uses the latest saved robot spec. Added parts, placement and planned connections save
+          This previews the current Workshop draft; added component placement uses the saved assembly. Added parts, placement and planned connections save
           separately from the CLI spec. These added parts are not yet included in mass, electrical
           or Gazebo checks. Your unsaved spec draft stays in the editor.
         </p>
@@ -857,15 +882,17 @@ export default function AssemblyWorkspace({
         </fieldset>
       )}
       {view === 'wiring' && <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:`Connect "battery" to "controller" on "${robot?.name}"`})}>Plan a connection with Wrench</button>}
-      {view !== 'wiring' && motionBar}
-      {!failed3D ? (
+      {!failed3D && showModel ? (
         <div
           onPointerDownCapture={() => {
             if (spin) setSpin(false);
           }}
         >
-          <Robot3D
+          <UnitySceneChoice robotId={robotId} versionId={robot?.versions.at(-1)?.id ?? 'new'} spec={spec}><Robot3D
             key={retry}
+            workshop={workshopScene && view !== 'wiring'}
+            cameraReset={cameraReset}
+            hiddenParts={hiddenParts}
             spec={spec as RobotSpec}
             explode={explode}
             selected={selectedWire ?? selected}
@@ -916,20 +943,17 @@ export default function AssemblyWorkspace({
                 propose({ kind: 'move', instanceId: id, positionM, yawDeg: current.yawDeg });
               }
             }}
-          />
+          /></UnitySceneChoice>
         </div>
       ) : (
         <div className="card" role="status">
-          <h4>3D needs WebGL</h4>
-          <p>
-            This browser could not create a 3D graphics context. Try a browser with hardware
-            acceleration enabled. Your assembly is saved; no 2D view is substituted.
-          </p>
+          <h4>{failed3D ? '3D unavailable' : 'Lightweight workbench'}</h4>
+          <p>Use the part list, instructions, and practice controls below. Your robot record is unchanged.</p>
           <button
             type="button"
             className="btn btn-sm"
             onClick={() => {
-              setFailed3D(false);
+              setFailed3D(false); setShowModel(true);
               setRetry((v) => v + 1);
             }}
           >
@@ -938,9 +962,10 @@ export default function AssemblyWorkspace({
         </div>
       )}
 
+      {view !== 'wiring' && motionBar}
       {spec.upgradePlan && <SavedUpgrade plan={spec.upgradePlan} artifacts={spec.upgradeArtifacts ?? []} versionId={robot!.versions.at(-1)!.id} wiring={spec.wiring} />}
       {tab === 'components' && (
-        <>
+        <details className="ws-disclosure"><summary>Upgrades and printable parts</summary>
         <button type="button" className="btn btn-primary btn-sm" onClick={() => promptWrench({mode: 'chat', text: `Plan a Raspberry Pi 5 upgrade for "${robot!.name}"`})}>Plan a Raspberry Pi 5 upgrade</button>
         <label className="g-field"><span>Design a printable part for</span>
           <select value={(definition ?? activePartDef).id} onChange={e => { setSelected(null); setSelectedWire(null); setComponentId(e.target.value); }}>
@@ -953,7 +978,7 @@ export default function AssemblyWorkspace({
           robotVersionId={robot!.versions.at(-1)!.id}
           part={definition ?? activePartDef}
         />
-        </>
+        </details>
       )}
 
       {/* Placement, Orientation & Mounting Intelligence Summary */}

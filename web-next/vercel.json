@@ -3,9 +3,61 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "robot-forge.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "robot-forge.vercel.app"
+        }
+      ],
       "destination": "https://robot-forge-hackathon.vercel.app/:path*",
       "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/unity/current.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/unity/:buildId/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/unity/:buildId/:path*.br",
+      "headers": [
+        {
+          "key": "Content-Encoding",
+          "value": "br"
+        }
+      ]
+    },
+    {
+      "source": "/unity/:buildId/:path*.wasm.br",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
+    },
+    {
+      "source": "/unity/:buildId/:path*.js.br",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
     }
   ]
 }

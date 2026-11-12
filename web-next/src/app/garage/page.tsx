@@ -18,7 +18,7 @@ export default function WorkshopPage() {
           <h1>Workshop</h1>
           <p className="lede">Your robots. Change one, check it, save it.</p>
         </div>
-        <Link className="btn btn-primary" href="/design/">Design a rover</Link>
+        <Link className="btn btn-primary" href="/garage/#rover-design">Design a rover</Link>
       </div>
       <Workshop />
     </AppShell>

@@ -74,8 +74,8 @@ def test_ui_section_and_persistence():
     assert "generateForgeTests(draft" in GARAGE_TSX
     assert "forgeTests" in GARAGE_TSX
     # Acceptance tests belong to Checks; simulation has its own pane.
-    sim_block = GARAGE_TSX.split("tab === 'simulate' && (")[1].split("tab === 'bom'")[0]
-    checks_block = GARAGE_TSX.split("tab === 'checks' && (", 1)[1]
+    sim_block = GARAGE_TSX.split("tab === 'simulate' && draft.referenceModel !== 'unitree-g1-23' && (")[1].split("tab === 'bom'")[0]
+    checks_block = GARAGE_TSX.split("tab === 'checks' && draft.referenceModel !== 'unitree-g1-23' && (", 1)[1]
     assert "SimulateTab" in sim_block and "ForgeTestsSection" not in sim_block
     assert "ForgeTestsSection" in checks_block
     # a recognised modification fix is wired to the same handler the

@@ -1,0 +1,18 @@
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+Builds/
+.vs/
+*.csproj
+*.sln
+
+# Recreated by BuildWorkshopWeb from the pinned model and scene recipe.
+Assets/Generated/
+Assets/Generated.meta
+Assets/Scenes/Workshop.unity
+Assets/Scenes/Workshop.unity.meta
+
+# Generated native/Burst build intermediates.
+Data/

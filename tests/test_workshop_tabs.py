@@ -51,16 +51,16 @@ def test_one_tab_bar_rendered_unconditionally_at_top():
     assert "const tabBar = robot && draft ? (" not in GARAGE
 
 
-def test_work_tabs_seven_main_destinations_with_bom_sections():
+def test_work_tabs_five_destinations_with_contextual_tools():
     nav = GARAGE.split('const WORK_TABS:', 1)[1].split('];', 1)[0]
-    destinations = [('overview', 'Overview'), ('build', 'Build'), ('wiring', 'Wiring'), ('bom', 'BOM'), ('checks', 'Test'), ('history', 'History'), ('simulate', 'Simulate')]
+    destinations = [('overview', 'Overview'), ('build', 'Build'), ('wiring', 'Wiring'), ('checks', 'Test'), ('history', 'History')]
     positions = [nav.index(f"{{ id: '{tab_id}', label: '{label}'") for tab_id, label in destinations]
     assert positions == sorted(positions)
-    for tab_id in ['specs', 'tools']:
+    for tab_id in ['specs', 'tools', 'bom', 'drivetrain', 'simulate']:
         assert f"id: '{tab_id}'" not in nav
-    assert "if (tab === 'tools') return 'bom'" in GARAGE
-    assert 'BOM_SECTIONS' in GARAGE
-    assert 'TEST_SECTIONS' not in GARAGE
+    assert "workshopMainTab(tab)" in GARAGE
+    assert 'BUILD_SECTIONS' in GARAGE
+    assert 'TEST_SECTIONS' in GARAGE
     assert '<SimulationWorkspace' in GARAGE
     assert '<SavedSimulationRuns robotId={robot.id}' in GARAGE
     assert '<SpecsDialog' in GARAGE
@@ -142,11 +142,11 @@ def test_twin_snapshot_is_omega1s_not_a_stored_robots():
 
 
 def test_secondary_controls_do_not_repeat_across_tabs():
-    checks = GARAGE.split("{tab === 'checks' && (", 1)[1]
+    checks = GARAGE.split("{tab === 'checks' && draft.referenceModel !== 'unitree-g1-23' && (", 1)[1]
     assert '<summary>Compare with a saved version</summary>' in checks
     assert '<ol className="ws-timeline"' in checks
     assert '<summary>Robot actions</summary>' in GARAGE
-    overview = GARAGE.split("tab === 'overview' && (", 1)[1].split("tab === 'wiring' && (", 1)[0]
+    overview = GARAGE.split("tab === 'overview' && draft.referenceModel !== 'unitree-g1-23' && (", 1)[1].split("tab === 'wiring' && (", 1)[0]
     assert '<ForgePlacement' not in overview
     assert '<summary>Source repositories' in overview
     assert '<WiringView compact' in GARAGE

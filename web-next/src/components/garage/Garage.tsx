@@ -46,6 +46,10 @@ import ConnectionsSection from './ConnectionsSection';
 import PlannedUpgrades from './PlannedUpgrades';
 import ImproveTwin from './ImproveTwin';
 import TakeApartPanel from './TakeApartPanel';
+import UnitySceneChoice from '@/components/unity/UnitySceneChoice';
+import HumanoidWorkshop from './HumanoidWorkshop';
+import { G1_SPEC } from '@/lib/humanoid';
+import RobotComparison from './RobotComparison';
 import WorkshopExplainer from '@/components/explain/WorkshopExplainer';
 import TwinCritic from './TwinCritic';
 import WiringViews from './WiringViews';
@@ -71,6 +75,8 @@ import { SCAN_SLOTS } from '@/lib/scan3d';
 import { tabFocus } from '@/lib/tabFocus';
 import { SIM_COMMAND_EVENT } from '@/lib/simulation';
 
+import { workshopMainTab } from '@/lib/workshopNavigation';
+
 const now = () => new Date().toISOString();
 
 function severityOf(line: string) {
@@ -91,20 +97,14 @@ const WORK_TABS: { id: WorkTab; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'M4 5h16v14H4zM4 10h16M10 10v9' },
   { id: 'build', label: 'Build', icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5' },
   { id: 'wiring', label: 'Wiring', icon: 'M6 4v6a6 6 0 0 0 12 0V4M6 20v-4M18 20v-4M4 4h4M16 4h4' },
-  { id: 'drivetrain', label: 'Drive train', icon: 'M7 7a3 3 0 1 0 0 .01M17 17a3 3 0 1 0 0 .01M7 10v4h10M17 14V10' },
-  { id: 'bom', label: 'BOM', icon: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4' },
   { id: 'checks', label: 'Test', icon: 'M4 12l5 5L20 6' },
   { id: 'history', label: 'History', icon: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2' },
-  { id: 'simulate', label: 'Simulate', icon: 'M8 4l12 8-12 8z' },
 ];
 
-// Preserve old specs/tools deep links alongside the seven main destinations.
-function mainTab(tab: WorkTab): WorkTab {
-  if (tab === 'tools') return 'bom';
-  if (tab === 'specs') return 'overview';
-  return tab;
-}
-const BOM_SECTIONS = [{ id: 'bom', label: 'Parts list' }, { id: 'tools', label: 'Tools & materials' }] as const;
+// Legacy panel IDs remain valid for bookmarks and Wrench actions.
+function mainTab(tab: WorkTab): WorkTab { return workshopMainTab(tab) as WorkTab; }
+const BUILD_SECTIONS = [{ id: 'build', label: 'Workbench' }, { id: 'drivetrain', label: 'Drive train' }, { id: 'bom', label: 'Parts list' }, { id: 'tools', label: 'Tools & materials' }] as const;
+const TEST_SECTIONS = [{ id: 'checks', label: 'Engineering checks' }, { id: 'simulate', label: 'Proving ground' }] as const;
 type BrowserDraft = { baseline: string; spec: Spec; label: string; note: string; planned: boolean };
 const draftKey = workshopDraftKey;
 
@@ -185,7 +185,7 @@ function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, sp
       <h2>Your next robot starts in Wrench</h2>
       <p className="sub">Attach photos, a mesh scan or a spec file; bring one in from your Robodex; scan with Scaniverse on your phone or hook up an Intel RealSense camera; or describe a robot that doesn’t exist yet.</p>
       <button type="button" className="btn btn-primary" onClick={() => promptWrench({mode:'chat',text:'',attach:true})}>Attach files to Wrench</button>
-      <div className="garage-add-actions">
+      <div className="garage-add-actions"><button type="button" className="btn btn-sm" onClick={() => onAdd(G1_SPEC.name,G1_SPEC,'starter','Official Unitree G1 educational reference; not owned hardware.')}>Explore Unitree G1 humanoid</button>
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'design',text:'Generate a robot '})}>Describe a new concept</button>
         <button type="button" className="btn btn-sm" onClick={() => setDexOpen(true)}>Add from Robodex</button>
         <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a robot from these photos.',attach:true})}>Add photos through Wrench</button>
@@ -672,9 +672,9 @@ export default function Garage() {
   const addRobot = (name: string, spec: Spec, source: VersionSource, why: string) => {
     const r: GarageRobot = {
       id: uid('robot'), name, createdAt: now(),
-      versions: [{ id: uid('v'), label: 'Baseline', note: why, source, createdAt: now(), spec }],
+      versions: [{ id: uid('v'), label: 'Baseline', note: why, source, createdAt: now(), spec, ...(spec.referenceModel ? {planned:true} : {}) }],
     };
-    persist([...robots, r]);
+    if (persist([...robots, r])) return;
     setSelected(r.id);
     setAdding(false);
   };
@@ -1046,7 +1046,7 @@ export default function Garage() {
    *    the robot (closing the twin / Add panel), as before.
    *  - Nothing selected and no twin: the bar is present but disabled —
    *    presence without fake function. */
-  const wsVerdict = verdictOf(draftLines);
+  const wsVerdict = draft?.referenceModel === 'unitree-g1-23' ? {cls:'norun',label:'Reference · not checked'} : verdictOf(draftLines);
   const barTab = twinOpen ? omegaTab : tab;
   const barDisabled = !twinOpen && (adding || !(robot && draft));
   const goTab = (t: WorkTab) => {
@@ -1096,6 +1096,7 @@ export default function Garage() {
       const bi = base ? robot.versions.findIndex((v) => v.id === base.id) : -1;
       publishWorkshopContext({
         robotId: robot.id,
+        draftDirty: unsaved.length > 0,
         robotName: draft.name || robot.name,
         versionLabel: base ? `v${bi + 1} — ${base.label}` : '',
         tab,
@@ -1247,8 +1248,11 @@ export default function Garage() {
         {(mainTab(barTab) === 'overview' || barDisabled) && <WrenchStart expanded={barDisabled} />}
         {tabBar}
         {!barDisabled && <div className="ws-taskbar">
-          {mainTab(barTab) === 'bom' && <div className="ws-sections" role="group" aria-label="BOM sections">
-            {BOM_SECTIONS.map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
+          {mainTab(barTab) === 'build' && <div className="ws-sections" role="group" aria-label="Build tools">
+            {BUILD_SECTIONS.map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
+          </div>}
+          {mainTab(barTab) === 'checks' && <div className="ws-sections" role="group" aria-label="Test tools">
+            {TEST_SECTIONS.map((section) => <button type="button" className="btn btn-sm" key={section.id} aria-pressed={barTab === section.id} onClick={() => goTab(section.id)}>{section.label}</button>)}
           </div>}
           <button type="button" className="btn btn-sm ws-edit-specs" onClick={() => goTab('specs')}>{twinOpen ? 'View specs' : 'Specs'}</button>
           {!twinOpen && isOmegaRobot && <button type="button" className="btn btn-sm" onClick={() => { setOmegaTab('overview'); setTwinOpen(true); }}>View ProjectSim twin</button>}
@@ -1270,8 +1274,8 @@ export default function Garage() {
           };
           return (
             <div className="ws-focus" role="region" aria-label="What this tab is for">
-              <p className="ws-focus-job">{focus.job}</p>
-              <span className={'ws-focus-status ' + focus.tone}>{focus.status}</span>
+              <p className="ws-focus-job">{draft.referenceModel ? 'Explore manufacturer links and visual joint limits.' : focus.job}</p>
+              <span className={'ws-focus-status ' + focus.tone}>{draft.referenceModel ? 'Educational reference · no hardware validation' : focus.status}</span>
               <button type="button" className="btn btn-primary btn-sm ws-focus-go" onClick={act}>{focus.action.label}</button>
             </div>
           );
@@ -1349,7 +1353,7 @@ export default function Garage() {
               </div>
             )}
 
-            {tab === 'overview' && (
+            {tab === 'overview' && draft.referenceModel !== 'unitree-g1-23' && (
               <section className="ws-pane" aria-label="Overview">
                 {(() => {
                   const missing = ['mass_kg', 'length_m', 'width_m', 'height_m'].filter((path) => !(Number(getPath(draft, path)) > 0)).length;
@@ -1431,6 +1435,7 @@ export default function Garage() {
                 </div>
                 <button type="button" className="btn btn-sm" onClick={() => promptWrench({mode: 'chat', text: 'I want to modify this robot: '})}>Describe a change to Wrench</button>
                 <WorkshopExplainer key={robot.id} robotId={robot.id} name={robot.name} spec={draft} estimatedPaths={latest?.estimatedPaths} />
+                <RobotComparison robots={activeRobots} selectedId={robot.id} />
                 {(() => {
                   const notes = notesFor(allNotes, robot.id);
                   return (
@@ -1561,16 +1566,18 @@ export default function Garage() {
               </section>
             )}
 
+            {tab === 'build' && draft.referenceModel !== 'unitree-g1-23' && <div className="ws-design-entry"><div><span className="eyebrow">Design at the bench</span><h3>Build your next idea with Wrench</h3><p>Describe a new rover, or ask for a change to the robot on this bench.</p></div><button type="button" className="btn btn-primary" onClick={() => promptWrench({mode:'design',text:'Generate a compact rover with a camera'})}>Design a robot</button><button type="button" className="btn btn-sm" onClick={() => promptWrench({mode:'chat',text:'Add a camera'})}>Revise this robot</button></div>}
+            {draft.referenceModel === 'unitree-g1-23' && (tab === 'build' || tab === 'overview') && <UnitySceneChoice key={robot.id} robotId={robot.id} versionId={latest?.id ?? 'new'} spec={draft}><HumanoidWorkshop /></UnitySceneChoice>}
             {/* One bench instance for Build and the Wiring planner, so picking a
                 planned cable in Build keeps its selection when it opens Wiring. */}
-            {(tab === 'build' || (tab === 'wiring' && benchWires)) && (
-              <AssemblyWorkspace key={robot.id} robotId={robot.id} view={tab === 'build' ? 'components' : 'wiring'}
+            {draft.referenceModel !== 'unitree-g1-23' && (tab === 'build' || (tab === 'wiring' && benchWires)) && (
+              <AssemblyWorkspace key={robot.id} robotId={robot.id} draftSpec={draft} draftIdentity={JSON.stringify(draft)} view={tab === 'build' ? 'components' : 'wiring'}
                 onView={(v) => { if (v === 'wiring') setBenchWires(true); setTab(v === 'components' ? 'build' : 'wiring'); }} />
             )}
 
-            {tab === 'build' && <details className="ws-disclosure"><summary>Build instructions and placement</summary><ForgeBuild spec={draft} /><ForgePlacement spec={draft} /></details>}
+            {tab === 'build' && draft.referenceModel !== 'unitree-g1-23' && <details className="ws-disclosure"><summary>Build instructions and placement</summary><ForgeBuild spec={draft} /><ForgePlacement spec={draft} /></details>}
 
-            {tab === 'build' && (
+            {tab === 'build' && draft.referenceModel !== 'unitree-g1-23' && (
               <details className="ws-disclosure"><summary>Take apart and assemble</summary><TakeApartPanel key={robot.id} robot={robot} spec={draft} onNeedSpecs={() => setTab('specs')} /></details>
             )}
 
@@ -1588,7 +1595,7 @@ export default function Garage() {
             {tab === 'drivetrain' && (
               <DriveTrainTab key={robot.id} spec={draft} onApply={(next) => setDraft(next)} />
             )}
-            {tab === 'simulate' && (
+            {tab === 'simulate' && draft.referenceModel !== 'unitree-g1-23' && (
               <><SimulationWorkspace spec={draft} robot={robot} robotId={robot.id} versionId={(unsaved.length?'draft:':'')+(latest?.id||'new')} /><details className="ws-disclosure"><summary>Estimates and advanced simulation options</summary><SimulateTab spec={draft} checks={roverDraft} opts={rover} setOpts={setRover} /></details></>
             )}
 
@@ -1650,7 +1657,8 @@ export default function Garage() {
               </section>
             )}
 
-            {tab === 'checks' && (
+            {draft.referenceModel === 'unitree-g1-23' && (tab === 'checks' || tab === 'simulate') && <section className="ws-guided"><h3>Reference model · not physically checked</h3><p>This G1 model supports link inspection and joint posing in Build. Rover calculations and driving tests do not apply. No gait, balance, collisions or hardware behavior have been validated.</p></section>}
+            {tab === 'checks' && draft.referenceModel !== 'unitree-g1-23' && (
             <section className="g-compare ws-pane" aria-label="Checks">
               <TestRun verdict={verdictOf(draftLines)} roverChecks={roverDraft} targets={rover} />
               <SavedSimulationRuns robotId={robot.id} /><h3>Engineering checks</h3>
