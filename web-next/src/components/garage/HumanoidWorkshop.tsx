@@ -4,14 +4,15 @@ import type {URDFRobot} from 'urdf-loader';
 import type * as Three from 'three';
 import {assetPath} from '@/components/home/asset';
 import {addWorkshopScenery,visibleForPicking} from '@/components/kit/workshopScenery';
+import {partLabel} from '@/lib/studioProject';
 import {BENCH_EVENT,type BenchResult} from '@/lib/workshopBench';
 import {HUMANOID_EVENT,clampJoint,type HumanoidResult,type HumanoidCommand} from '@/lib/humanoid';
 
 type Joint={name:string;lower:number;upper:number};
-export default function HumanoidWorkshop(){
+export default function HumanoidWorkshop({studio=false}:{studio?:boolean}={}){
  const host=useRef<HTMLDivElement>(null),robotRef=useRef<URDFRobot|null>(null);
  const [links,setLinks]=useState<string[]>([]),[joints,setJoints]=useState<Joint[]>([]),[selected,setSelected]=useState(''),[hidden,setHidden]=useState<string[]>([]),[spread,setSpread]=useState(0),[poses,setPoses]=useState<Record<string,number>>({}),[status,setStatus]=useState('Loading official G1 model…');
- const [lightweight,setLightweight]=useState(false);const cameraReset=useRef<()=>void>(()=>{});
+ const [lightweight,setLightweight]=useState(false);const [inspector,setInspector]=useState('parts'),[query,setQuery]=useState('');const cameraReset=useRef<()=>void>(()=>{});
  const poseRef=useRef(poses);poseRef.current=poses;
  const current=useRef({selected,hidden,spread});current.current={selected,hidden,spread};
  const command=(cmd:HumanoidCommand):string=>{
@@ -58,13 +59,19 @@ export default function HumanoidWorkshop(){
     const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=[0,0];const onDown=(e:PointerEvent)=>{down=[e.clientX,e.clientY];};
     const onUp=(e:PointerEvent)=>{if(Math.hypot(e.clientX-down[0],e.clientY-down[1])>6)return;const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);const meshes:Three.Object3D[]=[];robot!.traverse(o=>{if((o as Three.Mesh).isMesh&&visibleForPicking(o))meshes.push(o);});let hit=ray.intersectObjects(meshes,false)[0]?.object;while(hit&&!(hit as unknown as {isURDFLink?:boolean}).isURDFLink)hit=hit.parent!;if(hit)setSelected(hit.name);};
     renderer.domElement.addEventListener('pointerdown',onDown);renderer.domElement.addEventListener('pointerup',onUp);
-    const resize=()=>{renderer.setSize(el.clientWidth,420);camera.aspect=el.clientWidth/420;camera.updateProjectionMatrix();};const observer=new ResizeObserver(resize);observer.observe(el);resize();
+    const resize=()=>{const height=Math.max(240,el.clientHeight||420);renderer.setSize(el.clientWidth,height);camera.aspect=el.clientWidth/height;camera.updateProjectionMatrix();};const observer=new ResizeObserver(resize);observer.observe(el);resize();
     renderer.setAnimationLoop(()=>{if(document.hidden)return;for(const v of visuals){v.object.visible=!current.current.hidden.includes(v.link);v.object.position.copy(v.home).addScaledVector(v.offset,current.current.spread);v.object.traverse(o=>{const material=(o as Three.Mesh).material;if(material&&!Array.isArray(material)&&'emissive' in material)(material as Three.MeshStandardMaterial).emissive.setHex(v.link===current.current.selected?0x164b55:0);});}controls.update();renderer.render(scene,camera);});
     setStatus('Official G1 23-DoF model ready · inspection and visual joint posing');
     cleanup=()=>{renderer.setAnimationLoop(null);observer.disconnect();renderer.domElement.removeEventListener('pointerdown',onDown);renderer.domElement.removeEventListener('pointerup',onUp);controls.dispose();free(scene);renderer.dispose();renderer.domElement.remove();robotRef.current=null;cameraReset.current=()=>{};};if(disposed)cleanup();
    }catch(e){if(robot)free(robot);if(!disposed)setStatus(`${(e as Error).message}. Use link and joint records below.`);}
   })();return()=>{disposed=true;abort.abort();cleanup();};
  },[lightweight]);
+ if(studio)return <section className="studio-scene-grid" aria-label="G1 humanoid workbench">
+  <div className="studio-canvas"><div className="studio-scene-tools"><button onClick={()=>setStatus(command({kind:'reset'}))}>Fit view</button><button aria-pressed={spread>0} onClick={()=>setSpread(v=>v?0:1)}>Separate parts</button><button onClick={()=>setInspector(inspector==='pose'?'parts':'pose')}>{inspector==='pose'?'Parts':'Pose'}</button></div><div ref={host} className="studio-model" aria-label="Interactive G1 model"/>{(!links.length||status.includes('Use link'))&&<p className="studio-load" role="status">{status}</p>}<span className="studio-scene-caption">Drag to orbit · select a part</span></div>
+  <aside className="studio-inspector" aria-label="Humanoid inspector"><div className="studio-panel-head"><h2>{inspector==='pose'?'Joint pose':'Parts'}</h2><button onClick={()=>setInspector(inspector==='pose'?'parts':'pose')}>{inspector==='pose'?'Parts':'Pose'}</button></div><input className="studio-search" aria-label="Find a humanoid part" placeholder="Find a part…" value={query} onChange={e=>setQuery(e.target.value)}/>
+  {inspector==='pose'?<div className="studio-joints">{joints.filter(j=>partLabel(j.name).toLowerCase().includes(query.toLowerCase())).map(j=><label className="studio-field" key={j.name}><span>{partLabel(j.name)} <small>{((poses[j.name]??0)*180/Math.PI).toFixed(0)}°</small></span><input aria-label={partLabel(j.name)+' degrees'} type="range" min={j.lower} max={j.upper} step=".01" value={poses[j.name]??clampJoint(0,j.lower,j.upper)} onChange={e=>setStatus(command({kind:'pose',joint:j.name,degrees:Number(e.target.value)*180/Math.PI}))}/></label>)}</div>:<div className="studio-parts">{links.filter(id=>partLabel(id).toLowerCase().includes(query.toLowerCase())).map(id=><button key={id} aria-pressed={selected===id} onClick={()=>setSelected(id)}>{partLabel(id)}</button>)}</div>}
+  {selected&&<div className="studio-part-card"><span className="studio-bay">SELECTED PART</span><h3>{partLabel(selected)}</h3><button onClick={()=>setHidden(v=>v.includes(selected)?v.filter(id=>id!==selected):[...v,selected])}>{hidden.includes(selected)?'Show part':'Hide part'}</button><button onClick={()=>setStatus(command({kind:'next'}))}>Next part</button></div>}
+  <p className="studio-muted">Visual reference · no balance validation</p><a className="studio-muted" href={assetPath('assets/models/unitree-g1/LICENSE')}>Model source &amp; license</a></aside></section>;
  return <section className="ws-guided" aria-label="G1 humanoid workbench"><span className="eyebrow">Manufacturer reference · Unitree G1</span><h3>Explore a humanoid, link by link</h3><p>Official 23-DoF URDF. Model inspection and posing; no walking controller, hardware connection, or verified build sequence.</p><div ref={host} style={{minHeight:lightweight?0:420}} aria-label="Interactive G1 model"/><p role="status">{status}</p>
  <div className="ta-controls"><button className="btn btn-sm" onClick={()=>setStatus(command({kind:'next'}))}>Next link</button><button className="btn btn-sm" onClick={()=>setStatus(command({kind:'reset'}))}>Reset humanoid</button><button className="btn btn-sm" onClick={()=>setLightweight(v=>!v)}>{lightweight?'Show 3D':'Lightweight view'}</button><a href={assetPath('assets/models/unitree-g1/LICENSE')}>BSD-3-Clause license</a></div>
  <label className="g-field">Exploded inspection<input aria-label="G1 exploded view" type="range" min="0" max="1" step=".01" value={spread} onChange={e=>setSpread(Number(e.target.value))}/></label>
