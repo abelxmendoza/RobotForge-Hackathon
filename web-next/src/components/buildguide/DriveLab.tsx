@@ -134,6 +134,8 @@ export default function DriveLab({ board }: { board: BoardId }) {
       setReady(true);
       setSerial([`Starter rover · ${BOARDS[board].name} · simulated`, `Serial @ 115200 baud`, `HC-SR04, SG90 and L9110S ready`]);
 
+      // A rebuilt world restarts the clock at 0: a running autopilot starts over on it.
+      if (pilot.current) pilot.current = createAutopilot(0);
       let last = performance.now(), acc = 0, simT = 0, nextTick = 0, tick = 0;
       let pose = { t: 0, x: 0, y: 0, z: 0, qx: 0, qy: 0, qz: 0, qw: 1 };
       let servo = 90, cm = AUTO.NO_ECHO_CM, input = { throttle: 0, turn: 0 };
