@@ -91,6 +91,7 @@ export function useDemoSignInAction() {
 }
 
 export default function DemoBar() {
+  const pathname = usePathname();
   const demo = useDemoMode();
   const barDismissed = useDemoBarDismissed();
   const [welcomed, setWelcomed] = useState(true);
@@ -116,6 +117,8 @@ export default function DemoBar() {
     }
     setWelcomed(true);
   };
+
+  if(pathname?.replace(/\/$/,'')==='/garage')return <div className="demo-bar demo-bar--compact" role="region" aria-label="Demo mode"><span className="demo-bar-tag">Demo</span><span>Sample robots · recorded replies</span><button type="button" className="demo-bar-exit" onClick={exit}>Exit demo</button><button type="button" className="demo-bar-dismiss" aria-label="Dismiss demo bar" onClick={()=>setDemoBarDismissed(true)}>×</button></div>;
 
   return (
     <div className="demo-bar" role="region" aria-label="Demo mode">

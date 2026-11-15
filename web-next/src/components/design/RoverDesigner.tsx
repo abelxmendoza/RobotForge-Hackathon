@@ -30,7 +30,7 @@ function PlateFields({value,onChange,onError,prefix}:{value:RoverPlate;onChange:
  return <><div className={styles.fields}>{(['lengthMm','widthMm','thicknessMm','holeDiameterMm'] as const).map(key=><NumberField key={key} label={prefix+' '+({lengthMm:'length (mm)',widthMm:'width (mm)',thicknessMm:'thickness (mm)',holeDiameterMm:'hole diameter (mm)'})[key]} value={value[key]} step={.1} min={.5} onChange={n=>onChange({...value,[key]:n})}/>)}</div>
  <label className="g-field"><span>{prefix} hole coordinates — X, Y in mm, one pair per line</span><textarea rows={3} value={holes} placeholder="Leave blank for no holes" onChange={e=>{setHoles(e.target.value);try{const rows=e.target.value.trim()?e.target.value.trim().split('\n').map(row=>{const pair=row.split(',');if(pair.length!==2||pair.some(v=>!v.trim()))throw new Error('Use one numeric X, Y pair per line.');return pair.map(Number);}):[];if(rows.some(p=>p.length!==2||!p.every(Number.isFinite)))throw new Error('Use one numeric X, Y pair per line.');onError('');onChange({...value,holes:rows as [number,number][]});}catch(err){onError((err as Error).message);}}}/></label><p className="faint g-small">Coordinates are relative to the plate centre. No mounting holes are inferred from a component envelope.</p></>;
 }
-export default function RoverDesigner(){
+export default function RoverDesigner({initialRobotId}:{initialRobotId?:string}={}){
  const [robots,,ready]=useStore<GarageRobot[]>(GARAGE_KEY,[]);
  const [requirements,setRequirements]=useState(defaultRoverRequirements);
  const [draft,setDraft]=useState<Spec|null>(null),[robotId,setRobotId]=useState(''),[expected,setExpected]=useState<string|null>(null);
@@ -56,14 +56,14 @@ export default function RoverDesigner(){
  useEffect(()=>{
   if(!ready)return;
   try{
-   const id=new URLSearchParams(window.location.search).get('robot');
+   const id=initialRobotId||new URLSearchParams(window.location.search).get('robot');
    const r=id&&readStore<GarageRobot[]>(GARAGE_KEY,[]).find(r=>r.id===id&&!r.archivedAt);
    const cached=readStore<{format:string;requirements:RoverRequirements;draft:Spec|null;robotId:string;expected:string|null;cad:RoverCadSettings|null;dirty:boolean;briefDirty:boolean;cadDirty:boolean;step:number}|null>(DRAFT_KEY,null);
    if(shouldRecoverRoverDraft(cached,id)&&cached?.requirements&&Array.isArray(cached.requirements.sensors)){
     setRequirements(cached.requirements);setDraft(cached.draft);setRobotId(cached.robotId);setExpected(cached.expected);setCad(cached.cad);setDirty(cached.dirty);setBriefDirty(cached.briefDirty);setCadDirty(cached.cadDirty);setStep(Number.isInteger(cached.step)&&cached.step>=0&&cached.step<5?cached.step:0);setNotice(cached.dirty&&id&&id!==cached.robotId?'Recovered your unfinished draft instead of replacing it with a different robot. Save or discard it before choosing another design.':'Recovered your local design draft. It is separate from saved Workshop robots.');
    }else if(r)load(r);
   }catch(e){setError((e as Error).message);}finally{setRestored(true);}
- },[ready,contextEpoch]);
+ },[ready,contextEpoch,initialRobotId]);
  useEffect(()=>{const resetContext=()=>{setRequirements(defaultRoverRequirements());setBriefDirty(false);setCadDirty(false);setNotice('');setError('');setRestored(false);setDraft(null);setRobotId('');setExpected(null);setDirty(false);setCad(null);setStep(0);setInputErrors({});setContextEpoch(n=>n+1);};window.addEventListener(DEMO_EVENT,resetContext);return()=>window.removeEventListener(DEMO_EVENT,resetContext);},[]);
  useEffect(()=>{
   if(!ready||!restored)return;

@@ -48,7 +48,7 @@ export function isDemoMode(): boolean {
 /* The storage key a read/write should actually touch. Outside demo
  * mode (and for non-data keys) the key passes through unchanged. */
 export function effectiveStorageKey(key: string): string {
-  return DEMO_DATA_KEYS.has(key) && isDemoMode() ? key + '.demo' : key;
+  return (DEMO_DATA_KEYS.has(key) || key.startsWith('robotforge.workshop.draft.')) && isDemoMode() ? key + '.demo' : key;
 }
 
 export function setDemoMode(on: boolean): void {

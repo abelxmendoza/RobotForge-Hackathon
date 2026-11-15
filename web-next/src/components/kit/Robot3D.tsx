@@ -1002,7 +1002,7 @@ export default function Robot3D({
         const resize = () => {
           const w = host.clientWidth || 700;
           const viewportHeight=window.visualViewport?.height??window.innerHeight;
-          const h = viewHeight ?? (window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460);
+          const h = host.closest('.workshop-studio') ? Math.max(240,host.clientHeight) : viewHeight ?? (window.innerWidth <= 768 ? Math.max(220,Math.min(420,Math.round(viewportHeight*0.48))) : 460);
           renderer.setSize(w, h);
           composer?.setSize(w,h);
           camera.aspect = w / h;

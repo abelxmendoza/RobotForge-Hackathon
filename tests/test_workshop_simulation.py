@@ -51,6 +51,8 @@ try{
 }finally{world.free();}
 const two=await createDriveWorld({...spec,wheel:{...spec.wheel,count:2},motor:{...spec.motor,count:2}},'flat');
 try{let p;for(let i=0;i<120;i++)p=two.step(0,0);for(let i=0;i<180;i++)p=two.step(1,0);assert.ok(p.x>.3,'two-wheel rover casters must roll rather than stick to the ground');}finally{two.free();}
+const concurrent=await Promise.all(Array.from({length:4},()=>createDriveWorld(spec,'flat')));
+for(const w of concurrent){assert.ok(Number.isFinite(w.step(0,0).z));w.free();w.free();assert.throws(()=>w.step(0,0),/closed/);}
 ''')
     r=subprocess.run(['node','--experimental-strip-types',str(tmp_path/'drive.mjs')],capture_output=True,text=True)
     assert r.returncode==0,r.stdout+r.stderr

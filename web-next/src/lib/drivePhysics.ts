@@ -6,9 +6,11 @@ import {SIM_TYRE_FRICTION,SIM_USABLE_STALL_FRACTION,SIM_DRIVE_CMD_MPS,SIM_TURN_G
 /* Extra fixed boxes on the floor (the Omega1 simulator's pen walls):
  * centre and half-extents in metres, world frame, z up. */
 export type SimWall={x:number;y:number;z:number;hx:number;hy:number;hz:number};
+let rapierReady:Promise<typeof import('@dimforge/rapier3d-compat')>|undefined;
+function loadRapier(){return rapierReady??=import('@dimforge/rapier3d-compat').then(async R=>{await R.init();return R;});}
 export async function createDriveWorld(spec:Spec,scenario:Scenario,walls:SimWall[]=[]){
  const issues=simulationIssues(spec);if(issues.length)throw new Error('Physics needs: '+issues.join(', '));
- const R=await import('@dimforge/rapier3d-compat');await R.init();
+ const R=await loadRapier();
  const world=new R.World({x:0,y:0,z:-9.81});world.timestep=1/60;
  const L=spec.length_m,W=spec.width_m,H=spec.height_m,r=spec.wheel.diameter_m/2,ww=spec.wheel.width_m,mass=spec.mass_kg;
  const floor=world.createRigidBody(R.RigidBodyDesc.fixed());world.createCollider(R.ColliderDesc.cuboid(12,12,.1).setTranslation(0,0,-.1).setFriction(SIM_TYRE_FRICTION),floor);
@@ -33,6 +35,6 @@ export async function createDriveWorld(spec:Spec,scenario:Scenario,walls:SimWall
   joint.configureMotorModel(R.MotorModel.ForceBased);joint.configureMotorVelocity(0,20);joint.setMotorMaxForce(spec.motor.stall_torque_nm*SIM_USABLE_STALL_FRACTION*share);wheels.push({joint,y});
  }
  if(spec.wheel.count===2){const cr=Math.min(spec.ground_clearance_m,r)*.8;for(const x of [-L/2+cr,L/2-cr])world.createCollider(R.ColliderDesc.ball(cr).setTranslation(x,0,cr).setMass(.001).setFriction(0).setFrictionCombineRule(R.CoefficientCombineRule.Min),body);}
- let t=0;
- return {step(throttle:number,turn:number):SimPose{for(const w of wheels)w.joint.configureMotorVelocity((SIM_DRIVE_CMD_MPS*throttle-SIM_TURN_GAIN*turn*w.y)/r,20);world.step();t+=1/60;const p=body.translation(),q=body.rotation();return {t,x:p.x,y:p.y,z:p.z,qx:q.x,qy:q.y,qz:q.z,qw:q.w};},free(){world.free();}};
+ let t=0,released=false;
+ return {step(throttle:number,turn:number):SimPose{if(released)throw new Error('Simulation world is closed');for(const w of wheels)w.joint.configureMotorVelocity((SIM_DRIVE_CMD_MPS*throttle-SIM_TURN_GAIN*turn*w.y)/r,20);world.step();t+=1/60;const p=body.translation(),q=body.rotation();return {t,x:p.x,y:p.y,z:p.z,qx:q.x,qy:q.y,qz:q.z,qw:q.w};},free(){if(!released){released=true;world.free();}}};
 }

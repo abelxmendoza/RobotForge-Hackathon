@@ -1,0 +1,221 @@
+/* The prototype is scoped to Workshop; other application pages keep their layout. */
+.shell:has(.studio-shell){grid-template-columns:80px minmax(0,1fr);background:#0b1016}
+.shell:has(.studio-shell) .sidebar{padding:16px 6px;gap:24px;background:#0b1016}
+.shell:has(.studio-shell) .sidebar .brand{justify-content:center;padding:0}
+.shell:has(.studio-shell) .sidebar .brand>span:last-child{display:none}
+.shell:has(.studio-shell) .side-nav a{flex-direction:column;gap:7px;padding:12px 3px;font-size:10px;border-radius:6px;min-height:62px;text-align:center}
+.shell:has(.studio-shell) .side-nav a svg{width:21px;height:21px}
+.shell:has(.studio-shell) .side-nav a[href="/"]{display:none}
+.shell:has(.studio-shell) .side-foot a{padding:8px 4px;font-size:10px;text-align:center}
+.shell:has(.studio-shell) .topbar{height:40px;min-height:40px;padding:0 20px;background:#0b1016;font-size:11px;position:relative}
+.shell:has(.studio-shell) .content{max-width:none;padding:0!important;background:none}
+.shell:has(.studio-shell) .main{background:#0b1016}
+.studio-shell{--studio-panel:320px;position:relative;height:calc(100dvh - 40px);min-height:560px;padding:0!important;color:#e8edf3;background:#0b1016}
+.workshop-studio{width:100%;max-width:none;gap:0;height:100%;display:grid;grid-template-rows:80px minmax(0,1fr) 88px;position:relative;font:14px/1.45 var(--font,system-ui)}
+.workshop-studio button,.workshop-studio input,.workshop-studio select{font:inherit}
+.workshop-studio button,.studio-dialog button{min-height:36px;border:1px solid #34404b;border-radius:5px;background:#18212a;padding:7px 12px;color:#d8e0e8;cursor:pointer;transition:background .15s}
+.workshop-studio button:hover,.studio-dialog button:hover{background:#25333f;border-color:#6a8b90}
+.workshop-studio button:disabled{opacity:.4;cursor:default}
+.workshop-studio button[aria-pressed=true],.workshop-studio button[aria-current=true]{background:#193b3c;border-color:#67d5c1;color:#b9f4e8}
+.workshop-studio button:focus-visible,.workshop-studio input:focus-visible,.workshop-studio a:focus-visible{outline:2px solid #67d5c1;outline-offset:3px}
+.workshop-studio .studio-primary,.studio-dialog .studio-primary{background:#67d5c1;border-color:#67d5c1;color:#09221f;font-weight:700}
+.studio-header{grid-row:1;display:flex;align-items:center;gap:20px;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #27323d;background:#10161e;z-index:5;min-width:0}
+.studio-project-name{min-width:0;max-width:38%}
+.studio-project-name h1{font-size:20px;line-height:1.2;font-weight:600;letter-spacing:-.02em;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.studio-bay{font:10px/1.2 var(--mono,monospace);letter-spacing:.12em;color:#85aaa9}
+.studio-evidence{font-size:10px;color:#9eafb8;white-space:nowrap}
+.studio-modes{display:flex;gap:4px;align-self:stretch;align-items:center}
+.studio-modes button{background:none;border:0;border-radius:0;padding:12px 14px;font-weight:600;border-bottom:2px solid transparent}
+.studio-modes button[aria-pressed=true]{background:none;border-bottom-color:#67d5c1;color:#b9f4e8}
+.studio-header-actions{display:flex;gap:6px;flex-shrink:0}
+.studio-header-actions button{font-size:12px;padding:7px 10px}
+.studio-build,.studio-task-view,.studio-records,.studio-empty{grid-row:2;min-height:0;min-width:0}
+.studio-build{position:relative}
+.studio-renderer{height:100%;position:relative}
+.studio-view-settings{position:absolute;z-index:8;left:16px;bottom:16px}
+.studio-view-settings>button{background:#101820db;font-size:11px}
+.studio-view-settings>div{display:flex;gap:6px;padding:8px;background:#101820;border:1px solid #34404b;border-radius:5px;margin-top:4px}
+.studio-scene-grid{display:grid;grid-template-columns:minmax(0,1fr) var(--studio-panel);height:100%;min-height:0;margin:0;border:0;padding:0;background:#0e1721}
+.studio-canvas{position:relative;height:100%;min-height:0;min-width:0;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#263740,#0c1620 70%)}
+.studio-model,.studio-canvas>.assembly-viewport{height:100%;min-height:0!important;width:100%}
+.studio-canvas canvas{display:block;width:100%!important;height:100%!important}
+.studio-scene-tools{display:flex;gap:6px;position:absolute;z-index:7;top:14px;left:16px;right:16px;flex-wrap:wrap;pointer-events:none}
+.studio-scene-tools button{font-size:11px;background:#101820ce;backdrop-filter:blur(5px);pointer-events:auto;min-height:32px}
+.studio-scene-caption{position:absolute;left:18px;bottom:16px;font-size:10px;color:#9ab0bc;pointer-events:none}
+.studio-renderer .studio-scene-caption{bottom:62px}
+.studio-inspector{min-height:0;overflow:auto;background:#111922;border-left:1px solid #29343e;padding:20px 18px 100px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.studio-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+.studio-panel-head h2{font-size:17px;font-weight:600;margin:0}
+.studio-panel-head button{font-size:11px;padding:4px 8px;min-height:30px;background:none}
+.studio-inspector h3{font-size:20px;line-height:1.2;margin:3px 0}
+.studio-inspector p{margin:0;font-size:12px;color:#a9bbc7;line-height:1.6}
+.studio-search{width:100%;background:#0b1219;color:#e8edf3;border:1px solid #34404b;border-radius:5px;padding:10px 11px;min-height:40px}
+.studio-parts{display:flex;flex-direction:column;gap:3px;max-height:34vh;overflow:auto;flex-shrink:1;min-height:90px;scrollbar-width:thin}
+.studio-parts button{display:flex;justify-content:space-between;align-items:center;text-align:left;padding:9px 10px;min-height:40px;background:none;border:1px solid transparent;font-size:12px;flex-shrink:0}
+.studio-parts button small{color:#849aa8}
+.studio-part-card{padding-top:16px;border-top:1px solid #2b3741;display:flex;flex-direction:column;gap:10px}
+.studio-part-card>span:not(.studio-bay){font-size:11px;color:#849aa8}
+.studio-part-card button{align-self:flex-start;font-size:11px}
+.workshop-studio .studio-muted{font-size:11px;color:#849aa8}
+.studio-field{display:flex;flex-direction:column;gap:6px;margin:3px 0;font-size:12px}
+.studio-field>span{display:flex;justify-content:space-between;gap:8px}
+.studio-field small{color:#849aa8;font-size:11px}
+.studio-field input[type=number]{width:100%;min-height:40px;padding:8px 10px;color:#e8edf3;background:#0b1219;border:1px solid #34404b;border-radius:5px}
+.studio-field input[type=range]{width:100%;accent-color:#67d5c1}
+.studio-joints{max-height:40vh;overflow:auto;display:grid;gap:12px;padding-right:6px}
+.studio-inline{display:flex;flex-wrap:wrap;gap:6px}
+.workshop-studio progress{width:100%;height:5px;accent-color:#67d5c1}
+.studio-version{display:flex;flex-direction:column;text-align:left;gap:5px}
+.studio-version small{font-size:11px;color:#8da5b4}
+.studio-fleet{grid-row:3;display:flex;gap:14px;align-items:center;border-top:1px solid #29343e;background:#0c1219;padding:12px 18px;min-width:0;z-index:6}
+.studio-fleet>div{display:flex;gap:8px;overflow-x:auto;min-width:0;scrollbar-width:thin;flex:1;padding:2px}
+.studio-fleet button{display:flex;align-items:center;gap:10px;min-width:165px;max-width:230px;min-height:60px;background:#111b25;text-align:left;flex-shrink:0}
+.studio-fleet button>span:last-child{min-width:0;display:flex;flex-direction:column;gap:4px}
+.studio-fleet strong{display:block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600}
+.studio-fleet small{font-size:9px;color:#859aa8}
+.studio-fleet>button{min-width:38px;max-width:38px;justify-content:center;padding:4px}
+.studio-notice{position:absolute;bottom:98px;left:20px;max-width:calc(100% - var(--studio-panel) - 40px);z-index:22;padding:10px 14px;border:1px solid #496d6a;background:#152d30;box-shadow:0 4px 18px #0005;border-radius:5px;font-size:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.studio-notice button{font-size:11px;min-height:28px;padding:3px 6px}
+.studio-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:240px;padding:30px;text-align:center}
+.studio-empty h2{font-size:25px;margin:0;font-weight:500}
+.studio-empty p{color:#8da5b4;max-width:320px;font-size:13px}
+.studio-load{position:absolute;inset:40% 15%;text-align:center;display:flex;flex-direction:column;gap:12px;font-size:12px;color:#b8d5df;align-items:center}
+.studio-task-view,.studio-records{overflow:auto;padding:18px 24px 110px;background:#101923}
+.studio-task-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+.studio-task-head h2{font-size:19px;margin:0}
+.studio-task-view .sim-workspace-head h3{font-size:16px}
+.studio-task-view .sim-workspace-head p{font-size:11px}
+.studio-task-view .sim-drive-controls p{font-size:11px}
+.studio-test-issues{padding:15px;border:1px solid #875b35;border-radius:6px;margin-top:15px}
+.studio-test-issues p{font-size:12px}
+.studio-overlay-panel{position:absolute;top:0;right:0;width:var(--studio-panel);height:100%;background:#111922;padding:20px;z-index:12;overflow:auto}
+.studio-dialog{width:min(460px,calc(100% - 32px));border:1px solid #3f5665;border-radius:10px;background:#111b25;color:#e8edf3;padding:24px;box-shadow:0 20px 100px #0009;max-height:85dvh;overflow:auto}
+.studio-dialog::backdrop{background:#020912b5;backdrop-filter:blur(5px)}
+.studio-dialog h2{font-size:22px;margin:0 0 18px}
+.studio-dialog>button{margin:8px 6px 0 0}
+.studio-new-card{display:flex!important;flex-direction:column;gap:7px;text-align:left;width:100%;padding:18px!important;border:1px solid #34404b;border-radius:6px;background:#18232d;color:#d8e0e8;margin:10px 0!important}
+.studio-new-card span{font-size:12px;color:#94aab8}
+.studio-design{position:absolute;inset:0;z-index:35;background:#101923;padding:22px 24px 110px;overflow:auto}
+/* One Wrench area replaces the inspector when its conversation opens. */
+.studio-shell .studio-wrench{position:absolute;left:auto;right:12px;bottom:102px;transform:none;width:calc(var(--studio-panel) - 24px);max-width:none;z-index:32;margin:0}
+.studio-shell .studio-wrench .chat-bar-composer{width:100%;border-radius:7px;padding:5px;gap:3px;min-height:50px;background:#192936;border:1px solid #41616b;box-shadow:none}
+.studio-shell .studio-wrench .chat-bar-composer textarea{font-size:12px;min-width:0;padding:8px 3px}
+.studio-shell .studio-wrench .chat-bar-composer .chat-bar-toggle{display:none}
+.studio-shell .studio-wrench .chat-bar-composer button{width:30px;height:34px;min-width:30px}
+.studio-shell .studio-wrench .wrench-panel{height:calc(100dvh - 300px);max-height:none;width:100%;border-radius:7px;background:#111b25;display:flex;flex-direction:column}
+.studio-shell .studio-wrench .wrench-panel[hidden]{display:none}
+.studio-shell .studio-wrench .wrench-panel-body{flex:1;overflow:auto;min-height:0;font-size:12px}
+.studio-shell .studio-wrench .fc-working-on{font-size:10px}
+.studio-shell .studio-wrench .fc-chips{display:none}
+.studio-shell .studio-wrench .main-chat-suggestions{display:none}
+.studio-shell .studio-wrench .forge-composer>.g-tabs{display:none}
+.studio-shell:has(.wrench-panel:not([hidden])) .studio-inspector{visibility:hidden}
+.studio-shell:has(.wrench-panel:not([hidden])) .studio-overlay-panel{visibility:hidden}
+@media(max-width:1100px){
+ .studio-shell{--studio-panel:290px}
+ .studio-header{padding:10px 14px;gap:10px}
+ .studio-project-name h1{font-size:17px}
+ .studio-header-actions button{padding:7px;font-size:11px}
+ .studio-modes button{padding:12px 10px}
+}
+@media(max-width:760px){
+ .shell:has(.studio-shell){display:block;padding-bottom:60px}
+ .shell:has(.studio-shell) .sidebar{padding:0;height:auto;position:fixed;bottom:0;top:auto;width:100%;z-index:60;display:block;border-top:1px solid #29343e;border-right:0}
+ .shell:has(.studio-shell) .sidebar>.brand,.shell:has(.studio-shell) .side-foot{display:none}
+ .shell:has(.studio-shell) .side-nav{display:flex;justify-content:space-around;padding:2px 0}
+ .shell:has(.studio-shell) .side-nav a,.shell:has(.studio-shell) .side-nav .nav-more-item{display:flex;min-height:52px;flex:1;border-radius:0;font-size:10px;padding:5px}
+ .shell:has(.studio-shell) .side-nav a[href="/"],.shell:has(.studio-shell) .nav-more{display:none}
+ .shell:has(.studio-shell) .topbar{height:40px;padding:0 12px}
+ .shell:has(.studio-shell) .topbar .crumbs{display:none}
+ .shell:has(.studio-shell) .topbar .mobile-brand{display:block}
+ .studio-shell{--studio-panel:100%;height:auto;min-height:calc(100dvh - 100px);padding-bottom:70px!important}
+ .workshop-studio{min-height:calc(100dvh - 170px);height:auto;grid-template-rows:auto minmax(0,1fr) 78px}
+ .studio-header{flex-wrap:wrap;padding:12px;gap:10px}
+ .studio-project-name{max-width:calc(100% - 75px);flex:1}
+ .studio-project-name h1{font-size:17px}
+ .studio-header-actions{display:contents}
+ .studio-header-actions button{min-height:38px}
+ .studio-modes{order:3;flex:1;min-width:180px;height:40px;justify-content:center}
+ .studio-header-actions>button:first-child{order:4}
+ .studio-header-actions>button:nth-child(2){order:4}
+ .studio-header-actions>button:last-child{order:2}
+ .studio-scene-grid{grid-template-columns:minmax(0,1fr);height:auto}
+ .studio-canvas{height:43dvh;min-height:280px}
+ .studio-inspector{border-left:0;border-top:1px solid #29343e;max-height:420px;padding:18px 16px 24px;gap:12px}
+ .studio-parts{max-height:170px;min-height:80px}
+ .studio-parts button{min-height:44px}
+ .studio-inspector h3{font-size:18px}
+ .studio-joints{max-height:250px}
+ .studio-fleet{padding:8px 12px;gap:8px;height:78px}
+ .studio-fleet>.studio-bay{display:none}
+ .studio-fleet button{min-width:148px;min-height:54px}
+ .studio-fleet strong{max-width:110px}
+ .studio-fleet .g-avatar{width:32px;height:32px}
+ .studio-task-view,.studio-records{padding:16px 12px 25px}
+ .studio-task-head{align-items:flex-start;flex-wrap:wrap}
+ .studio-task-head .studio-evidence{white-space:normal}
+ .studio-shell .studio-wrench{position:fixed;bottom:65px;right:10px;width:calc(100% - 20px);max-width:none}
+ .studio-shell .studio-wrench .chat-bar-composer{min-height:48px}
+ .studio-shell .studio-wrench .chat-bar-composer textarea{font-size:16px}
+ .studio-shell .studio-wrench .wrench-panel{height:min(58dvh,480px)}
+ .studio-shell:has(.wrench-panel:not([hidden])) .studio-inspector{display:none}
+ .studio-notice{position:fixed;left:12px;right:12px;bottom:130px;max-width:none;z-index:45}
+ .studio-view-settings{bottom:calc(100% - 43dvh + 16px);left:auto;right:12px}
+ .studio-scene-tools{left:10px;right:10px;top:10px}
+ .studio-scene-tools button{min-height:36px;font-size:10px;padding:6px 9px}
+ .studio-overlay-panel{width:100%;top:0;height:100%;padding-bottom:90px}
+ .studio-design{position:fixed;inset:40px 0 120px;padding:18px 12px;z-index:40}
+ .workshop-studio button,.studio-dialog button{touch-action:manipulation}
+}
+@media(prefers-reduced-motion:reduce){.workshop-studio *{scroll-behavior:auto!important;transition:none!important}}
+.demo-bar.demo-bar--compact{height:34px;min-height:34px;padding:0 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #293c44;background:#13262b;font-size:11px}
+.demo-bar--compact .demo-bar-tag{font-size:9px;padding:3px 6px}
+.demo-bar--compact .demo-bar-exit{margin-left:auto;padding:3px 8px;font-size:10px;min-height:24px}
+.demo-bar--compact .demo-bar-dismiss{min-height:24px;padding:3px 8px}
+body:has(.demo-bar--compact) .studio-shell{height:calc(100dvh - 74px)}
+body:has(.demo-bar--compact) .shell:has(.studio-shell){min-height:calc(100dvh - 34px)}
+body:has(.demo-bar--compact) .shell:has(.studio-shell) .sidebar{height:calc(100dvh - 34px)}
+@media(max-width:760px){
+ body:has(.demo-bar--compact) .studio-shell{height:auto}
+ body:has(.demo-bar--compact) .shell:has(.studio-shell) .sidebar{height:auto}
+ .demo-bar.demo-bar--compact{padding:0 10px;gap:8px;font-size:10px}
+}
+.studio-shell .studio-wrench .wrench-panel{height:calc(100dvh - 340px)}
+.studio-shell .studio-wrench .forge-samples{display:none}
+.studio-shell .studio-wrench .wrench-panel-body>.studio-muted{padding:10px 14px;margin:0;border-bottom:1px solid #29343e;font-size:10px}
+@media(max-width:760px){.studio-shell .studio-wrench .wrench-panel{height:min(58dvh,480px)}}
+@media(max-width:760px){
+ .studio-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto auto;gap:8px;padding:12px}
+ .studio-project-name{grid-column:1/3;grid-row:1;max-width:none;width:100%;min-width:0}
+ .studio-project-name h1{font-size:17px}
+ .studio-header-actions>button:last-child{grid-column:3;grid-row:1;order:0}
+ .studio-modes{grid-column:1;grid-row:2;order:0;min-width:0;justify-content:flex-start}
+ .studio-modes button{padding:8px 12px;font-size:12px;min-height:40px}
+ .studio-header-actions>button:first-child{grid-column:2;grid-row:2;order:0}
+ .studio-header-actions>button:nth-child(2){grid-column:3;grid-row:2;order:0}
+ .workshop-studio{grid-template-rows:auto 78px minmax(0,1fr)}
+ .studio-fleet{grid-row:2}
+ .studio-build,.studio-task-view,.studio-records,.studio-empty{grid-row:3}
+ .studio-renderer .studio-scene-caption{bottom:16px}
+ .studio-view-settings{left:auto;right:12px;bottom:auto;top:calc(43dvh - 46px)}
+ .studio-task-view .sim-workspace-head{gap:10px}
+ .studio-task-view .sim-workspace-head>div{min-width:0}
+ .studio-task-view .sim-engine-switch{flex-wrap:wrap}
+}
+.studio-mobile-only,.studio-sheet-close{display:none}
+@media(max-width:760px){
+ .studio-scene-tools .studio-mobile-only{display:block}
+ .workshop-studio .studio-inspector{display:none}
+ .workshop-studio[data-inspector-open=true] .studio-inspector{display:flex;position:fixed;left:10px;right:10px;bottom:124px;max-height:48dvh;padding:18px 16px 58px;border:1px solid #41616b;border-radius:10px;background:#111b25;box-shadow:0 -10px 60px #0008;z-index:24}
+ .workshop-studio .studio-sheet-close{display:block;position:fixed;bottom:134px;left:24px;z-index:25;font-size:11px;min-height:34px}
+ .studio-shell:has(.wrench-panel:not([hidden])) .studio-sheet-close{display:none}
+ .studio-shell:has(.wrench-panel:not([hidden])) .studio-inspector{display:none}
+ .studio-shell .studio-wrench .wrench-panel{height:min(58dvh,480px)}
+}
+.shell:has(.studio-shell) .topbar .gh-link{display:none}
+@media(max-width:760px){
+ .studio-fleet>button{min-width:38px;max-width:38px}
+ .studio-field input,.studio-search{font-size:16px}
+ .studio-header-actions button,.studio-scene-tools button{min-height:44px}
+ .workshop-studio .studio-sheet-close{left:auto;right:12px;bottom:calc(124px + 48dvh + 6px);min-height:40px}
+}

@@ -42,7 +42,7 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
     <div className="shell">
       <a className="skip-link" href="#content">Skip to content</a>
       <aside className="sidebar">
-        <Link className="brand" href="/">
+        <Link className="brand" href="/" aria-label="RobotForge home">
           <BrandMark /><span>RobotForge<small>App</small></span>
         </Link>
         <nav className="side-nav" aria-label="App">
@@ -51,7 +51,7 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
               aria-current={n.id === active ? "page" : undefined}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{n.icon}</svg>
-              <span>{n.label}</span>
+              <span>{active === "workshop" && n.id === "inventory" ? "Library" : n.label}</span>
             </Link>
           ))}
           <details className="nav-more">

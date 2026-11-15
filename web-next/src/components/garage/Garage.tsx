@@ -533,7 +533,7 @@ function ModifyBox({ spec, onModify }: { spec: Spec; onModify: (text: string) =>
 
 const ALL_REPOS = '*all*';
 
-export default function Garage() {
+export default function Garage({initialTab='overview'}:{initialTab?:WorkTab}={}) {
   const [robots, saveRobots, ready] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const activeRobots = useMemo(() => activeRecords(robots), [robots]);
   const archivedRobots = useMemo(() => archivedRecords(robots), [robots]);
@@ -565,7 +565,7 @@ export default function Garage() {
    * stored robot — a fixed entry whose view replaces the workshop
    * while it is open. */
   const [twinOpen, setTwinOpen] = useState(false);
-  const [tab, setTab] = useState<WorkTab>('overview');
+  const [tab, setTab] = useState<WorkTab>(initialTab);
   /* While the twin is open, the SAME tab bar controls Omega1 instead
    * of the selected stored robot — its own tab state, so switching
    * Omega1 panes never closes the twin or touches the stored robot.
