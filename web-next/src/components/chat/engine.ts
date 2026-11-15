@@ -425,7 +425,7 @@ const GENERIC_NAME_TOKENS = new Set([
   "drive", "base", "wheel", "speed", "tank", "pushing", "dynamics",
   "electric", "hydraulic", "mini", "car", "arm", "gen", "starter",
 ]);
-const genericNameToken = (t: string) =>
+export const genericNameToken = (t: string) =>
   GENERIC_NAME_TOKENS.has(t) || /^\d+$/.test(t);
 
 function robotKeys(robot: RobotData): RobotKey[] {

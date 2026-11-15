@@ -32,6 +32,7 @@
 import {
   createEngine,
   esc,
+  genericNameToken,
   phraseIn,
   slugify,
   tokens,
@@ -119,11 +120,12 @@ function matchRobot(qt: string[], robots: RobotData[]): RobotData | null {
     const keys: { text: string; score: number }[] = [{ text: r.name, score: 10 }];
     if (toks.length > 1) {
       const last = toks[toks.length - 1];
-      if (last.length >= 3) keys.push({ text: last, score: 8 });
+      /* same everyday-word filter as the engine's robotKeys */
+      if (last.length >= 3 && !genericNameToken(last)) keys.push({ text: last, score: 8 });
       if (toks.length > 2) {
         keys.push({ text: toks.slice(-2).join(" "), score: 8 });
         toks.slice(1, -1).forEach((t) => {
-          if (t.length >= 5) keys.push({ text: t, score: 8 });
+          if (t.length >= 5 && !genericNameToken(t)) keys.push({ text: t, score: 8 });
         });
       }
     }
@@ -476,6 +478,16 @@ function omega1HowWorks(root: string): AnswerResult {
 }
 
 function dexHowWorks(robot: RobotData, root: string): AnswerResult {
+  /* The explainer is drawn from a recorded spec; an entry with only
+   * published figures has none, so point at its page instead. */
+  if (!robot.spec_file) {
+    return {
+      html:
+        "<p><strong>" + esc(robot.name) + "</strong> has no recorded spec in the Robodex, only the maker&rsquo;s " +
+        "published figures, so there is no step-through for it yet. Its page lists what is known.</p>",
+      hits: [{ kind: "robot", id: slugify(robot.name), label: dexId(robot) + " " + robot.name, route: robotRoute(root, robot) }],
+    };
+  }
   return {
     html:
       "<p>Here is <strong>" + esc(robot.name) + "</strong> as a step-through: power, brain, " +
