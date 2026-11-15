@@ -4,3 +4,5 @@ build/
 dist/
 .venv/
 .env
+# The /build/ route (the build guide) is source, not output.
+!web-next/src/app/build/
