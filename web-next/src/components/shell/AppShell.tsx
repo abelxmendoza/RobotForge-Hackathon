@@ -42,7 +42,7 @@ export default function AppShell({ active, crumbs = [], wide = false, gate = tru
     <div className="shell">
       <a className="skip-link" href="#content">Skip to content</a>
       <aside className="sidebar">
-        <Link className="brand" href="/">
+        <Link className="brand" href="/" aria-label="RobotForge home">
           <BrandMark /><span>RobotForge<small>App</small></span>
         </Link>
         <nav className="side-nav" aria-label="App">

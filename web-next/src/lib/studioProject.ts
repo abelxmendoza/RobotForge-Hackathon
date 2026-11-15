@@ -23,3 +23,6 @@ export function studioRoute(hash:string):{mode:'build'|'wiring'|'checks';panel:s
  return {mode:'build',panel:'parts',legacy:!!value&&!['overview','build','wrench'].includes(value)};
 }
 export function partLabel(id:string):string{return id.replace(/_(link|joint)$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());}
+
+export const STUDIO_INSPECT_EVENT='rf-studio-inspect';
+export function openStudioInspector(){if(typeof window!=='undefined')window.dispatchEvent(new Event(STUDIO_INSPECT_EVENT));}

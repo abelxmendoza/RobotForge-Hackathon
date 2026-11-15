@@ -33,7 +33,7 @@ export default function DriveScene({spec,robot,identity,scenario,running,resetKe
    const observer=new ResizeObserver(resize);observer.observe(host.current);resize();
    let world:Awaited<ReturnType<typeof createDriveWorld>>|undefined,raf=0,elapsed=0,last=performance.now(),sampleTick=0,replayTick=0;
    const freeObject=(object:import('three').Object3D)=>{object.traverse(o=>{const mesh=o as import('three').Mesh;mesh.geometry?.dispose();for(const m of Array.isArray(mesh.material)?mesh.material:mesh.material?[mesh.material]:[]){for(const v of Object.values(m))if(v&&typeof v==='object'&&(v as import('three').Texture).isTexture)(v as import('three').Texture).dispose();m.dispose();}});};
-   cleanup=()=>{cancelAnimationFrame(raf);observer.disconnect();controls.dispose();world?.free();freeObject(scene);renderer.dispose();renderer.domElement.remove();reframe.current=null;};
+   cleanup=()=>{cancelAnimationFrame(raf);observer.disconnect();controls.dispose();world?.free();world=undefined;freeObject(scene);renderer.dispose();renderer.domElement.remove();reframe.current=null;};
    // Fallback geometry is explicitly a proxy, never presented as a detailed twin.
    const proxy=new THREE.Group();const bodyH=Number(spec.height_m)||.18,clear=Number(spec.ground_clearance_m)||.02,L=Number(spec.length_m)||.3,W=Number(spec.width_m)||.2;
    const body=new THREE.Mesh(new THREE.BoxGeometry(L,W,Math.max(.01,bodyH-clear)),new THREE.MeshStandardMaterial({color:0x2da99c,metalness:.3,roughness:.5}));body.position.z=clear+(bodyH-clear)/2;body.castShadow=true;proxy.add(body);

@@ -340,7 +340,7 @@ export function omega1Ask(value: string): boolean {
   return !changes && t.split(/\s+/).filter(Boolean).length <= 12;
 }
 
-export default function ForgeThread({ docked = false }: { docked?: boolean } = {}) {
+export default function ForgeThread({ docked = false, compact = false }: { docked?: boolean; compact?: boolean } = {}) {
   /* Docked (the Workshop): only the oval composer shows at the bottom of
    * the page, like the bar on other pages; the conversation opens above
    * it when there is something to read, and collapses with ▾. */
@@ -1614,9 +1614,9 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
 
   const panel = (
     <>
-      <ModeBanner mode={mode.mode} reason={mode.why}>
+      {compact ? <p className="studio-muted">{mode.mode==='live'?'Live AI':mode.mode==='checking'?'Checking AI…':'Recorded AI · local tools available'}</p> : <ModeBanner mode={mode.mode} reason={mode.why}>
         {mode.mode === 'checking' ? null : status}
-      </ModeBanner>
+      </ModeBanner>}
       <div className="forge-thread" aria-live="polite">
         {entries.map((e) => {
           if (e.kind === 'stage') {
@@ -1862,7 +1862,7 @@ export default function ForgeThread({ docked = false }: { docked?: boolean } = {
                 (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
               }
             }}
-            placeholder={inputMode === 'design' ? 'Describe a robot in plain words…' : (docked ? 'Ask Wrench, or describe a robot…' : `Message ${ASSISTANT_NAME}…`)}
+            placeholder={compact ? 'Ask Wrench…' : inputMode === 'design' ? 'Describe a robot in plain words…' : (docked ? 'Ask Wrench, or describe a robot…' : `Message ${ASSISTANT_NAME}…`)}
           />
           <button
             type="submit"
