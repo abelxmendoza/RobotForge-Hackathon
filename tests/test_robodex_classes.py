@@ -172,7 +172,7 @@ def test_unknown_drivetrain_still_rejected():
 
 def test_new_entries_are_not_gated_with_class_reasons():
     by_name = {r.name: r for r in dex.robots}
-    assert len(dex.robots) == 12
+    assert len(dex.robots) >= 12
     for slug, (_dt, mobility) in NEW_FILES.items():
         entry = next(r for r in dex.robots if r.spec_file == f"examples/{slug}.json")
         assert entry.mobility_class == mobility, entry.name
@@ -195,7 +195,8 @@ def test_new_entries_are_not_gated_with_class_reasons():
 
 def test_new_robot_pages_do_not_advertise_ground_commands():
     for r in dex.robots:
-        if r.number < 5:
+        # the eight non-ground entries added together (#5-#12)
+        if r.number < 5 or r.number > 12:
             continue
         page = render_robot_page(r)
         assert "robotforge validate" in page, r.name

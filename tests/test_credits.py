@@ -62,10 +62,14 @@ def test_catalogue_robots_match_the_robodex():
     for maker in ("Ekumen", "ROBOTIS", "Holybro", "Bitcraze",
                   "Unitree", "MangDang"):
         assert maker in PAGE, maker
-    # Spot is a Spotter sighting (Cal Poly Pomona IRLab, Oct 28,
-    # 2026), credited as such — never as a catalogue entry.
-    assert "Boston Dynamics Spot is not a catalogue entry" in PAGE
+    # The Cal Poly Pomona Spot stays a Spotter sighting (Oct 28,
+    # 2026); since 2026-11-15 the catalogue also holds the Spot
+    # product record, and the page keeps the two apart.
     assert "Spotter sighting" in PAGE
+    assert "product record" in PAGE
+    for name in ("Optimus", "Atlas HD", "NEO Gamma", "Unitree H1",
+                 "Microduck", "RoboLabs", "SO-101", "LeKiwi", "VEX"):
+        assert name in PAGE, name
 
 
 def test_omega1_twin_and_services_credited():

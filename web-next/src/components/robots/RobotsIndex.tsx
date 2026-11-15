@@ -131,15 +131,11 @@ export default function RobotsIndex() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Robots</div>
           <h1><Term k="robodex">Robodex</Term></h1>
           <p className="lede">
-            Every robot RobotForge knows, sorted by how we know it. The
-            source tells you how far to trust its numbers.{" "}
-            <Link href="/#workflow">How the test works →</Link>{" "}
-            Know a robot that lives in a GitHub repo?{" "}
-            <Link href="/import/">Import the repo →</Link> and it joins your
-            Garage as a specimen with the repo attached.
+            Every robot RobotForge knows. The tag on each card says where its
+            numbers come from.{" "}
+            <Link href="/import/">Import a robot from GitHub →</Link>
           </p>
         </div>
       </div>

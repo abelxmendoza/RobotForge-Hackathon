@@ -70,6 +70,15 @@
 
   /* ---------------- robot matching ---------------- */
 
+  /* Everyday words inside robot names never pick a robot alone
+     (mirrors engine.ts GENERIC_NAME_TOKENS). */
+  var GENERIC_NAME_TOKENS = ['drive', 'base', 'wheel', 'speed', 'tank',
+    'pushing', 'dynamics', 'electric', 'hydraulic', 'mini', 'car', 'arm',
+    'gen', 'starter'];
+  function genericNameToken(t) {
+    return GENERIC_NAME_TOKENS.indexOf(t) !== -1 || /^\d+$/.test(t);
+  }
+
   function robotKeys(robot) {
     var toks = tokens(robot.name);
     var keys = [{ text: robot.name, score: 10 }];
@@ -77,12 +86,12 @@
       var last = toks[toks.length - 1];
       /* >= 3 so model designators like "go2" and "op3" resolve; both
          are distinctive, unlike a bare "g1" (2 chars, stays unmatched) */
-      if (last.length >= 3) keys.push({ text: last, score: 8 });
+      if (last.length >= 3 && !genericNameToken(last)) keys.push({ text: last, score: 8 });
       if (toks.length > 2) {
         keys.push({ text: toks.slice(-2).join(' '), score: 8 });
         /* distinctive middle token: "waffle" in TurtleBot3 Waffle Pi */
         toks.slice(1, -1).forEach(function (t) {
-          if (t.length >= 5) keys.push({ text: t, score: 8 });
+          if (t.length >= 5 && !genericNameToken(t)) keys.push({ text: t, score: 8 });
         });
       }
     }

@@ -38,7 +38,7 @@ EXPECT = {
 def _robots():
     data = json.loads((CATALOG / "robots.json").read_text(encoding="utf-8"))
     return {r["spec_file"].removeprefix("examples/").removesuffix(".json"): r
-            for r in data["robots"]}
+            for r in data["robots"] if r.get("spec_file")}
 
 
 def _manifest(slug):

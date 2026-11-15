@@ -31,7 +31,7 @@ export default async function RobotPage(
       active="robots"
       crumbs={[
         { label: "App", href: "/garage/" },
-        { label: "Robots", href: "/robots/" },
+        { label: "Robodex", href: "/robots/" },
         { label: robot.name },
       ]}
     >

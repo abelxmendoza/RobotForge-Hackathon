@@ -1,8 +1,16 @@
 {
  "note": "Per-robot physics-check data for the in-browser checks (URDF + Rapier). urdf_url points at the official model at the SAME pinned commit the robot's specimen import recorded (catalog/specimens/*.json) — nothing is re-hosted. Robots whose recorded model is not a plain URDF carry status 'none' and the reason, and the site shows that reason instead of results. catalog_mass_kg is the catalogue's own stated figure (key specs / provenance) for the mass audit; it is never the URDF's own sum.",
  "robots": {
+  "1x-neo-gamma": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
   "andino": {
    "reason": "Andino's official model ships as xacro (andino.urdf.xacro plus included files) — a format a build tool must expand before anything can parse it. No plain URDF is recorded for this entry, so there is nothing honest to run the checks on.",
+   "status": "none"
+  },
+  "anki-vector": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
    "status": "none"
   },
   "asimov-1": {
@@ -14,6 +22,22 @@
    "status": "urdf",
    "urdf_url": "https://raw.githubusercontent.com/menloresearch/asimov-1/43aa368adebcce099c3d80d33b37df68b6d48bf1/sim-model/asimov_1_25dof/urdf/asimov_1_25dof.urdf"
   },
+  "boston-dynamics-atlas": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "boston-dynamics-atlas-hd": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "boston-dynamics-spot": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "boston-dynamics-stretch": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
   "crazyflie-2-1": {
    "catalog_mass_kg": 0.029,
    "catalog_mass_label": "Bitcraze datasheet takeoff weight: 29 g (Robodex key specs)",
@@ -23,8 +47,28 @@
    "status": "urdf",
    "urdf_url": "https://raw.githubusercontent.com/utiasDSL/gym-pybullet-drones/2c2470c2043eb4cf474d9af2681c9fa10f2d0e2f/gym_pybullet_drones/assets/cf2p.urdf"
   },
+  "donkey-car": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "lekiwi": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "lerobot-so-101": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "microduck": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
   "mini-pupper": {
    "reason": "No URDF is recorded in the catalogue for this entry — its Robodex spec comes from MangDang's published specification pages, which carry no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "nvidia-jetbot": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
    "status": "none"
   },
   "openmanipulator-x": {
@@ -49,12 +93,24 @@
    "status": "urdf",
    "urdf_url": "urdf/pathfinder.urdf"
   },
+  "petoi-bittle": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
   "px4-x500": {
    "reason": "The recorded model for the X500 is an SDF from PX4's Gazebo models repo (models/x500_base/model.sdf), not a URDF. The physics checks parse URDF, so they do not run on this entry.",
    "status": "none"
   },
+  "reachy-mini": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
   "robotis-op3": {
    "reason": "The recorded model for the OP3 is an MJCF from the MuJoCo menagerie, not a URDF. The physics checks parse URDF, so they do not run on this entry.",
+   "status": "none"
+  },
+  "tesla-optimus-gen-2": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
    "status": "none"
   },
   "turtlebot3-burger": {
@@ -101,6 +157,30 @@
    "source_label": "unitreerobotics/unitree_ros @ 267182b — the specimen import's pinned commit",
    "status": "urdf",
    "urdf_url": "https://raw.githubusercontent.com/unitreerobotics/unitree_ros/267182b8521c8d6a631bab1fe63836873237a525/robots/go2_description/urdf/go2_description.urdf"
+  },
+  "unitree-h1": {
+   "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "vex-iq-drivebase": {
+   "reason": "No URDF is recorded for this VEX starter build. Bring it into the Workshop to get a model generated from its spec.",
+   "status": "none"
+  },
+  "vex-v5-mecanum-drive": {
+   "reason": "No URDF is recorded for this VEX starter build. Bring it into the Workshop to get a model generated from its spec.",
+   "status": "none"
+  },
+  "vex-v5-pushing-drive": {
+   "reason": "No URDF is recorded for this VEX starter build. Bring it into the Workshop to get a model generated from its spec.",
+   "status": "none"
+  },
+  "vex-v5-speed-tank": {
+   "reason": "No URDF is recorded for this VEX starter build. Bring it into the Workshop to get a model generated from its spec.",
+   "status": "none"
+  },
+  "vex-v5-tank-drive": {
+   "reason": "No URDF is recorded for this VEX starter build. Bring it into the Workshop to get a model generated from its spec.",
+   "status": "none"
   }
  }
 }

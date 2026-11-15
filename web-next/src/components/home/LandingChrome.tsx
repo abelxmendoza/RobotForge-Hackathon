@@ -13,7 +13,7 @@ import { BrandMark, REPO_URL } from "@/components/shell/AppShell";
  * not repeated as links here: one way in to each (Abel, 2026-11-01). */
 const SITE_NAV = [
   { label: "Home", href: "/" },
-  { label: "Robots", href: "/robots/" },
+  { label: "Robodex", href: "/robots/" },
   { label: "How it works", href: "/how-it-works/" },
 ];
 
