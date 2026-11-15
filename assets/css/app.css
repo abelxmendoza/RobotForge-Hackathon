@@ -2597,3 +2597,141 @@ ol.forge-list{list-style:decimal;padding-left:20px}
   .ip-track-line li:last-child::before{display:none}
 }
 @media(prefers-reduced-motion:reduce){.ip-fill{animation:none}}
+
+/* ---------- Workshop studio (2026-11-12) ----------
+   One screen: robot name + Build/Wire/Test + Save in a single header
+   row, the robot filling the space, one side panel, your robots on a
+   shelf below. Wrench sits under the side panel on desktop. */
+.content:has(.studio){max-width:none;padding:var(--s3) var(--s5) var(--s3)}
+.workshop.studio-shell{padding-bottom:0}
+.studio{--studio-h:calc(100dvh - 56px - 24px);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr auto;gap:var(--s3);min-height:var(--studio-h);position:relative}
+.studio button{font:600 var(--fs-xs)/1 var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;min-height:36px;cursor:pointer;transition:background .15s var(--ease),border-color .15s var(--ease)}
+.studio button:hover:not(:disabled){border-color:var(--border-strong);background:var(--surface-3)}
+.studio button:disabled{opacity:.45;cursor:default}
+.studio button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.studio button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.studio .studio-primary,.studio-dialog .studio-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.studio .studio-primary:hover:not(:disabled){background:var(--accent);filter:brightness(1.08);border-color:var(--accent)}
+.studio-bay{display:block;font:600 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint)}
+.studio-muted{font-size:var(--fs-xs);color:var(--text-faint);line-height:1.4}
+.studio-evidence{display:inline-block;font-size:var(--fs-xs);color:var(--text-muted);border:1px solid var(--border);border-radius:999px;padding:2px 10px;white-space:nowrap}
+/* header */
+.studio-header{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap}
+.studio-project-name{display:flex;align-items:baseline;gap:var(--s3);min-width:0;flex:1 1 260px}
+.studio-project-name .studio-bay{display:none}
+.studio-project-name h1{font-size:var(--fs-lg);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.studio-modes{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.studio-modes button{background:transparent;border-color:transparent;min-width:76px}
+.studio-modes button[aria-pressed="true"]{background:var(--surface-3);border-color:var(--border-strong);color:var(--text)}
+.studio-header-actions{display:flex;gap:var(--s2);margin-left:auto}
+.studio-notice{display:flex;align-items:center;gap:var(--s3);font-size:var(--fs-xs);background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r-sm);padding:6px 6px 6px 12px}
+.studio-notice[role="alert"]{border-left-color:var(--marginal)}
+.studio-notice button:first-of-type{margin-left:auto}
+/* main area */
+.studio-build,.studio-task-view{min-height:0}
+.studio-scene-grid{display:grid;grid-template-columns:minmax(0,1fr) var(--panel-w);gap:var(--s3);height:clamp(420px,calc(var(--studio-h) - 170px),1100px)}
+.studio-canvas{position:relative;min-width:0;min-height:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.studio-canvas > div:not(.studio-scene-tools):not(.studio-empty):not(.studio-load),.studio-canvas canvas,.studio-model{width:100%;height:100%}
+.studio-canvas .ta-stage,.studio-canvas .r3d,.studio-canvas [class*="viewer"]{height:100%!important;min-height:0!important;border:0!important;border-radius:0!important}
+.studio-scene-tools{position:absolute;top:var(--s3);left:var(--s3);z-index:3;display:flex;gap:6px;flex-wrap:wrap}
+.studio-scene-tools button{background:rgba(11,20,32,.78);backdrop-filter:blur(6px)}
+.studio-scene-caption{position:absolute;left:var(--s3);bottom:var(--s3);z-index:2;font-size:12px;color:var(--text-faint);pointer-events:none}
+.studio-load{position:absolute;inset:0;display:grid;place-content:center;gap:var(--s2);text-align:center;color:var(--text-muted);z-index:2}
+.studio-inspector{display:flex;flex-direction:column;gap:var(--s3);min-height:0;overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--s4);padding-bottom:calc(var(--s4) + 72px)}
+.studio-panel-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.studio-panel-head h2{font-size:var(--fs-md);line-height:1.2}
+.studio-search,.studio-field input,.studio-field select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;font:inherit;font-size:var(--fs-sm)}
+.studio-field{display:grid;gap:4px;font-size:var(--fs-xs);color:var(--text-muted)}
+.studio-field small{color:var(--text-faint)}
+.studio-field input[type="range"]{padding:0;border:0;background:transparent;accent-color:var(--accent)}
+.studio-parts{display:flex;flex-wrap:wrap;gap:6px}
+.studio-parts button{display:inline-flex;align-items:center;gap:6px;font-weight:500}
+.studio-parts small{color:var(--text-faint);font-weight:400}
+.studio-joints{display:grid;gap:var(--s3)}
+.studio-part-card{display:grid;gap:var(--s2);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--s3);font-size:var(--fs-sm)}
+.studio-part-card h3{font-size:var(--fs-md)}
+.studio-part-card p,.studio-inspector p{font-size:var(--fs-sm);color:var(--text-muted);line-height:1.45}
+.studio-inspector h3{font-size:var(--fs-md)}
+.studio-inspector progress{width:100%;accent-color:var(--accent)}
+.studio-inline{display:flex;flex-wrap:wrap;gap:6px}
+.studio-version{display:flex!important;justify-content:space-between;align-items:center;text-align:left;width:100%;font-weight:500!important}
+.studio-version small{color:var(--text-faint);font-weight:400}
+.studio-renderer{position:relative;height:100%}
+.studio-view-settings{position:absolute;top:var(--s3);right:calc(var(--panel-w) + var(--s3) + var(--s3));z-index:4;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.studio-view-settings > button,.studio-view-settings [role="group"] button{background:rgba(11,20,32,.78)}
+.studio-view-settings [role="group"]{display:flex;gap:6px}
+.studio-overlay-panel{position:absolute;right:0;top:0;width:var(--panel-w);display:grid;gap:var(--s2);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r);padding:var(--s4);z-index:5}
+.studio-task-view{display:grid;grid-template-rows:auto 1fr;gap:var(--s3);margin-right:calc(var(--panel-w) + var(--s3))}
+.studio-task-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap}
+.studio-task-head h2{font-size:var(--fs-lg)}
+.studio-test-issues{display:grid;gap:6px;border:1px solid var(--marginal);background:var(--marginal-soft);border-radius:var(--r-sm);padding:var(--s3);font-size:var(--fs-sm)}
+.studio-empty{display:grid;justify-items:start;gap:var(--s2);padding:var(--s6);background:var(--surface);border:1px dashed var(--border-strong);border-radius:var(--r)}
+.studio-empty h2{font-size:var(--fs-lg)}
+.studio-empty p{color:var(--text-muted);font-size:var(--fs-sm)}
+.studio-records{display:grid;gap:var(--s3);justify-items:start}
+.studio-records > :last-child{width:100%}
+/* robot shelf: left of the Wrench column */
+.studio-fleet{display:flex;align-items:center;gap:var(--s3);min-width:0;margin-right:calc(var(--panel-w) + var(--s3))}
+.studio-fleet > div{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:thin;padding:2px;min-width:0}
+.studio-fleet > div button{display:flex;align-items:center;gap:var(--s2);text-align:left;padding:6px 12px 6px 6px;min-height:52px;background:var(--surface);flex:none}
+.studio-fleet > div button[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.studio-fleet > div button span{display:grid;gap:2px}
+.studio-fleet strong{font-size:var(--fs-xs);white-space:nowrap}
+.studio-fleet small{font-size:11px;font-weight:400;color:var(--text-faint)}
+.studio-fleet > button{flex:none;width:44px;height:44px;font-size:20px!important}
+/* new robot dialog */
+.studio-dialog{margin:auto;width:min(460px,calc(100vw - 32px));background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:var(--s5);box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.studio-dialog::backdrop{background:rgba(4,8,14,.7)}
+.studio-dialog[open]{display:grid;gap:var(--s3)}
+.studio-dialog h2{font-size:var(--fs-lg)}
+.studio-dialog p{color:var(--text-muted);font-size:var(--fs-sm)}
+.studio-dialog button,.studio-dialog a{font:600 var(--fs-sm)/1.2 var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;cursor:pointer;text-align:left}
+.studio-new-card{display:grid!important;gap:4px;padding:14px 16px!important}
+.studio-new-card span{font-weight:400;color:var(--text-muted);font-size:var(--fs-xs)}
+.studio-new-card:hover{border-color:var(--accent)!important}
+/* Wrench: in the side panel's column on desktop, never across the
+   robot or the header. The column starts under the header row. */
+.studio-shell{position:relative;--panel-w:380px}
+@media (min-width:1101px){
+  .studio-shell .studio-wrench.chat-bar{position:absolute;left:auto;right:0;transform:none;top:64px;bottom:0;width:var(--panel-w);justify-content:flex-end;pointer-events:none;z-index:6}
+  .studio-shell .studio-wrench.chat-bar > *{pointer-events:auto;min-height:0}
+  .studio-shell .studio-wrench .wrench-panel,.studio-shell .studio-wrench .chat-bar-panel{max-height:none;min-height:0;flex:0 1 auto;overflow:hidden;display:flex;flex-direction:column}
+}
+/* One compact Wrench bar: no mode toggle or suggestion chips over the
+   Workshop (typing "design a rover…" picks the mode by itself). */
+.studio-shell .studio-wrench .main-chat-suggestions,.studio-shell .studio-wrench .forge-composer .g-tabs,.studio-shell .studio-wrench .fc-chips{display:none}
+.studio-shell > .studio{width:100%;max-width:none}
+@media (max-width:1100px){
+  .studio{--studio-h:auto;min-height:0}
+  .content:has(.studio){padding:var(--s3) 12px calc(200px + env(safe-area-inset-bottom))}
+  .studio-scene-grid{grid-template-columns:minmax(0,1fr);height:auto}
+  .studio-canvas{height:min(58dvh,520px)}
+  .studio-inspector{padding-bottom:var(--s4);max-height:none}
+  .studio-task-view,.studio-fleet{margin-right:0}
+  .studio-view-settings{right:var(--s3)}
+  .studio-header{gap:var(--s2)}
+  .studio-project-name{flex-basis:100%}
+  .studio-header-actions{margin-left:auto}
+  .studio-modes button{min-width:0;padding:9px 14px}
+}
+@media (max-width:560px){
+  .studio-header-actions button{padding:9px 10px}
+  .studio-modes{flex:1}
+  .studio-modes button{flex:1}
+  .studio-header-actions{width:100%;margin-left:0}
+  .studio-header-actions button{flex:1}
+}
+/* side panel: one segmented switch, rover kit rows */
+.studio-seg{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.studio-seg button{flex:1;background:transparent;border-color:transparent}
+.studio-seg button[aria-pressed="true"]{background:var(--surface-3);border-color:var(--border-strong);color:var(--text)}
+.studio-roles{display:grid;gap:6px}
+.studio-roles button{display:grid;gap:3px;text-align:left;font-weight:500;padding:8px 12px;line-height:1.25}
+.studio-roles small{font-size:11px;font-weight:600;text-transform:capitalize;color:var(--text-faint)}
+.studio-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.studio-field textarea{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;font:inherit;font-size:var(--fs-sm);resize:vertical}
+.studio-options{display:grid;gap:6px}
+.studio-options button{text-align:left;font-weight:500;line-height:1.3}
+.studio-shell .studio-wrench textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the in-flow demo strip takes ~58px off the studio's height */
+body:has(.demo-bar) .studio{--studio-h:calc(100dvh - 56px - 24px - 58px)}

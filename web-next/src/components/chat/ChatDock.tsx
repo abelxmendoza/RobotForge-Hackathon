@@ -1,4 +1,5 @@
 "use client";
+import { parseRoverKitCommand, requestRoverKit } from '@/lib/roverKit';
 import {UNITY_ASYNC_EVENT} from '@/lib/unityProtocol';
 import type {UnityRequest} from '@/components/unity/UnityWorkshop';
 import {parseHumanoidCommand,requestHumanoid} from '@/lib/humanoid';
@@ -1244,6 +1245,12 @@ export function useForgeAssistant() {
       if (benchCommand) {
         const result = requestBench(benchCommand);
         noteBubble(result.handled ? result.message : 'Open this robot’s Build workbench in Workshop, then ask again.');
+        return true;
+      }
+      const kitCommand = parseRoverKitCommand(q);
+      if (kitCommand) {
+        const result = requestRoverKit(kitCommand);
+        noteBubble(result.handled ? result.message : 'Open a rover in the Workshop first, then ask again.');
         return true;
       }
       if (runVexCommand(q)) return true;

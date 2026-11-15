@@ -22,8 +22,9 @@ assert.throws(()=>saveStudioVersion([{...records[0],archivedAt:'2026-01-01'}],'r
 assert.throws(()=>saveStudioVersion([],'r','v1',{},'v3','c'),/removed/);
 assert.equal(studioRoute('#tab=simulate').mode,'checks');
 assert.equal(studioRoute('#tab=specs').panel,'specs');
-assert.equal(studioRoute('#rover-design').panel,'design');
+assert.equal(studioRoute('#rover-design').panel,'kit');
 assert.equal(studioRoute('#omega1').legacy,true);
+assert.deepEqual(studioRoute('#robot=rover-2&tab=kit'),{mode:'build',panel:'kit',legacy:false,robotId:'rover-2'});
 assert.equal(partLabel('left_elbow_joint'),'Left Elbow');
 ''')
  result=subprocess.run(['node',str(tmp_path/'check.mjs')],capture_output=True,text=True)

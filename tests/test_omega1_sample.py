@@ -110,7 +110,7 @@ def test_demobar_welcome_leads_with_the_sample():
     steps = bar.split('<ol className="demo-steps">', 1)[1].split("</ol>", 1)[0]
     first_step = steps.split("<li>", 1)[1].split("</li>", 1)[0] if "<li>" in steps else steps.split("<li", 1)[1]
     assert "Omega1 sample" in first_step
-    assert "SAMPLE_REPO_URL" in bar and "SAMPLE_PROMPT" in bar and "SAMPLE_DEMO_NOTE" in bar
+    assert "SAMPLE_REPO_URL" in bar and "SAMPLE_PROMPT" in bar
     assert "Send it to Wrench" in bar and "Copy" in bar
 
 

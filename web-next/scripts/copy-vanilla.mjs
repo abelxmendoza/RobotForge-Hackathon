@@ -3,7 +3,7 @@
 // into the export itself. (Copying into out/ after `next build` does not
 // survive Vercel's Next.js builder — the copy ran but never deployed.)
 // The vanilla files live at the repository root, one level up from web-next.
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,3 +26,16 @@ for (const name of [...files, ...dirs]) {
   copied++;
 }
 console.log(`copy-vanilla: copied ${copied} entries into public/vanilla/`);
+
+// The legacy catalogue includes optional illustrations with an onerror
+// removal fallback. Omit unavailable figures from the exported page so
+// they do not produce broken requests before that fallback can run.
+const cataloguePage = path.join(destRoot, "app", "robots", "index.html");
+if (existsSync(cataloguePage)) {
+  const html = readFileSync(cataloguePage, "utf8");
+  const complete = html.replace(/<figure class="pfig"><img src="([^"<>]+)"[^>]*>[\s\S]*?<\/figure>/g, (figure, src) => {
+    if (!src.startsWith("../../assets/img/parts/")) return figure;
+    return existsSync(path.resolve(path.dirname(cataloguePage), src)) ? figure : "";
+  });
+  writeFileSync(cataloguePage, complete);
+}
