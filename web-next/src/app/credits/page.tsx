@@ -167,12 +167,25 @@ export default function CreditsPage() {
           <li><strong>Unitree G1</strong> — Unitree</li>
           <li><strong>ROBOTIS OP3</strong> — ROBOTIS</li>
           <li><strong>OpenManipulator-X</strong> — ROBOTIS</li>
+          <li><strong>Asimov 1</strong> — Menlo Research</li>
         </ul>
         <p>
-          Boston Dynamics Spot is not a catalogue entry: it appears
-          as a Spotter sighting, photographed at Cal Poly
-          Pomona&apos;s IRLab on October 28, 2026, and matched
-          against the Robodex from that photo.
+          Robots added from their makers&apos; published figures
+          (no files copied, sources linked on each page): Tesla
+          Optimus Gen 2, Boston Dynamics Atlas, Atlas HD, Spot and
+          Stretch, 1X NEO Gamma, Unitree H1, Anki Vector, and
+          Microduck (Pollen Robotics). The first eight of those
+          follow the fleet in RoboLabs. Open-source robots: LeRobot
+          SO-101 (TheRobotStudio), LeKiwi (SIGRobotics UIUC), Reachy
+          Mini (Pollen Robotics), Petoi Bittle, NVIDIA JetBot and
+          Donkey Car. The VEX V5 and IQ entries are RobotForge starter
+          builds made from VEX&apos;s published part ratings.
+        </p>
+        <p>
+          The Spot in Sighted is a separate Spotter sighting,
+          photographed at Cal Poly Pomona&apos;s IRLab on October
+          28, 2026. The catalogue&apos;s Boston Dynamics Spot entry is
+          the product record from Boston Dynamics&apos; spec page.
         </p>
       </section>
 

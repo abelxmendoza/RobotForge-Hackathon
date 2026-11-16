@@ -46,6 +46,26 @@ EXPECTED = {
     "ROBOTIS OP3": ("Legged", "Humanoid"),
     "OpenManipulator-X": ("Stationary", "Robotic arm"),
     "Asimov 1": ("Legged", "Humanoid"),
+    "Tesla Optimus Gen 2": ("Legged", "Humanoid"),
+    "Boston Dynamics Atlas": ("Legged", "Humanoid"),
+    "Boston Dynamics Atlas HD": ("Legged", "Humanoid"),
+    "1X NEO Gamma": ("Legged", "Humanoid"),
+    "Unitree H1": ("Legged", "Humanoid"),
+    "Boston Dynamics Stretch": ("Ground — wheeled", "Mobile manipulator"),
+    "Anki Vector": ("Ground — tracked", "Tracked rover"),
+    "Microduck": ("Legged", "Biped"),
+    "Boston Dynamics Spot": ("Legged", "Quadruped"),
+    "LeRobot SO-101": ("Stationary", "Robotic arm"),
+    "LeKiwi": ("Ground — wheeled", "Mobile manipulator"),
+    "Reachy Mini": ("Stationary", "Desktop robot"),
+    "Petoi Bittle": ("Legged", "Quadruped"),
+    "NVIDIA JetBot": ("Ground — wheeled", "Differential rover"),
+    "Donkey Car": ("Ground — wheeled", "Car-like"),
+    "VEX V5 Tank Drive": ("Ground — wheeled", "Skid-steer rover"),
+    "VEX V5 Speed Tank": ("Ground — wheeled", "Skid-steer rover"),
+    "VEX V5 Pushing Drive": ("Ground — wheeled", "Skid-steer rover"),
+    "VEX V5 Mecanum Drive": ("Ground — wheeled", "Mecanum rover"),
+    "VEX IQ Drivebase": ("Ground — wheeled", "Skid-steer rover"),
 }
 
 
@@ -70,7 +90,7 @@ def test_taxonomy_tree_shape():
         assert len(set(subs)) == len(subs), f"{cls}: duplicate subtype"
     assert mobility_subtypes("Ground — wheeled") == (
         "Differential rover", "Skid-steer rover", "Mecanum rover",
-        "Car-like")
+        "Car-like", "Mobile manipulator")
     assert mobility_subtypes("Nope") == ()
 
 
@@ -106,17 +126,18 @@ def test_robodex_page_shows_class_paths_and_class_filters():
         assert r.class_path in page, r.name
         assert f'data-mobility="{r.mobility_class}"' in page, r.name
     # every populated class is an enabled chip with its count
-    for cls, n in (("Ground — wheeled", 4), ("Aerial", 2),
-                   ("Legged", 5), ("Stationary", 1)):
+    for cls, n in (("Ground — wheeled", 13), ("Aerial", 2),
+                   ("Legged", 13), ("Stationary", 3),
+                   ("Ground — tracked", 1)):
         assert f'data-cfilter="{cls}"' in page, cls
         assert f"{cls} ({n})" in page, cls
         assert f"{cls} — none yet" not in page, cls
     # the still-empty branches show disabled, labelled "none yet" —
     # no entries are invented for them
-    for cls in ("Ground — tracked", "Marine"):
+    for cls in ("Marine",):
         assert f'data-cfilter="{cls}"' in page, cls
         assert f"{cls} — none yet" in page, cls
-    assert page.count("disabled") >= 2
+    assert page.count("disabled") >= 1
 
 
 def test_robot_pages_show_the_class_path():

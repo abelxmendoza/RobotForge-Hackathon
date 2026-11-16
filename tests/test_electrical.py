@@ -47,7 +47,11 @@ def _overvolt(spec):
 # is recorded for it — the unwired set is exactly these, and it is
 # asserted so an accidental omission (or an invented harness) both
 # fail loudly.
-UNWIRED = {"Unitree Go2", "Unitree G1", "Asimov 1"}
+# The VEX starter builds (added 2026-11-15) record drive specs only;
+# no wiring block is drawn for them.
+UNWIRED = {"Unitree Go2", "Unitree G1", "Asimov 1",
+           "VEX V5 Tank Drive", "VEX V5 Speed Tank", "VEX V5 Pushing Drive",
+           "VEX V5 Mecanum Drive", "VEX IQ Drivebase"}
 
 
 def test_every_robodex_robot_spec_carries_valid_wiring():

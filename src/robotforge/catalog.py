@@ -103,11 +103,12 @@ STABILITY_GRADES = ("STABLE", "MARGINAL", "UNSTABLE")
 MOBILITY_TAXONOMY = (
     ("Aerial", ("Quadcopter", "Hexacopter", "Fixed-wing", "VTOL")),
     ("Ground — wheeled", ("Differential rover", "Skid-steer rover",
-                          "Mecanum rover", "Car-like")),
+                          "Mecanum rover", "Car-like",
+                          "Mobile manipulator")),
     ("Ground — tracked", ("Tracked rover",)),
     ("Legged", ("Quadruped", "Humanoid", "Biped")),
     ("Marine", ("Surface", "Underwater")),
-    ("Stationary", ("Robotic arm", "Gantry")),
+    ("Stationary", ("Robotic arm", "Gantry", "Desktop robot")),
 )
 MOBILITY_CLASSES = tuple(cls for cls, _ in MOBILITY_TAXONOMY)
 

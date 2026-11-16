@@ -24,7 +24,7 @@ export default function KitPage() {
     <AppShell
       active="robots"
       crumbs={[
-        { label: "Robots", href: "/robots/" },
+        { label: "Robodex", href: "/robots/" },
         { label: "Parts catalogue" },
       ]}
     >
