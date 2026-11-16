@@ -299,6 +299,7 @@ export default function Omega1Simulator() {
         <div className="o1sim-links">
           <a className="btn btn-sm" href="/explain/?robot=omega1">How does Omega1 work?</a>
           <a className="btn btn-sm" href="/film/">Watch Omega1 come apart</a>
+          <a className="btn btn-sm" href="/build/">Build a rover step by step</a>
           <a className="btn btn-sm" href="/garage/#omega1">Open Omega1 in the Workshop</a>
           <a className="btn btn-sm" href={OMEGA1_PHOTO.source} target="_blank" rel="noreferrer">The real robot&apos;s photo ↗</a>
         </div>
