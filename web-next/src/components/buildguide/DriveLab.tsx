@@ -8,8 +8,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createDriveWorld } from '@/lib/drivePhysics';
 import { driveInput } from '@/lib/simulation';
 import {
-  ARENA_HALF, AUTO, BOARDS, DEFAULT_ARENA, SONAR_MIN_TOP_M, arenaSolids, avoiderSketch, createAutopilot, parseArena, serializeArena,
-  sidesToInput, sonarCm, starterRoverSpec, type ArenaBox, type BoardId, type FlowId,
+  ARENA_HALF, AUTO, BOARDS, COURSES, DEFAULT_ARENA, FINISH, SONAR_MIN_TOP_M, SUMO, avoiderSketch, courseBoxes, courseCheck, courseSolids,
+  createAutopilot, parseArena, serializeArena, sidesToInput, sonarCm, starterRoverSpec,
+  type ArenaBox, type BoardId, type CourseId, type CourseResult, type FlowId,
 } from '@/lib/buildGuide';
 import { yawDeg } from '@/lib/omega1Sim';
 import { buildRover, setLed, SONAR_X, WHEEL_R } from './roverModel';
@@ -17,9 +18,15 @@ import ArenaEditor from './ArenaEditor';
 import { FlowChart, FlowCode } from './CodeWalk';
 
 const ARENA_KEY = 'rf.buildguide.arena.v1';
+const COURSE_KEY = 'rf.buildguide.course.v1';
+const BEST_KEY = 'rf.buildguide.best.v1';
 const KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'];
 type Mode = 'manual' | 'auto';
 type Live = { cm: number; servo: number; led: boolean; buzzer: boolean; node: FlowId | null; trail: FlowId[]; x: number; y: number; heading: number };
+
+function loadBest(): Partial<Record<CourseId, number>> {
+  try { const v = JSON.parse(localStorage.getItem(BEST_KEY) ?? '{}'); return v && typeof v === 'object' ? v : {}; } catch { return {}; }
+}
 
 function loadArena(): ArenaBox[] {
   try { return parseArena(localStorage.getItem(ARENA_KEY)) ?? DEFAULT_ARENA; } catch { return DEFAULT_ARENA; }
@@ -32,6 +39,10 @@ export default function DriveLab({ board }: { board: BoardId }) {
   const keys = useRef(new Set<string>());
   const [arena, setArena] = useState<ArenaBox[]>(DEFAULT_ARENA);
   const [applied, setApplied] = useState<ArenaBox[]>(DEFAULT_ARENA);
+  const [course, setCourse] = useState<CourseId>('boxes');
+  const [result, setResult] = useState<CourseResult>(null);
+  const [running, setRunning] = useState(false);
+  const [best, setBest] = useState<Partial<Record<CourseId, number>>>({});
   const [resetKey, setResetKey] = useState(0);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -51,7 +62,21 @@ export default function DriveLab({ board }: { board: BoardId }) {
   ctl.current = { mode, speed, head, led, beep, sound, follow };
 
   // The saved arena, once, after mount (localStorage is per viewer).
-  useEffect(() => { const a = loadArena(); setArena(a); setApplied(a); }, []);
+  useEffect(() => {
+    const a = loadArena(); setArena(a); setApplied(a); setBest(loadBest());
+    try { const c = localStorage.getItem(COURSE_KEY); if (COURSES.some((x) => x.id === c)) setCourse(c as CourseId); } catch { /* not saved */ }
+  }, []);
+  useEffect(() => { try { localStorage.setItem(COURSE_KEY, course); } catch { /* private mode: not saved */ } }, [course]);
+  const finish = useCallback((r: NonNullable<CourseResult>, c: CourseId) => {
+    setResult(r);
+    if (r.kind === 'lose') return;
+    setBest((b) => {
+      if (b[c] !== undefined && b[c]! <= r.t) return b;
+      const next = { ...b, [c]: r.t };
+      try { localStorage.setItem(BEST_KEY, JSON.stringify(next)); } catch { /* not saved */ }
+      return next;
+    });
+  }, []);
   useEffect(() => { try { localStorage.setItem(ARENA_KEY, serializeArena(arena)); } catch { /* private mode: not saved */ } }, [arena]);
 
   const log = useCallback((lines: string[], t: number) => {
@@ -85,7 +110,7 @@ export default function DriveLab({ board }: { board: BoardId }) {
 
   useEffect(() => {
     let disposed = false, cleanup: (() => void) | undefined;
-    setReady(false); setError('');
+    setReady(false); setError(''); setResult(null); setRunning(false);
     (async () => {
       const THREE = await import('three');
       const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
@@ -104,11 +129,25 @@ export default function DriveLab({ board }: { board: BoardId }) {
       const floor = new THREE.Mesh(keep(new THREE.PlaneGeometry(ARENA_HALF * 2, ARENA_HALF * 2)), keep(new THREE.MeshStandardMaterial({ color: 0x23453d, roughness: 0.95 })));
       floor.receiveShadow = true; scene.add(floor);
       const grid = new THREE.GridHelper(ARENA_HALF * 2, 12, 0x3f7468, 0x2e5a50); grid.rotation.x = Math.PI / 2; grid.position.z = 0.001; scene.add(grid); disposables.push(grid);
-      const solids = arenaSolids(applied);
+      const solids = courseSolids(course, applied);
+      const shown = courseBoxes(course, applied);
+      if (course === 'sumo') {
+        const ring = new THREE.Mesh(keep(new THREE.CircleGeometry(SUMO.radius, 96)), keep(new THREE.MeshStandardMaterial({ color: 0x1c1f24, roughness: 0.9 })));
+        ring.position.z = 0.002; ring.receiveShadow = true; scene.add(ring);
+        const edge = new THREE.Mesh(keep(new THREE.RingGeometry(SUMO.radius - SUMO.edge, SUMO.radius, 96)), keep(new THREE.MeshBasicMaterial({ color: 0xf1f5f9 })));
+        edge.position.z = 0.003; scene.add(edge);
+      }
+      if (course === 'course') {
+        const pad = new THREE.Mesh(keep(new THREE.PlaneGeometry(FINISH.half * 2, FINISH.half * 2)), keep(new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.55 })));
+        pad.position.set(FINISH.x, FINISH.y, 0.003); scene.add(pad);
+      }
+      const b = SUMO.block;
+      const blockMesh = course === 'sumo' ? new THREE.Mesh(keep(new THREE.BoxGeometry(b.hx * 2, b.hy * 2, b.hz * 2)), keep(new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 }))) : null;
+      if (blockMesh) { blockMesh.castShadow = true; blockMesh.position.set(b.x, b.y, b.hz); scene.add(blockMesh); }
       const tones: Record<ArenaBox['tone'], number> = { card: 0xc9965a, wood: 0xa8743f, blue: 0x4f86c6 };
       const wallMat = keep(new THREE.MeshStandardMaterial({ color: 0xe8e4d8, roughness: 0.8 }));
       solids.forEach((s, i) => {
-        const m = new THREE.Mesh(keep(new THREE.BoxGeometry(s.hx * 2, s.hy * 2, s.hz * 2)), s.wall ? wallMat : keep(new THREE.MeshStandardMaterial({ color: tones[applied[i - 4].tone], roughness: 0.85 })));
+        const m = new THREE.Mesh(keep(new THREE.BoxGeometry(s.hx * 2, s.hy * 2, s.hz * 2)), s.wall ? wallMat : keep(new THREE.MeshStandardMaterial({ color: tones[shown[i - 4].tone], roughness: 0.85 })));
         m.position.set(s.x, s.y, s.z); m.castShadow = m.receiveShadow = true; scene.add(m);
       });
       const beamGeo = keep(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)]));
@@ -129,7 +168,7 @@ export default function DriveLab({ board }: { board: BoardId }) {
       };
       cleanup = () => { cancelAnimationFrame(raf); buzz(false); audio?.close().catch(() => {}); ro.disconnect(); controls.dispose(); world?.free(); model.dispose(); for (const d of disposables) d.dispose(); renderer.dispose(); renderer.domElement.remove(); };
 
-      try { world = await createDriveWorld(spec, 'flat', solids); } catch (e) { if (!disposed) setError((e as Error).message); return; }
+      try { world = await createDriveWorld(spec, 'flat', solids, course === 'sumo' ? [SUMO.block] : []); } catch (e) { if (!disposed) setError((e as Error).message); return; }
       if (disposed) { world.free(); world = undefined; return; }
       setReady(true);
       setSerial([`Starter rover · ${BOARDS[board].name} · simulated`, `Serial @ 115200 baud`, `HC-SR04, SG90 and L9110S ready`]);
@@ -141,6 +180,7 @@ export default function DriveLab({ board }: { board: BoardId }) {
       let servo = 90, cm = AUTO.NO_ECHO_CM, input = { throttle: 0, turn: 0 };
       let out: ReturnType<NonNullable<typeof pilot.current>['tick']> | null = null;
       const cam = new THREE.Vector3();
+      let startT: number | null = null, over = false, blockPose: { x: number; y: number; qx: number; qy: number; qz: number; qw: number; z: number } | null = null;
       const frame = (now: number) => {
         if (disposed) return;
         acc = Math.min(acc + (now - last) / 1000, 4 / 60); last = now;
@@ -149,7 +189,9 @@ export default function DriveLab({ board }: { board: BoardId }) {
           const yaw = yawDeg(pose), a = (yaw * Math.PI) / 180;
           const target = c.mode === 'auto' ? (out?.servo ?? 90) : c.head;
           servo += Math.sign(target - servo) * Math.min(Math.abs(target - servo), 400 / 60); // SG90: about 0.1 s per 60°
-          cm = sonarCm(pose.x + Math.cos(a) * SONAR_X, pose.y + Math.sin(a) * SONAR_X, yaw + servo - 90, solids);
+          // The sumo block moves, so the sensor sees it where it is now (as an upright square).
+          const seen = blockPose ? [...solids, { x: blockPose.x, y: blockPose.y, z: blockPose.z, hx: b.hx, hy: b.hy, hz: b.hz }] : solids;
+          cm = sonarCm(pose.x + Math.cos(a) * SONAR_X, pose.y + Math.sin(a) * SONAR_X, yaw + servo - 90, seen);
           if (c.mode === 'auto' && pilot.current) {
             // The sketch loops about every 20 ms (its delay(20) plus a reading).
             while (simT * 1000 >= nextTick) { out = pilot.current.tick(nextTick, cm); nextTick += 20; if (out.log.length) log(out.log, simT); }
@@ -159,9 +201,17 @@ export default function DriveLab({ board }: { board: BoardId }) {
             const k = driveInput(keys.current), s = c.speed / 100;
             input = { throttle: k.throttle * s, turn: k.turn * s };
           }
+          if (over) input = { throttle: 0, turn: 0 }; // the run is over: the car waits for Reset
           pose = world!.step(input.throttle, input.turn); acc -= 1 / 60; simT += 1 / 60;
+          blockPose = course === 'sumo' ? world!.blocks()[0] : null;
+          if (startT === null && Math.hypot(pose.x, pose.y) > 0.05) { startT = simT; setRunning(true); }
+          if (!over && course !== 'boxes') {
+            const r = courseCheck(course, pose, blockPose, startT, simT);
+            if (r) { over = true; finish(r, course); log([r.text], simT); }
+          }
         }
         simNow.current = simT;
+        if (blockMesh && blockPose) { blockMesh.position.set(blockPose.x, blockPose.y, blockPose.z); blockMesh.quaternion.set(blockPose.qx, blockPose.qy, blockPose.qz, blockPose.qw); }
         const yaw = yawDeg(pose), a = (yaw * Math.PI) / 180;
         car.position.set(pose.x, pose.y, pose.z - 0.0); car.quaternion.set(pose.qx, pose.qy, pose.qz, pose.qw);
         model.head.rotation.z = ((servo - 90) * Math.PI) / 180;
@@ -181,7 +231,7 @@ export default function DriveLab({ board }: { board: BoardId }) {
       raf = requestAnimationFrame(frame);
     })().catch((e) => { if (!disposed) setError((e as Error).message); cleanup?.(); cleanup = undefined; });
     return () => { disposed = true; cleanup?.(); };
-  }, [resetKey, applied, board, spec, log]);
+  }, [resetKey, applied, course, board, spec, log, finish]);
 
   const press = (k: string, on: boolean) => { if (on) { keys.current.add(k); if (mode === 'auto') setMode('manual'); } else keys.current.delete(k); };
   const reset = () => { setMode('manual'); keys.current.clear(); setResetKey((n) => n + 1); };
@@ -196,6 +246,11 @@ export default function DriveLab({ board }: { board: BoardId }) {
           <span><i>Distance</i><b className={live.cm < AUTO.STOP_CM ? 'warn' : ''}>{live.cm >= AUTO.NO_ECHO_CM ? 'no echo' : `${live.cm.toFixed(1)} cm`}</b></span>
           <span><i>Mode</i><b>{mode === 'auto' ? 'AUTO' : 'MANUAL'}</b></span>
           <span><i>Head</i><b>{Math.round(live.servo)}°</b></span>
+          {course !== 'boxes' && (
+            <span className={'bg-hud-goal' + (result ? ' ' + result.kind : '')} role="status" aria-live="polite">
+              <i>{COURSES.find((c) => c.id === course)!.name}</i><b>{result ? result.text : course === 'sumo' ? 'Push the block out' : 'Reach the green square'}</b>
+            </span>
+          )}
           {live.led && <span className="bg-hud-led" aria-label="LED on" />}
         </div>
         <figcaption>Browser physics (Rapier) · typical kit numbers, not measured · one-ray sensor</figcaption>
@@ -246,13 +301,35 @@ export default function DriveLab({ board }: { board: BoardId }) {
 
         {panel === 'arena' && (
           <div className="bg-panel" role="tabpanel">
-            <ArenaEditor boxes={arena} onChange={setArena} car={{ x: live.x, y: live.y, heading: live.heading }} />
-            <div className="bg-row">
-              <button className="btn btn-primary btn-sm" disabled={!dirty} onClick={() => { setApplied(arena); setMode('manual'); }}>Drive in this arena</button>
-              <button className="btn btn-sm" onClick={() => setArena(DEFAULT_ARENA)}>Default boxes</button>
-              <button className="btn btn-sm" onClick={() => setArena([])}>Empty</button>
+            <div className="bg-seg bg-courses" role="radiogroup" aria-label="Course">
+              {COURSES.map((c) => (
+                <button key={c.id} role="radio" aria-checked={course === c.id} className={course === c.id ? 'on' : ''}
+                  onClick={() => { if (c.id !== course) { setCourse(c.id); setMode('manual'); keys.current.clear(); } }}>{c.name}</button>
+              ))}
             </div>
-            <p className="faint g-small">3 × 3 m floor. Boxes under {SONAR_MIN_TOP_M * 100} cm tall slip under the sensor’s beam. Saved in this browser.</p>
+            {course === 'boxes' ? (
+              <>
+                <ArenaEditor boxes={arena} onChange={setArena} car={{ x: live.x, y: live.y, heading: live.heading }} />
+                <div className="bg-row">
+                  <button className="btn btn-primary btn-sm" disabled={!dirty} onClick={() => { setApplied(arena); setMode('manual'); }}>Drive in this arena</button>
+                  <button className="btn btn-sm" onClick={() => setArena(DEFAULT_ARENA)}>Default boxes</button>
+                  <button className="btn btn-sm" onClick={() => setArena([])}>Empty</button>
+                </div>
+                <p className="faint g-small">3 × 3 m floor. Boxes under {SONAR_MIN_TOP_M * 100} cm tall slip under the sensor’s beam. Saved in this browser.</p>
+              </>
+            ) : (
+              <div className="bg-course">
+                <p>{COURSES.find((c) => c.id === course)!.goal}</p>
+                <p className={'bg-course-result' + (result ? ' ' + result.kind : '')} role="status">{result ? result.text : running ? 'Clock running…' : 'The clock starts when the car moves.'}</p>
+                <p className="faint g-small">Best: {best[course] !== undefined ? `${best[course]!.toFixed(1)} s` : 'no run yet'}</p>
+                <button className="btn btn-primary btn-sm" onClick={reset}>{result ? 'Try again' : 'Restart'}</button>
+                <p className="faint g-small">
+                  {course === 'sumo'
+                    ? 'The ring is 154 cm across, the size used for 3 kg robot sumo. The 300 g block is our pick. Auto runs the obstacle avoider, which steers away from things, so it won’t push the block. That’s the point: sumo needs different code.'
+                    : 'Try it by hand, then switch to Auto and see whether the obstacle avoider finds the way.'}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
