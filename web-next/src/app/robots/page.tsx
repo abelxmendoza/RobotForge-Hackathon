@@ -3,7 +3,7 @@ import AppShell from "@/components/shell/AppShell";
 import RobotsIndex from "@/components/robots/RobotsIndex";
 
 export const metadata: Metadata = {
-  title: "Robots",
+  title: "Robodex",
   description: "The Robodex: every robot RobotForge knows, with gate verdicts from recorded runs.",
 };
 
@@ -11,7 +11,7 @@ export default function RobotsPage() {
   return (
     <AppShell
       active="robots"
-      crumbs={[{ label: "App", href: "/garage/" }, { label: "Robots" }]}
+      crumbs={[{ label: "App", href: "/garage/" }, { label: "Robodex" }]}
     >
       <RobotsIndex />
     </AppShell>

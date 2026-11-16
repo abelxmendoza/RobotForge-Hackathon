@@ -35,7 +35,18 @@ export default function RobotCard({ robot, hidden = false, sourceOverride = null
           <RobotPhoto src={imgSrc(img.src)} alt={alt} slug={robotSlug(robot)} name={robot.name} />
         </div>
       ) : (
-        <div className="ph ai"></div>
+        /* No credited photo recorded: the same outline the photo
+         * fallback draws, so the card is never an empty box. */
+        <div className="ph ai">
+          <span className="ph-fallback" role="img" aria-label={robot.name + " (no photo recorded)"}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="4" y="7" width="16" height="9" rx="2" /><circle cx="8" cy="18.5" r="1.8" />
+              <circle cx="16" cy="18.5" r="1.8" /><path d="M12 7V4" /><circle cx="12" cy="3.5" r=".8" />
+            </svg>
+            <span>{robot.name}</span>
+          </span>
+        </div>
       )}
       <div className="body">
         <span className="dex">{dexId(robot)}</span>

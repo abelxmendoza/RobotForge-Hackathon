@@ -839,6 +839,741 @@
       "spec_file": "examples/asimov-1.json",
       "kit": null,
       "reason": "No take-apart kit is defined for this robot yet — the kit generator builds kits for wheeled ground robots from the spec's wheel block, and this spec has no wheels."
+    },
+    "tesla-optimus-gen-2": {
+      "robot": "Tesla Optimus Gen 2",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "boston-dynamics-atlas": {
+      "robot": "Boston Dynamics Atlas",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "boston-dynamics-atlas-hd": {
+      "robot": "Boston Dynamics Atlas HD",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "1x-neo-gamma": {
+      "robot": "1X NEO Gamma",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "unitree-h1": {
+      "robot": "Unitree H1",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "boston-dynamics-stretch": {
+      "robot": "Boston Dynamics Stretch",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "anki-vector": {
+      "robot": "Anki Vector",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "microduck": {
+      "robot": "Microduck",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "boston-dynamics-spot": {
+      "robot": "Boston Dynamics Spot",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "lerobot-so-101": {
+      "robot": "LeRobot SO-101",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "lekiwi": {
+      "robot": "LeKiwi",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "reachy-mini": {
+      "robot": "Reachy Mini",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "petoi-bittle": {
+      "robot": "Petoi Bittle",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "nvidia-jetbot": {
+      "robot": "NVIDIA JetBot",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "donkey-car": {
+      "robot": "Donkey Car",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "vex-v5-tank-drive": {
+      "robot": "VEX V5 Tank Drive",
+      "spec_file": "examples/vex-v5-tank-drive.json",
+      "kit": {
+        "estimated": false,
+        "parts": [
+          {
+            "name": "Chassis plate",
+            "file": "parts/chassis_plate.scad",
+            "qty": 1,
+            "does": "The deck everything else bolts to.",
+            "dims": "380 x 380 mm footprint, 4 mm thick",
+            "print_note": "Print flat as modeled. Suggestion: 3-4 walls, ~25% infill.",
+            "params": [
+              {
+                "name": "chassis_length_mm",
+                "value_mm": 380.0,
+                "source": "from spec length_m"
+              },
+              {
+                "name": "chassis_width_mm",
+                "value_mm": 380.0,
+                "source": "from spec width_m"
+              },
+              {
+                "name": "plate_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "corner_radius_mm",
+                "value_mm": 6.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "mount_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              },
+              {
+                "name": "mount_hole_inset_mm",
+                "value_mm": 12.0,
+                "source": "assumption — not in the spec"
+              }
+            ]
+          },
+          {
+            "name": "Wheel",
+            "file": "parts/wheel.scad",
+            "qty": 4,
+            "does": "Rolls on the ground; one per wheel position on the robot.",
+            "dims": "101.6 mm diameter x 28 mm wide, 6 mm shaft hole",
+            "print_note": "Print flat as modeled. Suggestion: print one first and check the shaft fit before printing the rest.",
+            "params": [
+              {
+                "name": "wheel_diameter_mm",
+                "value_mm": 101.6,
+                "source": "from spec wheel.diameter_m"
+              },
+              {
+                "name": "wheel_width_mm",
+                "value_mm": 28.0,
+                "source": "from spec wheel.width_m"
+              },
+              {
+                "name": "shaft_diameter_mm",
+                "value_mm": 6.0,
+                "source": "assumption — typical DC gearmotor shaft; measure yours"
+              },
+              {
+                "name": "hub_diameter_mm",
+                "value_mm": 40.6,
+                "source": "derived — 0.4 x wheel diameter, for looks/strength"
+              },
+              {
+                "name": "lightening_hole_diameter_mm",
+                "value_mm": 12.2,
+                "source": "derived — decorative; delete the loop below for a solid wheel"
+              }
+            ]
+          },
+          {
+            "name": "Motor mount",
+            "file": "parts/motor_mount.scad",
+            "qty": 4,
+            "does": "Side plate that holds one drive motor so its shaft lines up with a wheel's axle.",
+            "dims": "44 mm wide plate, shaft hole at axle height 50.8 mm",
+            "print_note": "Suggestion: 40% infill — this part takes the motor's twist. The motor itself is not a printed part.",
+            "params": [
+              {
+                "name": "shaft_center_height_mm",
+                "value_mm": 50.8,
+                "source": "from spec wheel radius (diameter_m / 2) — the axle height above ground"
+              },
+              {
+                "name": "mount_width_mm",
+                "value_mm": 44.0,
+                "source": "derived — wheel width + 16 mm of plate around the motor"
+              },
+              {
+                "name": "mount_height_mm",
+                "value_mm": 61.8,
+                "source": "derived — reaches from the ground past the axle to the chassis plate"
+              },
+              {
+                "name": "mount_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "shaft_hole_diameter_mm",
+                "value_mm": 6.4,
+                "source": "derived — shaft diameter + 0.4 mm slip fit"
+              },
+              {
+                "name": "flange_depth_mm",
+                "value_mm": 16.0,
+                "source": "assumption — how far the bolting flange reaches under the chassis"
+              },
+              {
+                "name": "flange_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "vex-v5-speed-tank": {
+      "robot": "VEX V5 Speed Tank",
+      "spec_file": "examples/vex-v5-speed-tank.json",
+      "kit": {
+        "estimated": false,
+        "parts": [
+          {
+            "name": "Chassis plate",
+            "file": "parts/chassis_plate.scad",
+            "qty": 1,
+            "does": "The deck everything else bolts to.",
+            "dims": "380 x 380 mm footprint, 4 mm thick",
+            "print_note": "Print flat as modeled. Suggestion: 3-4 walls, ~25% infill.",
+            "params": [
+              {
+                "name": "chassis_length_mm",
+                "value_mm": 380.0,
+                "source": "from spec length_m"
+              },
+              {
+                "name": "chassis_width_mm",
+                "value_mm": 380.0,
+                "source": "from spec width_m"
+              },
+              {
+                "name": "plate_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "corner_radius_mm",
+                "value_mm": 6.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "mount_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              },
+              {
+                "name": "mount_hole_inset_mm",
+                "value_mm": 12.0,
+                "source": "assumption — not in the spec"
+              }
+            ]
+          },
+          {
+            "name": "Wheel",
+            "file": "parts/wheel.scad",
+            "qty": 6,
+            "does": "Rolls on the ground; one per wheel position on the robot.",
+            "dims": "82.55 mm diameter x 28 mm wide, 6 mm shaft hole",
+            "print_note": "Print flat as modeled. Suggestion: print one first and check the shaft fit before printing the rest.",
+            "params": [
+              {
+                "name": "wheel_diameter_mm",
+                "value_mm": 82.55,
+                "source": "from spec wheel.diameter_m"
+              },
+              {
+                "name": "wheel_width_mm",
+                "value_mm": 28.0,
+                "source": "from spec wheel.width_m"
+              },
+              {
+                "name": "shaft_diameter_mm",
+                "value_mm": 6.0,
+                "source": "assumption — typical DC gearmotor shaft; measure yours"
+              },
+              {
+                "name": "hub_diameter_mm",
+                "value_mm": 33.0,
+                "source": "derived — 0.4 x wheel diameter, for looks/strength"
+              },
+              {
+                "name": "lightening_hole_diameter_mm",
+                "value_mm": 9.9,
+                "source": "derived — decorative; delete the loop below for a solid wheel"
+              }
+            ]
+          },
+          {
+            "name": "Motor mount",
+            "file": "parts/motor_mount.scad",
+            "qty": 6,
+            "does": "Side plate that holds one drive motor so its shaft lines up with a wheel's axle.",
+            "dims": "44 mm wide plate, shaft hole at axle height 41.275 mm",
+            "print_note": "Suggestion: 40% infill — this part takes the motor's twist. The motor itself is not a printed part.",
+            "params": [
+              {
+                "name": "shaft_center_height_mm",
+                "value_mm": 41.275,
+                "source": "from spec wheel radius (diameter_m / 2) — the axle height above ground"
+              },
+              {
+                "name": "mount_width_mm",
+                "value_mm": 44.0,
+                "source": "derived — wheel width + 16 mm of plate around the motor"
+              },
+              {
+                "name": "mount_height_mm",
+                "value_mm": 52.275,
+                "source": "derived — reaches from the ground past the axle to the chassis plate"
+              },
+              {
+                "name": "mount_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "shaft_hole_diameter_mm",
+                "value_mm": 6.4,
+                "source": "derived — shaft diameter + 0.4 mm slip fit"
+              },
+              {
+                "name": "flange_depth_mm",
+                "value_mm": 16.0,
+                "source": "assumption — how far the bolting flange reaches under the chassis"
+              },
+              {
+                "name": "flange_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "vex-v5-pushing-drive": {
+      "robot": "VEX V5 Pushing Drive",
+      "spec_file": "examples/vex-v5-push-drive.json",
+      "kit": {
+        "estimated": false,
+        "parts": [
+          {
+            "name": "Chassis plate",
+            "file": "parts/chassis_plate.scad",
+            "qty": 1,
+            "does": "The deck everything else bolts to.",
+            "dims": "380 x 380 mm footprint, 4 mm thick",
+            "print_note": "Print flat as modeled. Suggestion: 3-4 walls, ~25% infill.",
+            "params": [
+              {
+                "name": "chassis_length_mm",
+                "value_mm": 380.0,
+                "source": "from spec length_m"
+              },
+              {
+                "name": "chassis_width_mm",
+                "value_mm": 380.0,
+                "source": "from spec width_m"
+              },
+              {
+                "name": "plate_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "corner_radius_mm",
+                "value_mm": 6.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "mount_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              },
+              {
+                "name": "mount_hole_inset_mm",
+                "value_mm": 12.0,
+                "source": "assumption — not in the spec"
+              }
+            ]
+          },
+          {
+            "name": "Wheel",
+            "file": "parts/wheel.scad",
+            "qty": 4,
+            "does": "Rolls on the ground; one per wheel position on the robot.",
+            "dims": "82.55 mm diameter x 28 mm wide, 6 mm shaft hole",
+            "print_note": "Print flat as modeled. Suggestion: print one first and check the shaft fit before printing the rest.",
+            "params": [
+              {
+                "name": "wheel_diameter_mm",
+                "value_mm": 82.55,
+                "source": "from spec wheel.diameter_m"
+              },
+              {
+                "name": "wheel_width_mm",
+                "value_mm": 28.0,
+                "source": "from spec wheel.width_m"
+              },
+              {
+                "name": "shaft_diameter_mm",
+                "value_mm": 6.0,
+                "source": "assumption — typical DC gearmotor shaft; measure yours"
+              },
+              {
+                "name": "hub_diameter_mm",
+                "value_mm": 33.0,
+                "source": "derived — 0.4 x wheel diameter, for looks/strength"
+              },
+              {
+                "name": "lightening_hole_diameter_mm",
+                "value_mm": 9.9,
+                "source": "derived — decorative; delete the loop below for a solid wheel"
+              }
+            ]
+          },
+          {
+            "name": "Motor mount",
+            "file": "parts/motor_mount.scad",
+            "qty": 4,
+            "does": "Side plate that holds one drive motor so its shaft lines up with a wheel's axle.",
+            "dims": "44 mm wide plate, shaft hole at axle height 41.275 mm",
+            "print_note": "Suggestion: 40% infill — this part takes the motor's twist. The motor itself is not a printed part.",
+            "params": [
+              {
+                "name": "shaft_center_height_mm",
+                "value_mm": 41.275,
+                "source": "from spec wheel radius (diameter_m / 2) — the axle height above ground"
+              },
+              {
+                "name": "mount_width_mm",
+                "value_mm": 44.0,
+                "source": "derived — wheel width + 16 mm of plate around the motor"
+              },
+              {
+                "name": "mount_height_mm",
+                "value_mm": 52.275,
+                "source": "derived — reaches from the ground past the axle to the chassis plate"
+              },
+              {
+                "name": "mount_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "shaft_hole_diameter_mm",
+                "value_mm": 6.4,
+                "source": "derived — shaft diameter + 0.4 mm slip fit"
+              },
+              {
+                "name": "flange_depth_mm",
+                "value_mm": 16.0,
+                "source": "assumption — how far the bolting flange reaches under the chassis"
+              },
+              {
+                "name": "flange_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "vex-v5-mecanum-drive": {
+      "robot": "VEX V5 Mecanum Drive",
+      "spec_file": "examples/vex-v5-mecanum.json",
+      "kit": {
+        "estimated": false,
+        "parts": [
+          {
+            "name": "Chassis plate",
+            "file": "parts/chassis_plate.scad",
+            "qty": 1,
+            "does": "The deck everything else bolts to.",
+            "dims": "380 x 380 mm footprint, 4 mm thick",
+            "print_note": "Print flat as modeled. Suggestion: 3-4 walls, ~25% infill.",
+            "params": [
+              {
+                "name": "chassis_length_mm",
+                "value_mm": 380.0,
+                "source": "from spec length_m"
+              },
+              {
+                "name": "chassis_width_mm",
+                "value_mm": 380.0,
+                "source": "from spec width_m"
+              },
+              {
+                "name": "plate_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "corner_radius_mm",
+                "value_mm": 6.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "mount_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              },
+              {
+                "name": "mount_hole_inset_mm",
+                "value_mm": 12.0,
+                "source": "assumption — not in the spec"
+              }
+            ]
+          },
+          {
+            "name": "Wheel",
+            "file": "parts/wheel.scad",
+            "qty": 4,
+            "does": "Rolls on the ground; one per wheel position on the robot.",
+            "dims": "101.6 mm diameter x 35 mm wide, 6 mm shaft hole",
+            "print_note": "Print flat as modeled. Suggestion: print one first and check the shaft fit before printing the rest.",
+            "params": [
+              {
+                "name": "wheel_diameter_mm",
+                "value_mm": 101.6,
+                "source": "from spec wheel.diameter_m"
+              },
+              {
+                "name": "wheel_width_mm",
+                "value_mm": 35.0,
+                "source": "from spec wheel.width_m"
+              },
+              {
+                "name": "shaft_diameter_mm",
+                "value_mm": 6.0,
+                "source": "assumption — typical DC gearmotor shaft; measure yours"
+              },
+              {
+                "name": "hub_diameter_mm",
+                "value_mm": 40.6,
+                "source": "derived — 0.4 x wheel diameter, for looks/strength"
+              },
+              {
+                "name": "lightening_hole_diameter_mm",
+                "value_mm": 12.2,
+                "source": "derived — decorative; delete the loop below for a solid wheel"
+              }
+            ]
+          },
+          {
+            "name": "Motor mount",
+            "file": "parts/motor_mount.scad",
+            "qty": 4,
+            "does": "Side plate that holds one drive motor so its shaft lines up with a wheel's axle.",
+            "dims": "51 mm wide plate, shaft hole at axle height 50.8 mm",
+            "print_note": "Suggestion: 40% infill — this part takes the motor's twist. The motor itself is not a printed part.",
+            "params": [
+              {
+                "name": "shaft_center_height_mm",
+                "value_mm": 50.8,
+                "source": "from spec wheel radius (diameter_m / 2) — the axle height above ground"
+              },
+              {
+                "name": "mount_width_mm",
+                "value_mm": 51.0,
+                "source": "derived — wheel width + 16 mm of plate around the motor"
+              },
+              {
+                "name": "mount_height_mm",
+                "value_mm": 61.8,
+                "source": "derived — reaches from the ground past the axle to the chassis plate"
+              },
+              {
+                "name": "mount_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "shaft_hole_diameter_mm",
+                "value_mm": 6.4,
+                "source": "derived — shaft diameter + 0.4 mm slip fit"
+              },
+              {
+                "name": "flange_depth_mm",
+                "value_mm": 16.0,
+                "source": "assumption — how far the bolting flange reaches under the chassis"
+              },
+              {
+                "name": "flange_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "vex-iq-drivebase": {
+      "robot": "VEX IQ Drivebase",
+      "spec_file": "examples/vex-iq-drive-base.json",
+      "kit": {
+        "estimated": false,
+        "parts": [
+          {
+            "name": "Chassis plate",
+            "file": "parts/chassis_plate.scad",
+            "qty": 1,
+            "does": "The deck everything else bolts to.",
+            "dims": "300 x 200 mm footprint, 4 mm thick",
+            "print_note": "Print flat as modeled. Suggestion: 3-4 walls, ~25% infill.",
+            "params": [
+              {
+                "name": "chassis_length_mm",
+                "value_mm": 300.0,
+                "source": "from spec length_m"
+              },
+              {
+                "name": "chassis_width_mm",
+                "value_mm": 200.0,
+                "source": "from spec width_m"
+              },
+              {
+                "name": "plate_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "corner_radius_mm",
+                "value_mm": 6.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "mount_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              },
+              {
+                "name": "mount_hole_inset_mm",
+                "value_mm": 12.0,
+                "source": "assumption — not in the spec"
+              }
+            ]
+          },
+          {
+            "name": "Wheel",
+            "file": "parts/wheel.scad",
+            "qty": 4,
+            "does": "Rolls on the ground; one per wheel position on the robot.",
+            "dims": "63.7 mm diameter x 20 mm wide, 6 mm shaft hole",
+            "print_note": "Print flat as modeled. Suggestion: print one first and check the shaft fit before printing the rest.",
+            "params": [
+              {
+                "name": "wheel_diameter_mm",
+                "value_mm": 63.7,
+                "source": "from spec wheel.diameter_m"
+              },
+              {
+                "name": "wheel_width_mm",
+                "value_mm": 20.0,
+                "source": "from spec wheel.width_m"
+              },
+              {
+                "name": "shaft_diameter_mm",
+                "value_mm": 6.0,
+                "source": "assumption — typical DC gearmotor shaft; measure yours"
+              },
+              {
+                "name": "hub_diameter_mm",
+                "value_mm": 25.5,
+                "source": "derived — 0.4 x wheel diameter, for looks/strength"
+              },
+              {
+                "name": "lightening_hole_diameter_mm",
+                "value_mm": 7.6,
+                "source": "derived — decorative; delete the loop below for a solid wheel"
+              }
+            ]
+          },
+          {
+            "name": "Motor mount",
+            "file": "parts/motor_mount.scad",
+            "qty": 4,
+            "does": "Side plate that holds one drive motor so its shaft lines up with a wheel's axle.",
+            "dims": "36 mm wide plate, shaft hole at axle height 31.85 mm",
+            "print_note": "Suggestion: 40% infill — this part takes the motor's twist. The motor itself is not a printed part.",
+            "params": [
+              {
+                "name": "shaft_center_height_mm",
+                "value_mm": 31.85,
+                "source": "from spec wheel radius (diameter_m / 2) — the axle height above ground"
+              },
+              {
+                "name": "mount_width_mm",
+                "value_mm": 36.0,
+                "source": "derived — wheel width + 16 mm of plate around the motor"
+              },
+              {
+                "name": "mount_height_mm",
+                "value_mm": 42.85,
+                "source": "derived — reaches from the ground past the axle to the chassis plate"
+              },
+              {
+                "name": "mount_thickness_mm",
+                "value_mm": 4.0,
+                "source": "assumption — not in the spec"
+              },
+              {
+                "name": "shaft_hole_diameter_mm",
+                "value_mm": 6.4,
+                "source": "derived — shaft diameter + 0.4 mm slip fit"
+              },
+              {
+                "name": "flange_depth_mm",
+                "value_mm": 16.0,
+                "source": "assumption — how far the bolting flange reaches under the chassis"
+              },
+              {
+                "name": "flange_hole_diameter_mm",
+                "value_mm": 3.4,
+                "source": "assumption — M3 bolt clearance"
+              }
+            ]
+          }
+        ]
+      }
     }
   }
 }

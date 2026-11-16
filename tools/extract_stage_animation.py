@@ -82,6 +82,8 @@ def main() -> int:
             "mobility_class": robot.get("mobility_class"),
             "class": robot.get("class"),
         }
+        if not robot.get("spec_file"):
+            continue  # published figures only: no spec to animate
         spec_path = REPO / robot["spec_file"]
         spec = json.loads(spec_path.read_text())
         entry["spec"] = {

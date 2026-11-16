@@ -688,6 +688,550 @@
           "weakest_direction": "backward"
         }
       ]
+    },
+    {
+      "class": "Humanoid",
+      "description": "Tesla's second-generation humanoid, shown in December 2023 with Tesla-built actuators, sensing feet and 11-DoF hands.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Benjamin Ceci, via Wikimedia Commons (CC0). An Optimus on display in 2023; the generation is not stated.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Optimus_Tesla.jpg/960px-Optimus_Tesla.jpg",
+      "key_specs": {
+        "Battery": "2.3 kWh",
+        "Hands": "11 DoF each",
+        "Height": "about 1.73 m",
+        "Mass": "about 73 kg (third-party figure; Tesla only said 10 kg lighter than Gen 1)"
+      },
+      "mobility_class": "Legged",
+      "name": "Tesla Optimus Gen 2",
+      "number": 13,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Tesla has not published a full Gen 2 spec sheet. Height, mass and battery are widely quoted third-party figures and are marked that way.",
+        "source_name": "Tesla Optimus Gen 2 announcement (Dec 2023), via robozaps.com spec review",
+        "source_url": "https://blog.robozaps.com/b/tesla-optimus-gen-2-review"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Humanoid",
+      "description": "The all-electric Atlas that replaced the hydraulic one in 2024, built for factory work with swappable batteries.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "4 h, self-swappable",
+        "Degrees of freedom": "56",
+        "Height": "1.9 m",
+        "Lift": "50 kg instant, 30 kg sustained",
+        "Mass": "90 kg",
+        "Reach": "2.3 m"
+      },
+      "mobility_class": "Legged",
+      "name": "Boston Dynamics Atlas",
+      "number": 14,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "All figures from the maker's published spec sheet.",
+        "source_name": "Boston Dynamics Atlas spec sheet (2026)",
+        "source_url": "https://bostondynamics.com/wp-content/uploads/2026/01/atlas-spec-sheet.pdf"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Humanoid",
+      "description": "The hydraulic Atlas (2013 to 2024), famous for parkour and backflips. Retired in April 2024.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: DARPA, via Wikimedia Commons (public domain). The 2013 prototype.",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Atlas_frontview_2013.jpg/960px-Atlas_frontview_2013.jpg",
+      "key_specs": {
+        "Actuation": "Hydraulic, electrically powered",
+        "Degrees of freedom": "28",
+        "Height": "1.5 m",
+        "Mass": "80 kg (2016 version)",
+        "Sensors": "Lidar and stereo vision"
+      },
+      "mobility_class": "Legged",
+      "name": "Boston Dynamics Atlas HD",
+      "number": 15,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Figures for the 2016 redesign; the 2013 prototype was taller and tethered.",
+        "source_name": "Atlas HD, IEEE ROBOTS guide",
+        "source_url": "https://robotsguide.com/robots/atlas2016"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Humanoid",
+      "description": "A soft, quiet home humanoid from 1X with tendon-driven joints under a knit suit.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Carry": "25 kg (55 lb)",
+        "Hands": "22 DoF each",
+        "Height": "1.68 m (5 ft 6 in)",
+        "Mass": "30 kg (66 lb)",
+        "Walking speed": "1.4 m/s"
+      },
+      "mobility_class": "Legged",
+      "name": "1X NEO Gamma",
+      "number": 16,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Maker's published hardware table (NEO Gamma, introduced Feb 2025).",
+        "source_name": "1X NEO product page",
+        "source_url": "https://www.1x.tech/neo"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Humanoid",
+      "description": "Unitree's full-size humanoid, a fast electric biped used widely in research.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Height": "about 1.8 m",
+        "Mass": "about 47 kg"
+      },
+      "mobility_class": "Legged",
+      "name": "Unitree H1",
+      "number": 17,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Maker's published figures. The heavier H1-2 (about 70 kg) is a separate model.",
+        "source_name": "Unitree H1 product page",
+        "source_url": "https://www.unitree.com/h1"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Humanoid"
+    },
+    {
+      "class": "Mobile manipulator",
+      "description": "A warehouse robot that unloads trucks: a pallet-sized omnidirectional base with a 7-axis arm and a vacuum gripper.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Arm": "7 axes",
+        "Battery": "lasts 2 shifts",
+        "Footprint": "1 \u00d7 1.25 m",
+        "Mass": "1,300 kg",
+        "Max box": "23 kg (50 lb)",
+        "Reach": "3.2 m"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Boston Dynamics Stretch",
+      "number": 18,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Maker's published specification table.",
+        "source_name": "Boston Dynamics Stretch brochure",
+        "source_url": "https://bostondynamics.com/wp-content/uploads/2023/07/stretch_brochure_manifest.pdf"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Mobile manipulator"
+    },
+    {
+      "class": "Home robot",
+      "description": "A palm-sized home robot on treads with an expressive screen face, a lift arm and on-board AI.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Compute": "Qualcomm APQ8009, quad-core 1.2 GHz",
+        "Mass": "0.16 kg",
+        "Sensors": "HD camera (120\u00b0 FOV), time-of-flight distance sensor, 4 microphones, cliff and touch sensors",
+        "Size": "10 \u00d7 6 \u00d7 7 cm"
+      },
+      "mobility_class": "Ground \u2014 tracked",
+      "name": "Anki Vector",
+      "number": 19,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Made by Anki (2018); now sold by Digital Dream Labs.",
+        "source_name": "Vector, IEEE ROBOTS guide",
+        "source_url": "https://robotsguide.com/robots/vector"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Tracked rover"
+    },
+    {
+      "class": "Desktop biped",
+      "description": "A 25 cm open-source biped duck from Pollen Robotics and Hugging Face that walks with reinforcement-learning policies.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Height": "25 cm",
+        "Motors": "15",
+        "Sensors": "camera, small depth sensor"
+      },
+      "mobility_class": "Legged",
+      "name": "Microduck",
+      "number": 20,
+      "provenance": {
+        "collection": "RoboLabs fleet",
+        "license": "Open source (see the repository)",
+        "note": "Open source; figures from Pollen's 'Meet Microduck' post.",
+        "source_name": "pollen-robotics/microduck (GitHub) and Pollen's launch post",
+        "source_url": "https://github.com/pollen-robotics/microduck"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Biped"
+    },
+    {
+      "class": "Legged quadruped",
+      "description": "Boston Dynamics' four-legged inspection robot. It climbs stairs, carries sensors and runs about 90 minutes per battery.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Jonte, via Wikimedia Commons (CC BY-SA 4.0)",
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Spot_by_Boston_Dynamics.jpg/1280px-Spot_by_Boston_Dynamics.jpg",
+      "key_specs": {
+        "Battery": "564 Wh, about 90 min",
+        "Degrees of freedom": "12",
+        "Mass": "33.8 kg with battery",
+        "Max speed": "1.6 m/s",
+        "Payload": "14 kg",
+        "Size": "1.1 \u00d7 0.5 m, 0.84 m standing"
+      },
+      "mobility_class": "Legged",
+      "name": "Boston Dynamics Spot",
+      "number": 21,
+      "provenance": {
+        "license": "Published specifications (facts quoted with a link; no files copied)",
+        "note": "Maker's current spec page. Older units list 32.5 kg and a 605 Wh battery. The Spot you saw at Cal Poly Pomona stays in Sighted.",
+        "source_name": "Boston Dynamics Spot specifications",
+        "source_url": "https://support.bostondynamics.com/s/article/spot-specifications"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Robotic arm",
+      "description": "The low-cost, 3D-printed open arm used with Hugging Face LeRobot for imitation learning.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Build": "3D-printed parts",
+        "Joints": "6 (5 + gripper)",
+        "Motors": "6 \u00d7 Feetech STS3215 servos, 7.4 V"
+      },
+      "mobility_class": "Stationary",
+      "name": "LeRobot SO-101",
+      "number": 22,
+      "provenance": {
+        "license": "Apache-2.0 (TheRobotStudio/SO-ARM100)",
+        "note": "Open hardware; parts list from the repository.",
+        "source_name": "TheRobotStudio/SO-ARM100 (GitHub) and LeRobot SO-101 docs",
+        "source_url": "https://github.com/TheRobotStudio/SO-ARM100"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Robotic arm"
+    },
+    {
+      "class": "Mobile manipulator",
+      "description": "An open-source 3-wheel omni base that carries an SO-101 arm, run from a Raspberry Pi with LeRobot.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Arm": "SO-101",
+        "Base": "3 omni wheels",
+        "Computer": "Raspberry Pi"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "LeKiwi",
+      "number": 23,
+      "provenance": {
+        "license": "Apache-2.0 (SIGRobotics-UIUC/LeKiwi)",
+        "note": "Open hardware; design from the repository.",
+        "source_name": "SIGRobotics-UIUC/LeKiwi (GitHub)",
+        "source_url": "https://github.com/SIGRobotics-UIUC/LeKiwi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Mobile manipulator"
+    },
+    {
+      "class": "Desktop robot",
+      "description": "Pollen Robotics' open-source desktop robot head with antennas, a camera and four microphones.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Computer": "Raspberry Pi CM4 (wireless version)",
+        "Price": "$499 wireless, $399 Lite",
+        "Sensors": "camera, 4 microphones, accelerometer"
+      },
+      "mobility_class": "Stationary",
+      "name": "Reachy Mini",
+      "number": 24,
+      "provenance": {
+        "license": "Open source (see pollen-robotics on GitHub)",
+        "note": "Open source; figures from the maker's page.",
+        "source_name": "Reachy Mini product page",
+        "source_url": "https://pollen-robotics.com/reachy-mini/"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Desktop robot"
+    },
+    {
+      "class": "Legged quadruped",
+      "description": "A palm-sized open-source robot dog kit that runs on an Arduino-class board and walks on 9 servos.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "7.4 V 1000 mAh, about 1 h walking",
+        "Mass": "265\u2013290 g",
+        "Servos": "9 (8 legs + neck)",
+        "Size": "20 \u00d7 11 \u00d7 11 cm"
+      },
+      "mobility_class": "Legged",
+      "name": "Petoi Bittle",
+      "number": 25,
+      "provenance": {
+        "license": "Open source (OpenCat on GitHub)",
+        "note": "Maker's spec page; servo and battery details from the IEEE ROBOTS guide.",
+        "source_name": "Petoi Bittle specifications",
+        "source_url": "https://www.petoi.com/pages/bittle-robot-dog-specifications"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Mobile robot",
+      "description": "NVIDIA's open-source learning robot: a two-wheel base with a camera, run by a Jetson Nano.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Computer": "NVIDIA Jetson Nano",
+        "Drive": "2 DC motors, differential",
+        "Sensor": "wide-angle camera"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "NVIDIA JetBot",
+      "number": 26,
+      "provenance": {
+        "license": "MIT (NVIDIA-AI-IOT/jetbot)",
+        "note": "Open source; parts from the repository's bill of materials.",
+        "source_name": "NVIDIA-AI-IOT/jetbot (GitHub)",
+        "source_url": "https://github.com/NVIDIA-AI-IOT/jetbot"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Differential rover"
+    },
+    {
+      "class": "Self-driving car",
+      "description": "An open-source self-driving RC car: a 1/16-scale chassis, a Raspberry Pi and a camera that learns to drive by imitation.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the maker's published figures; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Chassis": "1/16 or 1/10 scale RC car",
+        "Computer": "Raspberry Pi or Jetson Nano",
+        "Sensor": "camera"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Donkey Car",
+      "number": 27,
+      "provenance": {
+        "license": "MIT (autorope/donkeycar)",
+        "note": "Open source; build options from the project docs.",
+        "source_name": "Donkey Car docs",
+        "source_url": "https://docs.donkeycar.com/"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Car-like"
+    },
+    {
+      "class": "VEX competition robot",
+      "description": "A balanced first V5 competition drive: 4 motors, 4 in omni wheels, 360 rpm.",
+      "gate_status": {
+        "note": "Not gated yet. Its spec is a RobotForge starter build, so you can bring it into the Workshop and run the checks there.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "12.8 V 1100 mAh",
+        "Mass": "4.0 kg (typical)",
+        "Motors": "4",
+        "Size": "0.38 \u00d7 0.38 \u00d7 0.15 m",
+        "Wheels": "4 \u00d7 4.0 in"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "VEX V5 Tank Drive",
+      "number": 28,
+      "provenance": {
+        "collection": "VEX",
+        "license": "RobotForge starter spec (this repo); VEX part figures quoted from VEX",
+        "note": "A RobotForge starter build made only from real VEX parts and VEX's published motor ratings. Mass and frame size are typical values, not a measured robot.",
+        "source_name": "VEX published motor and part ratings (VEX Library)",
+        "source_url": "https://kb.vex.com/"
+      },
+      "source": "researched",
+      "spec_file": "examples/vex-v5-tank-drive.json",
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "VEX competition robot",
+      "description": "A fast six-wheel V5 drive: 4 blue-cartridge motors geared to 450 rpm.",
+      "gate_status": {
+        "note": "Not gated yet. Its spec is a RobotForge starter build, so you can bring it into the Workshop and run the checks there.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "12.8 V 1100 mAh",
+        "Mass": "4.8 kg (typical)",
+        "Motors": "4",
+        "Size": "0.38 \u00d7 0.38 \u00d7 0.15 m",
+        "Wheels": "6 \u00d7 3.25 in"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "VEX V5 Speed Tank",
+      "number": 29,
+      "provenance": {
+        "collection": "VEX",
+        "license": "RobotForge starter spec (this repo); VEX part figures quoted from VEX",
+        "note": "A RobotForge starter build made only from real VEX parts and VEX's published motor ratings. Mass and frame size are typical values, not a measured robot.",
+        "source_name": "VEX published motor and part ratings (VEX Library)",
+        "source_url": "https://kb.vex.com/"
+      },
+      "source": "researched",
+      "spec_file": "examples/vex-v5-speed-tank.json",
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "VEX competition robot",
+      "description": "A slow, strong V5 drive on traction wheels for pushing matches.",
+      "gate_status": {
+        "note": "Not gated yet. Its spec is a RobotForge starter build, so you can bring it into the Workshop and run the checks there.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "12.8 V 1100 mAh",
+        "Mass": "4.5 kg (typical)",
+        "Motors": "4",
+        "Size": "0.38 \u00d7 0.38 \u00d7 0.15 m",
+        "Wheels": "4 \u00d7 3.25 in"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "VEX V5 Pushing Drive",
+      "number": 30,
+      "provenance": {
+        "collection": "VEX",
+        "license": "RobotForge starter spec (this repo); VEX part figures quoted from VEX",
+        "note": "A RobotForge starter build made only from real VEX parts and VEX's published motor ratings. Mass and frame size are typical values, not a measured robot.",
+        "source_name": "VEX published motor and part ratings (VEX Library)",
+        "source_url": "https://kb.vex.com/"
+      },
+      "source": "researched",
+      "spec_file": "examples/vex-v5-push-drive.json",
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "VEX competition robot",
+      "description": "A V5 drive on four mecanum wheels that can slide sideways.",
+      "gate_status": {
+        "note": "Not gated yet. Its spec is a RobotForge starter build, so you can bring it into the Workshop and run the checks there.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "12.8 V 1100 mAh",
+        "Mass": "4.5 kg (typical)",
+        "Motors": "4",
+        "Size": "0.38 \u00d7 0.38 \u00d7 0.15 m",
+        "Wheels": "4 \u00d7 4.0 in"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "VEX V5 Mecanum Drive",
+      "number": 31,
+      "provenance": {
+        "collection": "VEX",
+        "license": "RobotForge starter spec (this repo); VEX part figures quoted from VEX",
+        "note": "A RobotForge starter build made only from real VEX parts and VEX's published motor ratings. Mass and frame size are typical values, not a measured robot.",
+        "source_name": "VEX published motor and part ratings (VEX Library)",
+        "source_url": "https://kb.vex.com/"
+      },
+      "source": "researched",
+      "spec_file": "examples/vex-v5-mecanum.json",
+      "subtype": "Mecanum rover"
+    },
+    {
+      "class": "VEX competition robot",
+      "description": "The VEX IQ starter drive base: 2 Smart Motors and travel wheels.",
+      "gate_status": {
+        "note": "Not gated yet. Its spec is a RobotForge starter build, so you can bring it into the Workshop and run the checks there.",
+        "status": "NOT_GATED"
+      },
+      "key_specs": {
+        "Battery": "7.2 V 2000 mAh",
+        "Mass": "1.0 kg (typical)",
+        "Motors": "2",
+        "Size": "0.3 \u00d7 0.2 \u00d7 0.12 m",
+        "Wheels": "4 \u00d7 2.51 in"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "VEX IQ Drivebase",
+      "number": 32,
+      "provenance": {
+        "collection": "VEX",
+        "license": "RobotForge starter spec (this repo); VEX part figures quoted from VEX",
+        "note": "A RobotForge starter build made only from real VEX parts and VEX's published motor ratings. Mass and frame size are typical values, not a measured robot.",
+        "source_name": "VEX published motor and part ratings (VEX Library)",
+        "source_url": "https://kb.vex.com/"
+      },
+      "source": "researched",
+      "spec_file": "examples/vex-iq-drive-base.json",
+      "subtype": "Skid-steer rover"
     }
   ]
 }
