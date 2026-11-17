@@ -26,6 +26,7 @@ Needs: pip install httpx usd-core trimesh pillow fast-simplification
 """
 import argparse
 import getpass
+import hashlib
 import json
 import os
 import subprocess
@@ -39,7 +40,7 @@ API = 'https://api.projectsim.ai'
 ROOT = Path(__file__).resolve().parent.parent
 SUBJECTS = ROOT / 'tools' / 'projectsim' / 'subjects.json'
 OUT = ROOT / 'assets' / 'robot-twins'
-DOWNLOADS = Path.home() / 'projectsim-downloads'
+DOWNLOADS = Path(os.environ.get('PROJECTSIM_DOWNLOAD_DIR', str(Path.home() / 'projectsim-downloads')))
 CREDITS = {False: 4, True: 6}
 POLL_S = 10
 TIMEOUT_S = 60 * 60
@@ -51,7 +52,7 @@ def load_subjects():
 
 
 def token():
-    t = os.environ.get('PROJECTSIM_TOKEN') or getpass.getpass('ProjectSim API token (hidden): ')
+    t = os.environ.get('PROJECTSIM_TOKEN') or os.environ.get('KAEDIM_API_KEY') or getpass.getpass('ProjectSim API token (hidden): ')
     t = t.strip()
     if not t.startswith('kps_'):
         sys.exit('That does not look like a ProjectSim token (they start with kps_). Nothing was sent.')
@@ -76,19 +77,50 @@ def check(r, ok):
     return r.json()
 
 
+def request_checkpoint(dest, body):
+    dest.mkdir(parents=True, exist_ok=True)
+    path = dest / 'request.json'
+    digest = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+    if path.exists():
+        record = json.loads(path.read_text())
+        if record['body_sha256'] != digest:
+            raise ValueError('Inputs changed for a paid request. Use a new subject id or explicitly archive the old request.')
+        return record
+    record = {'body_sha256': digest, 'idempotency_key': str(uuid.uuid4())}
+    save_checkpoint(dest, record)
+    return record
+
+
+def save_checkpoint(dest, record):
+    path = dest / 'request.json'
+    temp = dest / 'request.json.partial'
+    temp.write_text(json.dumps(record, indent=2) + '\n')
+    temp.replace(path)
+
+
 def run_one(client, httpx, slug, s):
     body = body_for(slug, s)
-    print(f'\n[{slug}] creating asset...')
-    created = check(client.post('/v1/assets/standard', json=body,
-                                headers={'Idempotency-Key': str(uuid.uuid4())}), (202,))
-    asset_id, job_id = created['id'], created['job_id']
-    print(f'[{slug}] asset {asset_id}, job {job_id}')
+    dest = (DOWNLOADS / slug).resolve()
+    record = request_checkpoint(dest, body)
+    if (OUT / f'{slug}.glb').exists() and (OUT / f'{slug}.json').exists():
+        print(f'[{slug}] already converted; no new credits spent.')
+        return
+    print(f'\n[{slug}] creating or resuming asset...', flush=True)
+    if not record.get('asset_id'):
+        created = check(client.post('/v1/assets/standard', json=body,
+                                    headers={'Idempotency-Key': record['idempotency_key']}), (202,))
+        record.update(asset_id=created['id'], job_id=created['job_id'])
+        save_checkpoint(dest, record)
+    asset_id, job_id = record['asset_id'], record['job_id']
+    print(f'[{slug}] asset {asset_id}, job {job_id}', flush=True)
     start = time.time()
     while True:
         job = check(client.get(f'/v1/jobs/{job_id}'), (200,))
         st = job.get('status')
         if st == 'retried' and job.get('retried_by'):
             job_id = job['retried_by']
+            record['job_id'] = job_id
+            save_checkpoint(dest, record)
             print(f'[{slug}] retried on ProjectSim side as {job_id}')
             continue
         if st == 'complete':
@@ -101,9 +133,10 @@ def run_one(client, httpx, slug, s):
         time.sleep(POLL_S)
 
     asset = check(client.get(f'/v1/assets/{asset_id}'), (200,))
-    dest = (DOWNLOADS / slug).resolve()
     usd = None
     for f in asset['files']:
+        if not f['url'].startswith('https://'):
+            sys.exit('Non-HTTPS model download refused.')
         target = (dest / f['path']).resolve()
         if not target.is_relative_to(dest):
             sys.exit('Unexpected download path from ProjectSim; stopped.')
