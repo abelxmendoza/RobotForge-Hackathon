@@ -6,6 +6,8 @@
  * a recorded over-voltage. Click a part to trace its paths and run the
  * "if this part dies" test; click a cable to read it. */
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
+type Extra = 'report' | 'facts' | 'note';
 import dynamic from 'next/dynamic';
 import HarnessReport from './HarnessReport';
 import WiringFactsEditor from './WiringFactsEditor';
@@ -67,6 +69,7 @@ export default function WiringView({ wiring: w, spec, compact = false, onWiringC
   const bad = useMemo(() => badConns(w), [w]);
   const nodes = useMemo(() => nodeMap(w), [w]);
   const [mode, setMode] = useState<'simple' | 'full'>('simple');
+  const [extra, setExtra] = useState<Extra | null>(null);
   const [show3D, setShow3D] = useState(!compact);
   const [explode3D, setExplode3D] = useState(0);
   const [failed3D, setFailed3D] = useState(false);
@@ -219,9 +222,16 @@ export default function WiringView({ wiring: w, spec, compact = false, onWiringC
         {(tr || dead) && <button type="button" className="btn btn-sm btn-ghost" onClick={showAll}>Show all</button>}
         <button type="button" className="btn btn-sm btn-ghost" onClick={print}>Print harness sheet</button>
       </div>
-      {onWiringChange && <WiringFactsEditor wiring={w} onChange={onWiringChange} />}
-      <HarnessReport wiring={w} />
-      {w.note && <details className="g-howto wv-notebox"><summary>About this harness</summary><p className="wv-note"><Marked text={w.note} g={g} /></p></details>}
+      {/* One switch for the report, the facts editor and the note,
+       * instead of three stacked dropdowns (2026-11-17 simplify). */}
+      <div className="wv-extra" role="group" aria-label="Wiring report, facts and notes">
+        {([['report', 'Electrical report'], ...(onWiringChange ? [['facts', 'Record facts']] : []), ...(w.note ? [['note', 'Notes']] : [])] as [Extra, string][]).map(([k, label]) => (
+          <button key={k} type="button" className="chip" aria-pressed={extra === k} onClick={() => setExtra(extra === k ? null : k)}>{label}</button>
+        ))}
+      </div>
+      {extra === 'report' && <HarnessReport wiring={w} bare />}
+      {extra === 'facts' && onWiringChange && <WiringFactsEditor wiring={w} onChange={onWiringChange} bare />}
+      {extra === 'note' && w.note && <div className="wv-extra-body"><p className="wv-note"><Marked text={w.note} g={g} /></p></div>}
       {show3D && !failed3D && (
         <div className="card" style={{ marginBottom: 14, padding: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 }}>

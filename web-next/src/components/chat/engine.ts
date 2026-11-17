@@ -1850,7 +1850,7 @@ export const HANDLERS: Record<string, (ctx: Ctx) => HandlerResult> = {
   },
 
   parts_overview: function (ctx) {
-    if (!ctx.data.parts.length) return ctx.noData("app/kit/#parts", "the parts catalogue");
+    if (!ctx.data.parts.length) return ctx.noData("app/inventory/?scope=catalogue", "the parts catalogue");
     const byClass: Record<string, number> = {};
     ctx.data.parts.forEach((p) => {
       const cls = p.part_class || "";

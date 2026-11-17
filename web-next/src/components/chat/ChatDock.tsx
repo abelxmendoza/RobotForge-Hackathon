@@ -1,5 +1,6 @@
 "use client";
 import {robotResearchName,collectRobotResearch,ROBOT_RESEARCH_KEY,type RobotResearchReport} from '@/lib/robotResearch';
+import { catalogPartHref } from "@/lib/partsLibrary";
 import { parseRoverKitCommand, requestRoverKit } from '@/lib/roverKit';
 import {UNITY_ASYNC_EVENT} from '@/lib/unityProtocol';
 import type {UnityRequest} from '@/components/unity/UnityWorkshop';
@@ -814,7 +815,6 @@ export function useForgeAssistant() {
 
   /* ---------------- part focus + in-page actions ---------------- */
 
-  const onPartsPage = Boolean(pathname && pathname.startsWith("/kit"));
 
   const dispatchFocusPart = useCallback((id: string) => {
     window.dispatchEvent(
@@ -822,24 +822,18 @@ export function useForgeAssistant() {
     );
   }, []);
 
-  /* A part hit: on the Parts catalogue page, focus the part there (event +
-   * the ?part= deep link the page understands); from anywhere else,
-   * navigate to that deep link. */
+  /* A part hit opens that part in My Parts and Tools, the catalogue's
+   * one home (2026-11-17). Already there, a full load re-reads the
+   * ?part= deep link, which the page only reads on mount. */
   const focusPartHit = useCallback(
     (hit: Hit) => {
       if (!hit.id) return;
       dispatchFocusPart(hit.id);
-      const url = "/kit/?part=" + encodeURIComponent(hit.id) + "#parts";
-      if (onPartsPage) {
-        noteBubble(
-          "I highlighted “" + hit.label + "” in the parts catalogue on this page."
-        );
-        router.replace(url, { scroll: false });
-      } else {
-        router.push(url);
-      }
+      const url = catalogPartHref(hit.id);
+      if (pathname && pathname.startsWith("/inventory")) window.location.assign(url);
+      else router.push(url);
     },
-    [dispatchFocusPart, noteBubble, onPartsPage, router]
+    [dispatchFocusPart, pathname, router]
   );
 
   /* A real in-page action, not just an answer: on a page with the
@@ -872,20 +866,10 @@ export function useForgeAssistant() {
     (q: string, ans: AnswerResult) => {
       if (/^(find|search|show|filter)\b/i.test(q) && ans.hits) {
         const partHits = ans.hits.filter((h) => h.kind === "part");
-        if (partHits.length && onPartsPage && partHits[0].id) {
-          dispatchFocusPart(partHits[0].id);
-          noteBubble(
-            "I highlighted the first match, “" +
-              partHits[0].label +
-              "”, in the catalogue on this page — tap any result " +
-              "button to pop another one up."
-          );
-          return;
-        }
       }
       filterPartsHere(q);
     },
-    [dispatchFocusPart, filterPartsHere, noteBubble, onPartsPage]
+    [filterPartsHere]
   );
 
   /* ---------------- save a robot (addendum, 2026-11-01) ---------------- */

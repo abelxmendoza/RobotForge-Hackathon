@@ -111,7 +111,9 @@ def test_demobar_welcome_leads_with_the_sample():
     first_step = steps.split("<li>", 1)[1].split("</li>", 1)[0] if "<li>" in steps else steps.split("<li", 1)[1]
     assert "Omega1 sample" in first_step
     assert "SAMPLE_REPO_URL" in bar and "SAMPLE_PROMPT" in bar
-    assert "Send it to Wrench" in bar and "Copy" in bar
+    # 2026-11-17 simplify: one button that sends it to Wrench; the
+    # repo link rides in its tooltip instead of a separate Copy button.
+    assert "Import the Omega1 sample" in first_step and "promptWrench" in first_step
 
 
 def test_import_page_sample_filler_uses_the_constant():
@@ -146,7 +148,8 @@ def test_card_leads_with_open_now():
 def test_landing_spotlight_and_hero_button():
     page = (SRC / "app" / "page.tsx").read_text()
     assert "<SampleSpotlight />" in page
-    assert "<SampleOpenLink" in page
+    # 2026-11-17 simplify: the hero's extra "Try the Omega1 sample"
+    # link is gone; the spotlight card right under the hero opens it.
     spot = (SRC / "components" / "home" / "SampleSpotlight.tsx").read_text()
     assert "<SampleOpenLink" in spot
     link = (SRC / "components" / "home" / "SampleOpenLink.tsx").read_text()

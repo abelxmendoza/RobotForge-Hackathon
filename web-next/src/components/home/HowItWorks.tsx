@@ -5,8 +5,9 @@ import CopyButton from "./CopyButton";
  * The fine print for /how-it-works/: what a PASS proves, what it
  * doesn't, and the CLI quickstart.
  *
- * The test itself is explained once, on the landing page's #workflow
- * band — that is the canonical explanation. This component used to
+ * The test itself is explained once, in the #workflow band just above
+ * this on /how-it-works/ (moved from the landing on 2026-11-17) —
+ * that is the canonical explanation. This component used to
  * restate the whole mechanism a second time (pipeline graphic, three
  * explainer cards); it was cut on 2026-10-29 at Abel's direction
  * (declutter: one explanation, links instead of copies, less is more).
@@ -26,7 +27,7 @@ export default function HowItWorks() {
         <h2>What a PASS proves.</h2>
         <p>
           The test itself is explained once, on the home page:{" "}
-          <Link href="/#workflow">how the driving test works</Link>. This
+          <Link href="#workflow">how the driving test works</Link>. This
           page keeps the fine print.
         </p>
       </div>

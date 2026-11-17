@@ -33,10 +33,10 @@ export default function PartsLibrary(){
  const filtered=source.filter(p=>(!query.trim()||query.toLowerCase().split(/\s+/).every(word=>[p.name,CATEGORY_NAMES[p.category],PART_GROUPS.find(g=>g.id===partGroup(p.category))?.label,originLabel(p),itemLabel(p),...Object.values(p.specs)].join(' ').toLowerCase().includes(word)))&&(status==='all'||status==='archived'||(status==='custom'?p.origin==='custom':status==='pending'?!available(p)&&p.status!=='confirmed':itemLabel(p).toLowerCase()===status))&&(robot==='all'||(robot==='shared'?!p.robot_id&&!p.robot_links?.length:robotMatches(p,robots).some(m=>m.robot.id===robot&&m.kind!=='suggested'))));
  const shown=filtered.filter(p=>category==='all'||p.category===category);
  const all=[...items,...stock.filter(p=>p.archivedAt),...CATALOGUE.filter(c=>!items.some(p=>p.catalog_part_id===c.catalog_part_id))];
- const open=all.find(p=>p.id===openId);
+ const open=all.find(p=>p.id===openId)??(openId?.startsWith('catalog:')?all.find(p=>p.catalog_part_id===openId.slice(8)):undefined);
  const ref=(p:InventoryPart)=>quote(all.filter(x=>x.name.toLowerCase()===p.name.toLowerCase()).length===1?p.name:p.id);
  const categoryView=category==='all'&&!query.trim();
- useEffect(()=>{const params=new URLSearchParams(window.location.search);setOpenId(params.get('part'));setRobot(params.get('robot')||'all');},[]);
+ useEffect(()=>{const params=new URLSearchParams(window.location.search);setOpenId(params.get('part'));setRobot(params.get('robot')||'all');if(params.get('scope')==='catalogue')setScope('catalogue');},[]);
  useEffect(()=>{if(!openId||!dialogRef.current)return;dialogRef.current.showModal();closeRef.current?.focus();return()=>{dialogRef.current?.close();lastFocus.current?.focus();};},[openId]);
  const show=(p:InventoryPart)=>{lastFocus.current=document.activeElement as HTMLElement;setOpenId(p.id);};
  const ask=(text:string,attach=false)=>{setOpenId(null);promptWrench({mode:'chat',text,attach});};
