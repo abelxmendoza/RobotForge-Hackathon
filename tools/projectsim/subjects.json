@@ -1,0 +1,17 @@
+{
+  "_note": "Robots tools/projectsim_generate.py can send to ProjectSim (Kaedim). Inputs are only images we have rights to use, or text written from the catalogue. Every output is a GENERATED stand-in, not manufacturer CAD.",
+  "boston-dynamics-spot": {
+    "name": "Boston Dynamics Spot",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Spot_by_Boston_Dynamics.jpg/1280px-Spot_by_Boston_Dynamics.jpg",
+    "image_credit": "Photo: Jonte, via Wikimedia Commons (CC BY-SA 4.0)",
+    "image_license": "CC BY-SA 4.0 (the generated model is a derivative: keep the credit and the same license)",
+    "text": null,
+    "articulated": true
+  },
+  "vex-v5-tank-drive": {
+    "name": "VEX V5 Tank Drive",
+    "image_url": null,
+    "text": "A small VEX V5 competition robot drivetrain, about 38 cm square and 15 cm tall. Flat rectangular frame of silver aluminium C-channel bars with rows of square holes. Four black 4-inch omni wheels with grey rollers, two on each side, each driven by a dark grey square VEX V5 smart motor mounted inside the frame. A black V5 robot brain with a small touchscreen sits on top in the middle, and a black rectangular V5 battery is mounted beside it. Short black and red cables run between the motors and the brain. No arms, no intake, just the drive base.",
+    "articulated": true
+  }
+}
