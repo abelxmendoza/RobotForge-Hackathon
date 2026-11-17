@@ -135,13 +135,17 @@ def test_spot_files_under_sighted_as_cpp_club_robot():
     assert "Cal Poly Pomona IRLab" in DEX
 
 
-def test_no_catalog_spot_to_double_present():
-    # dedupe fact: the catalog holds no Spot record, so the CPP
-    # sighting is the ONLY Spot presentation — nothing to merge,
-    # and Researched must never gain a second Spot from the data.
+def test_one_catalog_spot_beside_the_sighting():
+    # Abel asked for Spot in the Robodex (2026-11-14): the catalog
+    # holds exactly ONE researched Spot record (the product, from
+    # Boston Dynamics' spec page), and the CPP sighting stays its own
+    # card in Sighted — the club's robot, not the product record.
     names = [r["name"] for r in CATALOG["robots"]]
-    assert not any("spot" in n.lower() for n in names), names
-    assert len(names) == 12
+    spots = [n for n in names if "spot" in n.lower()]
+    assert spots == ["Boston Dynamics Spot"], spots
+    spot = next(r for r in CATALOG["robots"] if r["name"] == "Boston Dynamics Spot")
+    assert spot["source"] == "researched"
+    assert len(names) == 32
 
 
 # ------------------------------------------------------- 4. bring into Workshop

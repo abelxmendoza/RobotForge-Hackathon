@@ -66,7 +66,7 @@ PASS_AT, FAIL_AT = 5.0, 10.0
 APP_NAV = [
     ("forge", "Forge", "forge/",
      '<path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16" r="3"/>'),
-    ("robots", "Robots", "robots/",
+    ("robots", "Robodex", "robots/",
      '<rect x="4" y="7" width="16" height="9" rx="2"/>'
      '<circle cx="8" cy="18.5" r="1.8"/><circle cx="16" cy="18.5" r="1.8"/>'
      '<path d="M12 7V4"/>'),

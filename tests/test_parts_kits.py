@@ -61,6 +61,22 @@ def test_kitless_entries_are_the_wheelless_classes():
     assert kitless == {
         "px4-x500", "crazyflie-2-1", "unitree-go2", "mini-pupper",
         "unitree-g1", "robotis-op3", "openmanipulator-x", "asimov-1",
+        # entries with no spec file (published figures only)
+        "1x-neo-gamma",
+        "anki-vector",
+        "boston-dynamics-atlas",
+        "boston-dynamics-atlas-hd",
+        "boston-dynamics-spot",
+        "boston-dynamics-stretch",
+        "donkey-car",
+        "lekiwi",
+        "lerobot-so-101",
+        "microduck",
+        "nvidia-jetbot",
+        "petoi-bittle",
+        "reachy-mini",
+        "tesla-optimus-gen-2",
+        "unitree-h1",
     }
 
 
