@@ -8,8 +8,8 @@
  * cannot leak into the app shell (or vice versa).
  *
  * The parts catalogue and the spec-driven take-apart viewer used to
- * be repeated here; they now live once each, in PartsCatalogue (below
- * this viewer on /kit/) and on the robot pages. */
+ * be repeated here; they now live once each, in My Parts and Tools
+ * (/inventory/?scope=catalogue) and on the robot pages. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { parts as libParts } from '../forge/data';
@@ -181,6 +181,7 @@ type Detail =
 
 export default function KitViewer() {
   const [slider, setSlider] = useState(0);
+  const [showLife, setShowLife] = useState(false);
   const [explodeCur, setExplodeCur] = useState(0);
   const [spin, setSpin] = useState(false);
   const [cad, setCad] = useState(false);
@@ -488,17 +489,9 @@ export default function KitViewer() {
           <div className="kicker">RobotForge · Take-Apart Kit</div>
           <h1>The Parts Kit, in 3D</h1>
           <p className="sub">
-            A forged robot is a kit of parts, not a monolith. Drag to orbit,
-            pinch or scroll to zoom, tap any part to inspect it — then pull the
-            explode slider and watch it come apart. Flip on <b>CAD mode</b>{' '}
-            and the same model becomes parametric OpenSCAD you can download,
-            open in OpenSCAD or FreeCAD, edit, and print. Geometry: TurtleBot3
-            Burger dims — the robot the gate passed. Open the{' '}
-            <b>Parts palette</b> to drag bench props onto the stage and
-            build a parts list — or ask Wrench in chat to add
-            parts to your build. Flip on <b>Wiring</b> to cable that
-            build list together — a schematic diagram from the parts'
-            recorded interfaces, checked as you go.
+            Tap a part to inspect it, or pull the explode slider. <b>CAD
+            mode</b> gives you OpenSCAD to print; to add parts, use the{' '}
+            <b>Parts palette</b> or ask Wrench in chat.
           </p>
         </header>
 
@@ -653,8 +646,14 @@ export default function KitViewer() {
             stage.setControls((c) => ({ ...c, ...patch }))
           }
         />
+        {/* What moves and why: behind one button (2026-11-17). */}
         {burgerCapability && (
-          <div className="box" style={{ marginTop: 14 }}>
+          <button type="button" className="btn btn-sm" style={{ marginTop: 14 }} aria-expanded={showLife} onClick={() => setShowLife((v) => !v)}>
+            {showLife ? 'Hide what moves, and why' : 'What moves, and why'}
+          </button>
+        )}
+        {burgerCapability && showLife && (
+          <div className="box" style={{ marginTop: 8 }}>
             <b>Stage life — what moves here, and why.</b>{' '}
             <span className="dim">
               Every track below is derived from recorded data (the Burger's

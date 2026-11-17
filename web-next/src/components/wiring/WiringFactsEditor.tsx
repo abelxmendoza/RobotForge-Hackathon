@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Wiring } from '@/lib/wiring';
 import { NODE_FACTS, CONNECTION_FACTS, saveWiringFacts } from '@/lib/wiringFacts';
 const unit = (key: string) => key.endsWith('_v') || key === 'volts' ? 'V' : key.endsWith('_a') ? 'A' : key === 'length_mm' ? 'mm' : key === 'gauge_awg' ? 'AWG' : 'documented pin ID';
-export default function WiringFactsEditor({ wiring, onChange }: { wiring: Wiring; onChange: (w: Wiring) => void }) {
+export default function WiringFactsEditor({ wiring, onChange, bare = false }: { wiring: Wiring; onChange: (w: Wiring) => void; bare?: boolean }) {
   const [selection,setSelection] = useState('node:0');
   const [error,setError] = useState('');
   const [saved,setSaved] = useState(false);
@@ -13,7 +13,8 @@ export default function WiringFactsEditor({ wiring, onChange }: { wiring: Wiring
   const data = (target === 'node' ? wiring.nodes[index] : wiring.connections[index]) as unknown as Record<string,unknown> | undefined;
   const cable = data?.cable as Record<string,unknown> | undefined;
   const fields = target === 'node' ? NODE_FACTS : CONNECTION_FACTS;
-  return <details className="g-howto wv-notebox"><summary>Record electrical facts and connector pins</summary>
+  const Box = bare ? 'div' : 'details';
+  return <Box className={bare ? 'wv-extra-body' : 'g-howto wv-notebox'}>{!bare && <summary>Record electrical facts and connector pins</summary>}
     <p>Copy values from your exact part documentation or measurements. Saved facts are marked user-entered and unverified. Empty means unknown; no value is inferred. Save each selected part or connection before switching.</p>
     <label>Part or connection <select value={selection} onChange={e=>{setSelection(e.target.value);setError('');setSaved(false);}}>
       {wiring.nodes.map((n,i)=><option key={`n${i}`} value={`node:${i}`}>{n.label}</option>)}
@@ -24,5 +25,5 @@ export default function WiringFactsEditor({ wiring, onChange }: { wiring: Wiring
       <button type="submit" className="btn btn-sm">Save recorded facts</button>
       {error && <p role="alert">{error}</p>}{saved && <p role="status">Saved as user-entered, unverified facts.</p>}
     </form>}
-  </details>;
+  </Box>;
 }

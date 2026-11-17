@@ -28,6 +28,7 @@ export default function Omega1Simulator() {
   const host = useRef<HTMLDivElement>(null);
   const keys = useRef(new Set<string>());
   const [resetKey, setResetKey] = useState(0);
+  const [showSources, setShowSources] = useState(false);
   const [ready, setReady] = useState(false);
   const [modelNote, setModelNote] = useState('Loading Omega1’s twin…');
   const [error, setError] = useState('');
@@ -196,7 +197,7 @@ export default function Omega1Simulator() {
         <div>
           <p className="eyebrow">Omega1 simulator</p>
           <h1>Drive Omega1&apos;s digital twin</h1>
-          <p className="faint">Omega1 is offline for repairs, so here is its 3D twin on real-time physics. Take the tour, or drive it yourself and watch what its motors and sensor would be doing.</p>
+          <p className="faint">Omega1 is offline for repairs. Take the tour, or drive its twin yourself.</p>
         </div>
         <div className="o1sim-badges"><span className="fbadge local">Browser · Rapier physics</span><span className="fbadge planned">Estimated twin</span></div>
       </header>
@@ -246,7 +247,7 @@ export default function Omega1Simulator() {
               </div>
             ))}
           </div>
-          <p className="faint g-small">The channel each wheel&apos;s command lights, from Omega1&apos;s own motor table. Bars show the share of the strongest command, not speed.</p>
+          <p className="faint g-small">Channels from Omega1&apos;s motor table. Bars are command share, not speed.</p>
         </div>
 
         <div className="o1sim-gauge">
@@ -270,16 +271,20 @@ export default function Omega1Simulator() {
         <div className="o1sim-gauge">
           <h3>Trip</h3>
           <p className="o1sim-big">{gauges.tripM.toFixed(2)} m</p>
-          <p className="faint g-small">Distance driven in the twin, {gauges.t.toFixed(0)} s of sim time. No speed is shown: the real wheel size and motor speed haven&apos;t been measured.</p>
+          <p className="faint g-small">{gauges.t.toFixed(0)} s of sim time. No speed is shown: wheel size and motor speed are unmeasured.</p>
           <h3 style={{ marginTop: 12 }}>Battery</h3>
           <p className="o1sim-mid">7.4 V nominal</p>
-          <p className="faint g-small">Two 18650 cells in series. Their capacity isn&apos;t recorded, so there&apos;s no runtime estimate.</p>
+          <p className="faint g-small">Two 18650 cells. Capacity unknown, so no runtime estimate.</p>
         </div>
       </section>
 
       <section className="o1sim-sources">
-        <h2>Where these numbers come from</h2>
-        <p>Omega1&apos;s records say what it is (four gearmotors on a PCA9685 hat, skid steer, an HC-SR04 up front), but its size, weight and wheel have never been measured. Physics can&apos;t run without them, so this page reads them off the 3D twin and says so.</p>
+        {/* Sources behind one button (2026-11-17 simplify pass). */}
+        <button type="button" className="btn btn-sm" aria-expanded={showSources} onClick={() => setShowSources((v) => !v)}>
+          {showSources ? 'Hide where these numbers come from' : 'Where these numbers come from'}
+        </button>
+        {showSources && <>
+        <p>Omega1&apos;s size, weight and wheel have never been measured, so the physics reads them off the 3D twin and says so.</p>
         <div className="table-scroll">
           <table className="data">
             <thead><tr><th>Number</th><th>Value</th><th>Where it comes from</th></tr></thead>
@@ -295,7 +300,8 @@ export default function Omega1Simulator() {
           </table>
         </div>
         <p className="g-small">With these numbers, climbing a 10° ramp at steady speed asks each motor for {analysis.cases[1].torquePerMotorNm.toFixed(3)} N·m, {analysis.cases[1].pctOfStall.toFixed(0)}% of the stand-in stall torque.</p>
-        <p className="faint g-small">Not used on purpose: the wheel radius (50 mm), track (200 mm) and 300 rpm defaults in Omega1&apos;s code. The repo extraction flags them as wrong-sized. When Omega1 is measured, its saved copy in the Workshop runs the same sandbox on real numbers.</p>
+        <p className="faint g-small">Not used on purpose: the wheel radius (50 mm), track (200 mm) and 300 rpm defaults in Omega1&apos;s code, which the repo extraction flags as wrong-sized.</p>
+        </>}
         <div className="o1sim-links">
           <a className="btn btn-sm" href="/explain/?robot=omega1">How does Omega1 work?</a>
           <a className="btn btn-sm" href="/film/">Watch Omega1 come apart</a>

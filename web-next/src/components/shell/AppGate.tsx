@@ -166,14 +166,8 @@ function GateScreen({ expired }: { expired: boolean }) {
   return (
     <div className="gate">
       <div className="gate-intro">
-        <div className="eyebrow">Members&apos; workshop</div>
-        <h2>Sign in to use the app — or take the demo</h2>
-        <p>
-          The Workshop, Robodex, Kit, Garage, Inventory and Wrench
-          run on an account, because live AI spends real model
-          budget. The landing page stays public, and the demo is
-          the no-account way in.
-        </p>
+        <h2>Sign in, or try the demo</h2>
+        <p>Live AI runs on an account. The demo needs none.</p>
         {expired && (
           <p className="gate-expired" role="status">
             Your session expired — sign in again to keep going.
@@ -185,22 +179,15 @@ function GateScreen({ expired }: { expired: boolean }) {
         <div className="acct-card gate-demo">
           <span className="fbadge local">NO ACCOUNT</span>
           <div>
-            <h2>Try the demo first</h2>
+            <h2>Try the demo</h2>
             <p className="acct-sub">
-              The real app, preloaded with clearly-labeled sample
-              robots and parts. Recorded answers only — the demo
-              never calls the live endpoint, so it costs nothing
-              and asks for nothing.
+              Sample robots and recorded answers. Nothing is sent
+              anywhere, and your own data is untouched.
             </p>
           </div>
           <DemoEntryButton className="btn btn-primary acct-cta" label="Enter the demo" to={pathname || "/garage/"} />
           {/* The Omega1 sample, one click past the gate (lib/sampleRobot.ts). */}
           <DemoEntryButton className="btn acct-cta" label="Or start with the Omega1 sample robot" to="/garage/" onBeforeEnter={requestSampleOpen} />
-          <p className="acct-note">
-            Exit any time from the demo bar. Your own robots and
-            inventory are never touched — the demo keeps its own
-            separate sandbox on this device.
-          </p>
         </div>
       </div>
     </div>

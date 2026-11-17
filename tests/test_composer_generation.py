@@ -218,12 +218,20 @@ def test_landing_declutter():
     # Open the app) a third time on the page; it is removed.
     assert "cta-band" not in LANDING
     assert "See a broken robot get fixed in one click" not in LANDING
-    # Kept: hero + its CTAs, the demo entry, how-it-works, footer.
+    # Kept: hero + its CTAs, the demo entry, footer.
     assert 'className="hero"' in LANDING
-    assert "Open the app →" in LANDING
+    assert "Run the demo, no sign-up" in LANDING
+    assert "Open my Workshop" in LANDING
     assert "RunDemoLink" in LANDING
-    assert 'id="workflow"' in LANDING
     assert "LandingFooter" in LANDING
+    # 2026-11-17 simplify: the driving test (#workflow) is explained
+    # once, on How it works; the landing links there.
+    assert 'id="workflow"' not in LANDING
+    assert 'href="/how-it-works/"' in LANDING
+    driving = (SRC / "components/home/DrivingTest.tsx").read_text()
+    assert 'id="workflow"' in driving
+    how = (SRC / "app/how-it-works/page.tsx").read_text()
+    assert "<DrivingTest />" in how
 
 
 def test_create_styles_in_css_source_of_truth():

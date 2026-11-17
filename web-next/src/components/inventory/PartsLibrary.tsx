@@ -36,7 +36,7 @@ export default function PartsLibrary(){
  const open=all.find(p=>p.id===openId);
  const ref=(p:InventoryPart)=>quote(all.filter(x=>x.name.toLowerCase()===p.name.toLowerCase()).length===1?p.name:p.id);
  const categoryView=category==='all'&&!query.trim();
- useEffect(()=>{const params=new URLSearchParams(window.location.search);setOpenId(params.get('part'));setRobot(params.get('robot')||'all');},[]);
+ useEffect(()=>{const params=new URLSearchParams(window.location.search);setOpenId(params.get('part'));setRobot(params.get('robot')||'all');if(params.get('scope')==='catalogue')setScope('catalogue');},[]);
  useEffect(()=>{if(!openId||!dialogRef.current)return;dialogRef.current.showModal();closeRef.current?.focus();return()=>{dialogRef.current?.close();lastFocus.current?.focus();};},[openId]);
  const show=(p:InventoryPart)=>{lastFocus.current=document.activeElement as HTMLElement;setOpenId(p.id);};
  const ask=(text:string,attach=false)=>{setOpenId(null);promptWrench({mode:'chat',text,attach});};

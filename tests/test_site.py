@@ -148,7 +148,7 @@ def test_next_landing_final_cta_has_no_dense_demo_screenshot():
     assert "See a broken robot get fixed in one click." not in page
     assert "cta-band" not in page
     assert "Run the demo" in page
-    assert "Open the app" in page
+    assert "Open my Workshop" in page
     assert 'assets/img/demo-shot.jpg' not in page
     assert "The one-click demo, mid-run." not in page
 

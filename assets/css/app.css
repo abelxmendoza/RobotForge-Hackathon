@@ -2735,3 +2735,14 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .studio-shell .studio-wrench textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* the in-flow demo strip takes ~58px off the studio's height */
 body:has(.demo-bar) .studio{--studio-h:calc(100dvh - 56px - 24px - 58px)}
+
+/* Wire view: one switch row for the report, facts and notes instead
+ * of three stacked dropdowns (2026-11-17 simplify pass). */
+.wv-extra{display:flex;flex-wrap:wrap;gap:var(--s2);margin:0 0 var(--s3)}
+.wv-extra-body{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:var(--s3) var(--s4);margin:0 0 var(--s4);font-size:var(--fs-sm)}
+.wv-extra-body > p:first-child{margin-top:0}
+/* Demo welcome: one line, three taps in a row (2026-11-17). */
+.demo-bar-welcome{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.demo-bar-welcome p{margin:0}
+.demo-bar-welcome .demo-steps{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:0;padding:0;list-style:none;max-width:none}
+.demo-bar-welcome .demo-steps li{display:block}
