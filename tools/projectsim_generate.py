@@ -139,7 +139,7 @@ def download_with_retry(httpx, url, target, sleep=time.sleep):
             sleep(delay)
 
 
-def run_one(client, httpx, slug, s):
+def submit_one(client, slug, s):
     body = body_for(slug, s)
     dest = (DOWNLOADS / slug).resolve()
     record = request_checkpoint(dest, body)
@@ -152,6 +152,14 @@ def run_one(client, httpx, slug, s):
                                     headers={'Idempotency-Key': record['idempotency_key']}), (202,))
         record.update(asset_id=created['id'], job_id=created['job_id'])
         save_checkpoint(dest, record)
+    return record
+
+
+def run_one(client, httpx, slug, s):
+    record = submit_one(client, slug, s)
+    if record is None:
+        return
+    dest = (DOWNLOADS / slug).resolve()
     asset_id, job_id = record['asset_id'], record['job_id']
     print(f'[{slug}] asset {asset_id}, job {job_id}', flush=True)
     start = time.time()
@@ -235,6 +243,10 @@ def main():
         return
     import httpx
     with httpx.Client(base_url=API, headers={'Authorization': f'Bearer {token()}'}, timeout=30) as client:
+        # Queue every requested asset before waiting on the first reconstruction.
+        # Existing checkpoint IDs prevent duplicate paid submissions on restart.
+        for slug in a.slugs:
+            submit_one(client, slug, subjects[slug])
         for slug in a.slugs:
             run_one(client, httpx, slug, subjects[slug])
 

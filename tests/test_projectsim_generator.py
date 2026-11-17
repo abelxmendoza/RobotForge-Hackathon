@@ -62,3 +62,27 @@ def test_interrupted_download_never_publishes_partial_model(tmp_path):
  assert target.read_bytes()==b'firstsecond'
  assert len(calls)==2 and pauses==[2]
  assert not target.with_name('robot.usd.partial').exists()
+
+
+def test_batch_submits_all_subjects_before_waiting(monkeypatch):
+ import sys
+ from types import SimpleNamespace
+ m=module();events=[]
+ class Client:
+  def __init__(self,**kwargs):pass
+  def __enter__(self):return self
+  def __exit__(self,*args):return False
+ monkeypatch.setitem(sys.modules,'httpx',SimpleNamespace(Client=Client))
+ monkeypatch.setattr(sys,'argv',['generator','boston-dynamics-spot-with-arm','vex-v5-tank-drive','--yes'])
+ monkeypatch.setattr(m,'token',lambda:'kps_test')
+ monkeypatch.setattr(m,'submit_one',lambda client,slug,subject:events.append(('submit',slug)))
+ monkeypatch.setattr(m,'run_one',lambda client,httpx,slug,subject:events.append(('wait',slug)))
+ m.main()
+ assert events==[('submit','boston-dynamics-spot-with-arm'),('submit','vex-v5-tank-drive'),('wait','boston-dynamics-spot-with-arm'),('wait','vex-v5-tank-drive')]
+
+def test_saved_asset_submission_does_not_create_replacement(tmp_path,monkeypatch):
+ from types import SimpleNamespace
+ m=module();monkeypatch.setattr(m,'DOWNLOADS',tmp_path);monkeypatch.setattr(m,'OUT',tmp_path/'output')
+ slug='boston-dynamics-spot-with-arm';subject=m.load_subjects()[slug]
+ dest=tmp_path/slug;record=m.request_checkpoint(dest,m.body_for(slug,subject));record.update(asset_id='ast_existing',job_id='job_existing');m.save_checkpoint(dest,record)
+ assert m.submit_one(SimpleNamespace(),slug,subject)['job_id']=='job_existing'
