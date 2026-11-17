@@ -37,3 +37,28 @@ def test_read_poll_recovers_timeout_and_service_failure_without_creation():
  result=m.get_with_retry(client,SimpleNamespace(TransportError=NetworkFailure),'/v1/jobs/existing',sleep=pauses.append)
  assert result.json()['status']=='running'
  assert client.calls==3 and pauses==[2,4]
+
+
+def test_interrupted_download_never_publishes_partial_model(tmp_path):
+ from types import SimpleNamespace
+ m=module();target=tmp_path/'robot.usd';target.write_bytes(b'previous complete model')
+ class NetworkFailure(Exception):pass
+ class Response:
+  status_code=200
+  def __init__(self,fail):self.fail=fail
+  def __enter__(self):return self
+  def __exit__(self,*args):return False
+  def iter_bytes(self,size):
+   yield b'first'
+   if self.fail:raise NetworkFailure('connection lost')
+   yield b'second'
+ calls=[]
+ def stream(*args,**kwargs):
+  calls.append(1)
+  assert target.read_bytes()==b'previous complete model'
+  return Response(len(calls)==1)
+ pauses=[]
+ m.download_with_retry(SimpleNamespace(stream=stream,TransportError=NetworkFailure),'https://example.com/model',target,sleep=pauses.append)
+ assert target.read_bytes()==b'firstsecond'
+ assert len(calls)==2 and pauses==[2]
+ assert not target.with_name('robot.usd.partial').exists()

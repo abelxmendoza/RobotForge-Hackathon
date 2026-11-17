@@ -115,6 +115,30 @@ def get_with_retry(client, httpx, path, sleep=time.sleep):
         sleep(delay)
 
 
+def download_with_retry(httpx, url, target, sleep=time.sleep):
+    """Publish a download only after the complete response has arrived."""
+    partial = target.with_name(target.name + '.partial')
+    for attempt in range(6):
+        try:
+            with httpx.stream('GET', url, timeout=120, follow_redirects=True) as response:
+                if response.status_code == 429 or response.status_code >= 500:
+                    raise httpx.TransportError('Temporary download failure')
+                if response.status_code != 200:
+                    raise RuntimeError('Model download refused. Rerun to fetch fresh download links for the saved asset.')
+                with partial.open('wb') as output:
+                    for chunk in response.iter_bytes(1 << 20):
+                        output.write(chunk)
+            partial.replace(target)
+            return
+        except httpx.TransportError:
+            partial.unlink(missing_ok=True)
+            if attempt == 5:
+                raise RuntimeError('Model download interrupted. Rerun to download the existing asset; no replacement is needed.') from None
+            delay = min(30, 2 ** (attempt + 1))
+            print(f'Model download interrupted; retrying in {delay}s.', flush=True)
+            sleep(delay)
+
+
 def run_one(client, httpx, slug, s):
     body = body_for(slug, s)
     dest = (DOWNLOADS / slug).resolve()
@@ -158,11 +182,7 @@ def run_one(client, httpx, slug, s):
         if not target.is_relative_to(dest):
             sys.exit('Unexpected download path from ProjectSim; stopped.')
         target.parent.mkdir(parents=True, exist_ok=True)
-        with httpx.stream('GET', f['url'], timeout=120, follow_redirects=True) as dl:
-            dl.raise_for_status()
-            with target.open('wb') as fh:
-                for chunk in dl.iter_bytes(1 << 20):
-                    fh.write(chunk)
+        download_with_retry(httpx, f['url'], target)
         if target.suffix in ('.usd', '.usdc', '.usda') and f.get('kind') == 'usd' and usd is None:
             usd = target
     if usd is None:
