@@ -359,7 +359,7 @@ function sourcesFor(data: EngineData, root: string, ans: AnswerResult): SourceRe
         }
       }
     } else if (h.kind === "part" && h.id) {
-      push("Parts catalogue — " + h.label, "/kit/?part=" + encodeURIComponent(h.id) + "#parts");
+      push("Parts catalogue — " + h.label, "/inventory/?scope=catalogue&part=" + encodeURIComponent("catalog:" + h.id));
     } else if (h.kind === "kind") {
       push("Starter kinds — the Forge", "/forge/");
     } else if (h.kind === "route" && h.route) {

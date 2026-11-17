@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AppShell from "@/components/shell/AppShell";
 import KitViewer from "@/components/kit/KitViewer";
+import KitPartForward from "@/components/kit/KitPartForward";
 import { parts } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default function KitPage() {
         { label: "Parts kit in 3D" },
       ]}
     >
+      <KitPartForward />
       <KitViewer />
       {/* The catalogue's one home is My Parts and Tools now (simplify
        * pass, 2026-11-17); it showed the same parts twice. */}

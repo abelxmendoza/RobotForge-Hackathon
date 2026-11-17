@@ -28,6 +28,12 @@ export function organizedLibraryItems(stock:InventoryPart[],web:WebPartRecord[],
   return [...saved,...catalogue.filter(p=>!linked.has(p.catalog_part_id))];
 }
 
+/* Deep link to one catalogue part in My Parts and Tools (the
+ * catalogue's one home since 2026-11-17; it used to be /kit/#parts). */
+export function catalogPartHref(id:string):string {
+  return '/inventory/?scope=catalogue&part='+encodeURIComponent('catalog:'+id);
+}
+
 export function catalogItems(catalogue:CataloguePart[]):InventoryPart[] {
   return catalogue.map(p=>{const links=cataloguePartLinks(p);return {...base('catalog:'+p.id,p.name||p.id,categoryFor(p.part_class||'',p.name||p.id)),catalog_part_id:p.id,origin:'catalogue' as const,...catalogPhoto(p),...(links.length?{shops:links}:{}),specs:Object.fromEntries(Object.entries(p.specs||{}).filter(([,v])=>typeof v==='number'||typeof v==='string')) as InventoryPart['specs']};});
 }
