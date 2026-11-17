@@ -11,7 +11,7 @@ export function indexGeneratedModels(repo){
   const model=`assets/robot-twins/${slug}.glb`,local=path.join(repo,model);
   if(record.glb!==model||!record.asset_id||!record.robot||!existsSync(local))continue;
   const bytes=readFileSync(local);if(bytes.length<20||bytes.toString('ascii',0,4)!=='glTF'||bytes.readUInt32LE(4)!==2||bytes.readUInt32LE(8)!==bytes.length)continue;
-  records.push({slug,name:String(record.robot),model,receipt:`assets/robot-twins/${file}`,assetId:String(record.asset_id),generatedAt:record.generated_at,bytes:bytes.length});
+  records.push({slug,catalogSlug:typeof record.catalog_slug==='string'?record.catalog_slug:slug,name:String(record.robot),model,receipt:`assets/robot-twins/${file}`,assetId:String(record.asset_id),generatedAt:record.generated_at,bytes:bytes.length});
  }
  return records;
 }

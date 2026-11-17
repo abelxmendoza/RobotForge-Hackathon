@@ -196,6 +196,8 @@ def run_one(client, httpx, slug, s):
 
     record = {
         'robot': s['name'],
+        'catalog_slug': s.get('catalog_slug', slug),
+        'reference_url': s.get('reference_url'),
         'label': 'Generated 3D model (ProjectSim by Kaedim). Not manufacturer CAD; shape, scale and physics are estimates.',
         'generator': 'ProjectSim by Kaedim, POST /v1/assets/standard',
         'asset_id': asset_id,
@@ -227,7 +229,7 @@ def main():
     if unknown:
         sys.exit(f'Unknown robot(s): {", ".join(unknown)}. See --list.')
     total = sum(CREDITS[bool(subjects[s].get('articulated'))] for s in a.slugs)
-    print(f'{len(a.slugs)} model(s), about {total} ProjectSim credits.')
+    print(f'{len(a.slugs)} model(s), up to {total} ProjectSim credits. Saved jobs are resumed without a new creation charge.')
     if not a.yes:
         print('Dry run. Add --yes to generate.')
         return
