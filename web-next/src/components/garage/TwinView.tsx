@@ -14,6 +14,16 @@ import { assetPath } from '@/components/home/asset';
 import { fitScan } from '@/lib/scan3d';
 import { ROVER_LINKS, type TwinSubject } from '@/lib/omega1Twin';
 
+function disposeTwinObject(root:import('three').Object3D){
+  const textures=new Set<import('three').Texture>();
+  root.traverse(o=>{const mesh=o as import('three').Mesh;mesh.geometry?.dispose();
+    const materials=Array.isArray(mesh.material)?mesh.material:mesh.material?[mesh.material]:[];
+    for(const material of materials){for(const value of Object.values(material)){
+      if(value&&typeof value==='object'&&'isTexture' in value&&value.isTexture)textures.add(value as import('three').Texture);
+    }material.dispose();}
+  });textures.forEach(t=>t.dispose());
+}
+
 export default function TwinView({ subject, explode = false }: { subject: TwinSubject; explode?: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
@@ -42,7 +52,7 @@ export default function TwinView({ subject, explode = false }: { subject: TwinSu
         ]);
         const gltf = await new GLTFLoader().parseAsync(data, '');
         const object = gltf.scene;
-        if (disposed || !host.current) return;
+        if (disposed || !host.current) {disposeTwinObject(object);return;}
 
         const el = host.current;
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -130,12 +140,7 @@ export default function TwinView({ subject, explode = false }: { subject: TwinSu
           ro.disconnect();
           renderer.setAnimationLoop(null);
           controls.dispose();
-          scene.traverse((o) => {
-            const m = o as import('three').Mesh;
-            m.geometry?.dispose?.();
-            const mat = m.material as import('three').Material | import('three').Material[] | undefined;
-            (Array.isArray(mat) ? mat : mat ? [mat] : []).forEach((x) => x.dispose());
-          });
+          disposeTwinObject(scene);
           env.dispose();
           renderer.dispose();
           renderer.domElement.remove();
@@ -154,8 +159,8 @@ export default function TwinView({ subject, explode = false }: { subject: TwinSu
         {state === 'missing' && (
           <div className="scan-wait">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="twin-preview" src={assetPath(subject.preview)} alt={`Preview render of ${subject.name} from the generator`} />
-            <p className="faint g-small">The 3D model file is not in this deployment yet, so this is the generator’s flat preview render — not a model you can orbit.</p>
+            {subject.preview&&<img className="twin-preview" src={assetPath(subject.preview)} alt={`Preview render of ${subject.name} from the generator`} />}
+            <p className="faint g-small">{subject.preview?'The 3D model file is not in this deployment yet, so this is the generator’s flat preview render — not a model you can orbit.':'The generated model file is unavailable in this deployment.'}</p>
           </div>
         )}
         {state === 'error' && <p className="g-error scan-wait" role="alert">Could not show this model: {error}</p>}

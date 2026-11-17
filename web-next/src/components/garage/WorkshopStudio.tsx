@@ -20,6 +20,8 @@ import type {RobotSpec} from '@/components/forge/model';
 import {isDetailedBurger} from '@/lib/turtlebotModel';
 import DetailedBurgerWorkshop from './DetailedBurgerWorkshop';
 import RobodexPicker from './RobodexPicker';
+import {generatedRobotAsset} from '@/lib/generatedRobotAssets';
+import GeneratedRobotModel from './GeneratedRobotModel';
 import RobotAvatar from './RobotAvatar';
 import type {CataloguePart} from '@/lib/forgeEngine';
 import {parts as catalogueParts} from '@/lib/data';
@@ -57,6 +59,7 @@ export default function WorkshopStudio(){
  const stale=!!(dirty&&edit?.baseline!==latest?.id);
  const identity=robot?.id+':'+latest?.id+':'+demo;
  const isKit=!!spec?.roverDesign,canKit=!isKit&&canBeRoverKit(spec,latest?.planned);
+ const generatedAsset=generatedRobotAsset(robot?.name??spec?.name??'');
  const detailedBurger=isDetailedBurger(spec);
  const humanoid=spec?.referenceModel==='unitree-g1-23';
  const built=useMemo(()=>{try{return spec&&!humanoid?taBuildParts(spec as RobotSpec):null;}catch{return null;}},[spec,humanoid]);
@@ -155,8 +158,8 @@ export default function WorkshopStudio(){
   {stale&&<div className="studio-notice" role="alert">A newer version exists. Your draft is kept.<button onClick={()=>downloadJSON('workshop-draft.json',edit?.spec)}>Export draft</button><button onClick={()=>{if(robot&&latest){setEdit({robotId:robot.id,baseline:latest.id,spec:clone(latest.spec),baseSpec:clone(latest.spec)});writeStore(workshopDraftKey(robot.id),null);}}}>Load latest</button></div>}
   {legacy?<div className="studio-records"><button onClick={()=>{setEdit(null);setLegacy(false);}}>← Back to workspace</button><Garage initialTab={mode}/></div>:!robot||!spec?<div className="studio-empty"><span className="studio-bay">A SPACE TO BUILD</span><h2>Bring your robot to the bench.</h2><button className="studio-primary" onClick={()=>setNewRobot(true)}>Add your first robot</button></div>:<>
    {mode==='build'&&<div className="studio-build">
-    {detailedBurger?<DetailedBurgerWorkshop studio key={robot.id+':'+latest?.id}/>:humanoid?<UnitySceneChoice studio robotId={robot.id} versionId={latest?.id??'new'} spec={spec}><HumanoidWorkshop studio/></UnitySceneChoice>:<div className="studio-scene-grid">
-     <div className="studio-canvas"><div className="studio-scene-tools"><button className="studio-mobile-only" onClick={()=>setInspectorOpen(true)}>Parts</button><button onClick={reset}>Fit view</button><button aria-pressed={explode>0} onClick={()=>setExplode(n=>n?0:.8)}>Separate parts</button><button onClick={()=>{setPanel('guide');setInspectorOpen(true);}}>Assemble</button></div>
+    {panel==='generated'&&generatedAsset?<GeneratedRobotModel asset={generatedAsset} onClose={()=>setPanel('parts')}/>:detailedBurger?<DetailedBurgerWorkshop studio key={robot.id+':'+latest?.id}/>:humanoid?<UnitySceneChoice studio robotId={robot.id} versionId={latest?.id??'new'} spec={spec}><HumanoidWorkshop studio/></UnitySceneChoice>:<div className="studio-scene-grid">
+     <div className="studio-canvas"><div className="studio-scene-tools"><button className="studio-mobile-only" onClick={()=>setInspectorOpen(true)}>Parts</button><button onClick={reset}>Fit view</button>{generatedAsset&&<button onClick={()=>{setPanel('generated');setMode('build');setLegacy(false);}}>Generated view</button>}<button aria-pressed={explode>0} onClick={()=>setExplode(n=>n?0:.8)}>Separate parts</button><button onClick={()=>{setPanel('guide');setInspectorOpen(true);}}>Assemble</button></div>
       {failed?<div className="studio-empty"><h2>3D view unavailable</h2><p>Your parts and project are still available.</p><button onClick={()=>{setFailed(false);setCameraReset(n=>n+1);}}>Retry 3D</button></div>:<Robot3D key={robot.id+':'+cameraReset} spec={spec} workshop cameraReset={cameraReset} viewHeight={undefined} explode={explode} selected={part} onSelect={id=>{setPart(id);setPanel('parts');setInspectorOpen(true);}} onFail={()=>setFailed(true)} autoRotate={false} showComMarker={false} teardown={bench.active?{removed:steps.slice(0,bench.off),isolate:target??null}:undefined}/>}
       <span className="studio-scene-caption">Drag to orbit · select a part</span>
      </div>

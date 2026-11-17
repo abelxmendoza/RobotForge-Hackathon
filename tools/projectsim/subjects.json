@@ -33,5 +33,12 @@
     "name": "Robot Test Ramp",
     "text": "Low robotics driving test ramp. Rectangular wedge with a flat incline, matte grey non-slip top and yellow safety edges. No scenery or writing, no wheels. Approximately 60 cm long, 40 cm wide and 12 cm high.",
     "articulated": false
+  },
+  "boston-dynamics-spot-with-arm": {
+    "name": "Boston Dynamics Spot with Arm",
+    "catalog_slug": "boston-dynamics-spot",
+    "reference_url": "https://bostondynamics.com/products/spot/arm/",
+    "text": "Boston Dynamics Spot-style quadruped robot WITH the top-mounted Spot Arm installed. Generated visual reference, not manufacturer CAD. Yellow rounded rectangular torso with black top equipment rails, black underside and front stereo camera apertures. Four black articulated legs with visible hip and knee joints and rubber feet, standing firmly on all four feet. A single substantial articulated manipulator is bolted to the front upper deck: shoulder pedestal, upper arm, elbow, forearm, wrist and black two-jaw gripper. Six arm joint regions plus gripper, yellow link covers and black joint housings. Arm raised above the body in a bent ready pose, elbow clearly visible, gripper extending forward past the front camera panel. Keep the entire arm and gripper in view, do not omit or fuse it with the torso. No other payloads or scenery. Approximate body length 1.1 metres and arm reach almost 1 metre, estimated proportions only. Preserve distinct rigid links for the legs, arm and gripper.",
+    "articulated": true
   }
 }

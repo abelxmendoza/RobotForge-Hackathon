@@ -1,3 +1,5 @@
+import {generatedRobotAsset} from '@/lib/generatedRobotAssets';
+import GeneratedRobotModel from '@/components/garage/GeneratedRobotModel';
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Robot } from "@/lib/types";
@@ -528,6 +530,8 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
       {harnessRep ? (
         <HarnessSection rep={harnessRep} slug={slug} specFile={specFile} />
       ) : null}
+
+      {generatedRobotAsset(slug)&&<GeneratedRobotModel asset={generatedRobotAsset(slug)!}/>}
 
       {specFile ? (
         <section className="section" id="take-apart">
