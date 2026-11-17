@@ -462,6 +462,55 @@ export function arenaSolids(boxes: ArenaBox[]): { x: number; y: number; z: numbe
   return [...walls, ...boxes.map((b) => ({ x: b.x, y: b.y, z: b.h / 2, hx: b.w / 2, hy: b.d / 2, hz: b.h / 2, wall: false }))];
 }
 
+/* ---------- Courses: your boxes, an obstacle course, a sumo ring ----------
+ * Ready-made tests for the rover. The layouts and the sumo block's mass are
+ * this page's own picks, not from a rulebook, except the ring: 154 cm across,
+ * the size used for 3 kg robot sumo. */
+
+export type CourseId = 'boxes' | 'course' | 'sumo';
+export const COURSES: { id: CourseId; name: string; goal: string }[] = [
+  { id: 'boxes', name: 'Your boxes', goal: 'Lay out boxes and drive around them.' },
+  { id: 'course', name: 'Obstacle course', goal: 'Reach the green square. Two long walls are in the way.' },
+  { id: 'sumo', name: 'Sumo ring', goal: 'Push the block out of the ring without leaving it yourself.' },
+];
+
+/** The obstacle course: two long walls make an S, the finish sits behind the second. */
+export const COURSE_BOXES: ArenaBox[] = [
+  { id: 'w1', x: 0.45, y: -0.4, w: 0.06, d: 1.3, h: 0.16, tone: 'blue' },
+  { id: 'w2', x: 0.95, y: 0.4, w: 0.06, d: 1.3, h: 0.16, tone: 'blue' },
+  { id: 'c1', x: 0.7, y: 1.15, w: 0.2, d: 0.2, h: 0.14, tone: 'card' },
+  { id: 'c2', x: -0.6, y: 0.6, w: 0.24, d: 0.24, h: 0.16, tone: 'wood' },
+  { id: 'c3', x: -0.7, y: -0.8, w: 0.2, d: 0.3, h: 0.16, tone: 'card' },
+];
+export const FINISH = { x: 1.2, y: -0.9, half: 0.2 }; // a 40 cm square
+export const inFinish = (x: number, y: number) => Math.abs(x - FINISH.x) <= FINISH.half && Math.abs(y - FINISH.y) <= FINISH.half;
+
+/** The sumo ring and the block to push out (the block weighs 300 g, a pick
+ * light enough for the 0.75 kg starter rover to shove). */
+export const SUMO = { radius: 0.77, edge: 0.05, block: { x: 0.45, y: 0, hx: 0.08, hy: 0.08, hz: 0.06, mass: 0.3 } } as const;
+export const outOfRing = (x: number, y: number) => Math.hypot(x, y) > SUMO.radius;
+
+/** What the floor holds for a course: fixed solids, plus the block for sumo. */
+export function courseSolids(course: CourseId, boxes: ArenaBox[]) {
+  if (course === 'sumo') return []; // no walls: the ring is a floor marking
+  return arenaSolids(course === 'course' ? COURSE_BOXES : boxes);
+}
+export const courseBoxes = (course: CourseId, boxes: ArenaBox[]) => (course === 'course' ? COURSE_BOXES : course === 'boxes' ? boxes : []);
+
+export type CourseResult = { kind: 'finish' | 'win' | 'lose'; t: number; text: string } | null;
+/** Watch one step of a run and say when it's over. Times count from the
+ * first moment the car moves 5 cm. */
+export function courseCheck(course: CourseId, car: { x: number; y: number }, block: { x: number; y: number } | null, startT: number | null, t: number): CourseResult {
+  if (startT === null) return null;
+  const s = Math.round((t - startT) * 10) / 10;
+  if (course === 'course' && inFinish(car.x, car.y)) return { kind: 'finish', t: s, text: `Finished in ${s.toFixed(1)} s` };
+  if (course === 'sumo') {
+    if (outOfRing(car.x, car.y)) return { kind: 'lose', t: s, text: `You left the ring at ${s.toFixed(1)} s` };
+    if (block && outOfRing(block.x, block.y)) return { kind: 'win', t: s, text: `Block out in ${s.toFixed(1)} s` };
+  }
+  return null;
+}
+
 /** The HC-SR04 as one straight ray from (x, y) along heading (degrees,
  * 0 = +x). Returns cm to the first face, or NO_ECHO_CM past 4 m. The
  * real beam is a cone about 15° wide; the page says so. The sensor sits

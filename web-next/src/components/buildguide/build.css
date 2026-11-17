@@ -103,3 +103,13 @@
   .bg-rail{grid-template-columns:1fr 1fr}.bg-rail ol{grid-column:1/-1;grid-row:1}
   .bg-rail li button{min-width:70px}
 }
+
+/* Courses (Arena tab): obstacle course + sumo ring */
+.bg-courses{margin-bottom:var(--s3);display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+.bg-courses button{padding:8px 6px;text-align:center}
+.bg-course{display:grid;gap:var(--s2)}
+.bg-course p{margin:0}
+.bg-course-result{font-family:var(--readout);font-size:var(--fs-md)}
+.bg-course-result.finish,.bg-course-result.win,.bg-hud-goal.finish b,.bg-hud-goal.win b{color:var(--pass)}
+.bg-course-result.lose,.bg-hud-goal.lose b{color:var(--fail)}
+.bg-course .btn{justify-self:start}

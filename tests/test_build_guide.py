@@ -29,7 +29,7 @@ def test_module_is_pure_and_route_is_wired():
     route = (WEB / "app" / "build" / "page.tsx").read_text()
     assert "BuildGuide" in route and "AppShell" in route
     lab = (WEB / "components" / "buildguide" / "DriveLab.tsx").read_text()
-    assert "createDriveWorld(spec, 'flat', solids)" in lab  # the Workshop's drive sandbox
+    assert "createDriveWorld(spec, 'flat', solids, course === 'sumo' ? [SUMO.block] : [])" in lab  # the Workshop's drive sandbox
     assert "'/build/'" in (WEB / "lib" / "nav.ts").read_text()
 
 
@@ -118,6 +118,28 @@ const back = B.parseArena(B.serializeArena([{ id: 'b1', x: 9, y: -9, w: 5, d: 0.
 assert.equal(back[0].w, 1.2); assert.equal(back[0].d, 0.04);
 assert.ok(back[0].x + back[0].w / 2 <= B.ARENA_HALF + 1e-9 && back[0].y - back[0].d / 2 >= -B.ARENA_HALF - 1e-9);
 assert.equal(B.arenaSolids([]).length, 4);
+// Courses: three choices, the course's own boxes keep the start clear and the finish free.
+assert.deepEqual(B.COURSES.map((c) => c.id), ['boxes', 'course', 'sumo']);
+assert.ok(B.COURSE_BOXES.every((b) => !B.coversStart(b)));
+assert.ok(B.COURSE_BOXES.every((b) => Math.abs(b.x - B.FINISH.x) > b.w / 2 + B.FINISH.half || Math.abs(b.y - B.FINISH.y) > b.d / 2 + B.FINISH.half));
+assert.ok(B.COURSE_BOXES.every((b) => B.fitBox(b).x === b.x && B.fitBox(b).y === b.y)); // inside the floor
+// There's a way through: both walls leave a gap wider than the car (24 cm) at opposite ends.
+const [w1, w2] = B.COURSE_BOXES;
+assert.ok(B.ARENA_HALF - (w1.y + w1.d / 2) > 0.5 && (w2.y - w2.d / 2) + B.ARENA_HALF > 0.5);
+assert.ok(w2.x - w1.x - (w1.w + w2.w) / 2 > 0.3);
+assert.equal(B.courseSolids('sumo', B.DEFAULT_ARENA).length, 0);
+assert.equal(B.courseSolids('course', []).length, 4 + B.COURSE_BOXES.length);
+assert.equal(B.courseSolids('boxes', B.DEFAULT_ARENA).length, 4 + B.DEFAULT_ARENA.length);
+// Results: nothing before the car moves; finish, win and lose say so with the time.
+assert.equal(B.courseCheck('course', { x: B.FINISH.x, y: B.FINISH.y }, null, null, 5), null);
+assert.deepEqual(B.courseCheck('course', { x: B.FINISH.x, y: B.FINISH.y }, null, 1, 13.34), { kind: 'finish', t: 12.3, text: 'Finished in 12.3 s' });
+assert.equal(B.courseCheck('course', { x: 0, y: 0 }, null, 1, 5), null);
+assert.equal(B.SUMO.radius * 2, 1.54);
+assert.equal(B.courseCheck('sumo', { x: 0, y: 0 }, { x: B.SUMO.block.x, y: 0 }, 0, 2), null);
+assert.equal(B.courseCheck('sumo', { x: 0.5, y: 0 }, { x: 0.8, y: 0 }, 0, 2).kind, 'win');
+assert.equal(B.courseCheck('sumo', { x: 0.8, y: 0 }, { x: 0.2, y: 0 }, 0, 2).kind, 'lose');
+assert.equal(B.courseCheck('sumo', { x: 0.8, y: 0 }, { x: 0.9, y: 0 }, 0, 2).kind, 'lose'); // both out: leaving the ring loses
+assert.equal(B.courseCheck('boxes', { x: 9, y: 9 }, null, 0, 2), null);
 console.log('ok');
 """)
     out = subprocess.run([node, "t.mjs"], cwd=tmp_path, capture_output=True, text=True, timeout=60)
