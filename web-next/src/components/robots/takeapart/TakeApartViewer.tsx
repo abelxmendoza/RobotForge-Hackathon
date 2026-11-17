@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import type { RobotSpec as ForgeSpec } from "@/components/forge/model";
 
+const DetailedBurgerWorkshop = dynamic(() => import('@/components/garage/DetailedBurgerWorkshop'), {ssr:false});
 const Robot3D = dynamic(() => import("@/components/kit/Robot3D"), { ssr: false });
 import { assetPath } from "@/components/home/asset";
 import { teardownSteps } from "@/lib/teardown";
@@ -18,6 +19,7 @@ import { stageRecordOf } from "@/lib/data";
 import { robotCapability } from "@/lib/stageAnimation";
 import { useStageAnimation } from "@/lib/useStageAnimation";
 import { StageControlsRow } from "@/components/kit/StageControls";
+import {isDetailedBurger} from '@/lib/turtlebotModel';
 import type { RobotLife } from "@/components/kit/Robot3D";
 
 /* The take-apart viewer (robot.js initTakeApart + TA_PANEL + the
@@ -399,6 +401,7 @@ export default function TakeApartViewer({ specFile }: { specFile: string }) {
         : `Step ${tdDone} of ${td.steps.length}: ${tdName(tdCurrent)} off`;
   const tdFocus = tdIsolate ? (tdCurrent ?? td.core) : null;
 
+  if(isDetailedBurger(spec))return <DetailedBurgerWorkshop/>;
   const ground = cls === "ground";
   return (
     <>

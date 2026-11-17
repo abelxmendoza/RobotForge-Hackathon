@@ -285,25 +285,23 @@ export default function SignInCard({
         )}
       </p>
 
-      <div className="acct-guest">
-        <strong>Just visiting?</strong> The demo is the no-account
-        way in — sample robots and recorded answers, nothing sent
-        anywhere. A free account opens the full app and live AI.
-        Your robots and parts live on this device; signed in, the
-        Save button also keeps a copy in your account. No email
-        verification or password reset in this version.
-        {!hideDemo && (
+      {/* The gate shows its own demo card beside this one, so the
+       * guest note only appears where it doesn't (2026-11-17). */}
+      {!hideDemo && (
+        <div className="acct-guest">
+          <strong>Just visiting?</strong> Try the demo: sample robots
+          and recorded answers, no account.
           <div className="acct-guest-demo">
             <DemoEntryButton label="Try the demo" />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <p className="acct-legal">
-        By continuing you agree to the{" "}
-        <Link href="/privacy/">Privacy Policy</Link>. Deleting your
-        data is covered on the{" "}
-        <Link href="/data-deletion/">data deletion page</Link>.
+        Robots and parts are kept on this device; Save also copies
+        them to your account. No password reset yet. By continuing
+        you agree to the <Link href="/privacy/">Privacy Policy</Link>{" "}
+        (<Link href="/data-deletion/">deleting your data</Link>).
       </p>
     </div>
   );

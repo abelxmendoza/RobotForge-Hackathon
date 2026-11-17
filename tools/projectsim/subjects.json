@@ -1,0 +1,37 @@
+{
+  "_note": "Robots tools/projectsim_generate.py can send to ProjectSim (Kaedim). Inputs are only images we have rights to use, or text written from the catalogue. Every output is a GENERATED stand-in, not manufacturer CAD.",
+  "boston-dynamics-spot": {
+    "name": "Boston Dynamics Spot",
+    "image_url": null,
+    "image_credit": null,
+    "image_license": null,
+    "text": "Boston Dynamics Spot-style quadruped robot, a generated visual reference rather than manufacturer CAD. Yellow rounded rectangular body shell with black top equipment rails, black underside and front stereo camera apertures. Four articulated black legs, each with hip, upper leg, knee and slender lower leg ending in a rounded rubber foot. Standing neutral pose, all four feet on the ground, no arm, no payload, no scenery. Body approximately 1.1 metres long; estimated proportions only. Preserve separate rigid leg links and visible joint regions.",
+    "articulated": true
+  },
+  "vex-v5-tank-drive": {
+    "name": "VEX V5 Tank Drive",
+    "image_url": null,
+    "text": "A small VEX V5 competition robot drivetrain, about 38 cm square and 15 cm tall. Flat rectangular frame of silver aluminium C-channel bars with rows of square holes. Four black 4-inch omni wheels with grey rollers, two on each side, each driven by a dark grey square VEX V5 smart motor mounted inside the frame. A black V5 robot brain with a small touchscreen sits on top in the middle, and a black rectangular V5 battery is mounted beside it. Short black and red cables run between the motors and the brain. No arms, no intake, just the drive base.",
+    "articulated": true
+  },
+  "vex-v5-mecanum-drive": {
+    "name": "VEX V5 Mecanum Drive",
+    "text": "VEX V5 competition robot drive base. Rectangular silver perforated aluminium C-channel frame, four black mecanum wheels with angled grey rollers, four dark grey V5 smart motors inside the frame, black touchscreen robot brain and rectangular battery mounted centrally. No lifting arm or intake. Neutral assembled pose, no scenery. Estimated 38 cm square footprint. Separate wheel and chassis links.",
+    "articulated": true
+  },
+  "vex-iq-drivebase": {
+    "name": "VEX IQ Drivebase",
+    "text": "Small educational VEX IQ style plastic robotics drive base, assembled from light grey perforated beams and black connector pins. Four chunky black rubber wheels and compact grey smart motors, central grey robot brain with small display and battery. Blue accent beams, no arm, no scenery. Estimated 30 cm square footprint. Separate wheel and chassis links.",
+    "articulated": true
+  },
+  "workshop-parts-bin": {
+    "name": "Workshop Parts Bin",
+    "text": "Open front stackable workshop parts bin made of matte dark blue plastic, rectangular back and sides, sloped low front lip with a blank white label holder. Empty interior, no text, no scenery. Approximately 20 cm wide, 30 cm deep, 15 cm tall.",
+    "articulated": false
+  },
+  "robot-test-ramp": {
+    "name": "Robot Test Ramp",
+    "text": "Low robotics driving test ramp. Rectangular wedge with a flat incline, matte grey non-slip top and yellow safety edges. No scenery or writing, no wheels. Approximately 60 cm long, 40 cm wide and 12 cm high.",
+    "articulated": false
+  }
+}

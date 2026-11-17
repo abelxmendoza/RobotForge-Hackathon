@@ -103,11 +103,8 @@ export const SAMPLE_SPOTLIGHT_TITLE = 'Try Omega1, a real robot with a digital t
  * builds a whole digital twin you can test and program in a digital
  * world, aiming for an exact sim of the real robot. */
 export const SAMPLE_SPOTLIGHT_BODY =
-  "Omega1 is Abel's own Freenove 4WD rover on a Raspberry Pi 4B. " +
-  'RobotForge builds its digital twin so you can test, program and ' +
-  'simulate it in a digital world before touching the hardware. Open ' +
-  'it in the Workshop to spin it in 3D, check its wiring, plan an ' +
-  'upgrade and run the physics checks. No account needed.';
+  "Abel's own 4WD rover on a Raspberry Pi 4B, with a digital twin " +
+  'you can spin, wire and test. No account needed.';
 
 /* Go to the Workshop and adopt Omega1. On /garage/ itself a plain
  * link to the same hash would not fire `hashchange` when the hash is

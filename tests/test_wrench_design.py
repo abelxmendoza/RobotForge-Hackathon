@@ -45,13 +45,13 @@ def test_landing_meet_wrench_band():
     assert 'id="wrench"' in page
     assert "Meet Wrench" in page
     assert "your robotics co-pilot" in page
-    # Drawn and animated (WrenchBot), not bitmap crops: the full figure,
-    # his three working poses, and the four moods the chat uses.
+    # Drawn and animated (WrenchBot), not bitmap crops: the full figure
+    # and his three working poses. (The row of four mood heads was cut
+    # in the 2026-11-17 simplify pass; the chat still uses every mood.)
     assert "WrenchBot" in page and 'pose="full"' in page
     for pose in ["design", "simulate", "report"]:
         assert f'pose="{pose}"' in page, pose
-    for mood in ["ready", "thinking", "pass", "fail"]:
-        assert f'mood="{mood}"' in page, mood
+    assert 'mood="ready"' in page
     # Abel's original sheet stays one click away.
     assert "WRENCH_ART.poster" in page
     for cls in [".wrench-band", ".wrench-stage", ".wrench-poses", ".wrench-moods"]:

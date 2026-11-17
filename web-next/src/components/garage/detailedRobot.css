@@ -1,0 +1,24 @@
+.detailed-workbench{min-width:0;--studio-panel:320px}
+.detailed-standalone{display:grid;grid-template-columns:minmax(0,1fr) 300px;height:620px;max-height:85dvh;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.detailed-standalone .studio-model{height:100%;min-height:300px}
+.detailed-standalone .studio-canvas{position:relative;min-height:0;background:#0d1721}
+.detailed-workbench .studio-parts.burger-part-list{max-height:300px;overflow-y:auto;flex-shrink:0}
+.detailed-workbench .burger-step{display:grid;gap:8px;padding:12px;background:#16242d;border:1px solid #3f5b66;border-radius:6px}
+.detailed-workbench .burger-step h3{margin:0;font-size:16px}
+.detailed-workbench .burger-step small{font-size:9px;letter-spacing:.1em;color:#97b7b5}
+.detailed-workbench .burger-step progress{width:100%;accent-color:#67d5c1}
+.detailed-workbench .burger-sources{font-size:11px;color:#9aacb8}
+.detailed-workbench .burger-sources a{display:block;padding:6px 0;color:#91d8d3}
+.detailed-standalone button{font:inherit;background:#182833;color:#d8e9ed;border:1px solid #3a4e59;border-radius:5px;min-height:36px;padding:6px 10px;cursor:pointer}
+.detailed-standalone button[aria-pressed=true]{background:#21534e}
+.detailed-standalone .studio-inspector{overflow-y:auto;min-height:0;padding:16px;display:flex;flex-direction:column;gap:12px;background:#101b24}
+.detailed-standalone .studio-parts{display:grid;gap:5px}.detailed-standalone .studio-parts button{text-align:left;display:flex;justify-content:space-between}
+.detailed-standalone .studio-panel-head{display:flex;justify-content:space-between;align-items:center}.detailed-standalone .studio-panel-head h2{font-size:17px}
+.detailed-standalone .studio-scene-tools{display:flex;position:absolute;top:12px;left:12px;right:12px;gap:5px;z-index:2;flex-wrap:wrap}
+.detailed-standalone .studio-scene-caption{position:absolute;bottom:12px;left:12px;font-size:10px;color:#b9d0da}
+.detailed-standalone .studio-load{position:absolute;inset:40% 15%;text-align:center}
+.detailed-standalone .studio-mobile-only{display:none}
+@media(max-width:760px){.detailed-standalone{grid-template-columns:1fr;height:auto;max-height:none}.detailed-standalone .studio-canvas{height:400px}.detailed-standalone .studio-inspector{max-height:400px}.detailed-workbench input{font-size:16px}}
+.detailed-workbench .studio-parts.burger-part-list{display:grid;grid-template-columns:minmax(0,1fr);flex-flow:initial;gap:5px;overflow-x:hidden}
+.detailed-workbench .burger-part-list>button{width:100%;min-width:0;text-align:left;display:flex;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid #31444f;border-radius:5px;background:#15232c;color:#d9e5e9}
+.detailed-workbench .burger-part-list>button[aria-pressed=true]{background:#214c48;border-color:#69bcb0}

@@ -90,7 +90,7 @@ def test_picker_adds_through_the_one_shared_bring_in():
 def test_picker_duplicate_guard_and_spec_less_honesty():
     # name-matched against the same Garage store the cards check
     assert "useStore<GarageRobot[]>(GARAGE_KEY, [])" in PICKER
-    assert "In your Workshop ✓" in PICKER
+    assert "Open in Workshop" in PICKER
     # no recorded spec -> no invented entry, the Wrench route instead
     assert "No recorded spec to bring in" in PICKER
     assert "Attach files to Wrench" in PICKER

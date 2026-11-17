@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { robotSlug } from '@/lib/data';
 import type { Robot } from '@/lib/types';
 import { GARAGE_KEY, type GarageRobot, type Spec } from '@/lib/garage';
-import { useStore } from '@/lib/store';
+import { readStore, useStore } from '@/lib/store';
 import { ROBOT_SOURCE_META } from '@/lib/robotSource';
 import { dexTabToRobotSource, type DexTab } from '@/lib/dexOverrides';
 import { promptWrench } from '@/lib/wrenchPrompt';
@@ -73,7 +73,7 @@ function PickRow({ name, sub, label, specFile, draftSpec, inGarage, onAdded, thu
       </span>
       <span className="dex-pick-action">
         {inGarage ? (
-          <span className="dex-in">In your Workshop ✓</span>
+          <button type="button" className="btn btn-sm" onClick={()=>{const record=readStore<GarageRobot[]>(GARAGE_KEY,[]).find(r=>!r.archivedAt&&r.name.toLowerCase()===name.toLowerCase());if(record)onAdded(record.id);}}>Open in Workshop</button>
         ) : !hasSpec ? (
           <>
             <span className="faint dex-local">No recorded spec to bring in — </span>
@@ -92,11 +92,13 @@ function PickRow({ name, sub, label, specFile, draftSpec, inGarage, onAdded, thu
   );
 }
 
-export default function RobodexPicker({ open, onClose, onAdded }: {
+export default function RobodexPicker({ open, onClose, onAdded, embedded=false }: {
+  embedded?:boolean;
   open: boolean;
   onClose: () => void;
   onAdded: (id: string) => void;
 }) {
+  const [query,setQuery]=useState('');
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -107,7 +109,7 @@ export default function RobodexPicker({ open, onClose, onAdded }: {
   const model = useDexSources();
   const [garage] = useStore<GarageRobot[]>(GARAGE_KEY, []);
   const inGarage = (name: string) =>
-    (garage ?? []).some((r) => r.name.toLowerCase() === name.toLowerCase());
+    (garage ?? []).some((r) => !r.archivedAt && r.name.toLowerCase() === name.toLowerCase());
 
   const catalogRow = (r: Robot, tab: DexTab) => (
     <PickRow
@@ -137,23 +139,16 @@ export default function RobodexPicker({ open, onClose, onAdded }: {
     />
   );
 
-  return (
-    <dialog
-      ref={ref}
-      className="dex-modal"
-      aria-labelledby="dex-modal-title"
-      onClose={onClose}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); /* backdrop */ }}
-    >
+  const content=<>
       <div className="dex-modal-head">
         <h2 id="dex-modal-title">Add from the Robodex</h2>
-        <p className="faint">Bring a robot the Robodex already knows into your Workshop. It lands as a Baseline version with its recorded spec — nothing is invented.</p>
+        <input className="studio-search" aria-label="Find a Robodex robot" placeholder="Find a robot…" value={query} onChange={e=>setQuery(e.target.value)}/>
         <button type="button" className="fc-close" onClick={onClose} aria-label="Close the Robodex picker">✕</button>
       </div>
       <div className="dex-pick-groups">
         {GROUP_ORDER.map((tab) => {
-          const catalog = model.catalogByTab[tab];
-          const sightings = model.sightingsByTab[tab];
+          const catalog = model.catalogByTab[tab].filter(r=>r.name.toLowerCase().includes(query.toLowerCase()));
+          const sightings = model.sightingsByTab[tab].filter(r=>r.identity.toLowerCase().includes(query.toLowerCase()));
           if (!catalog.length && !sightings.length) return null;
           return (
             <section key={tab} className="dex-pick-group" aria-label={ROBOT_SOURCE_META[dexTabToRobotSource(tab)].label}>
@@ -166,6 +161,6 @@ export default function RobodexPicker({ open, onClose, onAdded }: {
           );
         })}
       </div>
-    </dialog>
-  );
+  </>;
+  return embedded?<div className="studio-dex-picker">{content}</div>:<dialog ref={ref} className="dex-modal" aria-labelledby="dex-modal-title" onClose={onClose} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>{content}</dialog>;
 }

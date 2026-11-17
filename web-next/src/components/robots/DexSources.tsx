@@ -44,6 +44,7 @@ import {
   type DexOverrides,
   type DexTab,
 } from "@/lib/dexOverrides";
+import {stageRobodexRobot} from '@/lib/robodexIntake';
 import { buildDexEntry } from "@/lib/saveRobot";
 import { deleteOwnedRobot } from "@/lib/robotDelete";
 import { assetPath } from "@/components/home/asset";
@@ -275,10 +276,10 @@ export async function bringDexRobotIntoWorkshop({ name, specFile, draftSpec }: {
     const r = await fetch(assetPath(specFile));
     if (!r.ok) throw new Error("HTTP " + r.status);
     const spec = (await r.json()) as Spec;
-    entry = buildDexEntry(
-      { name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), specFile },
-      spec, nowIso, { robot: uid("robot"), version: uid("v") },
-    );
+    const result=stageRobodexRobot(readStore<GarageRobot[]>(GARAGE_KEY,[]),{name,slug:name.toLowerCase().replace(/[^a-z0-9]+/g,"-"),specFile},spec,uid("robot"),uid("v"),nowIso);
+    if(!result.added)return {status:"already"};
+    const failure=writeStore(GARAGE_KEY,result.records);if(failure)throw new Error(failure);
+    return {status:"added",entry:result.records.find(r=>r.id===result.robotId)!};
   } else if (draftSpec) {
     entry = {
       id: uid("robot"),

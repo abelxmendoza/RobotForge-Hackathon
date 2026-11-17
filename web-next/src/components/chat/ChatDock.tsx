@@ -1,7 +1,10 @@
 "use client";
+import {robotResearchName,collectRobotResearch,ROBOT_RESEARCH_KEY,type RobotResearchReport} from '@/lib/robotResearch';
+import { catalogPartHref } from "@/lib/partsLibrary";
 import { parseRoverKitCommand, requestRoverKit } from '@/lib/roverKit';
 import {UNITY_ASYNC_EVENT} from '@/lib/unityProtocol';
 import type {UnityRequest} from '@/components/unity/UnityWorkshop';
+import {parseInspectionCommand,requestInspection} from '@/lib/turtlebotModel';
 import {parseHumanoidCommand,requestHumanoid} from '@/lib/humanoid';
 import { parseBenchCommand, requestBench } from '@/lib/workshopBench';
 /* Headless assistant for the primary Forge conversation. Recorded answers,
@@ -560,6 +563,23 @@ export function useForgeAssistant() {
     [checkLive, liveBase]
   );
 
+  const researchBusy=useRef(false);
+  const researchNamedRobot=async(name:string)=>{
+    if(researchBusy.current){noteBubble('Robot research is already running.');return;}
+    const known=robots.find(r=>r.name.toLowerCase()===name.toLowerCase());
+    if(demoRef.current){noteBubble(known?`${known.name} is in the Robodex. Use Bring a robot in → From the Robodex. Online discovery is unavailable in the recorded demo.`:'Online robot identification and discovery require a live account. Attach a clear photo to identify a candidate, or research a manufacturer and model name.');return;}
+    researchBusy.current=true;const tokenAtStart=sessionToken();noteBubble(`Researching ${name}: specifications, repositories and CAD/model sources…`);
+    try{
+      const report=await collectRobotResearch(name,async query=>{const body=await fetchWebResult('search the web for '+query);if(!body||body.mode!=='search')throw new Error('Search unavailable');return body.results;},new Date().toISOString());
+      if(demoRef.current||sessionToken()!==tokenAtStart)return;
+      if(!report.coverage.some(c=>c.status==='searched')){noteBubble('Online robot research is unavailable right now. No sources or models were collected.');return;}
+      const saved=readStore<RobotResearchReport[]>(ROBOT_RESEARCH_KEY,[]);const failure=writeStore(ROBOT_RESEARCH_KEY,[...saved.filter(r=>r.name.toLowerCase()!==name.toLowerCase()),report].slice(-30));
+      const status=report.coverage.map(c=>`${c.category}: ${c.status}`).join(' · ');
+      const grouped=['Documentation / reference','Source repository','Robot description','CAD / 3D model'].map(kind=>{const items=report.resources.filter(r=>r.kind===kind);return items.length?`<p><strong>${esc(kind)}</strong></p><ul>${items.map(r=>`<li><a href="${esc(r.url)}" target="_blank" rel="noreferrer">${esc(r.title)}</a></li>`).join('')}</ul>`:'';}).join('');
+      appendMsg({who:'bot',pill:'ROBOT RESEARCH',html:`<p><strong>${esc(name)}</strong> — ${report.resources.length} candidate sources.</p>${grouped||'<p>No matching public sources returned.</p>'}<p>${esc(status)}</p><p>Search matches need identity and license checks. CAD links have not been downloaded or imported.</p>${failure?`<p>Could not save this research: ${esc(failure)}</p>`:''}`});
+    }finally{researchBusy.current=false;}
+  };
+
   /* Web grounding: hand the formatted, source-labelled block from
    * a successful fetch to liveChat as web_context. A fetch that
    * produced no content or no source earns no grounding and no
@@ -795,7 +815,6 @@ export function useForgeAssistant() {
 
   /* ---------------- part focus + in-page actions ---------------- */
 
-  const onPartsPage = Boolean(pathname && pathname.startsWith("/kit"));
 
   const dispatchFocusPart = useCallback((id: string) => {
     window.dispatchEvent(
@@ -803,24 +822,18 @@ export function useForgeAssistant() {
     );
   }, []);
 
-  /* A part hit: on the Parts catalogue page, focus the part there (event +
-   * the ?part= deep link the page understands); from anywhere else,
-   * navigate to that deep link. */
+  /* A part hit opens that part in My Parts and Tools, the catalogue's
+   * one home (2026-11-17). Already there, a full load re-reads the
+   * ?part= deep link, which the page only reads on mount. */
   const focusPartHit = useCallback(
     (hit: Hit) => {
       if (!hit.id) return;
       dispatchFocusPart(hit.id);
-      const url = "/kit/?part=" + encodeURIComponent(hit.id) + "#parts";
-      if (onPartsPage) {
-        noteBubble(
-          "I highlighted “" + hit.label + "” in the parts catalogue on this page."
-        );
-        router.replace(url, { scroll: false });
-      } else {
-        router.push(url);
-      }
+      const url = catalogPartHref(hit.id);
+      if (pathname && pathname.startsWith("/inventory")) window.location.assign(url);
+      else router.push(url);
     },
-    [dispatchFocusPart, noteBubble, onPartsPage, router]
+    [dispatchFocusPart, pathname, router]
   );
 
   /* A real in-page action, not just an answer: on a page with the
@@ -853,20 +866,10 @@ export function useForgeAssistant() {
     (q: string, ans: AnswerResult) => {
       if (/^(find|search|show|filter)\b/i.test(q) && ans.hits) {
         const partHits = ans.hits.filter((h) => h.kind === "part");
-        if (partHits.length && onPartsPage && partHits[0].id) {
-          dispatchFocusPart(partHits[0].id);
-          noteBubble(
-            "I highlighted the first match, “" +
-              partHits[0].label +
-              "”, in the catalogue on this page — tap any result " +
-              "button to pop another one up."
-          );
-          return;
-        }
       }
       filterPartsHere(q);
     },
-    [dispatchFocusPart, filterPartsHere, noteBubble, onPartsPage]
+    [filterPartsHere]
   );
 
   /* ---------------- save a robot (addendum, 2026-11-01) ---------------- */
@@ -1235,6 +1238,8 @@ export function useForgeAssistant() {
   };
 
   const runCommands = (q: string): boolean => {
+      const inspectionCommand=parseInspectionCommand(q);
+      if(inspectionCommand){const result=requestInspection(inspectionCommand);if(result.handled){noteBubble(result.message);return true;}}
       const humanoidCommand=parseHumanoidCommand(q);
       if(humanoidCommand){
         const command=humanoidCommand;
@@ -1764,6 +1769,7 @@ export function useForgeAssistant() {
         return;
       }
       if (runCommands(q)) return;
+      const researchName=robotResearchName(q);if(researchName){void researchNamedRobot(researchName);return;}
       const nav = parseNavCommand(q, navContext());
       if (nav) { doNav(nav); return; }
       /* Web knowledge loop: an add/update ask carrying a page URL

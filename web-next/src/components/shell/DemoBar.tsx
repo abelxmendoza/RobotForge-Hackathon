@@ -39,7 +39,6 @@ import {
   SAMPLE_REPO_URL,
 } from "@/lib/sampleRobot";
 import { promptWrench } from "@/lib/wrenchPrompt";
-import CopyButton from "@/components/chat/CopyButton";
 
 const WELCOMED_KEY = "rf.demo.welcomed";
 
@@ -149,35 +148,30 @@ export default function DemoBar() {
       </div>
       {!welcomed && (
         <div className="demo-bar-welcome">
+          {/* One short line and three taps (2026-11-17 simplify pass). */}
           <p>
-            <strong>Welcome.</strong> Two sample TurtleBots and a parts
-            shelf. Wrench, your build partner, answers from recorded runs.
+            <strong>Welcome.</strong> Sample robots; Wrench, your
+            build partner, answers from recorded runs.
           </p>
           <ol className="demo-steps">
             <li>
-              Import the Omega1 sample{" "}
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
+                title={"Ask Wrench to import the Omega1 sample (" + SAMPLE_REPO_URL + ")"}
                 onClick={() => {
                   dismissWelcome();
                   promptWrench({ mode: "chat", text: SAMPLE_PROMPT, send: true });
                 }}
               >
-                Send it to Wrench
-              </button>{" "}
-              <CopyButton
-                getText={() => SAMPLE_REPO_URL}
-                label="Copy"
-                title="Copy the Omega1 sample repo link"
-              />
+                Import the Omega1 sample
+              </button>
             </li>
-            <li><Link href="/garage/" onClick={dismissWelcome}>Open the TurtleBot</Link> and spin it in 3D.</li>
-            <li>Ask Wrench to &ldquo;design a compact rover with a camera&rdquo;.</li>
-            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Test it</Link> or <Link href="/garage/#tab=bom" onClick={dismissWelcome}>see its parts list</Link>.</li>
+            <li><Link href="/garage/" onClick={dismissWelcome}>Spin a robot in 3D</Link></li>
+            <li><Link href="/garage/#tab=simulate" onClick={dismissWelcome}>Test it</Link> · <Link href="/garage/#tab=bom" onClick={dismissWelcome}>Parts list</Link></li>
           </ol>
-          <button type="button" className="btn btn-primary btn-sm" onClick={dismissWelcome}>
-            Start exploring
+          <button type="button" className="btn btn-sm" onClick={dismissWelcome}>
+            Got it
           </button>
         </div>
       )}

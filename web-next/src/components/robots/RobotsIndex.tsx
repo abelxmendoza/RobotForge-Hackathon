@@ -246,8 +246,8 @@ export default function RobotsIndex() {
       </noscript>
 
       <p className="section-more">
-        <Link href="/kit/#parts">Browse the parts catalogue →</Link>{" "}
-        <span className="faint">{parts.length} real parts with datasheet specs, and the Burger kit in 3D.</span>
+        <Link href="/inventory/?scope=catalogue">Browse all {parts.length} parts →</Link>{" "}
+        <Link href="/kit/">The parts kit in 3D →</Link>
       </p>
     </>
   );

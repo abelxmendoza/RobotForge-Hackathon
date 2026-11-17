@@ -1283,7 +1283,7 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
    page slide under the composer. When a chat bar is mounted, give
    the content enough room to scroll fully clear of both bars. */
 @media (max-width: 900px) {
-  .shell:has(.chat-bar) .content {
+  body:has(.chat-bar) .shell .content {
     padding-bottom: calc(196px + env(safe-area-inset-bottom));
   }
   /* Landing (no app shell): keep the footer clear of the chat
@@ -1419,7 +1419,7 @@ details.report-more > summary:focus-visible{outline:2px solid var(--accent);outl
    (ChatBar is absent on Workshop/Forge/Chat routes; there the sheet
    keeps its normal 12px offset.) */
 @media (max-width: 900px) {
-  .shell:has(.chat-bar) .nav-more-menu { bottom: calc(100% + 88px); }
+  body:has(.chat-bar) .shell .nav-more-menu { bottom: calc(100% + 88px); }
 }
 
 /* Robodex split by source (2026-11-01). Each source has its own hue and a
@@ -2095,7 +2095,7 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .pl-empty{text-align:center;padding:48px 16px;border:1px dashed var(--border);border-radius:14px}.pl-empty p{color:var(--text-muted)}
 .pl-discover{margin-top:28px;border-top:1px solid var(--border);padding-top:24px}.pl-discover h3{margin:0 0 6px;font-size:18px}.pl-discover p{font-size:13px;margin:0 0 14px}
 .pl-detail{position:fixed;inset:0 0 0 auto;margin:0;padding:24px;width:min(540px,100vw);height:100dvh;max-height:100dvh;max-width:100vw;border:0;border-left:1px solid var(--border);background:#10151b;color:var(--text);overflow-y:auto;box-shadow:-20px 0 100px #0007}
-.pl-detail::backdrop{background:#0009}.pl-detail-head{justify-content:space-between;margin-bottom:16px}.pl-detail-picture{background:#edf0ec;border-radius:14px;height:210px;display:grid;place-items:center;overflow:hidden}.pl-detail-picture .inv-thumb,.pl-detail-picture .part-art{width:100%;height:100%;max-width:none;max-height:210px;object-fit:contain}.pl-detail-picture img{width:100%;height:100%;object-fit:contain}.pl-detail h2{font-size:25px;line-height:1.2;margin:18px 0 12px}.pl-detail .pl-actions{margin:20px 0}.pl-detail section,.pl-specs{margin:24px 0;padding-top:18px;border-top:1px solid var(--border)}.pl-detail h3{font-size:17px;margin:0 0 12px}.pl-specs summary{cursor:pointer}.pl-specs dl>div{display:flex;justify-content:space-between;gap:18px;padding:8px 0;font-size:13px;border-bottom:1px solid var(--border)}.pl-specs dt{color:var(--text-muted)}.pl-specs dd{margin:0;text-align:right}.pl-match{padding:10px 0}.pl-match p{margin:6px 0}.pl-detail>p:last-child{overflow-wrap:anywhere}
+.pl-detail::backdrop{background:#0009}.pl-detail-head{justify-content:space-between;margin-bottom:16px}.pl-detail-picture{background:#edf0ec;border-radius:14px;height:210px;display:grid;place-items:center;overflow:hidden}.pl-detail-picture .inv-thumb,.pl-detail-picture .part-art{width:100%;height:100%;max-width:none;max-height:210px;object-fit:contain}.pl-detail-picture img{width:100%;height:100%;object-fit:contain}.pl-detail h2:where(:not(.wrench-layer *)){font-size:25px;line-height:1.2;margin:18px 0 12px}.pl-detail .pl-actions{margin:20px 0}.pl-detail section:where(:not(.wrench-layer *)),.pl-specs{margin:24px 0;padding-top:18px;border-top:1px solid var(--border)}.pl-detail h3:where(:not(.wrench-layer *)){font-size:17px;margin:0 0 12px}.pl-specs summary{cursor:pointer}.pl-specs dl>div{display:flex;justify-content:space-between;gap:18px;padding:8px 0;font-size:13px;border-bottom:1px solid var(--border)}.pl-specs dt{color:var(--text-muted)}.pl-specs dd{margin:0;text-align:right}.pl-match{padding:10px 0}.pl-match p{margin:6px 0}.pl-detail>p:last-child{overflow-wrap:anywhere}
 @media(max-width:1100px){.pl-categories{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.pl-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.pl-category-art{height:125px}.pl-category-info{padding:12px}.pl-category-info strong{font-size:14px}.pl-search-row{flex-wrap:wrap}.pl-search{flex-basis:100%}.pl-scope{width:100%}.pl-scope button{flex:1}.pl-intro{align-items:flex-start;gap:10px}.pl-intro p{font-size:14px;max-width:185px}.pl-intro .pl-actions{gap:4px}.pl-intro .btn{padding:9px 11px;font-size:12px}.pl-detail{padding:20px}.pl-detail-picture{height:170px}}
 @media(prefers-reduced-motion:reduce){.pl-category{transition:none}}
@@ -2683,23 +2683,16 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .studio-dialog{margin:auto;width:min(460px,calc(100vw - 32px));background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:var(--s5);box-shadow:0 24px 64px rgba(0,0,0,.6)}
 .studio-dialog::backdrop{background:rgba(4,8,14,.7)}
 .studio-dialog[open]{display:grid;gap:var(--s3)}
-.studio-dialog h2{font-size:var(--fs-lg)}
-.studio-dialog p{color:var(--text-muted);font-size:var(--fs-sm)}
-.studio-dialog button,.studio-dialog a{font:600 var(--fs-sm)/1.2 var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;cursor:pointer;text-align:left}
+.studio-dialog h2:where(:not(.wrench-layer *)){font-size:var(--fs-lg)}
+.studio-dialog p:where(:not(.wrench-layer *)){color:var(--text-muted);font-size:var(--fs-sm)}
+.studio-dialog button:where(:not(.wrench-layer *)),.studio-dialog a:where(:not(.wrench-layer *)){font:600 var(--fs-sm)/1.2 var(--font);color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;cursor:pointer;text-align:left}
 .studio-new-card{display:grid!important;gap:4px;padding:14px 16px!important}
 .studio-new-card span{font-weight:400;color:var(--text-muted);font-size:var(--fs-xs)}
 .studio-new-card:hover{border-color:var(--accent)!important}
-/* Wrench: in the side panel's column on desktop, never across the
-   robot or the header. The column starts under the header row. */
 .studio-shell{position:relative;--panel-w:380px}
-@media (min-width:1101px){
-  .studio-shell .studio-wrench.chat-bar{position:absolute;left:auto;right:0;transform:none;top:64px;bottom:0;width:var(--panel-w);justify-content:flex-end;pointer-events:none;z-index:6}
-  .studio-shell .studio-wrench.chat-bar > *{pointer-events:auto;min-height:0}
-  .studio-shell .studio-wrench .wrench-panel,.studio-shell .studio-wrench .chat-bar-panel{max-height:none;min-height:0;flex:0 1 auto;overflow:hidden;display:flex;flex-direction:column}
-}
 /* One compact Wrench bar: no mode toggle or suggestion chips over the
    Workshop (typing "design a rover…" picks the mode by itself). */
-.studio-shell .studio-wrench .main-chat-suggestions,.studio-shell .studio-wrench .forge-composer .g-tabs,.studio-shell .studio-wrench .fc-chips{display:none}
+.wrench-layer .studio-wrench .main-chat-suggestions,.wrench-layer .studio-wrench .forge-composer .g-tabs,.wrench-layer .studio-wrench .fc-chips{display:none}
 .studio-shell > .studio{width:100%;max-width:none}
 @media (max-width:1100px){
   .studio{--studio-h:auto;min-height:0}
@@ -2732,6 +2725,17 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 .studio-field textarea{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;font:inherit;font-size:var(--fs-sm);resize:vertical}
 .studio-options{display:grid;gap:6px}
 .studio-options button{text-align:left;font-weight:500;line-height:1.3}
-.studio-shell .studio-wrench textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrench-layer .studio-wrench textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* the in-flow demo strip takes ~58px off the studio's height */
 body:has(.demo-bar) .studio{--studio-h:calc(100dvh - 56px - 24px - 58px)}
+
+/* Wire view: one switch row for the report, facts and notes instead
+ * of three stacked dropdowns (2026-11-17 simplify pass). */
+.wv-extra{display:flex;flex-wrap:wrap;gap:var(--s2);margin:0 0 var(--s3)}
+.wv-extra-body{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:var(--s3) var(--s4);margin:0 0 var(--s4);font-size:var(--fs-sm)}
+.wv-extra-body > p:first-child{margin-top:0}
+/* Demo welcome: one line, three taps in a row (2026-11-17). */
+.demo-bar-welcome{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.demo-bar-welcome p{margin:0}
+.demo-bar-welcome .demo-steps{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:0;padding:0;list-style:none;max-width:none}
+.demo-bar-welcome .demo-steps li{display:block}
