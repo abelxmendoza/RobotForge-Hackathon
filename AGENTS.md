@@ -47,12 +47,16 @@ Rules:
 **If `/health` returns 404, or `configured` is false**, the Worker was
 replaced. Don't redeploy over it. Tell the owner, and have them roll back
 to the last version that has the secrets (find it with
-`npx wrangler deployments list` in `live/`). As of 2026-11-03 the known-good
-version is `31dfa75d-2453-4bb3-9df1-fbe718f78987`:
+`npx wrangler deployments list` in `live/`). As of 2026-11-17 the known-good
+version is `5b329a54-427f-4214-b51d-f039d5ea14fe` (main `2e8873f` with
+every key; deployed with `live/safe-upload.sh`):
 
 ```
-cd live && npx wrangler rollback 31dfa75d-2453-4bb3-9df1-fbe718f78987
+cd live && npx wrangler rollback 5b329a54-427f-4214-b51d-f039d5ea14fe
 ```
+
+The older fallback `31dfa75d-2453-4bb3-9df1-fbe718f78987` (2026-11-03) also
+has the keys, but runs older code.
 
 The full Worker runbook is in `live/README.md`.
 
