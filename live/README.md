@@ -259,6 +259,13 @@ badged MEASURED (scan)).
 
 ## Safe deploy (use this for every update of `robotforge-live`)
 
+> **Status 2026-11-17:** done. Live is `5b329a54-427f-4214-b51d-f039d5ea14fe`
+> with every key, so new versions now inherit them. A code-only update is
+> `npx wrangler versions upload`, then steps 4–7 below; one new key is
+> `npx wrangler versions secret put NAME`, then steps 4–7. Run the full
+> script again only if the keys are ever lost. Roll back to `5b329a54…`
+> if a later version misbehaves.
+
 Since 2026-11-03 the keys live only inside version
 `31dfa75d-2453-4bb3-9df1-fbe718f78987`; `wrangler secret list` is empty
 and the latest *uploaded* version has no secrets. A new version takes
