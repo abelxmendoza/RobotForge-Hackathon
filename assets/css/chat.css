@@ -175,14 +175,25 @@
    floats above the composer, capped in height and width, so the
    page stays visible around it. On phones the bar sits above the
    bottom tab bar. */
+/* Wrench sits over everything (Abel, 2026-11-17): WrenchLayer portals
+   it to <body> (into an open modal dialog while one is up), and this
+   z-index keeps it above every drawer, sheet and overlay in the app. */
 .chat-bar{
   position:fixed;left:50%;transform:translateX(-50%);
-  bottom:18px;z-index:95;
+  bottom:calc(18px + env(safe-area-inset-bottom));z-index:2147483000;
   width:min(760px,calc(100vw - 24px));
   display:flex;flex-direction:column;gap:10px;
 }
 @media (max-width:900px){
   .chat-bar{bottom:calc(84px + env(safe-area-inset-bottom))}
+}
+/* Wrench stays on top of pop-up windows too, so on phones give their
+   last rows room to scroll clear of it. A modal dialog holds the
+   Wrench layer while it is open (WrenchLayer). */
+.wrench-layer{text-align:left}
+@media (max-width:900px){
+  dialog:has(> .wrench-layer)::after{content:"";display:block;flex:none;height:104px}
+  body:has(.chat-bar) .inv-drawer{padding-bottom:calc(var(--s3) + 150px + env(safe-area-inset-bottom))}
 }
 .chat-bar-panel{
   display:flex;flex-direction:column;overflow:hidden;
