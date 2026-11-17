@@ -8,6 +8,7 @@ a hidden prompt. It is never written to disk, logged, or put in the repo.
     python3 tools/projectsim_generate.py --list
     python3 tools/projectsim_generate.py boston-dynamics-spot vex-v5-tank-drive          # dry run: shows cost
     python3 tools/projectsim_generate.py boston-dynamics-spot vex-v5-tank-drive --yes    # spends credits
+    python3 tools/projectsim_generate.py robots      # or parts, or all (dry run)
 
 Cost (ProjectSim docs, 2026-11): 4 credits per standard asset, 6 per
 articulated one. A failed job is refunded. Jobs take minutes, not seconds.
@@ -153,6 +154,9 @@ def main():
         for k, v in subjects.items():
             print(f'{k:28} {v["name"]}  ({CREDITS[bool(v.get("articulated"))]} credits)')
         return
+    groups = {'all': list(subjects), 'robots': [k for k, v in subjects.items() if v.get('kind') == 'robot'],
+              'parts': [k for k, v in subjects.items() if v.get('kind') == 'part']}
+    a.slugs = [x for s in a.slugs for x in groups.get(s, [s])]
     unknown = [s for s in a.slugs if s not in subjects]
     if unknown:
         sys.exit(f'Unknown robot(s): {", ".join(unknown)}. See --list.')

@@ -6,12 +6,98 @@
     "image_credit": "Photo: Jonte, via Wikimedia Commons (CC BY-SA 4.0)",
     "image_license": "CC BY-SA 4.0 (the generated model is a derivative: keep the credit and the same license)",
     "text": null,
-    "articulated": true
+    "articulated": true,
+    "kind": "robot"
   },
   "vex-v5-tank-drive": {
     "name": "VEX V5 Tank Drive",
     "image_url": null,
     "text": "A small VEX V5 competition robot drivetrain, about 38 cm square and 15 cm tall. Flat rectangular frame of silver aluminium C-channel bars with rows of square holes. Four black 4-inch omni wheels with grey rollers, two on each side, each driven by a dark grey square VEX V5 smart motor mounted inside the frame. A black V5 robot brain with a small touchscreen sits on top in the middle, and a black rectangular V5 battery is mounted beside it. Short black and red cables run between the motors and the brain. No arms, no intake, just the drive base.",
+    "articulated": true,
+    "kind": "robot"
+  },
+  "vex-v5-mecanum-drive": {
+    "kind": "robot",
+    "name": "VEX V5 Mecanum Drive",
+    "image_url": null,
+    "text": "A small VEX V5 competition drive base, about 38 cm square and 15 cm tall. Flat rectangular frame of silver aluminium C-channel with rows of square holes. Four 4-inch mecanum wheels, one at each corner, with angled grey rollers set at 45 degrees, each driven by its own dark grey square VEX V5 smart motor. A black V5 robot brain with a small touchscreen on top in the middle and a black V5 battery beside it. No arm or intake.",
     "articulated": true
+  },
+  "vex-iq-drivebase": {
+    "kind": "robot",
+    "name": "VEX IQ Drivebase",
+    "image_url": null,
+    "text": "A small VEX IQ educational robot drivebase, about 25 cm long. Built from light grey and blue snap-together plastic beams with round holes. Two driven wheels with black rubber tyres at the front and two at the back, two white VEX IQ smart motors, and a white VEX IQ robot brain with a small screen and coloured buttons on top. Plastic pins and standoffs visible.",
+    "articulated": true
+  },
+  "build-guide-rover": {
+    "kind": "robot",
+    "name": "RobotForge build-guide rover",
+    "image_url": null,
+    "text": "A small hobby robot car about 25 cm long with a 4WD clear acrylic chassis of three stacked decks held by brass standoffs. Four yellow TT gear motors with yellow plastic wheels and black rubber tyres. An Arduino UNO style blue microcontroller board and a red L298N motor driver board on the decks, a blue HC-SR04 ultrasonic sensor with two silver round transducers at the front, a two-cell 18650 battery holder, and coloured jumper wires.",
+    "articulated": true
+  },
+  "raspberry-pi-5": {
+    "kind": "part",
+    "name": "Raspberry Pi 5",
+    "image_url": null,
+    "text": "A Raspberry Pi 5 single-board computer, a green circuit board 85 by 56 mm. Silver metal shielded processor in the middle, two stacked USB-A ports and an Ethernet jack along one short edge, a 40-pin black GPIO header along one long edge, two micro HDMI ports and a USB-C port on the other long edge, and a small power button.",
+    "articulated": false
+  },
+  "esp32-devkit": {
+    "kind": "part",
+    "name": "ESP32 dev board",
+    "image_url": null,
+    "text": "An ESP32 DevKit microcontroller board about 52 by 28 mm. Black circuit board with a silver metal-shielded ESP32 Wi-Fi module and printed antenna at one end, a micro USB port at the other end, two small push buttons, and two rows of 15 male header pins along the long edges.",
+    "articulated": false
+  },
+  "arduino-uno": {
+    "kind": "part",
+    "name": "Arduino UNO",
+    "image_url": null,
+    "text": "An Arduino UNO microcontroller board, a blue circuit board about 69 by 53 mm. Silver USB-B port and black barrel power jack on one short edge, a long black 28-pin DIP chip, black female header strips along both long edges, a reset button and a small crystal.",
+    "articulated": false
+  },
+  "tt-gearmotor-wheel": {
+    "kind": "part",
+    "name": "TT gear motor with wheel",
+    "image_url": null,
+    "text": "A yellow plastic TT hobby gear motor, a small yellow box gearbox about 70 mm long with a silver DC motor on one end, a white output shaft, and a yellow plastic wheel 65 mm across with a black rubber tyre attached to the shaft.",
+    "articulated": false
+  },
+  "l298n-driver": {
+    "kind": "part",
+    "name": "L298N motor driver",
+    "image_url": null,
+    "text": "An L298N dual motor driver board, a red circuit board about 43 by 43 mm with a large black aluminium heat sink with fins standing up on it, blue screw terminal blocks on three edges, a row of header pins and jumpers, and two small capacitors.",
+    "articulated": false
+  },
+  "realsense-d455": {
+    "kind": "part",
+    "name": "Intel RealSense D455",
+    "image_url": null,
+    "text": "An Intel RealSense D455 depth camera: a long slim dark grey aluminium bar about 124 mm wide, 26 mm tall and 29 mm deep, with a black glass front showing two round stereo lenses far apart, a small RGB lens and an infrared projector window between them, and a tripod mount underneath.",
+    "articulated": false
+  },
+  "sg90-servo": {
+    "kind": "part",
+    "name": "SG90 micro servo",
+    "image_url": null,
+    "text": "An SG90 micro servo motor, a small translucent blue plastic box about 23 by 12 by 29 mm with mounting tabs on each side, a white plastic horn on the output shaft on top, and a short brown, red and orange three-wire cable.",
+    "articulated": false
+  },
+  "vex-v5-brain": {
+    "kind": "part",
+    "name": "VEX V5 Brain",
+    "image_url": null,
+    "text": "A VEX V5 robot brain, a black plastic controller about 14 by 11 cm and 3 cm thick, with a colour touchscreen on top, rows of square smart ports along the edges, a power button, and screw mounting holes at the corners.",
+    "articulated": false
+  },
+  "vex-v5-smart-motor": {
+    "kind": "part",
+    "name": "VEX V5 Smart Motor",
+    "image_url": null,
+    "text": "A VEX V5 smart motor, a dark grey square plastic housing about 65 by 65 by 33 mm with a square metal output shaft hole in the middle of one face, a coloured gear cartridge cap, a smart port socket on the side and mounting holes in the corners.",
+    "articulated": false
   }
 }
