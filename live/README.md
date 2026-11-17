@@ -259,49 +259,38 @@ badged MEASURED (scan)).
 
 ## Safe deploy (use this for every update of `robotforge-live`)
 
-> **Status 2026-11-17:** done. Live is `5b329a54-427f-4214-b51d-f039d5ea14fe`
-> with every key, so new versions now inherit them. A code-only update is
-> `npx wrangler versions upload`, then steps 4–7 below; one new key is
-> `npx wrangler versions secret put NAME`, then steps 4–7. Run the full
-> script again only if the keys are ever lost. Roll back to `5b329a54…`
-> if a later version misbehaves.
+The owner confirmed deployment of version
+`7b62324e-a30b-4779-9e5e-d7e5a53da50c` at 100% traffic on 2026-11-17,
+followed by a passing live health check. This version adds `KAEDIM_API_KEY`
+to the preceding `5b329a54-427f-4214-b51d-f039d5ea14fe` version.
+This is a historical checkpoint; check current deployments before updating.
 
-Since 2026-11-03 the keys live only inside version
-`31dfa75d-2453-4bb3-9df1-fbe718f78987`; `wrangler secret list` is empty
-and the latest *uploaded* version has no secrets. A new version takes
-its secrets from the latest uploaded one, so a plain `wrangler deploy`
-would ship a keyless Worker, and a plain `wrangler secret put` would
-deploy each half-keyed step straight to live. Upload a version, add
-every key to it, test its preview, then promote it. Only the owner runs
-these, at their own terminal, on the Mac clone.
+Only the owner runs these steps, after explicitly authorizing that deployment.
+Keep every Wrangler command inside `live/`, with its `wrangler.toml` present.
 
-1. **Get main:** `cd ~/Desktop/projects/RobotForge-Hackathon && git checkout main && git pull`.
-2. **Read-only look:** `cd live && npx wrangler deployments list` — the
-   live version should be `31dfa75d…`.
-3. **Upload, not deploy:** `./safe-upload.sh`. It checks it runs from
-   `live/`, uploads the code with `wrangler versions upload`, then runs
-   `wrangler versions secret put NAME` for each key. Wrangler prompts you
-   for each value at your terminal (same as `wrangler secret put`);
-   nothing is saved to a file or printed. Every step makes a new version
-   and none of them is deployed, so live traffic does not move.
-4. **Find the last version:** `npx wrangler versions list`. The newest
-   Version ID is the one with every key; its preview URL is
+1. Update the checkout, then enter `live/`. Confirm `pwd` and
+   `test -f wrangler.toml` before running Wrangler.
+2. Inspect `npx wrangler deployments list` and `npx wrangler versions list`.
+   Record the current healthy version for rollback.
+3. For a code update with secrets intact, use `npx wrangler versions upload`.
+   For a new secret, use `npx wrangler versions secret put NAME` and type
+   its value at the hidden prompt. Each creates an undeployed version.
+   If the source version lacks secrets, use `./safe-upload.sh` to supply
+   every key at the owner's terminal. Never assume a version has keys.
+4. Find the final version with `npx wrangler versions list`. Its preview is
    `https://<first 8 characters of the ID>-robotforge-live.abelxmendoza.workers.dev`.
-5. **Test the preview:**
-   `python3 ../tools/check_live_health.py <preview URL>`. It
-   must pass, and `/health` there should show Meta, Baseten, Firecrawl and
-   email / Meta / Google login on.
-6. **Promote:** `npx wrangler versions deploy <Version ID>@100% --yes`.
-7. **Check live:**
+5. Test the preview with `python3 ../tools/check_live_health.py <preview URL>`.
+   Verify every required provider and login capability before promotion.
+6. Promote the tested version with
+   `npx wrangler versions deploy <Version ID>@100% --yes`.
+7. Check live with
    `python3 ../tools/check_live_health.py https://robotforge-live.abelxmendoza.workers.dev`,
-   then sign in on the site and ask Wrench one question.
+   then sign in and ask Wrench one question.
 
-If step 5 fails, do nothing: live is untouched. If step 7 fails,
-`npx wrangler rollback 31dfa75d-2453-4bb3-9df1-fbe718f78987` puts the old
-Worker back. Once a version with secrets is live, later updates (e.g. a
-new route plus one new key) are a `versions upload` plus one
-`npx wrangler versions secret put NAME`, then the same test and promote,
-because new versions inherit the secrets.
+If preview verification fails, leave traffic unchanged. If live verification
+fails, ask the owner to roll back to the healthy version recorded in step 2.
+The 2026-11-17 checkpoint above can be used only after confirming it is the
+appropriate recovery version. Never auto-deploy over a missing or keyless Worker.
 
 If `AUTH_JWT_SECRET` is lost, any long random string works
 (`openssl rand -base64 48`); it only signs session tokens, so the cost is

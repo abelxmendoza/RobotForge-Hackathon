@@ -48,12 +48,16 @@ Rules:
 replaced. Don't redeploy over it. Tell the owner, and have them roll back
 to the last version that has the secrets (find it with
 `npx wrangler deployments list` in `live/`). As of 2026-11-17 the known-good
-version is `5b329a54-427f-4214-b51d-f039d5ea14fe` (main `2e8873f` with
-every key; deployed with `live/safe-upload.sh`):
+version confirmed by the owner is `7b62324e-a30b-4779-9e5e-d7e5a53da50c`
+(100% traffic, `KAEDIM_API_KEY` added; live health passed):
 
 ```
-cd live && npx wrangler rollback 5b329a54-427f-4214-b51d-f039d5ea14fe
+cd live && npx wrangler rollback 7b62324e-a30b-4779-9e5e-d7e5a53da50c
 ```
+
+The preceding `5b329a54-427f-4214-b51d-f039d5ea14fe` predates the Kaedim
+secret. Confirm deployments before choosing a rollback; this note is a
+historical checkpoint, not a live status query.
 
 The older fallback `31dfa75d-2453-4bb3-9df1-fbe718f78987` (2026-11-03) also
 has the keys, but runs older code.
