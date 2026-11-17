@@ -12,12 +12,12 @@
 .shell:has(.studio-shell) .main{background:#0b1016}
 .studio-shell{--studio-panel:320px;position:relative;height:calc(100dvh - 40px);min-height:560px;padding:0!important;color:#e8edf3;background:#0b1016}
 .workshop-studio{width:100%;max-width:none;gap:0;height:100%;display:grid;grid-template-rows:80px minmax(0,1fr) 88px;position:relative;font:14px/1.45 var(--font,system-ui)}
-.workshop-studio button,.workshop-studio input,.workshop-studio select{font:inherit}
-.workshop-studio button,.studio-dialog button{min-height:36px;border:1px solid #34404b;border-radius:5px;background:#18212a;padding:7px 12px;color:#d8e0e8;cursor:pointer;transition:background .15s}
-.workshop-studio button:hover,.studio-dialog button:hover{background:#25333f;border-color:#6a8b90}
-.workshop-studio button:disabled{opacity:.4;cursor:default}
-.workshop-studio button[aria-pressed=true],.workshop-studio button[aria-current=true]{background:#193b3c;border-color:#67d5c1;color:#b9f4e8}
-.workshop-studio button:focus-visible,.workshop-studio input:focus-visible,.workshop-studio a:focus-visible{outline:2px solid #67d5c1;outline-offset:3px}
+.workshop-studio button:where(:not(.wrench-layer *)),.workshop-studio input:where(:not(.wrench-layer *)),.workshop-studio select:where(:not(.wrench-layer *)){font:inherit}
+.workshop-studio button:where(:not(.wrench-layer *)),.studio-dialog button:where(:not(.wrench-layer *)){min-height:36px;border:1px solid #34404b;border-radius:5px;background:#18212a;padding:7px 12px;color:#d8e0e8;cursor:pointer;transition:background .15s}
+.workshop-studio button:where(:not(.wrench-layer *)):hover,.studio-dialog button:where(:not(.wrench-layer *)):hover{background:#25333f;border-color:#6a8b90}
+.workshop-studio button:where(:not(.wrench-layer *)):disabled{opacity:.4;cursor:default}
+.workshop-studio button:where(:not(.wrench-layer *))[aria-pressed=true],.workshop-studio button:where(:not(.wrench-layer *))[aria-current=true]{background:#193b3c;border-color:#67d5c1;color:#b9f4e8}
+.workshop-studio button:where(:not(.wrench-layer *)):focus-visible,.workshop-studio input:where(:not(.wrench-layer *)):focus-visible,.workshop-studio a:where(:not(.wrench-layer *)):focus-visible{outline:2px solid #67d5c1;outline-offset:3px}
 .workshop-studio .studio-primary,.studio-dialog .studio-primary{background:#67d5c1;border-color:#67d5c1;color:#09221f;font-weight:700}
 .studio-header{grid-row:1;display:flex;align-items:center;gap:20px;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #27323d;background:#10161e;z-index:5;min-width:0}
 .studio-project-name{min-width:0;max-width:38%}
@@ -91,26 +91,25 @@
 .studio-overlay-panel{position:absolute;top:0;right:0;width:var(--studio-panel);height:100%;background:#111922;padding:20px;z-index:12;overflow:auto}
 .studio-dialog{width:min(460px,calc(100% - 32px));border:1px solid #3f5665;border-radius:10px;background:#111b25;color:#e8edf3;padding:24px;box-shadow:0 20px 100px #0009;max-height:85dvh;overflow:auto}
 .studio-dialog::backdrop{background:#020912b5;backdrop-filter:blur(5px)}
-.studio-dialog h2{font-size:22px;margin:0 0 18px}
+.studio-dialog h2:where(:not(.wrench-layer *)){font-size:22px;margin:0 0 18px}
 .studio-dialog>button{margin:8px 6px 0 0}
 .studio-new-card{display:flex!important;flex-direction:column;gap:7px;text-align:left;width:100%;padding:18px!important;border:1px solid #34404b;border-radius:6px;background:#18232d;color:#d8e0e8;margin:10px 0!important}
 .studio-new-card span{font-size:12px;color:#94aab8}
 .studio-design{position:absolute;inset:0;z-index:35;background:#101923;padding:22px 24px 110px;overflow:auto}
-/* One Wrench area replaces the inspector when its conversation opens. */
-.studio-shell .studio-wrench{position:absolute;left:auto;right:12px;bottom:102px;transform:none;width:calc(var(--studio-panel) - 24px);max-width:none;z-index:32;margin:0}
-.studio-shell .studio-wrench .chat-bar-composer{width:100%;border-radius:7px;padding:5px;gap:3px;min-height:50px;background:#192936;border:1px solid #41616b;box-shadow:none}
-.studio-shell .studio-wrench .chat-bar-composer textarea{font-size:12px;min-width:0;padding:8px 3px}
-.studio-shell .studio-wrench .chat-bar-composer .chat-bar-toggle{display:none}
-.studio-shell .studio-wrench .chat-bar-composer button{width:30px;height:34px;min-width:30px}
-.studio-shell .studio-wrench .wrench-panel{height:calc(100dvh - 300px);max-height:none;width:100%;border-radius:7px;background:#111b25;display:flex;flex-direction:column}
-.studio-shell .studio-wrench .wrench-panel[hidden]{display:none}
-.studio-shell .studio-wrench .wrench-panel-body{flex:1;overflow:auto;min-height:0;font-size:12px}
-.studio-shell .studio-wrench .fc-working-on{font-size:10px}
-.studio-shell .studio-wrench .fc-chips{display:none}
-.studio-shell .studio-wrench .main-chat-suggestions{display:none}
-.studio-shell .studio-wrench .forge-composer>.g-tabs{display:none}
-.studio-shell:has(.wrench-panel:not([hidden])) .studio-inspector{visibility:hidden}
-.studio-shell:has(.wrench-panel:not([hidden])) .studio-overlay-panel{visibility:hidden}
+/* Wrench: bottom centre over the stage, just above the robot row, and
+   on top of everything (.chat-bar + WrenchLayer). */
+.wrench-layer .studio-wrench{left:50%;right:auto;bottom:102px;transform:translateX(-50%);width:min(640px,calc(100vw - 24px));max-width:none;margin:0}
+.wrench-layer .studio-wrench .chat-bar-composer{width:100%;border-radius:7px;padding:5px;gap:3px;min-height:50px;background:#192936;border:1px solid #41616b;box-shadow:none}
+.wrench-layer .studio-wrench .chat-bar-composer textarea{font-size:12px;min-width:0;padding:8px 3px}
+.wrench-layer .studio-wrench .chat-bar-composer .chat-bar-toggle{display:none}
+.wrench-layer .studio-wrench .chat-bar-composer button{width:30px;height:34px;min-width:30px}
+.wrench-layer .studio-wrench .wrench-panel{height:calc(100dvh - 300px);max-height:none;width:100%;border-radius:7px;background:#111b25;display:flex;flex-direction:column}
+.wrench-layer .studio-wrench .wrench-panel[hidden]{display:none}
+.wrench-layer .studio-wrench .wrench-panel-body{flex:1;overflow:auto;min-height:0;font-size:12px}
+.wrench-layer .studio-wrench .fc-working-on{font-size:10px}
+.wrench-layer .studio-wrench .fc-chips{display:none}
+.wrench-layer .studio-wrench .main-chat-suggestions{display:none}
+.wrench-layer .studio-wrench .forge-composer>.g-tabs{display:none}
 @media(max-width:1100px){
  .studio-shell{--studio-panel:290px}
  .studio-header{padding:10px 14px;gap:10px}
@@ -154,18 +153,18 @@
  .studio-task-view,.studio-records{padding:16px 12px 25px}
  .studio-task-head{align-items:flex-start;flex-wrap:wrap}
  .studio-task-head .studio-evidence{white-space:normal}
- .studio-shell .studio-wrench{position:fixed;bottom:65px;right:10px;width:calc(100% - 20px);max-width:none}
- .studio-shell .studio-wrench .chat-bar-composer{min-height:48px}
- .studio-shell .studio-wrench .chat-bar-composer textarea{font-size:16px}
- .studio-shell .studio-wrench .wrench-panel{height:min(58dvh,480px)}
- .studio-shell:has(.wrench-panel:not([hidden])) .studio-inspector{display:none}
+ .wrench-layer .studio-wrench{bottom:65px;width:calc(100vw - 20px)}
+ .wrench-layer .studio-wrench .chat-bar-composer{min-height:48px}
+ .wrench-layer .studio-wrench .chat-bar-composer textarea{font-size:16px}
+ .wrench-layer .studio-wrench .wrench-panel{height:min(58dvh,480px)}
+ body:has(.studio-wrench .wrench-panel:not([hidden])) .studio-shell .studio-inspector{display:none}
  .studio-notice{position:fixed;left:12px;right:12px;bottom:130px;max-width:none;z-index:45}
  .studio-view-settings{bottom:calc(100% - 43dvh + 16px);left:auto;right:12px}
  .studio-scene-tools{left:10px;right:10px;top:10px}
  .studio-scene-tools button{min-height:36px;font-size:10px;padding:6px 9px}
  .studio-overlay-panel{width:100%;top:0;height:100%;padding-bottom:90px}
  .studio-design{position:fixed;inset:40px 0 120px;padding:18px 12px;z-index:40}
- .workshop-studio button,.studio-dialog button{touch-action:manipulation}
+ .workshop-studio button:where(:not(.wrench-layer *)),.studio-dialog button:where(:not(.wrench-layer *)){touch-action:manipulation}
 }
 @media(prefers-reduced-motion:reduce){.workshop-studio *{scroll-behavior:auto!important;transition:none!important}}
 .demo-bar.demo-bar--compact{height:34px;min-height:34px;padding:0 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #293c44;background:#13262b;font-size:11px}
@@ -180,10 +179,10 @@ body:has(.demo-bar--compact) .shell:has(.studio-shell) .sidebar{height:calc(100d
  body:has(.demo-bar--compact) .shell:has(.studio-shell) .sidebar{height:auto}
  .demo-bar.demo-bar--compact{padding:0 10px;gap:8px;font-size:10px}
 }
-.studio-shell .studio-wrench .wrench-panel{height:calc(100dvh - 340px)}
-.studio-shell .studio-wrench .forge-samples{display:none}
-.studio-shell .studio-wrench .wrench-panel-body>.studio-muted{padding:10px 14px;margin:0;border-bottom:1px solid #29343e;font-size:10px}
-@media(max-width:760px){.studio-shell .studio-wrench .wrench-panel{height:min(58dvh,480px)}}
+.wrench-layer .studio-wrench .wrench-panel{height:calc(100dvh - 340px)}
+.wrench-layer .studio-wrench .forge-samples{display:none}
+.wrench-layer .studio-wrench .wrench-panel-body>.studio-muted{padding:10px 14px;margin:0;border-bottom:1px solid #29343e;font-size:10px}
+@media(max-width:760px){.wrench-layer .studio-wrench .wrench-panel{height:min(58dvh,480px)}}
 @media(max-width:760px){
  .studio-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto auto;gap:8px;padding:12px}
  .studio-project-name{grid-column:1/3;grid-row:1;max-width:none;width:100%;min-width:0}
@@ -208,9 +207,9 @@ body:has(.demo-bar--compact) .shell:has(.studio-shell) .sidebar{height:calc(100d
  .workshop-studio .studio-inspector{display:none}
  .workshop-studio[data-inspector-open=true] .studio-inspector{display:flex;position:fixed;left:10px;right:10px;bottom:124px;max-height:48dvh;padding:18px 16px 58px;border:1px solid #41616b;border-radius:10px;background:#111b25;box-shadow:0 -10px 60px #0008;z-index:24}
  .workshop-studio .studio-sheet-close{display:block;position:fixed;bottom:134px;left:24px;z-index:25;font-size:11px;min-height:34px}
- .studio-shell:has(.wrench-panel:not([hidden])) .studio-sheet-close{display:none}
- .studio-shell:has(.wrench-panel:not([hidden])) .studio-inspector{display:none}
- .studio-shell .studio-wrench .wrench-panel{height:min(58dvh,480px)}
+ body:has(.studio-wrench .wrench-panel:not([hidden])) .studio-shell .studio-sheet-close{display:none}
+ body:has(.studio-wrench .wrench-panel:not([hidden])) .studio-shell .studio-inspector{display:none}
+ .wrench-layer .studio-wrench .wrench-panel{height:min(58dvh,480px)}
 }
 .shell:has(.studio-shell) .topbar .gh-link{display:none}
 @media(max-width:760px){

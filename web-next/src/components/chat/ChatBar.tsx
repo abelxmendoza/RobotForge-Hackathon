@@ -20,6 +20,7 @@ import AttachButton from "./AttachButton";
 import VoiceButton from "./VoiceButton";
 import CopyButton from "./CopyButton";
 import WrenchBot from "./WrenchBot";
+import WrenchLayer from "./WrenchLayer";
 import { useWrenchMood } from "@/lib/wrenchMood";
 import { transcript } from "@/lib/copytext";
 import { ASSISTANT_NAME } from "@/lib/handoff";
@@ -85,6 +86,7 @@ export default function ChatBar() {
   };
 
   return (
+    <WrenchLayer>
     <div className="chat-bar">
       {open && (
         <section className="chat-bar-panel" aria-label="Chat conversation">
@@ -224,5 +226,6 @@ export default function ChatBar() {
         </button>
       </form>
     </div>
+    </WrenchLayer>
   );
 }
