@@ -2,6 +2,7 @@
 // Source of truth stays the repo (catalog/*.json, assets/) — one
 // generator change feeds both sites. Runs as `prebuild`.
 import { cpSync, mkdirSync, copyFileSync } from "node:fs";
+import {indexGeneratedModels} from './index-generated-models.mjs';
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,3 +47,5 @@ for (const [folder, out] of [["harness-reports", "harness-reports.json"],
   writeFileSync(join(root, "src", "data", out), JSON.stringify(map));
 }
 console.log("sync-data: catalog JSON, assets/ and stylesheets synced");
+
+writeFileSync(join(root,'src','data','robot-twins.json'),JSON.stringify(indexGeneratedModels(repo),null,2)+'\n');

@@ -98,6 +98,23 @@ def save_checkpoint(dest, record):
     temp.replace(path)
 
 
+def get_with_retry(client, httpx, path, sleep=time.sleep):
+    """Retry read-only status calls; never create a replacement asset."""
+    for attempt in range(6):
+        response = None
+        try:
+            response = client.get(path)
+            if response.status_code != 429 and response.status_code < 500:
+                return response
+        except httpx.TransportError:
+            pass
+        if attempt == 5:
+            raise RuntimeError('ProjectSim status connection is unavailable. Rerun to resume the saved job; no replacement asset was created.') from None
+        delay = min(30, 2 ** (attempt + 1))
+        print(f'ProjectSim status connection interrupted; retrying in {delay}s.', flush=True)
+        sleep(delay)
+
+
 def run_one(client, httpx, slug, s):
     body = body_for(slug, s)
     dest = (DOWNLOADS / slug).resolve()
@@ -115,7 +132,7 @@ def run_one(client, httpx, slug, s):
     print(f'[{slug}] asset {asset_id}, job {job_id}', flush=True)
     start = time.time()
     while True:
-        job = check(client.get(f'/v1/jobs/{job_id}'), (200,))
+        job = check(get_with_retry(client, httpx, f'/v1/jobs/{job_id}'), (200,))
         st = job.get('status')
         if st == 'retried' and job.get('retried_by'):
             job_id = job['retried_by']
@@ -132,7 +149,7 @@ def run_one(client, httpx, slug, s):
         print(f'[{slug}] {st} {job.get("current_stage") or ""} {job.get("progress") or ""}', flush=True)
         time.sleep(POLL_S)
 
-    asset = check(client.get(f'/v1/assets/{asset_id}'), (200,))
+    asset = check(get_with_retry(client, httpx, f'/v1/assets/{asset_id}'), (200,))
     usd = None
     for f in asset['files']:
         if not f['url'].startswith('https://'):

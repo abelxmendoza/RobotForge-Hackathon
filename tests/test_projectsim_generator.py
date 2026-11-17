@@ -18,3 +18,22 @@ def test_generation_inputs_are_authored_and_bounded():
  assert {'boston-dynamics-spot','vex-v5-tank-drive'}<=subjects.keys()
  for slug in ['boston-dynamics-spot','vex-v5-tank-drive']:
   b=m.body_for(slug,subjects[slug]);assert b['inputs']['text'];assert 'images' not in b['inputs'];assert b['params']['physics']['articulated']
+
+
+def test_read_poll_recovers_timeout_and_service_failure_without_creation():
+ from types import SimpleNamespace
+ m=module()
+ class NetworkFailure(Exception):pass
+ class Response:
+  def __init__(self,status):self.status_code=status
+  def json(self):return {'status':'running'}
+ class Client:
+  calls=0
+  def get(self,path):
+   self.calls+=1
+   if self.calls==1:raise NetworkFailure('temporary timeout')
+   return Response(503 if self.calls==2 else 200)
+ client=Client();pauses=[]
+ result=m.get_with_retry(client,SimpleNamespace(TransportError=NetworkFailure),'/v1/jobs/existing',sleep=pauses.append)
+ assert result.json()['status']=='running'
+ assert client.calls==3 and pauses==[2,4]
