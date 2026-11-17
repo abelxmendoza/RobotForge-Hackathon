@@ -1,0 +1,1647 @@
+{
+  "schema": "robotforge.detailed-model.v1",
+  "robot": "TurtleBot3 Burger",
+  "revisionLabel": "ROBOTIS reference \u00b7 LDS-01 / Pi-era geometry",
+  "sourceRevision": "fc817ce3073af1d6032397c64504134882af5e9a",
+  "sources": [
+    {
+      "file": "burger_base.stl",
+      "url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/bases/burger_base.stl",
+      "sha256": "7d7f3329a437b43bbcbbec59f9a2d1df1d88b59c3882c543d979baf73670f025",
+      "license": "Apache-2.0"
+    },
+    {
+      "file": "left_tire.stl",
+      "url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/wheels/left_tire.stl",
+      "sha256": "578c9452ee51c2f71e5e6723b503d784e58a6ac317fa53ee308e645f204c8d6a",
+      "license": "Apache-2.0"
+    },
+    {
+      "file": "right_tire.stl",
+      "url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/wheels/right_tire.stl",
+      "sha256": "407aaf271ba7051c6186b220e1dc36b2a6eca688fced66a3347f49747b684596",
+      "license": "Apache-2.0"
+    },
+    {
+      "file": "lds.stl",
+      "url": "https://raw.githubusercontent.com/ROBOTIS-GIT/turtlebot3/fc817ce3073af1d6032397c64504134882af5e9a/turtlebot3_description/meshes/sensors/lds.stl",
+      "sha256": "98f0bd7046159f83caab9509293112ef13534368535669124b91b5114c3132f6",
+      "license": "Apache-2.0"
+    }
+  ],
+  "sourceShells": 254,
+  "sourceTriangles": 96524,
+  "assemblyEvidence": "Interpretive inspection order and separation paths. Source mesh geometry and URDF placements are preserved; grouping is not a verified physical assembly procedure. Cables and unpublished internals are not invented.",
+  "parts": [
+    {
+      "id": "plate-0",
+      "name": "Bottom waffle plate",
+      "color": "#252d32",
+      "explode": [
+        0,
+        0,
+        0.06
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          0,
+          8384
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "plate-1",
+      "name": "Motor deck waffle plate",
+      "color": "#252d32",
+      "explode": [
+        0,
+        0,
+        0.11
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          8384,
+          8384
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "plate-2",
+      "name": "Computer deck waffle plate",
+      "color": "#252d32",
+      "explode": [
+        0,
+        0,
+        0.16
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          16768,
+          8384
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "plate-3",
+      "name": "Lidar deck waffle plate",
+      "color": "#252d32",
+      "explode": [
+        0,
+        0,
+        0.21000000000000002
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          25152,
+          8384
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "motor-left",
+      "name": "Left DYNAMIXEL drive assembly",
+      "color": "#30383f",
+      "explode": [
+        0,
+        0.14,
+        0
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          58232,
+          3765
+        ],
+        [
+          62021,
+          2735
+        ],
+        [
+          64788,
+          416
+        ],
+        [
+          65206,
+          840
+        ],
+        [
+          66056,
+          120
+        ],
+        [
+          55842,
+          2390
+        ],
+        [
+          67050,
+          196
+        ],
+        [
+          67558,
+          156
+        ],
+        [
+          67714,
+          156
+        ],
+        [
+          67870,
+          156
+        ],
+        [
+          68026,
+          156
+        ],
+        [
+          66540,
+          42
+        ],
+        [
+          66602,
+          16
+        ],
+        [
+          64756,
+          32
+        ],
+        [
+          66048,
+          8
+        ],
+        [
+          66200,
+          32
+        ],
+        [
+          66236,
+          8
+        ],
+        [
+          66268,
+          32
+        ],
+        [
+          66304,
+          8
+        ],
+        [
+          66336,
+          32
+        ],
+        [
+          66372,
+          8
+        ],
+        [
+          66380,
+          40
+        ],
+        [
+          66420,
+          40
+        ],
+        [
+          66460,
+          40
+        ],
+        [
+          66500,
+          40
+        ],
+        [
+          61997,
+          24
+        ],
+        [
+          65204,
+          2
+        ],
+        [
+          66046,
+          2
+        ],
+        [
+          66176,
+          24
+        ],
+        [
+          66232,
+          4
+        ],
+        [
+          66244,
+          24
+        ],
+        [
+          66300,
+          4
+        ],
+        [
+          66312,
+          24
+        ],
+        [
+          66368,
+          4
+        ],
+        [
+          66618,
+          24
+        ],
+        [
+          66642,
+          24
+        ],
+        [
+          66666,
+          24
+        ],
+        [
+          66690,
+          24
+        ],
+        [
+          66714,
+          24
+        ],
+        [
+          66738,
+          24
+        ],
+        [
+          66762,
+          24
+        ],
+        [
+          66786,
+          24
+        ],
+        [
+          66810,
+          24
+        ],
+        [
+          66834,
+          24
+        ],
+        [
+          66858,
+          24
+        ],
+        [
+          66882,
+          24
+        ],
+        [
+          66906,
+          24
+        ],
+        [
+          66930,
+          24
+        ],
+        [
+          66954,
+          24
+        ],
+        [
+          66978,
+          24
+        ],
+        [
+          67002,
+          24
+        ],
+        [
+          67026,
+          24
+        ],
+        [
+          66582,
+          20
+        ]
+      ],
+      "shellCount": 39,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "motor-right",
+      "name": "Right DYNAMIXEL drive assembly",
+      "color": "#30383f",
+      "explode": [
+        0,
+        -0.14,
+        0
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          46828,
+          3765
+        ],
+        [
+          50617,
+          2735
+        ],
+        [
+          53384,
+          416
+        ],
+        [
+          53802,
+          840
+        ],
+        [
+          54652,
+          120
+        ],
+        [
+          44438,
+          2390
+        ],
+        [
+          55646,
+          196
+        ],
+        [
+          67246,
+          156
+        ],
+        [
+          67402,
+          156
+        ],
+        [
+          68182,
+          156
+        ],
+        [
+          68338,
+          156
+        ],
+        [
+          55136,
+          42
+        ],
+        [
+          55198,
+          16
+        ],
+        [
+          53352,
+          32
+        ],
+        [
+          54644,
+          8
+        ],
+        [
+          54796,
+          32
+        ],
+        [
+          54832,
+          8
+        ],
+        [
+          54864,
+          32
+        ],
+        [
+          54900,
+          8
+        ],
+        [
+          54932,
+          32
+        ],
+        [
+          54968,
+          8
+        ],
+        [
+          54976,
+          40
+        ],
+        [
+          55016,
+          40
+        ],
+        [
+          55056,
+          40
+        ],
+        [
+          55096,
+          40
+        ],
+        [
+          50593,
+          24
+        ],
+        [
+          53800,
+          2
+        ],
+        [
+          54642,
+          2
+        ],
+        [
+          54772,
+          24
+        ],
+        [
+          54828,
+          4
+        ],
+        [
+          54840,
+          24
+        ],
+        [
+          54896,
+          4
+        ],
+        [
+          54908,
+          24
+        ],
+        [
+          54964,
+          4
+        ],
+        [
+          55214,
+          24
+        ],
+        [
+          55238,
+          24
+        ],
+        [
+          55262,
+          24
+        ],
+        [
+          55286,
+          24
+        ],
+        [
+          55310,
+          24
+        ],
+        [
+          55334,
+          24
+        ],
+        [
+          55358,
+          24
+        ],
+        [
+          55382,
+          24
+        ],
+        [
+          55406,
+          24
+        ],
+        [
+          55430,
+          24
+        ],
+        [
+          55454,
+          24
+        ],
+        [
+          55478,
+          24
+        ],
+        [
+          55502,
+          24
+        ],
+        [
+          55526,
+          24
+        ],
+        [
+          55550,
+          24
+        ],
+        [
+          55574,
+          24
+        ],
+        [
+          55598,
+          24
+        ],
+        [
+          55622,
+          24
+        ],
+        [
+          55178,
+          20
+        ]
+      ],
+      "shellCount": 39,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "battery",
+      "name": "Battery and retaining hardware",
+      "color": "#252c35",
+      "explode": [
+        -0.17,
+        0,
+        0
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          71214,
+          644
+        ],
+        [
+          74434,
+          512
+        ],
+        [
+          71858,
+          644
+        ],
+        [
+          75970,
+          512
+        ],
+        [
+          72502,
+          644
+        ],
+        [
+          76482,
+          512
+        ],
+        [
+          73146,
+          644
+        ],
+        [
+          76994,
+          512
+        ],
+        [
+          73790,
+          644
+        ],
+        [
+          77506,
+          512
+        ],
+        [
+          78186,
+          220
+        ],
+        [
+          78018,
+          148
+        ],
+        [
+          78166,
+          20
+        ]
+      ],
+      "shellCount": 8,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "caster",
+      "name": "Rear caster assembly",
+      "color": "#9ba0a6",
+      "explode": [
+        -0.14,
+        0,
+        -0.025
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          41936,
+          1874
+        ],
+        [
+          43814,
+          156
+        ],
+        [
+          43970,
+          156
+        ],
+        [
+          44126,
+          156
+        ],
+        [
+          44282,
+          156
+        ],
+        [
+          43810,
+          4
+        ]
+      ],
+      "shellCount": 6,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "opencr",
+      "name": "OpenCR controller and connectors",
+      "color": "#247e6b",
+      "explode": [
+        -0.16,
+        0,
+        0.11
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          79154,
+          386
+        ],
+        [
+          79540,
+          386
+        ],
+        [
+          79926,
+          386
+        ],
+        [
+          80312,
+          386
+        ],
+        [
+          74946,
+          256
+        ],
+        [
+          75202,
+          256
+        ],
+        [
+          75458,
+          256
+        ],
+        [
+          75714,
+          256
+        ],
+        [
+          78966,
+          188
+        ],
+        [
+          86282,
+          96
+        ],
+        [
+          86378,
+          96
+        ],
+        [
+          86474,
+          96
+        ],
+        [
+          86570,
+          96
+        ]
+      ],
+      "shellCount": 13,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "pi",
+      "name": "Raspberry Pi board and connectors",
+      "color": "#237e58",
+      "explode": [
+        0.16,
+        0,
+        0.18
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          90242,
+          4478
+        ],
+        [
+          89066,
+          1176
+        ],
+        [
+          88454,
+          512
+        ],
+        [
+          94720,
+          272
+        ],
+        [
+          95264,
+          190
+        ],
+        [
+          94992,
+          272
+        ],
+        [
+          95454,
+          190
+        ],
+        [
+          80698,
+          386
+        ],
+        [
+          81084,
+          386
+        ],
+        [
+          81470,
+          386
+        ],
+        [
+          81856,
+          386
+        ],
+        [
+          88202,
+          252
+        ],
+        [
+          85658,
+          156
+        ],
+        [
+          85814,
+          156
+        ],
+        [
+          85970,
+          156
+        ],
+        [
+          86126,
+          156
+        ],
+        [
+          88966,
+          100
+        ],
+        [
+          86666,
+          96
+        ],
+        [
+          86762,
+          96
+        ],
+        [
+          86858,
+          96
+        ],
+        [
+          86954,
+          96
+        ]
+      ],
+      "shellCount": 19,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "lower-pillars",
+      "name": "Lower plate supports",
+      "color": "#a5a8ac",
+      "explode": [
+        0,
+        0,
+        0.1
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          70990,
+          56
+        ],
+        [
+          71046,
+          56
+        ],
+        [
+          71102,
+          56
+        ],
+        [
+          71158,
+          56
+        ]
+      ],
+      "shellCount": 4,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "middle-pillars",
+      "name": "Middle plate supports",
+      "color": "#a5a8ac",
+      "explode": [
+        0,
+        0,
+        0.2
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          78406,
+          56
+        ],
+        [
+          78462,
+          56
+        ],
+        [
+          78854,
+          56
+        ],
+        [
+          78910,
+          56
+        ]
+      ],
+      "shellCount": 4,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "upper-pillars",
+      "name": "Upper plate supports",
+      "color": "#a5a8ac",
+      "explode": [
+        0,
+        0,
+        0.3
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          78518,
+          56
+        ],
+        [
+          78574,
+          56
+        ],
+        [
+          78630,
+          56
+        ],
+        [
+          78686,
+          56
+        ],
+        [
+          78742,
+          56
+        ],
+        [
+          78798,
+          56
+        ]
+      ],
+      "shellCount": 6,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "hardware-0",
+      "name": "Bottom deck fasteners",
+      "color": "#9ba0a6",
+      "explode": [
+        -0.1,
+        0,
+        0.08
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          33536,
+          156
+        ],
+        [
+          33692,
+          156
+        ],
+        [
+          33848,
+          156
+        ],
+        [
+          34004,
+          156
+        ],
+        [
+          36032,
+          156
+        ],
+        [
+          36188,
+          156
+        ],
+        [
+          38528,
+          156
+        ],
+        [
+          38684,
+          156
+        ],
+        [
+          68494,
+          156
+        ],
+        [
+          68650,
+          156
+        ],
+        [
+          68806,
+          156
+        ],
+        [
+          68962,
+          156
+        ],
+        [
+          70366,
+          156
+        ],
+        [
+          70522,
+          156
+        ],
+        [
+          70678,
+          156
+        ],
+        [
+          70834,
+          156
+        ],
+        [
+          40784,
+          96
+        ],
+        [
+          40880,
+          96
+        ],
+        [
+          41360,
+          96
+        ],
+        [
+          41456,
+          96
+        ]
+      ],
+      "shellCount": 20,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "hardware-1",
+      "name": "Motor deck fasteners",
+      "color": "#9ba0a6",
+      "explode": [
+        0.1,
+        0,
+        0.15000000000000002
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          34160,
+          156
+        ],
+        [
+          34316,
+          156
+        ],
+        [
+          34472,
+          156
+        ],
+        [
+          34628,
+          156
+        ],
+        [
+          34784,
+          156
+        ],
+        [
+          34940,
+          156
+        ],
+        [
+          35096,
+          156
+        ],
+        [
+          35252,
+          156
+        ],
+        [
+          35408,
+          156
+        ],
+        [
+          35564,
+          156
+        ],
+        [
+          35720,
+          156
+        ],
+        [
+          35876,
+          156
+        ],
+        [
+          69118,
+          156
+        ],
+        [
+          69274,
+          156
+        ],
+        [
+          69430,
+          156
+        ],
+        [
+          69586,
+          156
+        ],
+        [
+          69742,
+          156
+        ],
+        [
+          69898,
+          156
+        ],
+        [
+          70054,
+          156
+        ],
+        [
+          70210,
+          156
+        ],
+        [
+          83786,
+          156
+        ],
+        [
+          83942,
+          156
+        ],
+        [
+          84098,
+          156
+        ],
+        [
+          84254,
+          156
+        ],
+        [
+          40592,
+          96
+        ],
+        [
+          40688,
+          96
+        ],
+        [
+          41552,
+          96
+        ],
+        [
+          41648,
+          96
+        ]
+      ],
+      "shellCount": 28,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "hardware-2",
+      "name": "Computer deck fasteners",
+      "color": "#9ba0a6",
+      "explode": [
+        -0.1,
+        0,
+        0.22000000000000003
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          36344,
+          156
+        ],
+        [
+          36500,
+          156
+        ],
+        [
+          36656,
+          156
+        ],
+        [
+          36812,
+          156
+        ],
+        [
+          36968,
+          156
+        ],
+        [
+          37124,
+          156
+        ],
+        [
+          37280,
+          156
+        ],
+        [
+          37436,
+          156
+        ],
+        [
+          37592,
+          156
+        ],
+        [
+          37748,
+          156
+        ],
+        [
+          37904,
+          156
+        ],
+        [
+          38060,
+          156
+        ],
+        [
+          38216,
+          156
+        ],
+        [
+          38372,
+          156
+        ],
+        [
+          84410,
+          156
+        ],
+        [
+          84566,
+          156
+        ],
+        [
+          84722,
+          156
+        ],
+        [
+          84878,
+          156
+        ],
+        [
+          40400,
+          96
+        ],
+        [
+          40496,
+          96
+        ],
+        [
+          41744,
+          96
+        ],
+        [
+          41840,
+          96
+        ],
+        [
+          87050,
+          96
+        ],
+        [
+          87146,
+          96
+        ],
+        [
+          87242,
+          96
+        ],
+        [
+          87338,
+          96
+        ]
+      ],
+      "shellCount": 26,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "hardware-3",
+      "name": "Lidar deck fasteners",
+      "color": "#9ba0a6",
+      "explode": [
+        0.1,
+        0,
+        0.29000000000000004
+      ],
+      "file": "burger_base.stl",
+      "position": [
+        -0.032,
+        0,
+        0.01
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          82242,
+          386
+        ],
+        [
+          82628,
+          386
+        ],
+        [
+          83014,
+          386
+        ],
+        [
+          83400,
+          386
+        ],
+        [
+          38840,
+          156
+        ],
+        [
+          38996,
+          156
+        ],
+        [
+          39152,
+          156
+        ],
+        [
+          39308,
+          156
+        ],
+        [
+          39464,
+          156
+        ],
+        [
+          39620,
+          156
+        ],
+        [
+          39776,
+          156
+        ],
+        [
+          39932,
+          156
+        ],
+        [
+          40088,
+          156
+        ],
+        [
+          40244,
+          156
+        ],
+        [
+          85034,
+          156
+        ],
+        [
+          85190,
+          156
+        ],
+        [
+          85346,
+          156
+        ],
+        [
+          85502,
+          156
+        ],
+        [
+          95644,
+          156
+        ],
+        [
+          95800,
+          156
+        ],
+        [
+          95956,
+          156
+        ],
+        [
+          96112,
+          156
+        ],
+        [
+          40976,
+          96
+        ],
+        [
+          41072,
+          96
+        ],
+        [
+          41168,
+          96
+        ],
+        [
+          41264,
+          96
+        ],
+        [
+          87434,
+          96
+        ],
+        [
+          87530,
+          96
+        ],
+        [
+          87626,
+          96
+        ],
+        [
+          87722,
+          96
+        ],
+        [
+          87818,
+          96
+        ],
+        [
+          87914,
+          96
+        ],
+        [
+          88010,
+          96
+        ],
+        [
+          88106,
+          96
+        ],
+        [
+          96268,
+          64
+        ],
+        [
+          96332,
+          64
+        ],
+        [
+          96396,
+          64
+        ],
+        [
+          96460,
+          64
+        ]
+      ],
+      "shellCount": 38,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "wheel-left",
+      "name": "Left wheel and tire",
+      "color": "#202328",
+      "explode": [
+        0,
+        0.22,
+        0
+      ],
+      "file": "left_tire.stl",
+      "position": [
+        0,
+        0.08,
+        0.033
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          0,
+          21672
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "wheel-right",
+      "name": "Right wheel and tire",
+      "color": "#202328",
+      "explode": [
+        0,
+        -0.22,
+        0
+      ],
+      "file": "right_tire.stl",
+      "position": [
+        0,
+        -0.08,
+        0.033
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          0,
+          21672
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    },
+    {
+      "id": "lidar",
+      "name": "LDS-01 laser scanner",
+      "color": "#252a30",
+      "explode": [
+        0,
+        0,
+        0.4
+      ],
+      "file": "lds.stl",
+      "position": [
+        -0.032,
+        0,
+        0.182
+      ],
+      "scale": 0.001,
+      "ranges": [
+        [
+          0,
+          14566
+        ]
+      ],
+      "shellCount": 1,
+      "evidence": "manufacturer mesh; RobotForge grouping"
+    }
+  ],
+  "teardown": [
+    "lidar",
+    "hardware-3",
+    "plate-3",
+    "pi",
+    "upper-pillars",
+    "hardware-2",
+    "plate-2",
+    "opencr",
+    "middle-pillars",
+    "hardware-1",
+    "plate-1",
+    "battery",
+    "wheel-left",
+    "wheel-right",
+    "motor-left",
+    "motor-right",
+    "lower-pillars",
+    "hardware-0",
+    "caster",
+    "plate-0"
+  ]
+}

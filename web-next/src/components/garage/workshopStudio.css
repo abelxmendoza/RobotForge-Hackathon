@@ -219,3 +219,5 @@ body:has(.demo-bar--compact) .shell:has(.studio-shell) .sidebar{height:calc(100d
  .studio-header-actions button,.studio-scene-tools button{min-height:44px}
  .workshop-studio .studio-sheet-close{left:auto;right:12px;bottom:calc(124px + 48dvh + 6px);min-height:40px}
 }
+.robodex-picker-list{display:grid;gap:8px;max-height:55dvh;overflow-y:auto;padding:4px}
+.studio-dex-picker{max-height:70dvh;overflow:auto;padding:4px}.studio-dex-picker .dex-modal-head{padding:0 0 12px}.studio-dex-picker .dex-pick-row{grid-template-columns:44px minmax(0,1fr);padding:10px 0}.studio-dex-picker .dex-pick-thumb{width:40px;height:40px}.studio-dex-picker .dex-pick-action{grid-column:2}.studio-dex-picker .dex-pick-main{min-width:0}.studio-dex-picker .dex-pick-name{font-size:14px}.studio-dex-picker .dex-pick-sub{font-size:10px}.studio-dex-picker .dex-pick-group h3{font-size:11px}
