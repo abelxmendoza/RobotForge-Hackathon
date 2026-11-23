@@ -11,6 +11,7 @@ import {
 } from "@/lib/gazebo";
 import { createZip } from "@/lib/zip";
 import { assetPath } from "@/components/home/asset";
+import { InfoTip } from "./ProfileTabs";
 
 /* "Launch in Gazebo" for one Robodex entry.
  *
@@ -214,20 +215,23 @@ export default function GazeboSection({ slug, robotName }: { slug: string; robot
   };
 
   return (
-    <section className="section" id="gazebo">
+    <section className="section pf-section" id="gazebo">
       <h2>Launch in Gazebo</h2>
       <p className="sub">
+        Download a ready-to-run package and the command.{" "}
+        <strong>Runs on your machine — Gazebo isn&apos;t in the browser.</strong>
+      </p>
+      <InfoTip>
         Gazebo doesn&apos;t run in a browser — not on this page, not anywhere —
         so this doesn&apos;t pretend to run it. Instead it does the real job a
         web app can do: it assembles a ready-to-run launch package from this
         robot&apos;s recorded model — the model file, a minimal generated
         world, a ROS 2 launch file and a plain <code>gz sim</code> variant —
-        and hands you the download plus the exact command.{" "}
-        <strong>Runs on your machine — Gazebo isn&apos;t in the browser.</strong>{" "}
-        Reference stack: Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic. The
-        package spawns the model at the origin in its zero pose; the original
-        project&apos;s controllers and bringup are not wired.
-      </p>
+        and hands you the download plus the exact command. Reference stack:
+        Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic. The package spawns the
+        model at the origin in its zero pose; the original project&apos;s
+        controllers and bringup are not wired.
+      </InfoTip>
       {!avail.ok ? (
         <div className="card">
           <p className="state-box">{avail.reason}</p>
@@ -263,8 +267,9 @@ export default function GazeboSection({ slug, robotName }: { slug: string; robot
           )}
           {state.kind === "idle" || state.kind === "error" ? (
             <>
-              <button type="button" className="primary" onClick={build}>
-                Build the Gazebo launch package for {robotName}
+              <button type="button" className="btn btn-primary" onClick={build}
+                aria-label={`Build the Gazebo launch package for ${robotName}`}>
+                Build the Gazebo package
               </button>
               {state.kind === "error" ? (
                 <p className="state-box" style={{ marginTop: 12 }}>{state.message}</p>

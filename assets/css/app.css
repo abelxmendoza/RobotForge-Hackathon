@@ -2739,3 +2739,147 @@ body:has(.demo-bar) .studio{--studio-h:calc(100dvh - 56px - 24px - 58px)}
 .demo-bar-welcome p{margin:0}
 .demo-bar-welcome .demo-steps{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:0;padding:0;list-style:none;max-width:none}
 .demo-bar-welcome .demo-steps li{display:block}
+
+/* ==== Robodex robot profile (2026-11-23 redesign) ====================
+   Compact hero (name, status chips, three readouts, two actions) and
+   five tabs (web-next ProfileTabs.tsx). Instrument-panel look: readouts
+   in the mono face, small-caps labels, one card style. */
+.pf-hero{grid-template-columns:minmax(0,320px) 1fr;gap:var(--s6);align-items:center}
+.pf-hero .ph{aspect-ratio:4/3}
+.pf-hero figcaption{font-size:11px;line-height:1.4}
+.pf-hero h1{margin-top:6px}
+.pf-hero .cls{font-size:var(--fs-sm)}
+.pf-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:var(--s4)}
+.pf-chips .verdict{margin:0}
+.pf-chip-link{display:inline-flex}
+.pf-chip-link:hover{text-decoration:none;filter:brightness(1.15)}
+.pf-chip{
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  font:700 12px/1 var(--font);letter-spacing:.06em;text-transform:uppercase;
+  padding:9px 12px;border-radius:999px;border:1px dashed var(--border-strong);
+  color:var(--text-muted);background:transparent;
+}
+a.pf-chip:hover{text-decoration:none;color:var(--text);border-color:var(--text-faint)}
+.pf-chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pf-chip.stab{color:#7cc4ee;border-color:#4db2e8}
+.pf-chip.stab.marginal{color:#d6a8f0;border-color:#c792ea}
+.pf-chip.stab.unstable{color:#b9c3cd;border-color:#9aa7b4}
+.pf-chip.wiring{color:var(--accent);border-color:var(--accent)}
+.pf-card-head .pf-chip{padding:6px 10px;font-size:11px}
+
+.pf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:var(--s4);max-width:640px}
+.pf-stat{
+  display:grid;gap:4px;padding:10px 12px;min-width:0;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+}
+.pf-stat-label,.pf-readout-label,.pf-spec-label{
+  font:700 11px/1.2 var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);
+}
+.pf-stat-label em{font-style:normal;color:var(--marginal);letter-spacing:.04em}
+.pf-stat-value{font:600 var(--fs-sm)/1.3 var(--readout);color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+
+.pf-desc{margin-top:var(--s4);max-width:62ch}
+.pf-desc > summary{
+  list-style:none;cursor:pointer;color:var(--text-muted);font-size:var(--fs-sm);line-height:1.55;
+}
+.pf-desc > summary::-webkit-details-marker{display:none}
+.pf-desc:not([open]) > summary{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:var(--s5)}
+
+/* tabs */
+.profile-tabs{margin-top:var(--s6);scroll-margin-top:56px}
+.ptab-bar{
+  position:sticky;top:56px;z-index:20;display:flex;align-items:center;gap:var(--s3);
+  background:rgba(11,20,32,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);
+}
+.ptab-context{display:none}
+.ptab-list{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.ptab-list::-webkit-scrollbar{display:none}
+.ptab{
+  flex:none;appearance:none;background:none;border:0;cursor:pointer;
+  font:600 var(--fs-sm)/1 var(--font);color:var(--text-muted);
+  padding:14px 14px 12px;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.ptab:hover{color:var(--text)}
+.ptab[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
+.ppane{padding-bottom:var(--s8)}
+.ppane > .section:first-child,.ppane > .pf-section:first-child{margin-top:var(--s5)}
+.ppane .section{scroll-margin-top:120px}
+.pf-section{margin-top:var(--s7)}
+.pf-section > h2,.pf-card-head h2{font-size:var(--fs-lg)}
+.pf-card-head{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.pf-card-head + .sub{color:var(--text-muted);font-size:var(--fs-sm);margin-top:6px;max-width:66ch}
+.pf-section > h2 + .sub + .info-tip,.pf-card-head + .sub + .info-tip{margin-top:4px}
+.pf-section > .card,.pf-section > .pf-card,.pf-section > .info-tip + *{margin-top:var(--s4)}
+.pf-card{display:grid;gap:var(--s3)}
+.pf-card > *{margin-top:0!important}
+.pf-card-foot{font-size:var(--fs-sm);color:var(--text-muted)}
+.pf-card .receipt{color:var(--text-faint)}
+
+/* "How this works" fold */
+.info-tip{font-size:var(--fs-xs);color:var(--text-muted);max-width:70ch}
+.info-tip > summary{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;list-style:none;
+  color:var(--text-faint);font-weight:600;padding:4px 0;
+}
+.info-tip > summary::-webkit-details-marker{display:none}
+.info-tip > summary:hover{color:var(--text)}
+.info-tip[open] > summary{color:var(--text)}
+.info-tip-body{
+  margin-top:6px;padding:var(--s3) var(--s4);line-height:1.6;
+  background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--link);border-radius:var(--r-sm);
+}
+
+/* readouts */
+.pf-readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.pf-readout{display:grid;gap:4px;padding:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface-2)}
+.pf-readout-value{font:700 var(--fs-lg)/1.15 var(--readout);color:var(--text);overflow-wrap:anywhere}
+.pf-readout.pass .pf-readout-value{color:var(--pass)}
+.pf-readout.marginal .pf-readout-value{color:var(--marginal)}
+.pf-readout.fail .pf-readout-value{color:var(--fail)}
+
+/* overview spec grid */
+.pf-spec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.pf-spec{display:grid;gap:6px;align-content:start;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.pf-spec-value{font-size:var(--fs-sm);line-height:1.45;color:var(--text);overflow-wrap:anywhere}
+.pf-source{margin-top:var(--s3);font-size:var(--fs-xs);color:var(--text-faint)}
+
+/* files */
+.pf-dl{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;font-size:var(--fs-sm)}
+.pf-dl dt{font:700 11px/1.9 var(--font);letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+.pf-dl dd{overflow-wrap:anywhere}
+.pf-note{font-size:var(--fs-sm)}
+
+/* parts */
+.pf-parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.pf-part{display:grid;gap:8px;align-content:start;padding:var(--s4)}
+.pf-part-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.pf-part-head h3{font-size:var(--fs-md)}
+.pf-qty{font:700 var(--fs-sm)/1 var(--readout);color:var(--accent)}
+.pf-part-does{font-size:var(--fs-sm);color:var(--text-muted)}
+.pf-part-dims{font:500 var(--fs-xs)/1.4 var(--readout);color:var(--text-faint)}
+.pf-part .report-more summary{font-size:var(--fs-xs)}
+.pf-part .prov{margin-top:0!important}
+
+@media (max-width: 900px){
+  /* phone hero: a thumbnail beside the name, so the robot's name and
+     verdict are on the first screen; everything else runs full width */
+  .pf-hero{grid-template-columns:96px minmax(0,1fr);gap:0 var(--s4);align-items:start}
+  .pf-hero figure,.pf-hero-body{display:contents}
+  .pf-hero .ph{grid-column:1;grid-row:1 / span 3;aspect-ratio:1;border-radius:var(--r);align-self:start}
+  .pf-hero .ph img{padding:6px}
+  .pf-hero figcaption{grid-column:1 / -1;grid-row:9;margin-top:var(--s3)}
+  .pf-hero .dex{grid-column:2;grid-row:1;align-self:end}
+  .pf-hero h1{grid-column:2;grid-row:2;font-size:26px;margin-top:2px}
+  .pf-hero .cls{grid-column:2;grid-row:3;font-size:var(--fs-xs)}
+  .pf-hero .pf-chips,.pf-hero .pf-stats,.pf-hero .pf-desc,.pf-hero .pf-actions{grid-column:1 / -1}
+  .ptab-bar{top:56px;margin:0 -16px;padding:0 16px}
+  .ptab{padding:14px 10px 12px;min-height:44px}
+  .pf-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pf-stat{padding:8px 10px}
+  .pf-stat-value{font-size:var(--fs-xs)}
+  .pf-parts{grid-template-columns:minmax(0,1fr)}
+  .pf-spec-grid{grid-template-columns:minmax(0,1fr)}
+  .pf-actions .btn{flex:1 1 auto;justify-content:center;min-height:44px}
+}
