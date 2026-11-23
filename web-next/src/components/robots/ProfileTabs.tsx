@@ -31,6 +31,7 @@ export default function ProfileTabs({ panes, name }: { panes: ProfilePane[]; nam
   const [active, setActive] = useState(panes[0]?.id ?? "");
   const [seen, setSeen] = useState<Set<string>>(() => new Set([panes[0]?.id ?? ""]));
   const barRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const open = (id: string, scrollTo?: string) => {
     setActive(id);
@@ -66,9 +67,17 @@ export default function ProfileTabs({ panes, name }: { panes: ProfilePane[]; nam
     } catch {
       /* history blocked: the tab still switches */
     }
+    /* The bar is sticky, so its own position never says how far down
+       the reader is. Use the tab container instead: once its top has
+       scrolled under the sticky bar, bring the new pane's start into
+       view (scroll-margin-top keeps it clear of the topbar). */
+    const wrap = rootRef.current;
     const bar = barRef.current;
-    if (bar && bar.getBoundingClientRect().top < 0) {
-      bar.scrollIntoView({ block: "start" });
+    if (wrap && bar) {
+      const pinnedAt = bar.getBoundingClientRect().top;
+      if (wrap.getBoundingClientRect().top < pinnedAt - 1) {
+        wrap.scrollIntoView({ block: "start" });
+      }
     }
   };
 
@@ -85,7 +94,7 @@ export default function ProfileTabs({ panes, name }: { panes: ProfilePane[]; nam
   };
 
   return (
-    <div className="profile-tabs" id="profile-tabs">
+    <div className="profile-tabs" id="profile-tabs" ref={rootRef}>
       <div className="ptab-bar" ref={barRef}>
         <span className="ptab-context" aria-hidden="true">{name}</span>
         <div className="ptab-list" role="tablist" aria-label={`${name} profile`}>
