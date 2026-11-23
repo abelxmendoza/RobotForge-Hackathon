@@ -113,6 +113,11 @@
       });
       if (best) hits.push({ robot: r, score: best });
     });
+    /* An exact full name wins: "Freenove 4WD Car (Pico)" must not
+       also pull in the ESP32 and Arduino cars through "4wd car". */
+    if (hits.some(function (h) { return h.score >= 10; })) {
+      hits = hits.filter(function (h) { return h.score >= 10; });
+    }
     return hits.sort(function (a, b) { return b.score - a.score; });
   }
 

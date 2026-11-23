@@ -468,7 +468,10 @@ function findRobots(qt: string[], robots: RobotData[]): RobotHitScore[] {
     });
     if (best) hits.push({ robot: r, score: best });
   });
-  return hits.sort((a, b) => b.score - a.score);
+  /* An exact full name wins: "Freenove 4WD Car (Pico)" must not also
+     pull in the ESP32 and Arduino cars through "4wd car". */
+  const exact = hits.filter((h) => h.score >= 10);
+  return (exact.length ? exact : hits).sort((a, b) => b.score - a.score);
 }
 
 /* Brand token shared by 2+ robots (e.g. "turtlebot3", or "turtlebot"
