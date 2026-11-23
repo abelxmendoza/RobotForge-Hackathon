@@ -10,6 +10,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from '
 type Extra = 'report' | 'facts' | 'note';
 import dynamic from 'next/dynamic';
 import HarnessReport from './HarnessReport';
+import { boardChain, logicLevelChecks } from '@/lib/boardLinks';
 import WiringFactsEditor from './WiringFactsEditor';
 import { assetPath } from '@/components/home/asset';
 import type { RobotSpec } from '@/components/forge/model';
@@ -68,6 +69,10 @@ export default function WiringView({ wiring: w, spec, compact = false, onWiringC
   const L = useMemo(() => layout(w), [w]);
   const bad = useMemo(() => badConns(w), [w]);
   const nodes = useMemo(() => nodeMap(w), [w]);
+  /* Robots with several boards: one line naming how they talk, and a
+   * flag when a 3.3 V and a 5 V board share a wire (lib/boardLinks.ts). */
+  const chain = useMemo(() => boardChain(w), [w]);
+  const logicWarns = useMemo(() => logicLevelChecks(w).filter((c) => c.severity === 'WARN').length, [w]);
   const [mode, setMode] = useState<'simple' | 'full'>('simple');
   const [extra, setExtra] = useState<Extra | null>(null);
   const [show3D, setShow3D] = useState(!compact);
@@ -222,6 +227,12 @@ export default function WiringView({ wiring: w, spec, compact = false, onWiringC
         {(tr || dead) && <button type="button" className="btn btn-sm btn-ghost" onClick={showAll}>Show all</button>}
         <button type="button" className="btn btn-sm btn-ghost" onClick={print}>Print harness sheet</button>
       </div>
+      {chain && (
+        <p className="wv-boards">
+          <strong>Boards</strong> <span className="m">{chain}</span>
+          {logicWarns > 0 && <>{' '}<button type="button" className="chip elec-bad" onClick={() => setExtra('report')}>⚠ 3.3 V / 5 V mismatch</button></>}
+        </p>
+      )}
       {/* One switch for the report, the facts editor and the note,
        * instead of three stacked dropdowns (2026-11-17 simplify). */}
       <div className="wv-extra" role="group" aria-label="Wiring report, facts and notes">

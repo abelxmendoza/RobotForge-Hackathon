@@ -51,6 +51,9 @@ export interface WirePort {
   rangeV: [number, number] | null;
   /** The recorded spec field this port came from. */
   source: string;
+  /** Logic levels a data/signal port runs at (specs.logic_v; a
+   *  level shifter records both sides). Empty when not recorded. */
+  logic?: number[];
 }
 
 export interface PartPorts {
@@ -86,6 +89,7 @@ function interfacePorts(
   raw: string,
   logicV: number | null,
   source: string,
+  logic: number[] = [],
 ): { ports: WirePort[]; wireless: string[] } {
   const ports: WirePort[] = [];
   const wireless: string[] = [];
@@ -123,6 +127,7 @@ function interfacePorts(
       ratedMaxV: null,
       rangeV: null,
       source,
+      logic,
     });
   }
   return { ports, wireless };
@@ -135,7 +140,10 @@ export function portsForPart(part: Part): PartPorts {
   const specs = (part.specs ?? {}) as Record<string, unknown>;
   const num = (v: unknown): number | null =>
     typeof v === "number" && Number.isFinite(v) ? v : null;
-  const logicV = num(specs.logic_v);
+  const logic = (Array.isArray(specs.logic_v) ? specs.logic_v : [specs.logic_v])
+    .map((v) => num(v))
+    .filter((v): v is number => v != null);
+  const logicV = logic.length === 1 ? logic[0] : null;
   const ports: WirePort[] = [];
   const wireless: string[] = [];
 
@@ -152,7 +160,7 @@ export function portsForPart(part: Part): PartPorts {
     }
   }
   for (const { raw, source } of rawInterfaces) {
-    const got = interfacePorts(raw, logicV, source);
+    const got = interfacePorts(raw, logicV, source, logic);
     for (const p of got.ports) {
       if (!ports.some((x) => x.id === p.id)) ports.push(p);
     }
@@ -510,7 +518,7 @@ export function disconnectEntry(
 /* ---------------- checks ---------------- */
 
 export interface WiringIssue {
-  kind: "unpowered" | "voltage-mismatch" | "duplicate";
+  kind: "unpowered" | "voltage-mismatch" | "logic-mismatch" | "duplicate";
   message: string;
   evidence: string;
   entryUid?: string;
@@ -677,6 +685,69 @@ export function wiringChecks(
       `${uncheckedVolts} power cable${uncheckedVolts === 1 ? "" : "s"} not ` +
         "voltage-checked: the delivered voltage isn't recorded " +
         "(the source names no fixed voltage, e.g. a driver passing its supply through)",
+    );
+  }
+
+  /* Logic levels: a 3.3 V board and a 5 V board on the same signal
+   * wire (UART, I2C, SPI, GPIO, PWM) with no level shifter at either
+   * end. USB, CAN, Ethernet and CSI carry their own signalling and
+   * are not judged. A board recorded as 5 V tolerant on some pins
+   * still gets the note, worded as "use one of those pins". */
+  const LOGIC_BUSES = new Set(["uart", "i2c", "spi", "gpio", "pwm", "pio"]);
+  const BOARD_CLASSES = new Set(["microcontrollers", "sbc"]);
+  const groundPairs: string[] = [];
+  let uncheckedLogic = 0;
+  for (const c of connections) {
+    if (c.type === "power") continue;
+    const fromPort = byUid.get(c.fromEntry)?.find((p) => p.id === c.fromPort);
+    const toPort = byUid.get(c.toEntry)?.find((p) => p.id === c.toPort);
+    if (!fromPort || !toPort || !LOGIC_BUSES.has(fromPort.bus)) continue;
+    const fromEntry = entries.find((e) => e.uid === c.fromEntry);
+    const toEntry = entries.find((e) => e.uid === c.toEntry);
+    if (!fromEntry || !toEntry) continue;
+    const fromPart = partsById.get(fromEntry.refId);
+    const toPart = partsById.get(toEntry.refId);
+    const fromSpecs = (fromPart?.specs ?? {}) as Record<string, unknown>;
+    const toSpecs = (toPart?.specs ?? {}) as Record<string, unknown>;
+    if (
+      fromPart && toPart &&
+      BOARD_CLASSES.has(fromPart.part_class) && BOARD_CLASSES.has(toPart.part_class)
+    ) {
+      groundPairs.push(`${nameOf(fromEntry)} ↔ ${nameOf(toEntry)}`);
+    }
+    if (fromSpecs.level_shifter === true || toSpecs.level_shifter === true) continue;
+    const a = fromPort.logic ?? [];
+    const b = toPort.logic ?? [];
+    if (!a.length || !b.length) {
+      uncheckedLogic++;
+      continue;
+    }
+    if (a.some((v) => b.includes(v))) continue;
+    const lowIsFrom = Math.max(...a) < Math.max(...b);
+    const low = lowIsFrom ? fromEntry : toEntry;
+    const lowSpecs = lowIsFrom ? fromSpecs : toSpecs;
+    const tolerant = typeof lowSpecs.five_v_tolerant === "string";
+    const lv = (vs: number[]) => vs.map(fmtV).join("/");
+    issues.push({
+      kind: "logic-mismatch",
+      connectionId: c.id,
+      message:
+        `${nameOf(fromEntry)} (${lv(a)} logic) and ${nameOf(toEntry)} ` +
+        `(${lv(b)} logic) share a ${fromPort.label} wire with no level shifter`,
+      evidence: tolerant
+        ? `${nameOf(low)} is 5 V tolerant on ${String(lowSpecs.five_v_tolerant)}: use one of those pins, or add a level shifter`
+        : `recorded logic levels differ: ${lv(a)} ≠ ${lv(b)}; add a level shifter, or link them over USB`,
+    });
+  }
+  if (uncheckedLogic) {
+    abstentions.push(
+      `${uncheckedLogic} signal cable${uncheckedLogic === 1 ? "" : "s"} not ` +
+        "logic-checked: a logic level isn't recorded at one end",
+    );
+  }
+  if (groundPairs.length) {
+    abstentions.push(
+      `ground isn't modelled: tie GND between ${[...new Set(groundPairs)].join(", ")}`,
     );
   }
 

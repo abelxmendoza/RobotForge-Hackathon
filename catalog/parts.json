@@ -600,14 +600,17 @@
       "source": "Espressif ESP32 DevKit class",
       "specs": {
         "interfaces": [
+          "usb",
           "i2c",
           "spi",
           "uart",
           "pwm",
+          "gpio",
           "wifi",
           "ble"
         ],
-        "logic_v": 3.3
+        "logic_v": 3.3,
+        "supply": "5 V (USB or VIN pin)"
       },
       "blurb": "A Wi-Fi/Bluetooth microcontroller board \u2014 the robot's reflexes.",
       "used_for": "Real-time jobs: motor PWM, encoder counting, sensor polling.",
@@ -648,12 +651,16 @@
       "source": "PJRC Teensy 4.1",
       "specs": {
         "interfaces": [
+          "usb",
           "i2c",
           "spi",
           "uart",
-          "can"
+          "can",
+          "pwm",
+          "gpio"
         ],
-        "logic_v": 3.3
+        "logic_v": 3.3,
+        "supply": "5 V (USB or VIN, 3.6-5.5 V)"
       },
       "blurb": "A very fast microcontroller board popular for precise motion control.",
       "used_for": "Arms and robots that need many fast, timed control loops.",
@@ -694,12 +701,16 @@
       "source": "Raspberry Pi Pico",
       "specs": {
         "interfaces": [
+          "usb",
           "i2c",
           "spi",
           "uart",
-          "pio"
+          "pio",
+          "pwm",
+          "gpio"
         ],
-        "logic_v": 3.3
+        "logic_v": 3.3,
+        "supply": "5 V (USB or VSYS, 1.8-5.5 V)"
       },
       "blurb": "Raspberry Pi's cheap dual-core microcontroller board.",
       "used_for": "Small control jobs, custom sensor hubs, PIO-based timing tricks.",
@@ -741,8 +752,12 @@
           "usb",
           "ethernet",
           "csi",
+          "i2c",
+          "spi",
+          "uart",
           "gpio"
         ],
+        "logic_v": 3.3,
         "supply": "5V/5A USB-C"
       },
       "blurb": "A full Linux computer the size of a credit card.",
@@ -784,10 +799,12 @@
           "csi",
           "pcie",
           "i2c",
+          "spi",
           "uart",
           "can",
           "gpio"
         ],
+        "logic_v": 3.3,
         "power_modes": "7 W / 15 W / 25 W",
         "size": "69.6 × 45 mm module, 260-pin SO-DIMM",
         "supply": "5 V module input"
@@ -2795,7 +2812,15 @@
       "source": "NXP PCA9685 breakout board",
       "specs": {
         "channels": 16,
-        "kind": "pwm_driver"
+        "interfaces": [
+          "i2c",
+          "pwm"
+        ],
+        "kind": "pwm_driver",
+        "logic_v": [
+          3.3,
+          5
+        ]
       },
       "blurb": "An I2C board that runs 16 servos or LEDs with its own clock, so the microcontroller does not have to.",
       "used_for": "Many-servo robots: hexapod legs, animatronics, arm arrays.",
@@ -2890,8 +2915,17 @@
       "source": "Arduino Uno R3 (ATmega328P)",
       "specs": {
         "clock_mhz": 16,
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio"
+        ],
         "logic_v": 5,
-        "mcu": "ATmega328P"
+        "mcu": "ATmega328P",
+        "supply": "5 V (USB or 5V pin); 7-12 V on the barrel jack"
       },
       "blurb": "The reference Arduino board: 5 V logic, a forest of shields, decades of examples.",
       "used_for": "Teaching, prototyping and simple robot control at 5 V.",
@@ -2924,8 +2958,17 @@
       "source": "Arduino Nano (ATmega328P)",
       "specs": {
         "clock_mhz": 16,
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio"
+        ],
         "logic_v": 5,
-        "mcu": "ATmega328P"
+        "mcu": "ATmega328P",
+        "supply": "5 V (USB or 5V pin); 7-12 V on VIN"
       },
       "blurb": "Uno guts on a breadboard-friendly stick.",
       "used_for": "Permanent small builds that started life as an Uno prototype.",
@@ -2958,8 +3001,19 @@
       "source": "generic Blue Pill development board",
       "specs": {
         "clock_mhz": 72,
+        "five_v_tolerant": "FT pins only (see the STM32F103 datasheet pin table)",
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "can",
+          "pwm",
+          "gpio"
+        ],
         "logic_v": 3.3,
-        "mcu": "STM32F103C8T6"
+        "mcu": "STM32F103C8T6",
+        "supply": "5 V (USB or 5V pin)"
       },
       "blurb": "A 72 MHz ARM Cortex-M3 board for a few dollars, programmed over SWD or USB.",
       "used_for": "Fast control loops and CAN-bus nodes on a budget.",
@@ -2989,8 +3043,19 @@
       "part_class": "microcontrollers",
       "source": "Espressif ESP32-S3 dev board class",
       "specs": {
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio",
+          "wifi",
+          "ble"
+        ],
         "logic_v": 3.3,
-        "mcu": "ESP32-S3"
+        "mcu": "ESP32-S3",
+        "supply": "5 V (USB or 5V pin)"
       },
       "blurb": "The ESP32's newer sibling: dual-core, native USB, vector instructions for small ML.",
       "used_for": "WiFi/BLE robot brains with camera and voice ambitions.",
@@ -3022,8 +3087,18 @@
       "part_class": "microcontrollers",
       "source": "generic NodeMCU v2/v3 (ESP8266)",
       "specs": {
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio",
+          "wifi"
+        ],
         "logic_v": 3.3,
-        "mcu": "ESP8266"
+        "mcu": "ESP8266",
+        "supply": "5 V (USB or VIN pin)"
       },
       "blurb": "The board that put WiFi on everything: one core, 3.3 V, huge community.",
       "used_for": "Simple connected sensors and remotes.",
@@ -3049,8 +3124,20 @@
       "part_class": "microcontrollers",
       "source": "Raspberry Pi Pico W (RP2040)",
       "specs": {
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pio",
+          "pwm",
+          "gpio",
+          "wifi",
+          "ble"
+        ],
         "logic_v": 3.3,
-        "mcu": "RP2040"
+        "mcu": "RP2040",
+        "supply": "5 V (USB or VSYS, 1.8-5.5 V)"
       },
       "blurb": "The Pico with WiFi and Bluetooth: RP2040 dual-core plus a radio.",
       "used_for": "Connected controllers and robot nodes that phone home.",
@@ -3082,8 +3169,17 @@
       "part_class": "microcontrollers",
       "source": "Seeed Studio XIAO RP2040",
       "specs": {
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio"
+        ],
         "logic_v": 3.3,
-        "mcu": "RP2040"
+        "mcu": "RP2040",
+        "supply": "5 V (USB-C or 5V pin)"
       },
       "blurb": "An RP2040 the size of a postage stamp, USB-C, for embedding in finished things.",
       "used_for": "Wearables, in-mechanism controllers, tiny robot nodes.",
@@ -3113,6 +3209,16 @@
       "part_class": "sbc",
       "source": "Raspberry Pi 4 Model B",
       "specs": {
+        "interfaces": [
+          "usb",
+          "ethernet",
+          "csi",
+          "i2c",
+          "spi",
+          "uart",
+          "gpio"
+        ],
+        "logic_v": 3.3,
         "supply": "5V/3A USB-C"
       },
       "blurb": "The previous-generation Pi: quad-core, dual camera/display options, runs the same software as the 5.",
@@ -3146,6 +3252,17 @@
       "part_class": "sbc",
       "source": "Raspberry Pi Zero 2 W",
       "specs": {
+        "interfaces": [
+          "usb",
+          "csi",
+          "i2c",
+          "spi",
+          "uart",
+          "gpio",
+          "wifi",
+          "ble"
+        ],
+        "logic_v": 3.3,
         "supply": "5V/2.5A micro-USB"
       },
       "blurb": "A quad-core Pi in the tiny Zero footprint, with WiFi.",
@@ -3177,6 +3294,16 @@
       "source": "NVIDIA Jetson Nano (original developer kit)",
       "specs": {
         "ai_performance": "472 GFLOPS",
+        "interfaces": [
+          "usb",
+          "ethernet",
+          "csi",
+          "i2c",
+          "spi",
+          "uart",
+          "gpio"
+        ],
+        "logic_v": 3.3,
         "supply": "5V/4A barrel or 5V/2A micro-USB"
       },
       "blurb": "The original little Jetson: a 128-core Maxwell GPU for CUDA and vision learning.",
@@ -4983,6 +5110,9 @@
       "part_class": "comms",
       "source": "TI SN65HVD230 board (Waveshare pattern)",
       "specs": {
+        "interfaces": [
+          "can"
+        ],
         "logic_v": 3.3
       },
       "blurb": "A 3.3 V CAN transceiver on a board: how ESP32s and Teensys join a vehicle bus.",
@@ -5015,6 +5145,10 @@
       "part_class": "comms",
       "source": "generic CP2102 adapter board",
       "specs": {
+        "interfaces": [
+          "usb",
+          "uart"
+        ],
         "logic_v": 3.3
       },
       "blurb": "The little USB stick that gives any UART a serial console.",
@@ -6252,6 +6386,233 @@
         {
           "vendor": "amazon",
           "url": "https://www.amazon.com/s?k=VEX%20IQ%20Optical%20Sensor"
+        }
+      ]
+    },
+    {
+      "id": "arduino_mega_2560",
+      "image": "assets/img/parts/arduino_mega_2560.jpg",
+      "license": "proprietary-part",
+      "name": "Arduino Mega 2560 Rev3 (ATmega2560)",
+      "part_class": "microcontrollers",
+      "source": "Arduino Mega 2560 Rev3 (ATmega2560)",
+      "specs": {
+        "clock_mhz": 16,
+        "logic_v": 5,
+        "mcu": "ATmega2560",
+        "uarts": 4,
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio"
+        ],
+        "supply": "5 V (USB or 5V pin); 7-12 V on the barrel jack"
+      },
+      "blurb": "The big Arduino: 54 digital pins, 16 analog inputs and four hardware serial ports.",
+      "used_for": "Motor and sensor controller under a Jetson or Raspberry Pi, when an Uno runs out of pins.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover",
+        "robot arm"
+      ],
+      "notes": "5 V logic: over USB it talks to a Jetson or Pi with no extra parts, but a UART or I2C wire to a 3.3 V header needs a level shifter. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=Arduino%20Mega%202560%20Rev3"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=Arduino%20Mega%202560%20Rev3"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=Arduino%20Mega%202560%20Rev3"
+        }
+      ]
+    },
+    {
+      "id": "stm32_nucleo_f446re",
+      "image": "assets/img/parts/stm32_nucleo_f446re.jpg",
+      "license": "proprietary-part",
+      "name": "STM32 Nucleo-64 F446RE",
+      "part_class": "microcontrollers",
+      "source": "STMicroelectronics NUCLEO-F446RE (STM32F446RE)",
+      "specs": {
+        "clock_mhz": 180,
+        "logic_v": 3.3,
+        "mcu": "STM32F446RE",
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "can",
+          "pwm",
+          "gpio"
+        ],
+        "supply": "5 V (USB ST-LINK); 7-12 V on VIN",
+        "five_v_tolerant": "FT pins only (see the STM32F446 datasheet pin table)"
+      },
+      "blurb": "ST's 180 MHz Cortex-M4 dev board with a built-in ST-LINK programmer and Arduino-style headers.",
+      "used_for": "Real-time motor control, encoders and CAN under a Jetson or Raspberry Pi.",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover",
+        "quadruped",
+        "robot arm"
+      ],
+      "notes": "3.3 V logic. Most pins are 5 V tolerant (FT), but not all: check the pin before wiring a 5 V signal to it. Its USB port doubles as a serial link to a host computer. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=NUCLEO-F446RE"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=NUCLEO-F446RE"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=NUCLEO-F446RE"
+        }
+      ]
+    },
+    {
+      "id": "stm32_black_pill_f411",
+      "image": "assets/img/parts/stm32_black_pill_f411.jpg",
+      "license": "proprietary-part",
+      "name": "STM32 Black Pill (STM32F411CEU6)",
+      "part_class": "microcontrollers",
+      "source": "WeAct Studio Black Pill V3.0 (STM32F411CEU6)",
+      "specs": {
+        "clock_mhz": 100,
+        "logic_v": 3.3,
+        "mcu": "STM32F411CEU6",
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio"
+        ],
+        "supply": "5 V (USB-C or 5V pin)",
+        "five_v_tolerant": "FT pins only (see the STM32F411 datasheet pin table)"
+      },
+      "blurb": "A tiny 100 MHz Cortex-M4 board with USB-C: the Blue Pill's faster successor.",
+      "used_for": "Small motor and sensor controllers that talk to a host computer over USB.",
+      "robot_types": [
+        "differential-drive rover",
+        "quadruped"
+      ],
+      "notes": "3.3 V logic; FT pins tolerate 5 V, others do not. No CAN on the F411. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=WeAct%20Black%20Pill%20STM32F411"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=WeAct%20Black%20Pill%20STM32F411"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=WeAct%20Black%20Pill%20STM32F411"
+        }
+      ]
+    },
+    {
+      "id": "esp32_c3_devkit",
+      "image": "assets/img/parts/esp32_c3_devkit.jpg",
+      "license": "proprietary-part",
+      "name": "ESP32-C3 DevKit",
+      "part_class": "microcontrollers",
+      "source": "Espressif ESP32-C3-DevKitM-1 class",
+      "specs": {
+        "clock_mhz": 160,
+        "logic_v": 3.3,
+        "mcu": "ESP32-C3",
+        "interfaces": [
+          "usb",
+          "i2c",
+          "spi",
+          "uart",
+          "pwm",
+          "gpio",
+          "wifi",
+          "ble"
+        ],
+        "supply": "5 V (USB or 5V pin)"
+      },
+      "blurb": "A low-cost single-core RISC-V ESP32 with Wi-Fi and Bluetooth LE.",
+      "used_for": "Wireless sensor nodes and small helper boards on a bigger robot.",
+      "robot_types": [
+        "differential-drive rover"
+      ],
+      "notes": "3.3 V logic and not 5 V tolerant. Fewer pins than a classic ESP32. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=ESP32-C3%20DevKitM-1"
+        },
+        {
+          "vendor": "digikey",
+          "url": "https://www.digikey.com/en/products/result?keywords=ESP32-C3%20DevKitM-1"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=ESP32-C3%20DevKitM-1"
+        }
+      ]
+    },
+    {
+      "id": "level_shifter_bss138",
+      "image": "assets/img/parts/level_shifter_bss138.jpg",
+      "license": "proprietary-part",
+      "name": "Logic level shifter, 4-channel (BSS138)",
+      "part_class": "comms",
+      "source": "BSS138 bidirectional level shifter board (Adafruit 757 pattern)",
+      "specs": {
+        "channels": 4,
+        "logic_v": [
+          3.3,
+          5
+        ],
+        "level_shifter": true,
+        "interfaces": [
+          "i2c",
+          "uart",
+          "gpio"
+        ]
+      },
+      "blurb": "Four little bridges that let a 3.3 V board and a 5 V board share signal wires safely.",
+      "used_for": "UART or I2C between a Jetson or Raspberry Pi (3.3 V) and an Arduino (5 V).",
+      "robot_types": [
+        "differential-drive rover",
+        "skid-steer rover"
+      ],
+      "notes": "Wire LV to 3.3 V, HV to 5 V and both grounds together. Good for I2C and UART; too slow for fast SPI. (General guidance.)",
+      "buy": null,
+      "shops": [
+        {
+          "vendor": "adafruit",
+          "url": "https://www.adafruit.com/search?q=BSS138%204%20channel%20logic%20level%20converter"
+        },
+        {
+          "vendor": "sparkfun",
+          "url": "https://www.sparkfun.com/search/results?term=BSS138%204%20channel%20logic%20level%20converter"
+        },
+        {
+          "vendor": "amazon",
+          "url": "https://www.amazon.com/s?k=BSS138%204%20channel%20logic%20level%20converter"
         }
       ]
     }
