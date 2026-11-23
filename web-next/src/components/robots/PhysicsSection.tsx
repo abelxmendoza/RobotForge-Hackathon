@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { physicsOf } from "@/lib/data";
 import { massAudit } from "@/lib/physicsMath";
+import { InfoTip } from "./ProfileTabs";
 import { runPhysicsChecks, type PhysicsResult } from "@/lib/physicsEngine";
 
 /* In-browser physics checks for one Robodex entry, on the entry's
@@ -389,9 +390,13 @@ export default function PhysicsSection({ slug, robotName }: { slug: string; robo
   };
 
   return (
-    <section className="section" id="physics">
+    <section className="section pf-section" id="physics">
       <h2>Physics checks</h2>
       <p className="sub">
+        Mass, inertia, balance and a drop test on the published model, run
+        in your browser.
+      </p>
+      <InfoTip>
         Four computations on this robot&apos;s own model, run in your
         browser when you ask: a mass audit (the URDF&apos;s link masses
         against the catalogue&apos;s stated figure), an inertia audit
@@ -401,22 +406,22 @@ export default function PhysicsSection({ slug, robotName }: { slug: string; robo
         check (centre of mass against the support polygon), and a settle
         test (the model dropped 30 mm in the Rapier physics engine,
         joints locked at the model&apos;s zero pose). These are checks on
-        the model as published — computations, not gate verdicts, and
+        the model as published: computations, not gate verdicts, and
         not measurements of a physical robot.
-      </p>
+        {entry.status !== "none" ? (
+          <>
+            {" "}<strong>Model:</strong> {entry.source_label} · licence{" "}
+            {entry.license}. The file loads from that address at run
+            time; it is not re-hosted here.
+          </>
+        ) : null}
+      </InfoTip>
       {entry.status === "none" ? (
         <div className="card">
           <p className="state-box">{entry.reason}</p>
         </div>
       ) : (
         <>
-          <p className="prov">
-            <span>
-              <strong>Model:</strong> {entry.source_label} · licence{" "}
-              {entry.license}. The file loads from that address at run
-              time; it is not re-hosted here.
-            </span>
-          </p>
           {entry.model_note ? (
             <div className="callout" style={{ margin: "12px 0" }}>
               <span>{entry.model_note}</span>
@@ -424,8 +429,9 @@ export default function PhysicsSection({ slug, robotName }: { slug: string; robo
           ) : null}
           {state.kind === "idle" || state.kind === "error" ? (
             <>
-              <button type="button" className="primary" onClick={run}>
-                Run the physics checks for {robotName}
+              <button type="button" className="btn btn-primary" onClick={run}
+                aria-label={`Run the physics checks for ${robotName}`}>
+                Run the physics checks
               </button>
               {state.kind === "error" ? (
                 <p className="state-box" style={{ marginTop: 12 }}>{state.message}</p>

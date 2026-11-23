@@ -54,13 +54,12 @@ export default function HarnessSection({ rep, slug, specFile }:
   const findings = rep.findings ?? [];
   const missing = s.missing_inputs;
   return (
-    <section className="section" id="harness">
+    <section className="section pf-section" id="harness">
       <h2><Term k="harness">Harness</Term> checks</h2>
       <p className="sub">
-        Electrical checks over this robot&apos;s documented wiring. Not a
-        simulation; the headline is counts, never a blanket pass.
+        Electrical checks over the documented wiring: counts, never a blanket pass.
       </p>
-      <div className="card">
+      <div className="card pf-card">
         <HarnessBadge rep={rep} lg />
         <p className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
           {rep.headline}
@@ -132,15 +131,9 @@ export default function HarnessSection({ rep, slug, specFile }:
           </>
         ) : null}
         </details>
-        <p className="prov" style={{ marginTop: 12 }}>
-          <span>
-            <strong>Report:</strong>{" "}
-            <a href={`${REPO_URL}/blob/main/${reportPath}`}>
-              <code>{reportPath}</code>
-            </a>{" "}
-            · checked {rep.date ?? ""} · reproduce with{" "}
-            <code>robotforge harness {specFile ?? ""}</code>
-          </span>
+        <p className="pf-card-foot">
+          <a href={`${REPO_URL}/blob/main/${reportPath}`}>Report</a>
+          {rep.date ? <> · checked {rep.date}</> : null}
         </p>
       </div>
     </section>
