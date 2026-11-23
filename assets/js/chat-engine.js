@@ -74,13 +74,16 @@
      (mirrors engine.ts GENERIC_NAME_TOKENS). */
   var GENERIC_NAME_TOKENS = ['drive', 'base', 'wheel', 'speed', 'tank',
     'pushing', 'dynamics', 'electric', 'hydraulic', 'mini', 'car', 'arm',
-    'gen', 'starter'];
+    'gen', 'starter', 'rover', 'robot', 'smart', 'hexapod', 'quadruped',
+    'mecanum', 'omni', 'bipedal', 'dog', 'ant'];
   function genericNameToken(t) {
     return GENERIC_NAME_TOKENS.indexOf(t) !== -1 || /^\d+$/.test(t);
   }
 
   function robotKeys(robot) {
-    var toks = tokens(robot.name);
+    /* a board tag like "(Raspberry Pi)" or "(ESP32)" is not a name:
+       "raspberry pi" must not pick a Freenove kit */
+    var toks = tokens(String(robot.name).replace(/\([^)]*\)/g, ' '));
     var keys = [{ text: robot.name, score: 10 }];
     if (toks.length > 1) {
       var last = toks[toks.length - 1];

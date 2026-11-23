@@ -424,12 +424,16 @@ interface RobotKey {
 const GENERIC_NAME_TOKENS = new Set([
   "drive", "base", "wheel", "speed", "tank", "pushing", "dynamics",
   "electric", "hydraulic", "mini", "car", "arm", "gen", "starter",
+  "rover", "robot", "smart", "hexapod", "quadruped", "mecanum", "omni",
+  "bipedal", "dog", "ant",
 ]);
 export const genericNameToken = (t: string) =>
   GENERIC_NAME_TOKENS.has(t) || /^\d+$/.test(t);
 
 function robotKeys(robot: RobotData): RobotKey[] {
-  const toks = tokens(robot.name);
+  /* a board tag like "(Raspberry Pi)" or "(ESP32)" is not a name:
+     "raspberry pi" must not pick a Freenove kit */
+  const toks = tokens(robot.name.replace(/\([^)]*\)/g, " "));
   const keys: RobotKey[] = [{ text: robot.name, score: 10 }];
   if (toks.length > 1) {
     const last = toks[toks.length - 1];
