@@ -2,12 +2,13 @@
 """Generate 3D robot models with ProjectSim (Kaedim) and convert them to GLB.
 
 Runs on the owner's computer, not in CI and not in the Worker. The API
-token is read from the PROJECTSIM_TOKEN environment variable, or typed at
-a hidden prompt. It is never written to disk, logged, or put in the repo.
+token is read from the PROJECTSIM_TOKEN environment variable, the macOS
+Keychain item "projectsim", or typed at a hidden prompt. It is never written to disk, logged, or put in the repo.
 
     python3 tools/projectsim_generate.py --list
     python3 tools/projectsim_generate.py boston-dynamics-spot vex-v5-tank-drive          # dry run: shows cost
     python3 tools/projectsim_generate.py boston-dynamics-spot vex-v5-tank-drive --yes    # spends credits
+    python3 tools/projectsim_generate.py robots      # or parts, or all (dry run)
 
 Cost (ProjectSim docs, 2026-11): 4 credits per standard asset, 6 per
 articulated one. A failed job is refunded. Jobs take minutes, not seconds.
@@ -51,8 +52,19 @@ def load_subjects():
     return {k: v for k, v in data.items() if not k.startswith('_')}
 
 
+def keychain_token():
+    """macOS Keychain item 'projectsim' (set once with:
+    security add-generic-password -a "$USER" -s projectsim -w), so runs need no prompt."""
+    if sys.platform != 'darwin':
+        return None
+    r = subprocess.run(['security', 'find-generic-password', '-s', 'projectsim', '-w'],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
 def token():
-    t = os.environ.get('PROJECTSIM_TOKEN') or os.environ.get('KAEDIM_API_KEY') or getpass.getpass('ProjectSim API token (hidden): ')
+    t = (os.environ.get('PROJECTSIM_TOKEN') or os.environ.get('KAEDIM_API_KEY')
+         or keychain_token() or getpass.getpass('ProjectSim API token (hidden): '))
     t = t.strip()
     if not t.startswith('kps_'):
         sys.exit('That does not look like a ProjectSim token (they start with kps_). Nothing was sent.')
@@ -233,6 +245,9 @@ def main():
         for k, v in subjects.items():
             print(f'{k:28} {v["name"]}  ({CREDITS[bool(v.get("articulated"))]} credits)')
         return
+    groups = {'all': list(subjects), 'robots': [k for k, v in subjects.items() if v.get('kind') == 'robot'],
+              'parts': [k for k, v in subjects.items() if v.get('kind') == 'part']}
+    a.slugs = [x for s in a.slugs for x in groups.get(s, [s])]
     unknown = [s for s in a.slugs if s not in subjects]
     if unknown:
         sys.exit(f'Unknown robot(s): {", ".join(unknown)}. See --list.')

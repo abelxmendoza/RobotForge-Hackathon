@@ -6,39 +6,116 @@
     "image_credit": null,
     "image_license": null,
     "text": "Boston Dynamics Spot-style quadruped robot, a generated visual reference rather than manufacturer CAD. Yellow rounded rectangular body shell with black top equipment rails, black underside and front stereo camera apertures. Four articulated black legs, each with hip, upper leg, knee and slender lower leg ending in a rounded rubber foot. Standing neutral pose, all four feet on the ground, no arm, no payload, no scenery. Body approximately 1.1 metres long; estimated proportions only. Preserve separate rigid leg links and visible joint regions.",
-    "articulated": true
+    "articulated": true,
+    "kind": "robot"
   },
   "vex-v5-tank-drive": {
     "name": "VEX V5 Tank Drive",
     "image_url": null,
     "text": "A small VEX V5 competition robot drivetrain, about 38 cm square and 15 cm tall. Flat rectangular frame of silver aluminium C-channel bars with rows of square holes. Four black 4-inch omni wheels with grey rollers, two on each side, each driven by a dark grey square VEX V5 smart motor mounted inside the frame. A black V5 robot brain with a small touchscreen sits on top in the middle, and a black rectangular V5 battery is mounted beside it. Short black and red cables run between the motors and the brain. No arms, no intake, just the drive base.",
-    "articulated": true
+    "articulated": true,
+    "kind": "robot"
   },
   "vex-v5-mecanum-drive": {
     "name": "VEX V5 Mecanum Drive",
     "text": "VEX V5 competition robot drive base. Rectangular silver perforated aluminium C-channel frame, four black mecanum wheels with angled grey rollers, four dark grey V5 smart motors inside the frame, black touchscreen robot brain and rectangular battery mounted centrally. No lifting arm or intake. Neutral assembled pose, no scenery. Estimated 38 cm square footprint. Separate wheel and chassis links.",
-    "articulated": true
+    "articulated": true,
+    "kind": "robot"
   },
   "vex-iq-drivebase": {
     "name": "VEX IQ Drivebase",
     "text": "Small educational VEX IQ style plastic robotics drive base, assembled from light grey perforated beams and black connector pins. Four chunky black rubber wheels and compact grey smart motors, central grey robot brain with small display and battery. Blue accent beams, no arm, no scenery. Estimated 30 cm square footprint. Separate wheel and chassis links.",
-    "articulated": true
+    "articulated": true,
+    "kind": "robot"
   },
   "workshop-parts-bin": {
     "name": "Workshop Parts Bin",
     "text": "Open front stackable workshop parts bin made of matte dark blue plastic, rectangular back and sides, sloped low front lip with a blank white label holder. Empty interior, no text, no scenery. Approximately 20 cm wide, 30 cm deep, 15 cm tall.",
-    "articulated": false
+    "articulated": false,
+    "kind": "part"
   },
   "robot-test-ramp": {
     "name": "Robot Test Ramp",
     "text": "Low robotics driving test ramp. Rectangular wedge with a flat incline, matte grey non-slip top and yellow safety edges. No scenery or writing, no wheels. Approximately 60 cm long, 40 cm wide and 12 cm high.",
-    "articulated": false
+    "articulated": false,
+    "kind": "part"
   },
   "boston-dynamics-spot-with-arm": {
     "name": "Boston Dynamics Spot with Arm",
     "catalog_slug": "boston-dynamics-spot",
     "reference_url": "https://bostondynamics.com/products/spot/arm/",
     "text": "Boston Dynamics Spot-style quadruped robot WITH the top-mounted Spot Arm installed. Generated visual reference, not manufacturer CAD. Yellow rounded rectangular torso with black top equipment rails, black underside and front stereo camera apertures. Four black articulated legs with visible hip and knee joints and rubber feet, standing firmly on all four feet. A single substantial articulated manipulator is bolted to the front upper deck: shoulder pedestal, upper arm, elbow, forearm, wrist and black two-jaw gripper. Six arm joint regions plus gripper, yellow link covers and black joint housings. Arm raised above the body in a bent ready pose, elbow clearly visible, gripper extending forward past the front camera panel. Keep the entire arm and gripper in view, do not omit or fuse it with the torso. No other payloads or scenery. Approximate body length 1.1 metres and arm reach almost 1 metre, estimated proportions only. Preserve distinct rigid links for the legs, arm and gripper.",
+    "articulated": true,
+    "kind": "robot"
+  },
+  "build-guide-rover": {
+    "kind": "robot",
+    "name": "RobotForge build-guide rover",
+    "image_url": null,
+    "text": "A small hobby robot car about 25 cm long with a 4WD clear acrylic chassis of three stacked decks held by brass standoffs. Four yellow TT gear motors with yellow plastic wheels and black rubber tyres. An Arduino UNO style blue microcontroller board and a red L298N motor driver board on the decks, a blue HC-SR04 ultrasonic sensor with two silver round transducers at the front, a two-cell 18650 battery holder, and coloured jumper wires.",
     "articulated": true
+  },
+  "raspberry-pi-5": {
+    "kind": "part",
+    "name": "Raspberry Pi 5",
+    "image_url": null,
+    "text": "A Raspberry Pi 5 single-board computer, a green circuit board 85 by 56 mm. Silver metal shielded processor in the middle, two stacked USB-A ports and an Ethernet jack along one short edge, a 40-pin black GPIO header along one long edge, two micro HDMI ports and a USB-C port on the other long edge, and a small power button.",
+    "articulated": false
+  },
+  "esp32-devkit": {
+    "kind": "part",
+    "name": "ESP32 dev board",
+    "image_url": null,
+    "text": "An ESP32 DevKit microcontroller board about 52 by 28 mm. Black circuit board with a silver metal-shielded ESP32 Wi-Fi module and printed antenna at one end, a micro USB port at the other end, two small push buttons, and two rows of 15 male header pins along the long edges.",
+    "articulated": false
+  },
+  "arduino-uno": {
+    "kind": "part",
+    "name": "Arduino UNO",
+    "image_url": null,
+    "text": "An Arduino UNO microcontroller board, a blue circuit board about 69 by 53 mm. Silver USB-B port and black barrel power jack on one short edge, a long black 28-pin DIP chip, black female header strips along both long edges, a reset button and a small crystal.",
+    "articulated": false
+  },
+  "tt-gearmotor-wheel": {
+    "kind": "part",
+    "name": "TT gear motor with wheel",
+    "image_url": null,
+    "text": "A yellow plastic TT hobby gear motor, a small yellow box gearbox about 70 mm long with a silver DC motor on one end, a white output shaft, and a yellow plastic wheel 65 mm across with a black rubber tyre attached to the shaft.",
+    "articulated": false
+  },
+  "l298n-driver": {
+    "kind": "part",
+    "name": "L298N motor driver",
+    "image_url": null,
+    "text": "An L298N dual motor driver board, a red circuit board about 43 by 43 mm with a large black aluminium heat sink with fins standing up on it, blue screw terminal blocks on three edges, a row of header pins and jumpers, and two small capacitors.",
+    "articulated": false
+  },
+  "realsense-d455": {
+    "kind": "part",
+    "name": "Intel RealSense D455",
+    "image_url": null,
+    "text": "An Intel RealSense D455 depth camera: a long slim dark grey aluminium bar about 124 mm wide, 26 mm tall and 29 mm deep, with a black glass front showing two round stereo lenses far apart, a small RGB lens and an infrared projector window between them, and a tripod mount underneath.",
+    "articulated": false
+  },
+  "sg90-servo": {
+    "kind": "part",
+    "name": "SG90 micro servo",
+    "image_url": null,
+    "text": "An SG90 micro servo motor, a small translucent blue plastic box about 23 by 12 by 29 mm with mounting tabs on each side, a white plastic horn on the output shaft on top, and a short brown, red and orange three-wire cable.",
+    "articulated": false
+  },
+  "vex-v5-brain": {
+    "kind": "part",
+    "name": "VEX V5 Brain",
+    "image_url": null,
+    "text": "A VEX V5 robot brain, a black plastic controller about 14 by 11 cm and 3 cm thick, with a colour touchscreen on top, rows of square smart ports along the edges, a power button, and screw mounting holes at the corners.",
+    "articulated": false
+  },
+  "vex-v5-smart-motor": {
+    "kind": "part",
+    "name": "VEX V5 Smart Motor",
+    "image_url": null,
+    "text": "A VEX V5 smart motor, a dark grey square plastic housing about 65 by 65 by 33 mm with a square metal output shaft hole in the middle of one face, a coloured gear cartridge cap, a smart port socket on the side and mounting holes in the corners.",
+    "articulated": false
   }
 }
