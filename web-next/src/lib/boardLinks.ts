@@ -158,7 +158,7 @@ export function logicLevelChecks(w: LinkWiring): LogicCheck[] {
     if (missing.length) {
       out.push({ check: 'logic_levels', subject, coverage: 'NOT_CHECKED', severity: 'INFO', missing, detail: 'Logic level not recorded on both ends.' });
     } else {
-      const shifted = rec(c).level_shifted === true || rec(f).level_shifter === true || rec(t).level_shifter === true;
+      const shifted = rec(c).level_shifted === true || rec(rec(c).cable as object | undefined).level_shifted === true || rec(f).level_shifter === true || rec(t).level_shifter === true;
       const clash = !a.some((v) => b.includes(v));
       const lowSide = Math.max(...a) < Math.max(...b) ? f : t;
       const tolerant = typeof rec(lowSide).five_v_tolerant === 'string' || rec(lowSide).five_v_tolerant === true;
@@ -177,7 +177,9 @@ export function logicLevelChecks(w: LinkWiring): LogicCheck[] {
   for (const l of boardLinks(w)) {
     if (!LOGIC_BUSES.has(l.bus) && l.bus !== 'data') continue;
     const conns = w.connections.filter((c) => c.kind !== 'power' && [l.a, l.b, ...l.via].includes(c.from) && [l.a, l.b, ...l.via].includes(c.to));
-    const tied = conns.some((c) => rec(c).ground_shared === true);
+    /* Every segment must record it: through a shifter, one tied side
+     * says nothing about the other board. */
+    const tied = conns.length > 0 && conns.every((c) => rec(c).ground_shared === true);
     out.push({
       check: 'shared_ground', subject: `${l.a} ↔ ${l.b}`,
       coverage: tied ? 'CHECKED' : 'NOT_CHECKED', severity: 'INFO',

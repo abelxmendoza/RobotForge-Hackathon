@@ -97,6 +97,16 @@ assert.equal(warn.severity, 'WARN');
 assert.ok(warn.detail.includes('level shifter'));
 assert.equal(B.logicLevelChecks(bare).find(c => c.check === 'shared_ground').coverage, 'NOT_CHECKED');
 
+// A shifter recorded on the cable counts too (the Python harness reads it there).
+const onCable = structuredClone(bare);
+onCable.connections.find(c => c.from === 'jetson' && c.to === 'mega').cable = { level_shifted: true };
+assert.equal(B.logicLevelChecks(onCable).find(c => c.subject === 'jetson → mega').severity, 'INFO');
+
+// Through a shifter, one tied segment is not enough: both boards need it.
+const half = structuredClone(jm);
+half.connections.find(c => c.from === 'shifter' && c.to === 'mega').ground_shared = false;
+assert.equal(B.logicLevelChecks(half).find(c => c.check === 'shared_ground').coverage, 'NOT_CHECKED');
+
 // A 5 V-tolerant STM32 gets the "use an FT pin" wording.
 const ft = { nodes: [{ id: 'uno', label: 'Arduino Uno', logic_v: 5 }, { id: 'st', label: 'STM32 Blue Pill', logic_v: 3.3, five_v_tolerant: 'FT pins' }],
   connections: [{ from: 'uno', to: 'st', kind: 'data', label: 'serial' }] };
