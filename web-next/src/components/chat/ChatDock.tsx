@@ -77,6 +77,8 @@ import { addRobotNote, cleanNoteText, parseRememberCommand } from "@/lib/robotNo
 import AssemblyProposal from './AssemblyProposal';
 import UpgradeProposal, { type UpgradeRequest } from './UpgradeProposal';
 import { VexBuildsCard, VexEditCard, type VexEditPlan } from './VexBuilds';
+import BoardAddCard, { type BoardAddProposal } from './BoardAddCard';
+import { parseBoardAdd, planBoardAdd, type BoardPart } from '@/lib/boardAdd';
 import { PartEditCard, PartLookCard, type PartEditRequest, type PartLookRequest } from './PartEditCard';
 import { applyPartEdit, describeChanges, parseLookEdit, parsePartEdit, pickRobot } from '@/lib/partEdit';
 import { partMeshAvailable, readLookFiles, saveLookFile, type MeshJob } from '@/lib/partMesh';
@@ -365,6 +367,8 @@ export function useForgeAssistant() {
   const [upgradeProposal, setUpgradeProposal] = useState<UpgradeRequest | null>(() => carry.upgradeProposal);
   const [vexBuilds, setVexBuilds] = useState<VexBuild[] | null>(() => carry.vexBuilds);
   const [vexEditPlan, setVexEditPlan] = useState<VexEditPlan | null>(() => carry.vexEditPlan);
+  /* "add an STM32 for the motors" (lib/boardAdd.ts), waiting for Apply. */
+  const [boardAdd, setBoardAdd] = useState<BoardAddProposal | null>(null);
   /* One-part edits (lib/partEdit.ts): a size change waiting for
    * Apply, or a look being generated / waiting for Keep. */
   const [partEditReq, setPartEditReq] = useState<PartEditRequest | null>(null);
@@ -1121,6 +1125,40 @@ export function useForgeAssistant() {
     noteBubble(`Saved as a new version of ${plan.robotName}. The previous version is unchanged in History; type “undo” to go back to it.`);
   };
 
+  /* Boards from plain words: "add an STM32 for the motors to my Jetson
+   * robot", "connect an ESP32 over I2C". The robot is the one named in
+   * the words, else the one open in the Workshop. Raspberry Pi 4/5 asks
+   * stay with the coordinated upgrade flow. Nothing is saved until Apply. */
+  const runBoardAdd = (q: string): boolean => {
+    const ask = parseBoardAdd(q);
+    if (!ask) return false;
+    const all = readActiveRobots(() => readStore<GarageRobot[]>(GARAGE_KEY, []));
+    const openId = (pathname || '').startsWith('/garage') ? readWorkshopContext()?.robotId : undefined;
+    const robot = pickRobot(q, all, openId ?? undefined);
+    const latest = robot?.versions.at(-1);
+    if (!robot || !latest) { noteBubble('Which robot? Open one in the Workshop, or name it, like “add an STM32 for the motors to Omega1”.'); return true; }
+    try {
+      const plan = planBoardAdd(latest.spec as Record<string, unknown>, ask, parts as unknown as BoardPart[]);
+      setBoardAdd({ robotId: robot.id, robotName: robot.name, baseVersionId: latest.id, phrase: q.trim(), plan });
+      noteBubble(`Review the board change to ${robot.name} below. Apply saves it as a new planned version; the current one stays in History.`);
+    } catch (e) { noteBubble((e as Error).message); }
+    return true;
+  };
+
+  const applyBoardAdd = (p: BoardAddProposal) => {
+    const all = readStore<GarageRobot[]>(GARAGE_KEY, []);
+    const robot = activeRecords(all).find((r) => r.id === p.robotId);
+    setBoardAdd(null);
+    if (!robot) { noteBubble(`${p.robotName} is no longer in your Workshop, so nothing changed.`); return; }
+    if (robot.versions.at(-1)?.id !== p.baseVersionId) { noteBubble(`${p.robotName} changed since this preview, so nothing was applied. Ask again.`); return; }
+    const versionId = uid('v');
+    const version = { id: versionId, label: 'Wrench: ' + p.phrase.slice(0, 60), note: 'Board change from Wrench: ' + p.plan.changes.join(' ') + ' Planned, not wired yet.', source: 'edit' as const, createdAt: new Date().toISOString(), spec: p.plan.spec, planned: true };
+    const err = writeStore(GARAGE_KEY, all.map((r) => (r.id === robot.id ? { ...r, versions: [...r.versions, version] } : r)));
+    if (err) { noteBubble(`I couldn't save it (${err}). ${p.robotName} is unchanged.`); return; }
+    lastApplied.current = { robotId: robot.id, versionId };
+    noteBubble(`Saved as a new version of ${p.robotName}. Its Wire tab shows the new board. Type “undo” to go back.`);
+  };
+
   /* One-part edits: "make the wheels bigger" (size, from the spec's
    * own fields, no AI) or "make the wheels look like …" (a new 3D
    * shape for that part from the Worker's /part-mesh). The robot is
@@ -1258,6 +1296,7 @@ export function useForgeAssistant() {
         noteBubble(result.handled ? result.message : 'Open a rover in the Workshop first, then ask again.');
         return true;
       }
+      if (runBoardAdd(q)) return true;
       if (runVexCommand(q)) return true;
       if (runRemoveLook(q)) return true;
       if (runPartEditCommand(q)) return true;
@@ -1678,6 +1717,7 @@ export function useForgeAssistant() {
       setUpgradeProposal(null);
       setInventoryProposal(null);
       setVexEditPlan(null);
+      setBoardAdd(null);
       setPartEditReq(null);
       if(pendingLibraryImport.current){
         const pending=pendingLibraryImport.current;pendingLibraryImport.current=null;
@@ -2053,6 +2093,7 @@ export function useForgeAssistant() {
     setRobotDeleteProposal(null);
     setVexBuilds(null);
     setVexEditPlan(null);
+    setBoardAdd(null);
     setPartEditReq(null);
     setPartLookReq(null);
     lastApplied.current = null;
@@ -2079,6 +2120,7 @@ export function useForgeAssistant() {
         {vexBuilds && <VexBuildsCard builds={vexBuilds} onAdd={addVexBuild} onClose={() => setVexBuilds(null)} />}
         {partEditReq && <PartEditCard key={partEditReq.baseVersionId + partEditReq.plan.phrase} req={partEditReq} onApply={() => applyPartEditReq(partEditReq)} onCancel={() => { setPartEditReq(null); noteBubble(`Cancelled. ${partEditReq.robotName} is unchanged.`); }} />}
         {partLookReq && <PartLookCard key={partLookReq.robotId + partLookReq.plan.phrase} req={partLookReq} onKeep={(data, job) => { void keepPartLook(partLookReq, data, job); }} onCancel={(why) => { setPartLookReq(null); noteBubble(why ? `No new look this time: ${why}` : `Stopped. ${partLookReq.robotName} is unchanged.`); }} />}
+        {boardAdd && <BoardAddCard key={boardAdd.baseVersionId + boardAdd.phrase} proposal={boardAdd} onApply={() => applyBoardAdd(boardAdd)} onCancel={() => { setBoardAdd(null); noteBubble(`Cancelled. ${boardAdd.robotName} is unchanged.`); }} />}
         {vexEditPlan && <VexEditCard key={vexEditPlan.baseVersionId + vexEditPlan.phrase} plan={vexEditPlan} onApply={() => applyVexEdit(vexEditPlan)} onCancel={() => { setVexEditPlan(null); noteBubble(`Cancelled. ${vexEditPlan.robotName} is unchanged.`); }} />}
         {upgradeProposal && <UpgradeProposal key={upgradeProposal.robotId+':'+upgradeProposal.expectedRobotVersionId+':'+upgradeProposal.expectedAssemblyRevision} request={upgradeProposal}
           onInputsChange={inputs=>setUpgradeProposal(previous=>previous?{...previous,inputs}:null)}
