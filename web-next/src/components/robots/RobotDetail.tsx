@@ -1,5 +1,5 @@
-import {generatedRobotAsset} from '@/lib/generatedRobotAssets';
-import GeneratedRobotModel from '@/components/garage/GeneratedRobotModel';
+import { generatedRobotAsset } from "@/lib/generatedRobotAssets";
+import GeneratedRobotModel from "@/components/garage/GeneratedRobotModel";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Robot } from "@/lib/types";
@@ -9,26 +9,32 @@ import { assetPath } from "@/components/home/asset";
 import Term from "@/components/shell/Term";
 import {
   classPath, dexId, evidenceHref, fullReportId, gateStatusOf, gradeOf,
-  imgSrc, robotImage, specLabel,
+  imgSrc, latestRun, robotImage, specLabel,
   staticCheckOf, type GateRunFull,
 } from "./shared";
-import { GateReceipt, StaticBadge, VerdictBadge } from "./badges";
+import { GateReceipt, VerdictBadge } from "./badges";
 import CopyButton from "./CopyButton";
 import PartsKitSection from "./PartsKitSection";
 import PhysicsSection from "./PhysicsSection";
 import GazeboSection from "./GazeboSection";
-import HarnessSection, { asHarnessReport, HarnessBadge } from "./HarnessSection";
+import HarnessSection, { asHarnessReport } from "./HarnessSection";
 import SpecWiring from "@/components/wiring/SpecWiring";
 import TakeApartViewer from "./takeapart/TakeApartViewer";
 import HeroPhoto from "./HeroPhoto";
+import ProfileTabs, { InfoTip, type ProfilePane } from "./ProfileTabs";
+import AskWrenchButton from "./AskWrenchButton";
 
-/* render_robot_page (site.py): hero, spec + provenance, gate runs,
-   static stability summary, harness checks, take-apart, reproduce.
-   Verdicts and numbers come only from the robot's recorded data. */
+/* The Robodex robot profile (redesigned 2026-11-23, PR "Simplify the
+   Robodex robot profile"). A compact hero answers "what is it and does
+   it pass", then five tabs hold everything else:
+     Overview · 3D · Tests · Parts · Files
+   Verdicts and numbers still come only from the robot's recorded data;
+   the long honesty notes moved into "How this works" folds, so none
+   of them were dropped. Old #section links open the right tab
+   (ProfileTabs). */
 
 /* The full stability report behind a static check
-   (catalog/stability-reports/<slug>.json via stabilityOf) — the
-   fields _stability_section renders beyond the summary rows. */
+   (catalog/stability-reports/<slug>.json via stabilityOf). */
 interface StabilityReport {
   method: string;
   inputs: { com_height_m: number; support_model: string };
@@ -47,12 +53,56 @@ function asStabilityReport(
   return doc as unknown as StabilityReport;
 }
 
+/* ---- hero key numbers --------------------------------------------
+   Up to three readouts picked from the robot's own key_specs. The
+   short form is the value up to its first aside; the full value is
+   in the tooltip and on the Overview tab, and a value the record
+   marks as estimated keeps an "est." tag so a short form never
+   reads as a measurement. */
+const STAT_PICKS: { label: string; keys: RegExp }[] = [
+  { label: "Mass", keys: /^(mass|weight|takeoff weight)$/i },
+  { label: "Size", keys: /^(size|footprint|dimensions.*|chassis|height.*)$/i },
+  { label: "Power", keys: /^(battery|power)$/i },
+];
+interface KeyStat { label: string; short: string; full: string; est: boolean }
+function shortValue(v: string): string {
+  let s = v.split(/ — | \(|; /)[0].trim();
+  if (s.length > 26) s = s.slice(0, 24).replace(/[\s,·x×]+\S*$/, "") + "…";
+  return s;
+}
+function keyStats(specs: Record<string, unknown>): KeyStat[] {
+  const out: KeyStat[] = [];
+  for (const pick of STAT_PICKS) {
+    const key = Object.keys(specs).find((k) => pick.keys.test(k.trim()));
+    if (!key) continue;
+    const full = String(specs[key]);
+    const short = shortValue(full);
+    out.push({
+      label: pick.label,
+      short,
+      full,
+      est: /estimat|photo draft/i.test(full) || /~|approx/i.test(short),
+    });
+  }
+  return out;
+}
+
 function FmtCell({ v, unit }: { v: number | null; unit: string }) {
   if (v === null) return <td className="num faint">—</td>;
   return (
     <td className="num">
       <span className={`verdict-text ${gradeOf(v)}`}>{v.toFixed(3)}{unit}</span>
     </td>
+  );
+}
+
+/* One labelled number in the instrument-panel style. */
+function Readout({ label, value, tone }: { label: string; value: ReactNode; tone?: string }) {
+  return (
+    <div className={`pf-readout${tone ? ` ${tone}` : ""}`}>
+      <span className="pf-readout-label">{label}</span>
+      <span className="pf-readout-value">{value}</span>
+    </div>
   );
 }
 
@@ -198,9 +248,8 @@ function SpecimenSection({ specimen }: { specimen: SpecimenBlock }) {
     <section className="section" id="specimen">
       <h2>Imported specimen</h2>
       <p className="sub">
-        Imported specimen — source: {specimen.source_label ?? "robot_descriptions"} (upstream:{" "}
-        <a href={specimen.source_repo}>{upstream}</a>), license:{" "}
-        {specimen.license}, imported {specimen.imported}.
+        From {specimen.source_label ?? "robot_descriptions"} (
+        <a href={specimen.source_repo}>{upstream}</a>) · {specimen.license} · imported {specimen.imported}
       </p>
       <div className="card">
         <table className="kv">
@@ -228,6 +277,7 @@ function SpecimenSection({ specimen }: { specimen: SpecimenBlock }) {
   );
 }
 
+
 export default function RobotDetail({ robot }: { robot: Robot }) {
   const slug = robotSlug(robot);
   const img = robotImage(robot);
@@ -237,326 +287,368 @@ export default function RobotDetail({ robot }: { robot: Robot }) {
   const stabRep = check ? asStabilityReport(stabilityOf(slug)) : null;
   const ground = (robot.mobility_class ?? "").startsWith("Ground");
   const specFile = robot.spec_file;
+  const genAsset = generatedRobotAsset(slug);
 
-  const keySpecs = robot.key_specs ?? {};
+  const keySpecs = (robot.key_specs ?? {}) as Record<string, unknown>;
   const specimen = (robot.specimen ?? null) as SpecimenBlock | null;
   const specKeys = Object.keys(keySpecs).sort();
+  const stats = keyStats(keySpecs);
   const prov = (robot.provenance ?? {}) as Record<string, unknown>;
   const provStr = (k: string): string =>
     typeof prov[k] === "string" ? (prov[k] as string) : "";
+  const reportId = fullReportId(robot, gateReports);
+  const last = latestRun(gs);
 
-  const gateSub: ReactNode = gs.runs.length || ground
-    ? "Measured against simulator ground truth at the locked thresholds: pass ≤ 5% / 5°, fail over 10% / 10°. The gate tests the spec's simulated twin, not a physical robot."
-    : "The motion gate covers ground robots today. This class has no gate yet, so there is no verdict to show — the note below says why, in the entry's own words.";
-
-  const jump: { href: string; label: string }[] = [
-    { href: "#spec", label: "Spec" },
-    { href: "#gate", label: "Gate runs" },
-    { href: "#parts-kit", label: "Parts kit" },
-  ];
-  if (check) jump.push({ href: "#stability", label: "Static stability" });
-  if (specimen) jump.push({ href: "#specimen", label: "Specimen" });
-  jump.push({ href: "#physics", label: "Physics checks" });
-  if (harnessRep) jump.push({ href: "#harness", label: "Harness checks" });
-  if (specFile) {
-    jump.push({ href: "#take-apart", label: "Take it apart" });
-    jump.push({ href: "#commands", label: "Reproduce" });
-  }
-
+  /* ---- Reproduce commands (Files tab) ---- */
   let cmdLines = "";
-  let cmdSub: ReactNode = null;
-  let taSub: ReactNode = null;
   if (specFile) {
-    if (ground) {
-      taSub = (
-        <>
-          Every spec becomes a kit of simple, 3D-printable parts (
-          <code>robotforge cad</code>). This viewer lays the kit out the way
-          the kit&apos;s own assembly file does, straight from the spec&apos;s
-          numbers — flat views, or in 3D with the toggle. Click any part.
-        </>
-      );
-      cmdLines =
-        `robotforge validate ${specFile}\n` +
+    cmdLines = ground
+      ? `robotforge validate ${specFile}\n` +
         `robotforge urdf ${specFile} --out build/${slug}.urdf\n` +
         `robotforge cad ${specFile}\n` +
-        `robotforge run-gate ${specFile}`;
-      cmdSub = "Run these from a clone of the repository.";
-    } else {
-      taSub = (
-        <>
-          This viewer derives a schematic take-apart straight from the
-          spec&apos;s numbers — the same one-derivation rule as the ground
-          kits — flat views, or in 3D with the toggle. It is a schematic of
-          the real robot&apos;s layout, not a printable kit:{" "}
-          <code>robotforge cad</code> kits cover ground robots only today.
-          Click any part.
-        </>
-      );
-      cmdLines =
-        `robotforge validate ${specFile}\n` +
+        `robotforge run-gate ${specFile}`
+      : `robotforge validate ${specFile}\n` +
         (check ? `robotforge stability ${specFile}\n` : "") +
         `robotforge catalog robot ${robot.number}`;
-      cmdSub = (
-        <>
-          Run these from a clone of the repository. The twin, CAD kit and
-          motion gate (<code>urdf</code> / <code>cad</code> /{" "}
-          <code>run-gate</code>) cover ground robots today, so they are not
-          listed here.
-        </>
-      );
-    }
     if (harnessRep) cmdLines += `\nrobotforge harness ${specFile}`;
   }
 
-  return (
-    <>
-      <div className="robot-hero">
-        {img ? (
-          <HeroPhoto src={imgSrc(img.src)} slug={slug} name={robot.name} ai={img.ai}
-            caption={img.caption}
-            alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")} />
-        ) : null}
-        <div>
-          <span className="dex">{dexId(robot)}</span>
-          <h1>{robot.name}</h1>
-          <div className="cls">{classPath(robot)}</div>
-          <div className="cls faint">{robot.class}</div>
-          <VerdictBadge status={gs.status} lg />
-          {check ? <StaticBadge check={check} lg /> : null}
-          {harnessRep ? <HarnessBadge rep={harnessRep} lg /> : null}
-          <GateReceipt gs={gs} />
-          {gs.runs.length ? (
-            <p style={{ marginTop: 8 }}>
-              <Link href={evidenceHref(robot, slug, gateReports)}>
-                {fullReportId(robot, gateReports)
-                  ? "Evidence: the full gate report →"
-                  : "Evidence: the recorded runs and their sources ↓"}
-              </Link>
-            </p>
-          ) : null}
-          <p className="desc">{robot.description}</p>
-        </div>
-      </div>
-
-      {/* The jump rail sits outside the hero so it can stick on
-          phones (mobile-ux.css): inside the hero it could only
-          stick within the hero's own box. */}
-      <nav className="jump" aria-label="On this page">
-        {/* Mobile only (mobile-ux.css): pins the robot's name and
-            verdict to the left of the sticky rail while its chips
-            scroll sideways, so a long page never loses context. */}
-        <span className="jump-context" aria-hidden="true">
-          {robot.name} · {gs.status.replace("_", " ")}
-        </span>
-        {jump.map((j) => (
-          <a key={j.href} className="chip" href={j.href}>{j.label}</a>
-        ))}
-      </nav>
-
-      <section className="section" id="spec">
-        <h2>Spec</h2>
-        <div className="cols">
-          <div className="card">
-            {specKeys.length ? (
-              <table className="kv">
-                <tbody>
-                  {specKeys.map((k) => (
-                    <tr key={k}>
-                      <th>{specLabel(k)}</th>
-                      <td>{String(keySpecs[k])}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="state-box">No key specs recorded yet.</p>
-            )}
-          </div>
-          <div className="card prov">
-            <span>
-              <strong>Source:</strong> {provStr("source_name")}
-              {provStr("source_url") ? (
-                <> · <a href={provStr("source_url")}>link</a></>
-              ) : null}
-            </span>
-            {provStr("license") ? (
-              <span><strong>License:</strong> {provStr("license")}</span>
-            ) : null}
-            {specFile ? (
-              <span>
-                <strong>Spec file:</strong>{" "}
-                <a href={`${REPO_URL}/blob/main/${specFile}`}>
-                  <code>{specFile}</code>
-                </a>
-              </span>
-            ) : null}
-            {provStr("note") ? <span>{provStr("note")}</span> : null}
-          </div>
-        </div>
-      </section>
-
-      {specimen ? <SpecimenSection specimen={specimen} /> : null}
-
-      <PhysicsSection slug={slug} robotName={robot.name} />
-      <GazeboSection slug={slug} robotName={robot.name} />
-
-      <section className="section" id="gate">
-        <h2><Term k="gate">Gate</Term> runs</h2>
-        <p className="sub">{gateSub}</p>
-        <div className="card">
-          {gs.runs.length ? (
-            <RunsTable runs={gs.runs} />
-          ) : (
-            <p className="state-box">
-              No recorded gate runs yet. This robot has no verdict until one
-              is measured.
-            </p>
-          )}
-          {gs.note ? (
-            <div
-              className={gs.status === "FAIL" ? "callout bad" : "callout"}
-              style={{ marginTop: 12 }}
-            >
-              <span>{gs.note}</span>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
+  /* ---- hero status chips: each one opens its test ---- */
+  const harnessIssues = harnessRep
+    ? harnessRep.summary.findings.WARN + harnessRep.summary.findings.ERROR
+    : 0;
+  const chips = (
+    <div className="pf-chips">
+      <a href="#gate" className="pf-chip-link" aria-label="Gate result: open the test">
+        <VerdictBadge status={gs.status} lg />
+      </a>
       {check ? (
-        <section className="section" id="stability">
-          <h2>Static stability check</h2>
-          <p className="sub">
-            A computation from this robot&apos;s spec — support-polygon
-            statics, not a simulation run and not a gate verdict. It grades
-            how far the robot can tip before its centre of mass passes over
-            its feet. The gate status above is unchanged by it: this robot
-            is still not gated.
-          </p>
-          <div className="card">
-            <StaticBadge check={check} lg />
-            <table className="kv" style={{ marginTop: 12 }}>
-              <tbody>
-                <tr><th>Grade</th><td>{check.grade}</td></tr>
-                <tr>
-                  <th>Static tip-over angle (weakest direction)</th>
-                  <td>{check.tip_angle_deg.toFixed(1)}° — {check.weakest_direction}</td>
-                </tr>
-                <tr>
-                  <th>Weakest tip margin</th>
-                  <td>
-                    {check.weakest_margin_mm.toFixed(0)} mm from the
-                    centre-of-mass projection to the support-polygon edge
-                  </td>
-                </tr>
-                {stabRep ? (
-                  <>
-                    <tr>
-                      <th>Margin as share of the body&apos;s half-extent</th>
-                      <td>{stabRep.results.weakest_margin_pct.toFixed(0)}%</td>
-                    </tr>
-                    <tr>
-                      <th>Centre-of-mass height</th>
-                      <td>
-                        {stabRep.inputs.com_height_m.toFixed(3)} m — ASSUMED
-                        at 55% of standing height (printed in the
-                        report&apos;s assumptions, never buried)
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Thresholds (v1, printed on the report)</th>
-                      <td>
-                        tip angle ≥ 20° STABLE · 10–20° MARGINAL ·
-                        &lt; 10° UNSTABLE
-                      </td>
-                    </tr>
-                  </>
-                ) : null}
-              </tbody>
-            </table>
-            <p className="prov" style={{ marginTop: 12 }}>
-              <span>
-                <strong>Report:</strong>{" "}
-                <a href={`${REPO_URL}/blob/main/${check.report}`}>
-                  <code>{check.report}</code>
-                </a>{" "}
-                · checked {check.date} · reproduce with{" "}
-                <code>robotforge stability {specFile ?? ""}</code>
-              </span>
-            </p>
-          </div>
-          {stabRep ? (
-            <div className="card" style={{ marginTop: 12 }}>
-              <div className="card-head">
-                <h3 style={{ fontSize: "var(--fs-md)" }}>How it was computed</h3>
-              </div>
-              <p className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
-                {stabRep.method}
-              </p>
-              <p className="muted" style={{ fontSize: "var(--fs-sm)" }}>
-                <strong>Support model:</strong> {stabRep.inputs.support_model}
-              </p>
-              <div className="table-scroll" style={{ marginTop: 12 }}>
-                <table className="data">
-                  <thead>
-                    <tr><th>Direction</th><th>Margin</th><th>Tip angle</th></tr>
-                  </thead>
-                  <tbody>
-                    {stabRep.results.edges.map((ed, i) => (
-                      <tr key={i}>
-                        <td>{ed.direction}</td>
-                        <td className="num">{ed.margin_mm.toFixed(0)} mm</td>
-                        <td className="num">{ed.tip_angle_deg.toFixed(1)}°</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
-                <strong>Assumptions</strong> (all of them, as printed in
-                the report):
-              </p>
-              <ul className="prov" style={{ paddingLeft: 18 }}>
-                {stabRep.assumptions.map((a, i) => (
-                  <li key={i}>{a}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </section>
+        <a href="#stability" className={`pf-chip stab ${check.grade.toLowerCase()}`}>
+          Stability: {check.grade.toLowerCase()}
+        </a>
       ) : null}
-
       {harnessRep ? (
-        <HarnessSection rep={harnessRep} slug={slug} specFile={specFile} />
+        <a href="#harness" className="pf-chip wiring">
+          Wiring: {harnessIssues} {harnessIssues === 1 ? "issue" : "issues"}
+          {harnessRep.summary.states.NOT_CHECKED
+            ? ` · ${harnessRep.summary.states.NOT_CHECKED} unchecked`
+            : ""}
+        </a>
       ) : null}
+    </div>
+  );
 
-      {generatedRobotAsset(slug)&&<GeneratedRobotModel asset={generatedRobotAsset(slug)!}/>}
+  /* ================================================================ */
+  /* Overview                                                          */
+  const overview = (
+    <section className="section pf-section" id="spec">
+      <h2>Spec</h2>
+      {specKeys.length ? (
+        <div className="pf-spec-grid">
+          {specKeys.map((k) => (
+            <div className="pf-spec" key={k}>
+              <span className="pf-spec-label">{specLabel(k)}</span>
+              <span className="pf-spec-value">{String(keySpecs[k])}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="state-box">No key specs recorded yet.</p>
+      )}
+      <p className="pf-source">
+        Source: {provStr("source_name") || "not recorded"}
+        {provStr("source_url") ? <> · <a href={provStr("source_url")}>link</a></> : null}
+        {provStr("license") ? <> · {provStr("license")}</> : null}
+      </p>
+    </section>
+  );
 
+  /* ================================================================ */
+  /* 3D                                                                */
+  const has3d = Boolean(specFile || genAsset);
+  const threeD = has3d ? (
+    <>
       {specFile ? (
-        <section className="section" id="take-apart">
+        <section className="section pf-section" id="take-apart">
           <h2>Take it apart</h2>
-          <p className="sub">{taSub}</p>
+          <p className="sub">
+            {ground
+              ? "The printable kit from this robot's spec. Flat or 3D; click any part."
+              : "A schematic take-apart from the spec's numbers. Flat or 3D; click any part."}
+          </p>
+          <InfoTip>
+            {ground ? (
+              <>
+                Every spec becomes a kit of simple, 3D-printable parts (
+                <code>robotforge cad</code>). This viewer lays the kit out the way
+                the kit&apos;s own assembly file does, straight from the spec&apos;s
+                numbers.
+              </>
+            ) : (
+              <>
+                This viewer derives a schematic take-apart straight from the
+                spec&apos;s numbers, the same one-derivation rule as the ground
+                kits. It is a schematic of the real robot&apos;s layout, not a
+                printable kit: <code>robotforge cad</code> kits cover ground
+                robots only today.
+              </>
+            )}
+          </InfoTip>
           <div id="ta">
             <TakeApartViewer specFile={specFile} />
           </div>
         </section>
       ) : null}
-
       {specFile ? <SpecWiring specFile={specFile} /> : null}
+      {genAsset ? (
+        <section className="section pf-section" id="generated-model">
+          <GeneratedRobotModel asset={genAsset} />
+        </section>
+      ) : null}
+    </>
+  ) : null;
 
-      <PartsKitSection slug={slug} />
+  /* ================================================================ */
+  /* Tests                                                             */
+  const gateCard = (
+    <section className="section pf-section" id="gate">
+      <div className="pf-card-head">
+        <h2><Term k="gate">Gate</Term> runs</h2>
+        <VerdictBadge status={gs.status} />
+      </div>
+      <p className="sub">
+        {gs.runs.length || ground
+          ? "Drive 1 m and turn 90° in simulation, measured against ground truth."
+          : "The motion gate covers ground robots today, so this robot has no verdict."}
+      </p>
+      <InfoTip>
+        {gs.runs.length || ground
+          ? "Measured against simulator ground truth at the locked thresholds: pass ≤ 5% / 5°, fail over 10% / 10°. The gate tests the spec's simulated twin, not a physical robot."
+          : "The motion gate covers ground robots today. This class has no gate yet, so there is no verdict to show; the note below says why, in the entry's own words."}
+      </InfoTip>
+      <div className="card pf-card">
+        {gs.runs.length && last ? (
+          <>
+            <div className="pf-readouts">
+              <Readout label="Runs" value={gs.runs.length} />
+              {last.drive_error_pct !== null ? (
+                <Readout label="Drive error" value={`${last.drive_error_pct.toFixed(2)}%`}
+                  tone={gradeOf(last.drive_error_pct)} />
+              ) : null}
+              {last.heading_error_deg !== null ? (
+                <Readout label="Turn error" value={`${last.heading_error_deg.toFixed(2)}°`}
+                  tone={gradeOf(last.heading_error_deg)} />
+              ) : null}
+            </div>
+            <GateReceipt gs={gs} />
+            <details className="report-more">
+              <summary>All runs and their sources</summary>
+              <RunsTable runs={gs.runs} />
+            </details>
+            <p className="pf-card-foot">
+              <Link href={evidenceHref(robot, slug, gateReports)}>
+                {reportId ? "Full gate report →" : "Recorded runs and sources ↓"}
+              </Link>
+            </p>
+          </>
+        ) : (
+          <p className="state-box">
+            No recorded gate runs yet. This robot has no verdict until one
+            is measured.
+          </p>
+        )}
+        {gs.note ? (
+          <div
+            className={gs.status === "FAIL" ? "callout bad" : "callout"}
+            style={{ marginTop: 12 }}
+          >
+            <span>{gs.note}</span>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
 
+  const stabilityCard = check ? (
+    <section className="section pf-section" id="stability">
+      <div className="pf-card-head">
+        <h2>Static stability</h2>
+        <span className={`pf-chip stab ${check.grade.toLowerCase()}`}>{check.grade.toLowerCase()}</span>
+      </div>
+      <p className="sub">How far it can tip before it falls, computed from the spec.</p>
+      <InfoTip>
+        A computation from this robot&apos;s spec: support-polygon statics,
+        not a simulation run and not a gate verdict. It grades how far the
+        robot can tip before its centre of mass passes over its feet. The
+        gate status is unchanged by it. Thresholds (v1, printed on the
+        report): tip angle ≥ 20° STABLE · 10–20° MARGINAL · &lt; 10° UNSTABLE.
+        {stabRep ? (
+          <>
+            {" "}Centre-of-mass height {stabRep.inputs.com_height_m.toFixed(3)} m
+            is ASSUMED at 55% of standing height.
+          </>
+        ) : null}
+      </InfoTip>
+      <div className="card pf-card">
+        <div className="pf-readouts">
+          <Readout label="Static check" value={check.grade} />
+          <Readout label="Tip angle" value={`${check.tip_angle_deg.toFixed(1)}°`} />
+          <Readout label="Weakest side" value={check.weakest_direction} />
+          <Readout label="Margin" value={`${check.weakest_margin_mm.toFixed(0)} mm`} />
+        </div>
+        {stabRep ? (
+          <details className="report-more">
+            <summary>How it was computed</summary>
+            <p className="muted" style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
+              {stabRep.method}
+            </p>
+            <p className="muted" style={{ fontSize: "var(--fs-sm)" }}>
+              <strong>Support model:</strong> {stabRep.inputs.support_model} ·{" "}
+              <strong>margin</strong> {stabRep.results.weakest_margin_pct.toFixed(0)}% of the
+              body&apos;s half-extent
+            </p>
+            <div className="table-scroll" style={{ marginTop: 12 }}>
+              <table className="data">
+                <thead>
+                  <tr><th>Direction</th><th>Margin</th><th>Tip angle</th></tr>
+                </thead>
+                <tbody>
+                  {stabRep.results.edges.map((ed, i) => (
+                    <tr key={i}>
+                      <td>{ed.direction}</td>
+                      <td className="num">{ed.margin_mm.toFixed(0)} mm</td>
+                      <td className="num">{ed.tip_angle_deg.toFixed(1)}°</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: "var(--fs-sm)", marginTop: 12 }}>
+              <strong>Assumptions</strong> (all of them, as printed in the report):
+            </p>
+            <ul className="prov" style={{ paddingLeft: 18 }}>
+              {stabRep.assumptions.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
+        <p className="pf-card-foot">
+          <a href={`${REPO_URL}/blob/main/${check.report}`}>Report</a> · checked {check.date}
+        </p>
+      </div>
+    </section>
+  ) : null;
+
+  const tests = (
+    <>
+      {gateCard}
+      <PhysicsSection slug={slug} robotName={robot.name} />
+      {stabilityCard}
+      {harnessRep ? (
+        <HarnessSection rep={harnessRep} slug={slug} specFile={specFile} />
+      ) : null}
+    </>
+  );
+
+  /* ================================================================ */
+  /* Files (for builders)                                              */
+  const files = (
+    <>
+      <section className="section pf-section" id="provenance">
+        <h2>Where the data comes from</h2>
+        <div className="card pf-card">
+          <dl className="pf-dl">
+            <dt>Source</dt>
+            <dd>
+              {provStr("source_name") || "not recorded"}
+              {provStr("source_url") ? <> · <a href={provStr("source_url")}>link</a></> : null}
+            </dd>
+            {provStr("license") ? (<><dt>License</dt><dd>{provStr("license")}</dd></>) : null}
+            {specFile ? (
+              <>
+                <dt>Spec file</dt>
+                <dd>
+                  <a href={`${REPO_URL}/blob/main/${specFile}`}><code>{specFile}</code></a>
+                </dd>
+              </>
+            ) : null}
+          </dl>
+          {provStr("note") ? <p className="muted pf-note">{provStr("note")}</p> : null}
+        </div>
+      </section>
+      {specimen ? <SpecimenSection specimen={specimen} /> : null}
+      <GazeboSection slug={slug} robotName={robot.name} />
       {specFile ? (
-        <section className="section" id="commands">
+        <section className="section pf-section" id="commands">
           <h2>Reproduce it</h2>
-          <p className="sub">{cmdSub}</p>
+          <p className="sub">Run these from a clone of the repository.</p>
+          {!ground ? (
+            <InfoTip>
+              The twin, CAD kit and motion gate (<code>urdf</code> /{" "}
+              <code>cad</code> / <code>run-gate</code>) cover ground robots
+              today, so they are not listed here.
+            </InfoTip>
+          ) : null}
           <div className="codeblock card" style={{ padding: 0, border: 0, background: "none" }}>
             <pre><code>{cmdLines}</code></pre>
             <CopyButton text={cmdLines} />
           </div>
         </section>
       ) : null}
+    </>
+  );
+
+  const panes: ProfilePane[] = [
+    { id: "overview", label: "Overview", anchors: ["spec"], content: overview },
+  ];
+  if (threeD) {
+    panes.push({ id: "3d", label: "3D", anchors: ["take-apart", "ta", "wiring", "generated-model"], content: threeD });
+  }
+  panes.push(
+    { id: "tests", label: "Tests", anchors: ["gate", "physics", "stability", "harness"], content: tests },
+    { id: "parts", label: "Parts", anchors: ["parts-kit"], content: <PartsKitSection slug={slug} /> },
+    { id: "files", label: "Files", anchors: ["provenance", "specimen", "gazebo", "commands"], content: files },
+  );
+
+  return (
+    <>
+      <div className="robot-hero pf-hero">
+        {img ? (
+          <HeroPhoto src={imgSrc(img.src)} slug={slug} name={robot.name} ai={img.ai}
+            caption={img.caption}
+            alt={robot.name + (img.ai ? " (AI concept illustration)" : " (official image)")} />
+        ) : null}
+        <div className="pf-hero-body">
+          <span className="dex">{dexId(robot)}</span>
+          <h1>{robot.name}</h1>
+          <div className="cls">{classPath(robot)}</div>
+          {chips}
+          {stats.length ? (
+            <div className="pf-stats">
+              {stats.map((s) => (
+                <div className="pf-stat" key={s.label} title={s.full}>
+                  <span className="pf-stat-label">{s.label}{s.est ? <em> est.</em> : null}</span>
+                  <span className="pf-stat-value">{s.short}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {robot.description ? (
+            <details className="pf-desc">
+              <summary>{robot.description}</summary>
+            </details>
+          ) : null}
+          <div className="pf-actions">
+            {has3d ? (
+              <a className="btn btn-primary" href="#tab-3d">View in 3D</a>
+            ) : null}
+            <AskWrenchButton name={robot.name} />
+          </div>
+        </div>
+      </div>
+
+      <ProfileTabs panes={panes} name={robot.name} />
     </>
   );
 }

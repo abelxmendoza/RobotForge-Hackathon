@@ -25,9 +25,9 @@ export default function SpecWiring({ specFile }: { specFile: string }) {
   }, [specFile]);
   if (!w) return null;
   return (
-    <section className="section" id="wiring">
+    <section className="section pf-section" id="wiring">
       <h2>Wiring harness</h2>
-      <p className="sub">The parts on a bench in 3D, then every cable as a schematic. Power on lights the harness in supply order; Take it apart lifts the parts off one at a time.</p>
+      <p className="sub">The parts on a bench in 3D, then every cable as a schematic.</p>
       <WiringBench3D wiring={w} />
       <WiringView wiring={w} spec={spec ?? undefined} />
     </section>
