@@ -75,6 +75,19 @@ const bare = B.planBoardAdd({ name: 'x' }, P('add an esp32'), parts);
 assert.equal(bare.hostId, null);
 assert.equal(bare.spec.wiring.nodes.length, 1);
 
+// Codex #214: a shortened starter label still finds its catalogue board.
+const eth = B.planBoardAdd(jm, P('add a Jetson Nano over Ethernet to the Mega'), parts);
+assert.equal(eth.hostId, jm.wiring.nodes.find(n => /Mega/.test(n.label)).id);
+assert.ok(eth.todo.some(t => t.includes('Arduino Mega 2560 has no Ethernet')), eth.todo.join('|'));
+
+// Codex #214: the most specific board wins; a tie is asked, not guessed.
+const two = B.planBoardAdd(B.planBoardAdd(pe, P('add an Arduino Uno via UART'), parts).spec, P('add an Arduino Mega via UART'), parts).spec;
+const pick = B.planBoardAdd(two, P('add an STM32 via UART to the Arduino Mega'), parts);
+assert.match(pick.hostLabel, /Mega/);
+const tie = B.planBoardAdd(two, P('add an STM32 via UART to the arduino'), parts);
+assert.equal(tie.hostId, null);
+assert.ok(tie.todo.some(t => t.includes('More than one board')), tie.todo.join('|'));
+
 fs.writeFileSync(process.argv[3], JSON.stringify(mega.spec));
 console.log('board add ok');
 """

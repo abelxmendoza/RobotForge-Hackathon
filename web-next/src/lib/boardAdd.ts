@@ -120,8 +120,14 @@ export function planBoardAdd(spec: Rec, ask: BoardAddAsk, parts: BoardPart[]): B
    * computer (a Jetson or Pi), else the only board there is. */
   const boards = wiring.nodes.filter((n) => isBoard(n as never));
   const hint = ask.hostHint?.replace(/\b(?:robot|rover|rig|bot|build|one)\b/g, '').trim();
-  const named = hint ? boards.filter((n) => hint.split(/\s+/).some((t) => t.length > 2 && String(n.label).toLowerCase().includes(t))) : [];
-  const host = named[0] ?? boards.find((n) => isSbc(n)) ?? (boards.length === 1 ? boards[0] : undefined);
+  /* Most hint words matched wins ("arduino mega" beats an Uno that
+   * only shares "arduino"); a tie between boards is asked, not guessed. */
+  const words = hint ? hint.split(/\s+/).filter((t) => t.length > 2) : [];
+  const score = (n: Rec) => words.filter((t) => String(n.label).toLowerCase().includes(t)).length;
+  const top = words.length ? Math.max(0, ...boards.map(score)) : 0;
+  const named = top > 0 ? boards.filter((n) => score(n) === top) : [];
+  const ambiguous = named.length > 1;
+  const host = ambiguous ? undefined : named[0] ?? boards.find((n) => isSbc(n)) ?? (boards.length === 1 ? boards[0] : undefined);
 
   const node: Rec = {
     deck: true, id: newId, kit: null, label: part.name, rated_max_v: null,
@@ -137,7 +143,7 @@ export function planBoardAdd(spec: Rec, ask: BoardAddAsk, parts: BoardPart[]): B
   let shifted = false;
 
   if (!host) {
-    todo.push(boards.length ? `Which board does it talk to? Say “connect it to the ${short(String(boards[0].label))}”.` : 'No other board is recorded on this robot, so there is no link to plan yet.');
+    todo.push(ambiguous ? `More than one board matches “${hint}”: say which, e.g. “connect it to the ${short(String(named[0].label))}”.` : boards.length ? `Which board does it talk to? Say “connect it to the ${short(String(boards[0].label))}”.` : 'No other board is recorded on this robot, so there is no link to plan yet.');
   } else {
     const hostLogic = levels(host.logic_v);
     /* The bigger computer drives the link: Jetson/Pi -> MCU. */
@@ -145,9 +151,13 @@ export function planBoardAdd(spec: Rec, ask: BoardAddAsk, parts: BoardPart[]): B
     const [from, to] = newIsSbc && !isSbc(host) ? [newId, String(host.id)] : [String(host.id), newId];
     bus = ask.bus ?? (isSbc(host) && newIsSbc ? 'ethernet' : isSbc(host) !== newIsSbc ? 'usb' : 'uart');
     /* The host's own interfaces, when its label names a catalogue board. */
-    const hostLabel = String(host.label).toLowerCase();
-    const hostPart = parts.filter((p) => hostLabel.includes(short(p.name).toLowerCase())).sort((a, b) => short(b.name).length - short(a.name).length)[0];
+    /* Starters shorten names ("Arduino Mega 2560" for "... Rev3
+     * (ATmega2560)"), so match either way round, longest name first. */
+    const hostLabel = short(String(host.label)).toLowerCase();
+    const hostPart = parts.filter((p) => { const n = short(p.name).toLowerCase(); return n.length > 2 && (hostLabel.includes(n) || n.includes(hostLabel)); })
+      .sort((a, b) => short(b.name).length - short(a.name).length)[0];
     const hostIfaces = Array.isArray(hostPart?.specs?.interfaces) ? (hostPart!.specs!.interfaces as string[]) : [];
+    if (!hostIfaces.length) todo.push(`Check the ${short(String(host.label))} has ${BUS_LABEL[bus] ?? bus}: its ports aren't recorded here.`);
     for (const [ifaces, name] of [[partIfaces, part.name], [hostIfaces, String(host.label)]] as [string[], string][]) {
       if (ifaces.length && !ifaces.includes(bus)) todo.push(`The ${short(name)} has no ${BUS_LABEL[bus] ?? bus} of its own: it needs an adapter (a ${bus === 'can' ? 'CAN transceiver or HAT' : (BUS_LABEL[bus] ?? bus) + ' adapter'}).`);
     }
