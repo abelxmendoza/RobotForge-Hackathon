@@ -205,12 +205,28 @@ def test_new_robot_pages_do_not_advertise_ground_commands():
         assert "No recorded gate runs yet" in page, r.name
 
 
-def test_mini_pupper_illustration_is_labeled_and_local():
+def test_mini_pupper_shows_a_real_credited_photo():
     entry = next(r for r in dex.robots if r.name == "Mini Pupper")
-    assert entry.image_url == "assets/img/illustrations/mini-pupper.svg"
-    assert (REPO / entry.image_url).exists()
-    assert "illustration" in entry.image_credit.lower()
-    assert "not a photo" in entry.image_credit.lower()
+    assert entry.image_url.startswith("https://raw.githubusercontent.com/mangdangroboticsclub/")
+    credit = entry.image_credit.lower()
+    assert credit.startswith("photo:") and "mini pupper 1" in credit
+
+
+def test_every_real_robot_has_a_credited_real_photo():
+    """Every Robodex robot that exists in the real world shows a real
+    photo with a credit. Pathfinder is RobotForge's own design, so no
+    photo of it exists. VEX starters are RobotForge drive builds and
+    must say their photo is representative."""
+    for r in dex.robots:
+        if r.name == "Pathfinder":
+            continue
+        assert r.image_url, r.name
+        assert r.image_credit and r.image_credit.startswith("Photo:"), r.name
+        assert "illustration" not in r.image_credit.lower(), r.name
+        if not r.image_url.startswith("http"):
+            assert (REPO / r.image_url).exists(), r.name
+        if r.name.startswith("VEX "):
+            assert "representative" in r.image_credit, r.name
 
 
 # ---------------------------------------------------------------------

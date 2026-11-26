@@ -29,6 +29,7 @@ from .kinds import KindError, format_kind_list, resolve_kind
 from .photo import (draft_spec_from_document, draft_spec_from_photo,
                     locate_parts)
 from .repair import apply_repairs, narrate, propose_repairs, render_proposal_md
+from .simready import SimReadyError, load_props, parse_scene
 from .spotter import format_card, save_dossier, spot_robot
 from .specimen import build_specimen
 from .stability import StabilityError, check_spec, format_stability_report
@@ -225,6 +226,14 @@ def main(argv: list[str] | None = None) -> int:
     ct.add_argument("--json", action="store_true",
                     help="machine-readable output instead of text")
 
+    sr = sub.add_parser("simready", help="SimReady scene props for the "
+                                         "gate world (NVIDIA dataset, "
+                                         "CC BY 4.0) — list the recorded "
+                                         "props; place them with "
+                                         "run-gate --scene")
+    sr.add_argument("--json", action="store_true",
+                    help="machine-readable output instead of text")
+
     v = sub.add_parser("validate", help="engineering checks on a spec file")
     v.add_argument("spec")
 
@@ -325,6 +334,11 @@ def main(argv: list[str] | None = None) -> int:
                         "repairs from the gate's suspects, write a repair "
                         "proposal + repaired spec into the workdir, and "
                         "re-run the gate on the repaired spec (one pass)")
+    g.add_argument("--scene", metavar="PLACEMENTS", default=None,
+                   help="SimReady props to place in the gate world as "
+                        "static obstacles: id@x,y[,yaw_deg] separated "
+                        "by ';' (see `robotforge simready` for ids), "
+                        "e.g. --scene \"crate@1.5,0.5; scope@-1,2,90\"")
 
     rp = sub.add_parser("repair", help="compute a repaired spec from a "
                                        "failing gate report")
@@ -478,6 +492,32 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             except (CatalogError, OSError) as exc:
                 print(f"catalog error: {exc}", file=sys.stderr)
+                return 2
+        if args.cmd == "simready":
+            try:
+                props = load_props()
+                if args.json:
+                    print(json.dumps(
+                        {"dataset": "nvidia/simready-assets",
+                         "license": "CC BY 4.0",
+                         "props": [
+                             {"id": p.id, "name": p.name,
+                              "size_m": list(p.size_m),
+                              "sdf_size_m": list(p.sdf_size),
+                              "source_url": p.source_url}
+                             for p in props]}, indent=2))
+                else:
+                    print("SimReady props (NVIDIA nvidia/simready-assets, "
+                          "CC BY 4.0) — place them in a gate world with "
+                          "run-gate --scene \"id@x,y[,yaw_deg]; ...\":")
+                    for p in props:
+                        sx, sy, sz = p.sdf_size
+                        print(f"  {p.id:<8} {p.name} — gate box "
+                              f"{sx:g} x {sy:g} x {sz:g} m "
+                              f"(source: {p.source_url})")
+                return 0
+            except SimReadyError as exc:
+                print(f"simready error: {exc}", file=sys.stderr)
                 return 2
         if args.cmd == "import-list":
             try:
@@ -769,9 +809,21 @@ def main(argv: list[str] | None = None) -> int:
                         "run is invalid, refusing to judge odometry heading "
                         "against zero")
 
+            scene = None
+            if args.scene:
+                try:
+                    scene = parse_scene(args.scene)
+                except SimReadyError as exc:
+                    print(f"simready error: {exc}", file=sys.stderr)
+                    return 2
+                print("scene: " + ", ".join(
+                    f"{pl.prop_id}@({pl.x:g}, {pl.y:g})"
+                    + (f" yaw {pl.yaw_deg:g}°" if pl.yaw_deg else "")
+                    for pl in scene))
             res = run_motion_check(spec, Path(args.workdir),
                                    drive_m=args.drive_m, turn_deg=args.turn_deg,
                                    wheel_radius_scale=args.inject_wheel_scale,
+                                   scene=scene,
                                    embedded=True if args.in_process else None)
             _require_truth_motion(res)
             # Primary acceptance is against ground truth (what actually
