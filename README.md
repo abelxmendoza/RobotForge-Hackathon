@@ -127,6 +127,13 @@ The design was informed by an earlier open-source design prototype by the same a
 referenced as prior design exploration only. **All code in this repository was written
 during the event window**, and the demo showcases only functionality built here.
 
+## Status
+
+Submitted to the Meta Global AI Developer Hackathon on November 4, 2026.
+Judging concluded November 9, 2026; RobotForge was not among the winners.
+Development has continued since the event (most recent commits late
+November 2026).
+
 ## Pipeline
 
 ```

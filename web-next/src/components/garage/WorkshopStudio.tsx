@@ -16,6 +16,8 @@ import {G1_SPEC} from '@/lib/humanoid';
 import {promptWrench} from '@/lib/wrenchPrompt';
 import {roverRoleChoices,swapRoverPart,saveRoverVersion} from '@/lib/roverDesign';
 import {isWiring} from '@/lib/wiring';
+import {BOARD_STARTERS} from '@/lib/boardStarters';
+import {assetPath} from '@/components/home/asset';
 import type {RobotSpec} from '@/components/forge/model';
 import {isDetailedBurger} from '@/lib/turtlebotModel';
 import DetailedBurgerWorkshop from './DetailedBurgerWorkshop';
@@ -47,7 +49,7 @@ export default function WorkshopStudio(){
  const [selectedId,setSelectedId]=useState(''),[edit,setEdit]=useState<Draft|null>(null);
  const [inspectorOpen,setInspectorOpen]=useState(false);
  const [mode,setMode]=useState<Mode>('build'),[panel,setPanel]=useState('parts'),[legacy,setLegacy]=useState(false);
- const [fromDex,setFromDex]=useState(false);
+ const [fromDex,setFromDex]=useState(false),[boardsPick,setBoardsPick]=useState(false);
  const [notice,setNotice]=useState(''),[newRobot,setNewRobot]=useState(false),[pending,setPending]=useState<string|null>(null);
  const [part,setPart]=useState<string|null>(null),[search,setSearch]=useState(''),[explode,setExplode]=useState(0),[cameraReset,setCameraReset]=useState(0),[failed,setFailed]=useState(false);
  const [bench,setBench]=useState<BenchState>({active:false,off:0,direction:1});
@@ -138,6 +140,15 @@ export default function WorkshopStudio(){
  };
  useEffect(()=>{if(routeRobot&&robots.some(r=>r.id===routeRobot)){switchRobot(routeRobot);setRouteRobot(null);}},[routeRobot,robots]);
  const switchRobot=(id:string)=>{if(id===robot?.id)return;if(dirty){setPending(id);return;}setSelectedId(id);setEdit(null);setNotice('');};
+ /* Multi-board starters (lib/boardStarters.ts): open straight on the Wire tab so the board chain shows first. */
+ const addBoardStarter=async(file:string,name:string)=>{
+  try{
+   const res=await fetch(assetPath('examples/'+file));if(!res.ok)throw new Error(`HTTP ${res.status}`);
+   const spec=await res.json() as Spec;const id=uid('mb'),at=new Date().toISOString(),fresh=readStore<GarageRobot[]>(GARAGE_KEY,[]);
+   const error=writeStore(GARAGE_KEY,[...fresh,{id,name:String(spec.name||name),createdAt:at,versions:[{id:uid('v'),label:'Starter',note:`Multi-board starter (examples/${file}): catalogue parts; mass and size are typical values, not measurements.`,source:'starter',createdAt:at,spec,planned:true}]}]);
+   if(error){setNotice(error);return;}setNewRobot(false);setBoardsPick(false);setMode('wiring');switchRobot(id);
+  }catch(e){setNotice(`Couldn't load the ${name} starter: ${(e as Error).message}`);}
+ };
  const addReference=()=>{
   setMode('build');setPanel('parts');
   const fresh=readStore<GarageRobot[]>(GARAGE_KEY,[]);const existing=fresh.find(r=>!r.archivedAt&&r.versions.at(-1)?.spec?.referenceModel==='unitree-g1-23');
@@ -174,7 +185,7 @@ export default function WorkshopStudio(){
   {inspectorOpen&&mode==='build'&&<button className="studio-sheet-close" onClick={()=>setInspectorOpen(false)}>Close inspector</button>}
   <footer className="studio-fleet" aria-label="Your robot shelf"><span className="studio-bay">MY ROBOTS</span><div>{robots.map(r=><button key={r.id} aria-current={r.id===robot?.id?'true':undefined} onClick={()=>switchRobot(r.id)}><RobotAvatar names={[r.name]} size={40}/><span><strong>{r.name}</strong><small>{r.versions.at(-1)?.planned?'Planned':'Saved project'}</small></span></button>)}</div><button aria-label="Add robot" onClick={()=>setNewRobot(true)}>+</button></footer>
   <dialog ref={dialog} className="studio-dialog" onCancel={()=>{setNewRobot(false);setFromDex(false);setPending(null);}}>
-   {pending===null&&fromDex?<RobodexPicker embedded open={newRobot&&fromDex} onClose={()=>setFromDex(false)} onAdded={id=>{setNewRobot(false);setFromDex(false);setMode('build');setPanel('parts');switchRobot(id);}}/>:pending!==null?<><h2>Keep your changes?</h2><p>Your current robot has an unfinished draft.</p><button className="studio-primary" onClick={()=>{if(save()){setSelectedId(pending);setEdit(null);setPending(null);}}}>Save & switch</button><button onClick={()=>{if(robot)writeStore(workshopDraftKey(robot.id),null);setSelectedId(pending);setEdit(null);setPending(null);}}>Discard & switch</button><button onClick={()=>setPending(null)}>Stay here</button></>:<><div className="studio-panel-head"><h2>Bring a robot in</h2><button onClick={()=>setNewRobot(false)}>Close</button></div><button className="studio-new-card" onClick={()=>setFromDex(true)}><strong>From the Robodex</strong><span>Explore a reference robot</span></button><button className="studio-new-card" onClick={()=>{setNewRobot(false);promptWrench({mode:'design',text:'Design a rover that '});}}><strong>Design a rover</strong><span>Tell Wrench what it should do</span></button><button className="studio-new-card" onClick={addReference}><strong>Explore Unitree G1</strong><span>Official humanoid reference</span></button><Link className="studio-new-card" href="/import/"><strong>Import a robot</strong><span>GitHub, photos or a spec</span></Link><button onClick={()=>{setNewRobot(false);promptWrench({mode:'design',text:'Generate a robot '});}}>Describe another robot to Wrench</button></>}
+   {pending===null&&fromDex?<RobodexPicker embedded open={newRobot&&fromDex} onClose={()=>setFromDex(false)} onAdded={id=>{setNewRobot(false);setFromDex(false);setMode('build');setPanel('parts');switchRobot(id);}}/>:pending!==null?<><h2>Keep your changes?</h2><p>Your current robot has an unfinished draft.</p><button className="studio-primary" onClick={()=>{if(save()){setSelectedId(pending);setEdit(null);setPending(null);}}}>Save & switch</button><button onClick={()=>{if(robot)writeStore(workshopDraftKey(robot.id),null);setSelectedId(pending);setEdit(null);setPending(null);}}>Discard & switch</button><button onClick={()=>setPending(null)}>Stay here</button></>:<><div className="studio-panel-head"><h2>Bring a robot in</h2><button onClick={()=>setNewRobot(false)}>Close</button></div><button className="studio-new-card" onClick={()=>setFromDex(true)}><strong>From the Robodex</strong><span>Explore a reference robot</span></button><button className="studio-new-card" onClick={()=>{setNewRobot(false);promptWrench({mode:'design',text:'Design a rover that '});}}><strong>Design a rover</strong><span>Tell Wrench what it should do</span></button><button className="studio-new-card" onClick={addReference}><strong>Explore Unitree G1</strong><span>Official humanoid reference</span></button><button className="studio-new-card" aria-expanded={boardsPick} onClick={()=>setBoardsPick(v=>!v)}><strong>Multi-board robot</strong><span>Jetson or Pi with an MCU</span></button>{boardsPick&&BOARD_STARTERS.map(b=><button key={b.file} className="studio-new-card" onClick={()=>void addBoardStarter(b.file,b.name)}><strong>{b.name}</strong><span>{b.blurb}</span></button>)}<Link className="studio-new-card" href="/import/"><strong>Import a robot</strong><span>GitHub, photos or a spec</span></Link><button onClick={()=>{setNewRobot(false);promptWrench({mode:'design',text:'Generate a robot '});}}>Describe another robot to Wrench</button></>}
   </dialog>
  </div>;
 }

@@ -19,7 +19,7 @@ export default function HarnessReport({ wiring, bare = false }: { wiring: Wiring
   const Box = bare ? 'div' : 'details';
   return <Box className={bare ? 'wv-extra-body' : 'g-howto wv-notebox'}>
     {bare ? <p><strong>{errors} errors · {unchecked} incomplete checks</strong></p> : <summary>Inspect electrical report · {errors} errors · {unchecked} incomplete checks</summary>}
-    <p>Recorded wiring only. Coverage describes available evidence; severity describes findings. No overall safety pass is claimed. Logic levels, ampacity, connector mating, polarity, protection and thermal limits are not checked here.</p>
+    <p>Recorded wiring only. Coverage describes available evidence; severity describes findings. No overall safety pass is claimed. Ampacity, connector mating, polarity, protection and thermal limits are not checked here.</p>
     {!plan.checks.length && <p>NOT_CHECKED: no power connections are documented.</p>}
     <div style={{ overflowX: 'auto' }}><table><thead><tr><th scope="col">Check / subject</th><th scope="col">Coverage</th><th scope="col">Severity / evidence</th></tr></thead><tbody>
       {plan.checks.map((c,i) => <tr key={i}><th scope="row">{c.check.replaceAll('_',' ')}<br />{c.subject}</th><td>{c.coverage}</td><td><strong>{c.severity}</strong> · {c.detail}

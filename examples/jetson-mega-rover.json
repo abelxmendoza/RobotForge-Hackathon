@@ -1,0 +1,201 @@
+{
+ "name": "Jetson + Arduino Mega rover",
+ "description": "Starter multi-board rover: an NVIDIA Jetson Orin Nano talking over UART, through a 3.3 V to 5 V level shifter, to an Arduino Mega 2560 that drives an L298N, two 12 V gearmotors and an HC-SR04 ultrasonic ranger. Parts are RobotForge catalogue parts; mass and size are typical values for a small two-wheel rover with a caster, not measurements of one robot.",
+ "drivetrain": "differential",
+ "length_m": 0.3,
+ "width_m": 0.24,
+ "height_m": 0.16,
+ "ground_clearance_m": 0.03,
+ "wheel": {
+  "count": 2,
+  "diameter_m": 0.1,
+  "driven": true,
+  "width_m": 0.032
+ },
+ "motor": {
+  "count": 2,
+  "kind": "dc_gearmotor",
+  "stall_torque_nm": 0.8,
+  "voltage_v": 11.1
+ },
+ "battery": {
+  "capacity_mah": 2200,
+  "chemistry": "lipo",
+  "voltage_v": 11.1
+ },
+ "mass_kg": 2.3,
+ "sensors": [
+  {
+   "kind": "ultrasonic",
+   "position": "front",
+   "range_m": 4.0
+  },
+  {
+   "kind": "imu",
+   "position": "internal"
+  }
+ ],
+ "component_mass_kg": {},
+ "wiring": {
+  "nodes": [
+   {
+    "deck": true,
+    "id": "battery",
+    "kit": null,
+    "label": "Battery — 3S LiPo 2200 mAh",
+    "rated_max_v": null,
+    "req_label": "11.1 V"
+   },
+   {
+    "deck": true,
+    "id": "regulator",
+    "kit": null,
+    "label": "5 V buck converter",
+    "rated_max_v": 24,
+    "req_label": "out 5 V · in ≤ 24 V",
+    "output_current_a": 5.0
+   },
+   {
+    "deck": true,
+    "id": "jetson",
+    "kit": null,
+    "label": "NVIDIA Jetson Orin Nano developer kit",
+    "rated_max_v": null,
+    "req_label": "DC jack: check its range",
+    "board": true,
+    "role": "brain",
+    "logic_v": 3.3
+   },
+   {
+    "deck": true,
+    "id": "shifter",
+    "kit": null,
+    "label": "Logic level shifter, 4-channel (BSS138)",
+    "rated_max_v": null,
+    "req_label": "LV 3.3 V · HV 5 V",
+    "logic_v": [
+     3.3,
+     5
+    ],
+    "level_shifter": true
+   },
+   {
+    "deck": true,
+    "id": "mega",
+    "kit": null,
+    "label": "Arduino Mega 2560",
+    "rated_max_v": null,
+    "req_label": "5 V",
+    "board": true,
+    "role": "motor controller",
+    "logic_v": 5.0
+   },
+   {
+    "deck": true,
+    "id": "driver",
+    "kit": null,
+    "label": "L298N motor driver",
+    "rated_max_v": 35,
+    "req_label": "in ≤ 35 V",
+    "logic_v": 5.0,
+    "output_current_a": 4.0
+   },
+   {
+    "deck": true,
+    "id": "motors",
+    "kit": "mount",
+    "label": "12 V DC gearmotors ×2 (run on 3S)",
+    "rated_max_v": 12,
+    "req_label": "rated 12 V"
+   },
+   {
+    "deck": false,
+    "id": "sonar",
+    "kit": "ultrasonic",
+    "label": "HC-SR04 ultrasonic ranger",
+    "rated_max_v": null,
+    "req_label": "5 V",
+    "logic_v": 5.0
+   }
+  ],
+  "connections": [
+   {
+    "from": "battery",
+    "kind": "power",
+    "label": "battery rail into the carrier board's DC jack",
+    "to": "jetson",
+    "volts": 11.1
+   },
+   {
+    "from": "battery",
+    "kind": "power",
+    "label": "battery rail",
+    "to": "regulator",
+    "volts": 11.1
+   },
+   {
+    "from": "battery",
+    "kind": "power",
+    "label": "battery rail (motor power)",
+    "to": "driver",
+    "volts": 11.1
+   },
+   {
+    "from": "regulator",
+    "kind": "power",
+    "label": "5 V rail",
+    "to": "mega",
+    "volts": 5.0
+   },
+   {
+    "from": "regulator",
+    "kind": "power",
+    "label": "5 V rail",
+    "to": "sonar",
+    "volts": 5.0
+   },
+   {
+    "from": "jetson",
+    "kind": "data",
+    "label": "UART TX/RX (3.3 V side)",
+    "to": "shifter",
+    "volts": null,
+    "bus": "uart",
+    "ground_shared": true
+   },
+   {
+    "from": "shifter",
+    "kind": "data",
+    "label": "UART TX/RX (5 V side)",
+    "to": "mega",
+    "volts": null,
+    "bus": "uart",
+    "ground_shared": true
+   },
+   {
+    "from": "mega",
+    "kind": "data",
+    "label": "PWM + direction",
+    "to": "driver",
+    "volts": null,
+    "bus": "pwm"
+   },
+   {
+    "from": "driver",
+    "kind": "power",
+    "label": "PWM output — duty-limited, not a fixed rail",
+    "to": "motors",
+    "volts": null
+   },
+   {
+    "from": "mega",
+    "kind": "data",
+    "label": "trigger + echo",
+    "to": "sonar",
+    "volts": null,
+    "bus": "gpio"
+   }
+  ],
+  "note": "The Jetson's 40-pin header is 3.3 V and the Mega is 5 V, so the UART runs through a BSS138 level shifter, with GND tied between all three. Using USB instead of the UART would remove the shifter."
+ }
+}

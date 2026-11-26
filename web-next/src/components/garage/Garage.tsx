@@ -34,6 +34,7 @@ import { HealthGauges, TestRun } from './InstrumentPanel';
 import SimulateTab from './SimulateTab';
 import DriveTrainTab from './DriveTrainTab';
 import { VEX_STARTERS, type VexStarter } from '@/lib/vexStarters';
+import { BOARD_STARTERS } from '@/lib/boardStarters';
 import SimulationWorkspace,{SavedSimulationRuns} from '@/components/simulation/SimulationWorkspace';
 import OverviewTurntable, { hasBody } from './OverviewTurntable';
 import { OverviewMedia } from './PhotoSpin';
@@ -166,6 +167,17 @@ function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, sp
   const [scanOpen, setScanOpen] = useState(false);
   const [vexOpen, setVexOpen] = useState(false);
   const [vexError, setVexError] = useState('');
+  const [boardsOpen, setBoardsOpen] = useState(false);
+  const [boardsError, setBoardsError] = useState('');
+  const startBoards = async (s: { file: string; name: string }) => {
+    setBoardsError('');
+    try {
+      const res = await fetch(assetPath('examples/' + s.file));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const spec = await res.json() as Spec;
+      onAdd(String(spec.name || s.name), spec, 'starter', `Multi-board starter (examples/${s.file}): catalogue parts; mass and size are typical values, not measurements.`);
+    } catch (e) { setBoardsError(`Couldn't load the ${s.name} starter: ${(e as Error).message}`); }
+  };
   const startVex = async (s: VexStarter) => {
     setVexError('');
     try {
@@ -192,7 +204,20 @@ function AddRobot({ onAdd, firstRobot, onOpenRobot }: { onAdd: (name: string, sp
         <button type="button" className="btn btn-sm" aria-expanded={scanOpen} onClick={() => setScanOpen((o) => !o)}>Add a scan through Wrench</button>
         <Link href="/scan/" className="btn btn-sm">Connect Intel RealSense camera</Link>
         <button type="button" className="btn btn-sm" aria-expanded={vexOpen} onClick={() => setVexOpen((o) => !o)}>Start a VEX robot</button>
+        <button type="button" className="btn btn-sm" aria-expanded={boardsOpen} onClick={() => setBoardsOpen((o) => !o)}>Start a multi-board robot</button>
       </div>
+      {boardsOpen && (
+        <div className="garage-vex">
+          <div className="garage-vex-list">
+            {BOARD_STARTERS.map((s) => (
+              <button key={s.file} type="button" className="garage-vex-card" onClick={() => void startBoards(s)}>
+                <strong>{s.name}</strong><span className="faint g-small">{s.blurb}</span>
+              </button>
+            ))}
+          </div>
+          {boardsError && <p className="g-error" role="alert">{boardsError}</p>}
+        </div>
+      )}
       {vexOpen && (
         <div className="garage-vex">
           <p className="g-small">VEX robots share one kit but differ most in the drive base. Pick one to start; you can change motors, cartridges and gears on V5 robots later in the Drive train tab, which also checks the robot against this season&apos;s competition rules.</p>

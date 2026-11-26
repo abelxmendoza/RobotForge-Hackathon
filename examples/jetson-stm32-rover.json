@@ -1,0 +1,171 @@
+{
+ "name": "Jetson + STM32 rover",
+ "description": "Starter multi-board rover: an NVIDIA Jetson Orin Nano for vision and planning, talking over USB to an STM32 Nucleo-F446RE that runs the motors and reads the encoders, a TB6612FNG driver, two 12 V gearmotors and a RealSense depth camera. Parts are RobotForge catalogue parts; mass and size are typical values for a small two-wheel rover with a caster, not measurements of one robot.",
+ "drivetrain": "differential",
+ "length_m": 0.3,
+ "width_m": 0.24,
+ "height_m": 0.16,
+ "ground_clearance_m": 0.03,
+ "wheel": {
+  "count": 2,
+  "diameter_m": 0.1,
+  "driven": true,
+  "width_m": 0.032
+ },
+ "motor": {
+  "count": 2,
+  "kind": "dc_gearmotor",
+  "stall_torque_nm": 0.8,
+  "voltage_v": 11.1
+ },
+ "battery": {
+  "capacity_mah": 2200,
+  "chemistry": "lipo",
+  "voltage_v": 11.1
+ },
+ "mass_kg": 2.4,
+ "sensors": [
+  {
+   "kind": "depth_camera",
+   "position": "front",
+   "range_m": null
+  },
+  {
+   "kind": "imu",
+   "position": "internal"
+  }
+ ],
+ "component_mass_kg": {},
+ "wiring": {
+  "nodes": [
+   {
+    "deck": true,
+    "id": "battery",
+    "kit": null,
+    "label": "Battery — 3S LiPo 2200 mAh",
+    "rated_max_v": null,
+    "req_label": "11.1 V"
+   },
+   {
+    "deck": true,
+    "id": "regulator",
+    "kit": null,
+    "label": "5 V buck converter",
+    "rated_max_v": 24,
+    "req_label": "out 5 V · in ≤ 24 V",
+    "output_current_a": 5.0
+   },
+   {
+    "deck": true,
+    "id": "jetson",
+    "kit": null,
+    "label": "NVIDIA Jetson Orin Nano developer kit",
+    "rated_max_v": null,
+    "req_label": "DC jack: check its range",
+    "board": true,
+    "role": "brain",
+    "logic_v": 3.3
+   },
+   {
+    "deck": true,
+    "id": "stm32",
+    "kit": null,
+    "label": "STM32 Nucleo-64 F446RE",
+    "rated_max_v": null,
+    "req_label": "5 V over USB",
+    "board": true,
+    "role": "motor controller",
+    "logic_v": 3.3,
+    "five_v_tolerant": "FT pins only (see the STM32F446 datasheet pin table)"
+   },
+   {
+    "deck": true,
+    "id": "driver",
+    "kit": null,
+    "label": "TB6612FNG dual motor driver",
+    "rated_max_v": 13.5,
+    "req_label": "VM ≤ 13.5 V",
+    "logic_v": 3.3
+   },
+   {
+    "deck": true,
+    "id": "motors",
+    "kit": "mount",
+    "label": "12 V DC gearmotors ×2 (run on 3S)",
+    "rated_max_v": 12,
+    "req_label": "rated 12 V"
+   },
+   {
+    "deck": false,
+    "id": "camera",
+    "kit": "camera",
+    "label": "Intel RealSense D435 depth camera",
+    "rated_max_v": null,
+    "req_label": "powered over USB"
+   }
+  ],
+  "connections": [
+   {
+    "from": "battery",
+    "kind": "power",
+    "label": "battery rail into the carrier board's DC jack",
+    "to": "jetson",
+    "volts": 11.1
+   },
+   {
+    "from": "battery",
+    "kind": "power",
+    "label": "battery rail (motor power)",
+    "to": "driver",
+    "volts": 11.1
+   },
+   {
+    "from": "jetson",
+    "kind": "power",
+    "label": "USB bus power",
+    "to": "stm32",
+    "volts": 5.0
+   },
+   {
+    "from": "jetson",
+    "kind": "data",
+    "label": "USB (virtual serial)",
+    "to": "stm32",
+    "volts": null,
+    "bus": "usb"
+   },
+   {
+    "from": "stm32",
+    "kind": "data",
+    "label": "PWM + direction",
+    "to": "driver",
+    "volts": null,
+    "bus": "pwm"
+   },
+   {
+    "from": "driver",
+    "kind": "power",
+    "label": "PWM output — duty-limited, not a fixed rail",
+    "to": "motors",
+    "volts": null
+   },
+   {
+    "from": "motors",
+    "kind": "data",
+    "label": "encoder feedback",
+    "to": "stm32",
+    "volts": null,
+    "bus": "gpio"
+   },
+   {
+    "from": "jetson",
+    "kind": "data",
+    "label": "USB 3",
+    "to": "camera",
+    "volts": null,
+    "bus": "usb"
+   }
+  ],
+  "note": "Jetson does vision and planning; the STM32 runs the motor loop in real time and reports encoder counts back over USB serial. USB carries 5 V and ground, so no level shifter or extra ground wire is needed between the two boards. The battery feeds the Jetson carrier board directly: check your carrier board's DC input range before wiring it."
+ }
+}

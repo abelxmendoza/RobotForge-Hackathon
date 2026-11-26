@@ -68,16 +68,17 @@ def test_chat_and_wizard_share_the_wiring_state():
 def test_data_reality_counts():
     doc = json.loads((REPO / "catalog/parts.json").read_text())
     parts = doc["parts"]
-    assert len(parts) == 178  # 150 + 17 VEX V5 + 11 VEX IQ parts (2026-11-10)
+    assert len(parts) == 183  # 150 + 17 VEX V5 + 11 VEX IQ + 5 multi-board parts (2026-11-23)
     with_iface = [
         p for p in parts
         if (p.get("specs") or {}).get("interface")
         or (p.get("specs") or {}).get("interfaces")
     ]
-    # 13 parts record an interface; the port count (of 178) is higher
+    # 31 parts record an interface (13 + every board and bridge, 2026-11-23);
+    # the port count (of 183) is higher
     # because power data (voltage/supply/cells) also makes ports —
     # the exact split is asserted in node, against the real code.
-    assert len(with_iface) == 13
+    assert len(with_iface) == 31
 
 
 # ---------------------------------------------------------------- node units
@@ -104,8 +105,8 @@ const byId = id => partsById.get(id);
 
 // --- port derivation: the data reality ---
 const withPorts = parts.filter(p => W.portsForPart(p).ports.length > 0);
-assert.equal(withPorts.length, 58);  // +3 VEX V5, +1 VEX IQ parts with voltage data (2026-11-10)
-assert.equal(parts.length - withPorts.length, 120);  // 96 + 14 VEX V5 + 10 VEX IQ parts with no port data
+assert.equal(withPorts.length, 72);  // +3 VEX V5, +1 VEX IQ (2026-11-10); +14 boards and bridges (2026-11-23)
+assert.equal(parts.length - withPorts.length, 111);  // parts with no port data
 const bat = W.portsForPart(byId('lipo_4s_5200')).ports;
 assert.deepEqual(bat.map(p => [p.id, p.dir, p.volts]), [['power-out', 'out', 14.8]]);
 const tb = W.portsForPart(byId('driver_tb6612fng')).ports;
@@ -115,9 +116,9 @@ const mg = W.portsForPart(byId('servo_mg996r')).ports;
 assert.equal(mg.find(p => p.id === 'pwm').dir, 'in');
 assert.deepEqual(mg.find(p => p.id === 'power-in').rangeV, [4.8, 7.2]);
 const esp = W.portsForPart(byId('esp32_devkit'));
-assert.deepEqual(esp.ports.map(p => p.bus).sort(), ['i2c', 'pwm', 'spi', 'uart']);
+assert.deepEqual(esp.ports.filter(p => p.type !== 'power').map(p => p.bus).sort(), ['gpio', 'i2c', 'pwm', 'spi', 'uart', 'usb']);
 assert.ok(esp.wireless.includes('Wi-Fi'));
-assert.ok(!esp.ports.some(p => p.type === 'power')); // supply not recorded
+assert.equal(esp.ports.find(p => p.id === 'power-in').volts, 5); // recorded supply line (2026-11-23)
 // No invention: fields that record no connector make no port.
 assert.equal(W.portsForPart(byId('ultrasonic_hcsr04')).ports.length, 0); // logic_v only
 assert.equal(W.portsForPart(byId('stepper_nema17')).ports.length, 0);
@@ -170,7 +171,10 @@ assert.ok(!checks.issues.some(i =>
   i.message.includes('into driver_tb6612fng')));
 // The camera has no power input recorded: not flagged, abstained.
 assert.ok(!checks.issues.some(i => i.entryUid === C.uid));
-assert.ok(checks.abstentions.some(a => a.includes('2 parts')));
+// The ESP32 records a 5 V supply line since 2026-11-23, so it is judged
+// (unpowered) and only the camera is left in the abstention.
+assert.ok(checks.issues.some(i => i.kind === 'unpowered' && i.entryUid === E.uid));
+assert.ok(checks.abstentions.some(a => a.includes('1 part with ports')));
 
 // Direct mismatch, both point values recorded.
 let w2 = { connections: [] };
@@ -282,6 +286,35 @@ assert.equal(csvRows.length, w.connections.length);
 assert.ok(csvRows.every(r => r[2].startsWith('wiring · ')));
 assert.ok(W.harnessCsv(entries, w, partsById, nameOf).includes('→'));
 
+// --- multi-board logic levels (2026-11-23) ---
+{
+  const PI = entry('raspberry_pi_5'), UNO = entry('arduino_uno_r3'),
+        LS = entry('level_shifter_bss138'), NU = entry('stm32_nucleo_f446re');
+  const ents = [PI, UNO, LS, NU];
+  let lw = W.EMPTY_WIRING, rr;
+  rr = W.addConnection(ents, lw, partsById, PI.uid, 'uart', UNO.uid, 'uart', mk); assert.ok(rr.ok); lw = rr.wiring;
+  let lc = W.wiringChecks(ents, lw, partsById, nameOf);
+  const lm = lc.issues.find(i => i.kind === 'logic-mismatch');
+  assert.ok(lm && lm.message.includes('3.3 V') && lm.message.includes('5 V'));
+  assert.ok(lc.abstentions.some(a => a.startsWith('ground isn')));
+  // Over USB the same two boards are fine.
+  lw = W.EMPTY_WIRING;
+  rr = W.addConnection(ents, lw, partsById, PI.uid, 'usb', UNO.uid, 'usb', mk); assert.ok(rr.ok); lw = rr.wiring;
+  lc = W.wiringChecks(ents, lw, partsById, nameOf);
+  assert.ok(!lc.issues.some(i => i.kind === 'logic-mismatch'));
+  // Through a level shifter: no warning on either side.
+  lw = W.EMPTY_WIRING;
+  rr = W.addConnection(ents, lw, partsById, PI.uid, 'uart', LS.uid, 'uart', mk); assert.ok(rr.ok); lw = rr.wiring;
+  rr = W.addConnection(ents, lw, partsById, LS.uid, 'uart', UNO.uid, 'uart', mk); assert.ok(rr.ok); lw = rr.wiring;
+  lc = W.wiringChecks(ents, lw, partsById, nameOf);
+  assert.ok(!lc.issues.some(i => i.kind === 'logic-mismatch'));
+  // A 5 V tolerant STM32 gets the "use an FT pin" wording.
+  lw = W.EMPTY_WIRING;
+  rr = W.addConnection(ents, lw, partsById, UNO.uid, 'uart', NU.uid, 'uart', mk); assert.ok(rr.ok); lw = rr.wiring;
+  lc = W.wiringChecks(ents, lw, partsById, nameOf);
+  assert.ok(lc.issues.find(i => i.kind === 'logic-mismatch').evidence.includes('FT pins'));
+  assert.deepEqual(W.portsForPart(byId('level_shifter_bss138')).ports.find(p => p.bus === 'uart').logic, [3.3, 5]);
+}
 console.log('wiring unit checks passed');
 """
 
