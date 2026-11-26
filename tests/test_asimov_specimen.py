@@ -80,9 +80,11 @@ def test_import_facts_are_internally_consistent():
 def test_import_did_not_gate_kit_or_image_the_asimov():
     entry = _entry()
     assert entry["gate_status"]["status"] == "NOT_GATED"
-    assert "image_url" not in entry, (
-        "no hotlinked Menlo photo — its licence terms for reuse "
-        "are not unambiguous (see the manifest honesty notes)")
+    # The photo comes from the official asimov-v1 repo README and is
+    # credited to it (2026-11-23: the owner asked for real photos).
+    assert entry["image_url"].startswith(
+        "https://raw.githubusercontent.com/asimovinc/asimov-v1/")
+    assert "asimov-v1 repo" in entry["image_credit"]
     kits = _load("catalog/parts-kits.json")["kits"]
     assert kits["asimov-1"]["kit"] is None
     assert kits["asimov-1"]["reason"]
