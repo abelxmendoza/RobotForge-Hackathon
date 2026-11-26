@@ -203,8 +203,9 @@ def generate_sdf(spec: RobotSpec, *,
     return "\n".join(out) + "\n"
 
 
-def generate_world(spec: RobotSpec, model_sdf_path: str) -> str:
-    return f'''<?xml version="1.0"?>
+def generate_world(spec: RobotSpec, model_sdf_path: str,
+                   scene: list | None = None) -> str:
+    world = f'''<?xml version="1.0"?>
 <sdf version="1.9">
   <world name="robotforge_world">
     <physics name="default_physics" type="ignored">
@@ -231,6 +232,11 @@ def generate_world(spec: RobotSpec, model_sdf_path: str) -> str:
   </world>
 </sdf>
 '''
+    if scene:
+        from .simready import scene_sdf
+        world = world.replace("  </world>",
+                              scene_sdf(scene) + "  </world>")
+    return world
 
 
 # ------------------------------------------------------------- motion runner
@@ -732,6 +738,7 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
                            drive_m: float = 1.0, speed_mps: float = 0.25,
                            turn_deg: float = 90.0, turn_rate_dps: float = 45.0,
                            wheel_radius_scale: float = 1.0,
+                           scene: list | None = None,
                            embedded_server: bool = False) -> dict:
     """One motion run. With embedded_server=False the twin runs in a
     `gz sim` subprocess (the canonical stack); with True the gz-sim
@@ -744,7 +751,8 @@ def _run_motion_check_once(spec: RobotSpec, workdir: Path, *,
     model.write_text(generate_sdf(
         spec, geometry_wheel_radius_m=
         spec.wheel.diameter_m / 2.0 * wheel_radius_scale))
-    world.write_text(generate_world(spec, str(model.resolve())))
+    world.write_text(generate_world(spec, str(model.resolve()),
+                                    scene=scene))
 
     gz = None
     server = None
@@ -896,6 +904,7 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
                      drive_m: float = 1.0, speed_mps: float = 0.25,
                      turn_deg: float = 90.0, turn_rate_dps: float = 45.0,
                      wheel_radius_scale: float = 1.0,
+                     scene: list | None = None,
                      embedded: bool | None = None) -> dict:
     """Run drive + turn in headless Gazebo; return measured results.
 
@@ -927,7 +936,7 @@ def run_motion_check(spec: RobotSpec, workdir: Path, *,
     _require_gz()
     kwargs = dict(drive_m=drive_m, speed_mps=speed_mps, turn_deg=turn_deg,
                   turn_rate_dps=turn_rate_dps,
-                  wheel_radius_scale=wheel_radius_scale)
+                  wheel_radius_scale=wheel_radius_scale, scene=scene)
     if embedded is not None:
         return _run_motion_check_once(spec, workdir,
                                       embedded_server=embedded, **kwargs)
