@@ -2729,6 +2729,10 @@ ol.forge-list{list-style:decimal;padding-left:20px}
 /* the in-flow demo strip takes ~58px off the studio's height */
 body:has(.demo-bar) .studio{--studio-h:calc(100dvh - 56px - 24px - 58px)}
 
+/* Wire view: the boards line for multi-board robots (2026-11-23). */
+.wv-boards{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin:0 0 var(--s3);font-size:var(--fs-sm)}
+.wv-boards .m{overflow-wrap:anywhere}
+
 /* Wire view: one switch row for the report, facts and notes instead
  * of three stacked dropdowns (2026-11-17 simplify pass). */
 .wv-extra{display:flex;flex-wrap:wrap;gap:var(--s2);margin:0 0 var(--s3)}

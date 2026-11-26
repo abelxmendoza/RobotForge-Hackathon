@@ -1,4 +1,5 @@
 /** Offline checks on recorded quantities. Coverage and severity are independent. */
+import { logicLevelChecks, type LinkWiring } from './boardLinks';
 type RecordData = { [key: string]: unknown };
 interface NodeData { id: string; label: string }
 interface ConnectionData { from: string; to: string; kind: string; cable?: unknown }
@@ -54,6 +55,8 @@ export function harnessPlan(w: HarnessData) {
     const total = currents.reduce<number>((sum, v) => sum + (v ?? 0), 0);
     checks.push({check:'rail_budget',subject:`${n.id} rail`,coverage:rating === undefined || currents.every(v=>v===undefined) ? 'NOT_CHECKED' : missing.length ? 'PARTIAL':'CHECKED',severity:rating !== undefined && total > rating ? 'ERROR':'INFO',missing,detail:rating !== undefined && total > rating ? 'Known branch current already exceeds rated output.' : 'Sum of recorded/resolvable outgoing branch currents; separate voltage rails require separate source nodes.',values:{known_load_a:total,...(rating === undefined ? {}:{rated_output_a:rating})}});
   }
+  /* Board-to-board signals: 3.3 V vs 5 V and shared ground (lib/boardLinks.ts). */
+  checks.push(...logicLevelChecks(w as unknown as LinkWiring));
   return { checks, converterAdvice:'No converter selected. A sourced exact SKU, input operating range, regulated output range, continuous output current at the recorded input/output and thermal conditions, and load current are required. Nominal voltage or a product name alone is insufficient.' };
 }
 const csvCell = (v: unknown) => '"' + text(v).replaceAll('"','""') + '"';

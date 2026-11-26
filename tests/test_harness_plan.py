@@ -8,7 +8,8 @@ REPO = Path(__file__).resolve().parents[1]
 def test_harness_plan(tmp_path):
     source = REPO / 'web-next/src/lib/harnessPlan.ts'
     assert source.exists(), 'Harness planner has not been implemented'
-    (tmp_path / 'harnessPlan.ts').write_text(source.read_text())
+    (tmp_path / 'harnessPlan.ts').write_text(source.read_text().replace("'./boardLinks'", "'./boardLinks.ts'"))
+    (tmp_path / 'boardLinks.ts').write_text((REPO / 'web-next/src/lib/boardLinks.ts').read_text())
     (tmp_path / 'run.mjs').write_text(r'''
 import assert from 'node:assert/strict';
 import { harnessPlan, harnessCSV, wirevizYAML } from './harnessPlan.ts';
@@ -53,6 +54,16 @@ converted.connections[0].current_a=0;
 assert.equal(harnessPlan(converted).checks.find(c=>c.check==='voltage_drop').values.drop_v,0);
 w.connections.push({from:'load',to:'battery',kind:'power'});
 assert.equal(harnessPlan(w).checks.find(c=>c.check==='rail_budget').coverage,'NOT_CHECKED');
+// Two boards on a UART: 3.3 V vs 5 V warns until a shifter is recorded.
+const duo = {nodes:[{id:'pi',label:'Raspberry Pi 5',logic_v:3.3},{id:'uno',label:'Arduino Uno',logic_v:5}],connections:[{from:'pi',to:'uno',kind:'data',label:'UART'}]};
+const lv = harnessPlan(duo).checks.find(c=>c.check==='logic_levels');
+assert.equal(lv.severity,'WARN'); assert.equal(lv.coverage,'CHECKED');
+assert.equal(harnessPlan(duo).checks.find(c=>c.check==='shared_ground').coverage,'NOT_CHECKED');
+duo.connections[0].level_shifted = true; duo.connections[0].ground_shared = true;
+assert.equal(harnessPlan(duo).checks.find(c=>c.check==='logic_levels').severity,'INFO');
+assert.equal(harnessPlan(duo).checks.find(c=>c.check==='shared_ground').coverage,'CHECKED');
+duo.connections[0].label = 'USB';
+assert.equal(harnessPlan(duo).checks.filter(c=>c.check==='logic_levels').length,0);
 ''')
     result = subprocess.run([shutil.which('node') or 'node', '--experimental-strip-types', str(tmp_path / 'run.mjs')], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
