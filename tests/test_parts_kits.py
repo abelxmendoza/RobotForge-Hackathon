@@ -77,6 +77,25 @@ def test_kitless_entries_are_the_wheelless_classes():
         "reachy-mini",
         "tesla-optimus-gen-2",
         "unitree-h1",
+        # Freenove kits (published parts lists only, no spec file)
+        "freenove-4wd-smart-car-raspberry-pi",
+        "freenove-mecanum-wheel-car-raspberry-pi",
+        "freenove-3wd-smart-car-raspberry-pi",
+        "freenove-tank-robot-raspberry-pi",
+        "freenove-robot-dog-raspberry-pi",
+        "freenove-robot-dog-esp32",
+        "freenove-big-hexapod-raspberry-pi",
+        "freenove-hexapod-arduino",
+        "freenove-quadruped-arduino",
+        "freenove-robot-ant-arduino",
+        "freenove-bipedal-robot-pico",
+        "freenove-4wd-car-arduino",
+        "freenove-4wd-car-esp32",
+        "freenove-4wd-car-pico",
+        "freenove-mecanum-wheel-car-pico",
+        "freenove-omni-wheel-car-pico",
+        "freenove-robot-arm-raspberry-pi",
+        "freenove-micro-rover-micro-bit",
     }
 
 

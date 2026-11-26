@@ -74,13 +74,16 @@
      (mirrors engine.ts GENERIC_NAME_TOKENS). */
   var GENERIC_NAME_TOKENS = ['drive', 'base', 'wheel', 'speed', 'tank',
     'pushing', 'dynamics', 'electric', 'hydraulic', 'mini', 'car', 'arm',
-    'gen', 'starter'];
+    'gen', 'starter', 'rover', 'robot', 'smart', 'hexapod', 'quadruped',
+    'mecanum', 'omni', 'bipedal', 'dog', 'ant'];
   function genericNameToken(t) {
     return GENERIC_NAME_TOKENS.indexOf(t) !== -1 || /^\d+$/.test(t);
   }
 
   function robotKeys(robot) {
-    var toks = tokens(robot.name);
+    /* a board tag like "(Raspberry Pi)" or "(ESP32)" is not a name:
+       "raspberry pi" must not pick a Freenove kit */
+    var toks = tokens(String(robot.name).replace(/\([^)]*\)/g, ' '));
     var keys = [{ text: robot.name, score: 10 }];
     if (toks.length > 1) {
       var last = toks[toks.length - 1];
@@ -110,6 +113,11 @@
       });
       if (best) hits.push({ robot: r, score: best });
     });
+    /* An exact full name wins: "Freenove 4WD Car (Pico)" must not
+       also pull in the ESP32 and Arduino cars through "4wd car". */
+    if (hits.some(function (h) { return h.score >= 10; })) {
+      hits = hits.filter(function (h) { return h.score >= 10; });
+    }
     return hits.sort(function (a, b) { return b.score - a.score; });
   }
 

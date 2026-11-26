@@ -1574,6 +1574,114 @@
           }
         ]
       }
+    },
+    "freenove-4wd-smart-car-raspberry-pi": {
+      "robot": "Freenove 4WD Smart Car (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-mecanum-wheel-car-raspberry-pi": {
+      "robot": "Freenove Mecanum Wheel Car (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-3wd-smart-car-raspberry-pi": {
+      "robot": "Freenove 3WD Smart Car (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-tank-robot-raspberry-pi": {
+      "robot": "Freenove Tank Robot (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-robot-dog-raspberry-pi": {
+      "robot": "Freenove Robot Dog (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-robot-dog-esp32": {
+      "robot": "Freenove Robot Dog (ESP32)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-big-hexapod-raspberry-pi": {
+      "robot": "Freenove Big Hexapod (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-hexapod-arduino": {
+      "robot": "Freenove Hexapod (Arduino)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-quadruped-arduino": {
+      "robot": "Freenove Quadruped (Arduino)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-robot-ant-arduino": {
+      "robot": "Freenove Robot Ant (Arduino)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-bipedal-robot-pico": {
+      "robot": "Freenove Bipedal Robot (Pico)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-4wd-car-arduino": {
+      "robot": "Freenove 4WD Car (Arduino)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-4wd-car-esp32": {
+      "robot": "Freenove 4WD Car (ESP32)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-4wd-car-pico": {
+      "robot": "Freenove 4WD Car (Pico)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-mecanum-wheel-car-pico": {
+      "robot": "Freenove Mecanum Wheel Car (Pico)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-omni-wheel-car-pico": {
+      "robot": "Freenove Omni Wheel Car (Pico)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-robot-arm-raspberry-pi": {
+      "robot": "Freenove Robot Arm (Raspberry Pi)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
+    },
+    "freenove-micro-rover-micro-bit": {
+      "robot": "Freenove Micro:Rover (micro:bit)",
+      "spec_file": null,
+      "kit": null,
+      "reason": "This entry has no spec file, so no kit can be generated."
     }
   }
 }

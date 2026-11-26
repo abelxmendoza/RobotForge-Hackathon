@@ -51,6 +51,78 @@
    "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
    "status": "none"
   },
+  "freenove-3wd-smart-car-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-4wd-car-arduino": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-4wd-car-esp32": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-4wd-car-pico": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-4wd-smart-car-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-big-hexapod-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-bipedal-robot-pico": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-hexapod-arduino": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-mecanum-wheel-car-pico": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-mecanum-wheel-car-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-micro-rover-micro-bit": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-omni-wheel-car-pico": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-quadruped-arduino": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-robot-ant-arduino": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-robot-arm-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-robot-dog-esp32": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-robot-dog-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
+  "freenove-tank-robot-raspberry-pi": {
+   "reason": "No URDF is recorded for this Freenove kit. Its Robodex record holds the kit's published parts list only, with no link masses or collision geometry to check.",
+   "status": "none"
+  },
   "lekiwi": {
    "reason": "No URDF is recorded in the catalogue for this entry. Its Robodex record holds the maker's published figures only, with no link masses or collision geometry to check.",
    "status": "none"
