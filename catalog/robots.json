@@ -1268,6 +1268,551 @@
       "source": "researched",
       "spec_file": "examples/vex-iq-drive-base.json",
       "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "A four-wheel Raspberry Pi car with a pan-tilt camera head. The Pi sits on Freenove's HAT, which carries a PCA9685 servo/PWM driver and an ADS7830 ADC.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi/master/Picture/icon.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Raspberry Pi 5 / 4B / 3B+ recommended (not included) on Freenove's car HAT (PCA9685 PWM driver, ADS7830 ADC)",
+        "Drive": "4 DC gear motors, 4 wheels",
+        "Kit": "Freenove FNK0043",
+        "Sensors": "camera, HC-SR04 ultrasonic, line-tracking module",
+        "Servos": "2 (camera pan and tilt)"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove 4WD Smart Car (Raspberry Pi)",
+      "number": 33,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial(ordinary_wheels).pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0043.",
+        "source_name": "Freenove FNK0043 \u2014 Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "The 4WD Raspberry Pi car on four mecanum wheels, so it can drive sideways. Same HAT, camera head and sensors as the wheeled version.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi/master/Picture/icon1.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Raspberry Pi 5 / 4B / 3B+ recommended (not included) on Freenove's car HAT (PCA9685 PWM driver, ADS7830 ADC)",
+        "Drive": "4 DC gear motors, 4 mecanum wheels",
+        "Kit": "Freenove FNK0043B",
+        "Sensors": "camera, HC-SR04 ultrasonic, line-tracking module",
+        "Servos": "2 (camera pan and tilt)"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove Mecanum Wheel Car (Raspberry Pi)",
+      "number": 34,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial(mecanum_wheels).pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0043B.",
+        "source_name": "Freenove FNK0043B \u2014 Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_4WD_Smart_Car_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Mecanum rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "Freenove's three-wheel Raspberry Pi car: two driven wheels and a caster, a Freenove Smart Car Shield, and a USB camera on servos.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product photo from store.freenove.com (FNK0021)",
+      "image_url": "https://store.freenove.com/cdn/shop/files/FNK0021.MAIN_9674ac4f-dcc9-4193-826f-7c557ea0fc31.jpg?width=960",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Raspberry Pi 4B / 3B+ / 3B (not included) + Freenove Smart Car Shield",
+        "Drive": "2 DC gear motors + 1 driven caster wheel",
+        "Kit": "Freenove FNK0021",
+        "Sensors": "USB camera, HC-SR04 ultrasonic",
+        "Servos": "3"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove 3WD Smart Car (Raspberry Pi)",
+      "number": 35,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0021.",
+        "source_name": "Freenove FNK0021 \u2014 Freenove_Three-wheeled_Smart_Car_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_Three-wheeled_Smart_Car_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Differential rover"
+    },
+    {
+      "class": "Tank robot kit",
+      "description": "A Raspberry Pi crawler on two tracks with a servo gripper that can pick up objects.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Tank_Robot_Kit_for_Raspberry_Pi GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Tank_Robot_Kit_for_Raspberry_Pi/main/Picture/V2.0.jpg",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Raspberry Pi 5 / 4B / 3B+ recommended (not included)",
+        "Drive": "2 DC gear motors, 2 tracks",
+        "Kit": "Freenove FNK0077",
+        "Sensors": "camera, HC-SR04 ultrasonic, line-tracking module",
+        "Servos": "2 (gripper)"
+      },
+      "mobility_class": "Ground \u2014 tracked",
+      "name": "Freenove Tank Robot (Raspberry Pi)",
+      "number": 36,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0077.",
+        "source_name": "Freenove FNK0077 \u2014 Freenove_Tank_Robot_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_Tank_Robot_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Tracked rover"
+    },
+    {
+      "class": "Robot dog kit",
+      "description": "A 12-servo Raspberry Pi robot dog that balances with an MPU6050 IMU and tracks faces and balls with its camera. The Pi drives the servos through a PCA9685 on Freenove's board.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Robot_Dog_Kit_for_Raspberry_Pi GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi/master/Picture/icon.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Raspberry Pi 5 / 4B / 3B+ recommended (not included) on Freenove's board (PCA9685 servo driver, ADS7830 ADC)",
+        "Kit": "Freenove FNK0050",
+        "Sensors": "camera, HC-SR04 ultrasonic, MPU6050 IMU",
+        "Servos": "12 ES08MA II (legs) + 1 S90 (head)"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Robot Dog (Raspberry Pi)",
+      "number": 37,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0050.",
+        "source_name": "Freenove FNK0050 \u2014 Freenove_Robot_Dog_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Robot dog kit",
+      "description": "A 12-servo robot dog run by an ESP32-WROVER with a camera, Wi-Fi and Bluetooth.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Robot_Dog_Kit_for_ESP32 GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Robot_Dog_Kit_for_ESP32/main/Picture/icon.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 flat-top Li-ion, \u2265 10 A discharge (not included)",
+        "Computer": "ESP32-WROVER (camera, Wi-Fi, Bluetooth)",
+        "Kit": "Freenove FNK0062",
+        "Sensors": "camera, ultrasonic, touch sensor",
+        "Servos": "12"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Robot Dog (ESP32)",
+      "number": 38,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0062.",
+        "source_name": "Freenove FNK0062 \u2014 Freenove_Robot_Dog_Kit_for_ESP32",
+        "source_url": "https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_ESP32"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Hexapod kit",
+      "description": "A six-legged Raspberry Pi walker on 18 leg servos, with a movable head carrying the camera and ultrasonic sensor.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Big_Hexapod_Robot_Kit_for_Raspberry_Pi GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Big_Hexapod_Robot_Kit_for_Raspberry_Pi/master/Picture/icon.png",
+      "key_specs": {
+        "Battery": "4 \u00d7 18650 Li-ion, > 15 A discharge (not included)",
+        "Computer": "Raspberry Pi 5 / 4B / 3B+ recommended (not included) on Freenove's board (PCA9685 servo drivers, ADS7830 ADC)",
+        "Kit": "Freenove FNK0052",
+        "Sensors": "camera, HC-SR04 ultrasonic, MPU6050 IMU",
+        "Servos": "18 (legs) + 2 (head)"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Big Hexapod (Raspberry Pi)",
+      "number": 39,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0052.",
+        "source_name": "Freenove FNK0052 \u2014 Freenove_Big_Hexapod_Robot_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_Big_Hexapod_Robot_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Hexapod"
+    },
+    {
+      "class": "Hexapod kit",
+      "description": "A six-legged crawler on 18 servos, run by Freenove's Crawling Robot Controller (programmed as an Arduino Mega) with a WLAN module for app control.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Hexapod_Robot_Kit GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Hexapod_Robot_Kit/master/Pictures/Product.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (V3 kit; not included)",
+        "Computer": "Freenove Crawling Robot Controller (Arduino Mega compatible) + WLAN module",
+        "Kit": "Freenove FNK0031",
+        "Servos": "18"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Hexapod (Arduino)",
+      "number": 40,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial_for_V3.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0031.",
+        "source_name": "Freenove FNK0031 \u2014 Freenove_Hexapod_Robot_Kit",
+        "source_url": "https://github.com/Freenove/Freenove_Hexapod_Robot_Kit"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Hexapod"
+    },
+    {
+      "class": "Quadruped kit",
+      "description": "A four-legged crawler on 12 servos, on the same Crawling Robot Controller as the Freenove hexapod.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Quadruped_Robot_Kit GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Quadruped_Robot_Kit/master/Pictures/Product.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (V3 kit; not included)",
+        "Computer": "Freenove Crawling Robot Controller (Arduino Mega compatible) + WLAN module",
+        "Kit": "Freenove FNK0030",
+        "Servos": "12"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Quadruped (Arduino)",
+      "number": 41,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial_for_V3.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0030.",
+        "source_name": "Freenove FNK0030 \u2014 Freenove_Quadruped_Robot_Kit",
+        "source_url": "https://github.com/Freenove/Freenove_Quadruped_Robot_Kit"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Quadruped"
+    },
+    {
+      "class": "Robot ant kit",
+      "description": "A six-legged ant that walks on just 3 servos, with an Arduino Uno compatible board, dot-matrix eyes and an ultrasonic sensor.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Robot_Ant_Kit GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Robot_Ant_Kit/main/Picture/icon.png",
+      "key_specs": {
+        "Battery": "18650 Li-ion (not included)",
+        "Computer": "Arduino Uno compatible board",
+        "Kit": "Freenove FNK0042",
+        "Sensors": "HC-SR04 ultrasonic",
+        "Servos": "3"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Robot Ant (Arduino)",
+      "number": 42,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0042.",
+        "source_name": "Freenove FNK0042 \u2014 Freenove_Robot_Ant_Kit",
+        "source_url": "https://github.com/Freenove/Freenove_Robot_Ant_Kit"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Hexapod"
+    },
+    {
+      "class": "Biped kit",
+      "description": "A small two-legged walker on 4 servos, run by a Raspberry Pi Pico or Pico W, with LED-matrix eyes and a speaker.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Bipedal_Robot_Kit_for_Raspberry_Pi_Pico GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Bipedal_Robot_Kit_for_Raspberry_Pi_Pico/main/Picture/icon.png",
+      "key_specs": {
+        "Battery": "9 V (6LR61 or rechargeable NiMH; not included)",
+        "Computer": "Raspberry Pi Pico or Pico W (RP2040) + Bluetooth module",
+        "Kit": "Freenove FNK0033",
+        "Sensors": "ultrasonic",
+        "Servos": "4"
+      },
+      "mobility_class": "Legged",
+      "name": "Freenove Bipedal Robot (Pico)",
+      "number": 43,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0033.",
+        "source_name": "Freenove FNK0033 \u2014 Freenove_Bipedal_Robot_Kit_for_Raspberry_Pi_Pico",
+        "source_url": "https://github.com/Freenove/Freenove_Bipedal_Robot_Kit_for_Raspberry_Pi_Pico"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Biped"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "A four-wheel car on an Arduino Uno compatible board: line tracking, obstacle avoidance and IR remote control.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_4WD_Car_Kit GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_4WD_Car_Kit/master/Images/freenove-4wd-car.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Arduino Uno compatible board",
+        "Drive": "4 DC motors, 4 wheels",
+        "Kit": "Freenove FNK0041",
+        "Sensors": "ultrasonic, line-tracking module, IR receiver",
+        "Servos": "1 (ultrasonic head)"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove 4WD Car (Arduino)",
+      "number": 44,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0041.",
+        "source_name": "Freenove FNK0041 \u2014 Freenove_4WD_Car_Kit",
+        "source_url": "https://github.com/Freenove/Freenove_4WD_Car_Kit"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "A four-wheel car run by an ESP32 with a camera, Wi-Fi and Bluetooth, plus a dot-matrix face.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_4WD_Car_Kit_for_ESP32 GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_4WD_Car_Kit_for_ESP32/master/Picture/icon.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion, > 3 A discharge (not included)",
+        "Computer": "ESP32 (camera, Wi-Fi, Bluetooth)",
+        "Drive": "4 DC gear motors, 4 wheels",
+        "Kit": "Freenove FNK0053",
+        "Sensors": "camera, HC-SR04 ultrasonic, line-tracking module",
+        "Servos": "2"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove 4WD Car (ESP32)",
+      "number": 45,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0053.",
+        "source_name": "Freenove FNK0053 \u2014 Freenove_4WD_Car_Kit_for_ESP32",
+        "source_url": "https://github.com/Freenove/Freenove_4WD_Car_Kit_for_ESP32"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "A four-wheel car run by a Raspberry Pi Pico or Pico W, with a dot-matrix face, line tracking and obstacle avoidance.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico/main/Picture/icon.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion, > 3 A discharge (not included)",
+        "Computer": "Raspberry Pi Pico or Pico W (RP2040)",
+        "Drive": "4 DC gear motors, 4 wheels",
+        "Kit": "Freenove FNK0089",
+        "Sensors": "ultrasonic, line-tracking module, IR receiver",
+        "Servos": "1"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove 4WD Car (Pico)",
+      "number": 46,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Ordinary_wheels/Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0089.",
+        "source_name": "Freenove FNK0089 \u2014 Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico",
+        "source_url": "https://github.com/Freenove/Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Skid-steer rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "The Pico car on four mecanum wheels, so it can drive sideways.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico/main/Picture/icon1.png",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion, > 3 A discharge (not included)",
+        "Computer": "Raspberry Pi Pico or Pico W (RP2040)",
+        "Drive": "4 DC gear motors, 4 mecanum wheels",
+        "Kit": "Freenove FNK0089H",
+        "Sensors": "ultrasonic, line-tracking module, IR receiver",
+        "Servos": "1"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove Mecanum Wheel Car (Pico)",
+      "number": 47,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Mecanum_wheels/Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0089H.",
+        "source_name": "Freenove FNK0089H \u2014 Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico",
+        "source_url": "https://github.com/Freenove/Freenove_4WD_Car_Kit_for_Raspberry_Pi_Pico"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Mecanum rover"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "A Pico car on omni wheels with encoder motors, built as a 3-wheel or 4-wheel robot, with an MPU6050 and a compass for heading.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product photo from store.freenove.com (FNK0097)",
+      "image_url": "https://store.freenove.com/cdn/shop/files/FNK0097C.MAIN_4e4f1b2e-f4de-4e06-8ab2-957f235c7950.jpg?width=960",
+      "key_specs": {
+        "Battery": "2 \u00d7 18650 Li-ion, > 3 A discharge (not included)",
+        "Computer": "Raspberry Pi Pico / Pico 2 / W (RP2040 class)",
+        "Drive": "4 TT motors with encoders, 4 omni wheels (or a 3-wheel build)",
+        "Kit": "Freenove FNK0097",
+        "Sensors": "MPU6050 accelerometer/gyro, compass, ultrasonic"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove Omni Wheel Car (Pico)",
+      "number": 48,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Four-Wheel/Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0097.",
+        "source_name": "Freenove FNK0097 \u2014 Freenove_Omni_Wheel_Car_Kit_for_Raspberry_Pi_Pico",
+        "source_url": "https://github.com/Freenove/Freenove_Omni_Wheel_Car_Kit_for_Raspberry_Pi_Pico"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Omni-wheel rover"
+    },
+    {
+      "class": "Robot arm kit",
+      "description": "A metal desktop arm on three stepper motors (A4988-class drivers) and a servo gripper, run by a Raspberry Pi. It can grip or draw, and record and replay moves.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Robot_Arm_Kit_for_Raspberry_Pi GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Robot_Arm_Kit_for_Raspberry_Pi/main/Picture/FNK0036.jpg",
+      "key_specs": {
+        "Actuators": "3 stepper motors + 1 servo (gripper)",
+        "Battery": "3 \u00d7 18650 Li-ion (not included)",
+        "Computer": "Raspberry Pi 5 / 4B / 3B+ recommended (not included)",
+        "Kit": "Freenove FNK0036"
+      },
+      "mobility_class": "Stationary",
+      "name": "Freenove Robot Arm (Raspberry Pi)",
+      "number": 49,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0036.",
+        "source_name": "Freenove FNK0036 \u2014 Freenove_Robot_Arm_Kit_for_Raspberry_Pi",
+        "source_url": "https://github.com/Freenove/Freenove_Robot_Arm_Kit_for_Raspberry_Pi"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Robotic arm"
+    },
+    {
+      "class": "Smart car kit",
+      "description": "A small two-motor rover for the BBC micro:bit V2, programmed in blocks or Python.",
+      "gate_status": {
+        "note": "Not gated. Specs come from the kit's own tutorial parts list; no RobotForge run has been recorded for it.",
+        "status": "NOT_GATED"
+      },
+      "image_credit": "Photo: Freenove \u2014 official product picture from the Freenove_Micro_Rover GitHub repository (CC BY-NC-SA 3.0)",
+      "image_url": "https://raw.githubusercontent.com/Freenove/Freenove_Micro_Rover/master/Picture/icon.png",
+      "key_specs": {
+        "Battery": "1 \u00d7 18650 Li-ion",
+        "Computer": "BBC micro:bit V2 (not included)",
+        "Drive": "2 gear motors",
+        "Kit": "Freenove FNK0037",
+        "Sensors": "ultrasonic, 3 line-tracking sensors, 2 light sensors"
+      },
+      "mobility_class": "Ground \u2014 wheeled",
+      "name": "Freenove Micro:Rover (micro:bit)",
+      "number": 50,
+      "provenance": {
+        "collection": "Freenove",
+        "license": "CC BY-NC-SA 3.0 (Freenove repository licence)",
+        "note": "Parts from the kit tutorial (Tutorial.pdf) in Freenove's repo; board and features from the Freenove store listing for FNK0037.",
+        "source_name": "Freenove FNK0037 \u2014 Freenove_Micro_Rover",
+        "source_url": "https://github.com/Freenove/Freenove_Micro_Rover"
+      },
+      "source": "researched",
+      "spec_file": null,
+      "subtype": "Differential rover"
     }
   ]
 }

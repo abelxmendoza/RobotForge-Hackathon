@@ -54,6 +54,7 @@ QUESTIONS = [
     "Tell me about TurtleBot3 Burger",
     "Rc car",
     "its an RC car",
+    "What battery does Freenove 4WD Car (Pico) need?",
 ]
 
 
@@ -142,3 +143,12 @@ def test_naming_a_kind_lays_out_its_build():
     for q in ("Rc car", "its an RC car"):
         assert "kind:ackermann" in out[q]["hits"], out[q]
 
+
+
+def test_exact_robot_name_beats_shared_aliases():
+    answers = _ask()
+    if answers is None:
+        return
+    a = answers["What battery does Freenove 4WD Car (Pico) need?"]
+    robots = [h for h in a["hits"] if h.startswith("robot:")]
+    assert robots == ["robot:freenove-4wd-car-pico"], robots

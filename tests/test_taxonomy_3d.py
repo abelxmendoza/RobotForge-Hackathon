@@ -66,6 +66,24 @@ EXPECTED = {
     "VEX V5 Pushing Drive": ("Ground — wheeled", "Skid-steer rover"),
     "VEX V5 Mecanum Drive": ("Ground — wheeled", "Mecanum rover"),
     "VEX IQ Drivebase": ("Ground — wheeled", "Skid-steer rover"),
+    "Freenove 4WD Smart Car (Raspberry Pi)": ("Ground — wheeled", "Skid-steer rover"),
+    "Freenove Mecanum Wheel Car (Raspberry Pi)": ("Ground — wheeled", "Mecanum rover"),
+    "Freenove 3WD Smart Car (Raspberry Pi)": ("Ground — wheeled", "Differential rover"),
+    "Freenove Tank Robot (Raspberry Pi)": ("Ground — tracked", "Tracked rover"),
+    "Freenove Robot Dog (Raspberry Pi)": ("Legged", "Quadruped"),
+    "Freenove Robot Dog (ESP32)": ("Legged", "Quadruped"),
+    "Freenove Big Hexapod (Raspberry Pi)": ("Legged", "Hexapod"),
+    "Freenove Hexapod (Arduino)": ("Legged", "Hexapod"),
+    "Freenove Quadruped (Arduino)": ("Legged", "Quadruped"),
+    "Freenove Robot Ant (Arduino)": ("Legged", "Hexapod"),
+    "Freenove Bipedal Robot (Pico)": ("Legged", "Biped"),
+    "Freenove 4WD Car (Arduino)": ("Ground — wheeled", "Skid-steer rover"),
+    "Freenove 4WD Car (ESP32)": ("Ground — wheeled", "Skid-steer rover"),
+    "Freenove 4WD Car (Pico)": ("Ground — wheeled", "Skid-steer rover"),
+    "Freenove Mecanum Wheel Car (Pico)": ("Ground — wheeled", "Mecanum rover"),
+    "Freenove Omni Wheel Car (Pico)": ("Ground — wheeled", "Omni-wheel rover"),
+    "Freenove Robot Arm (Raspberry Pi)": ("Stationary", "Robotic arm"),
+    "Freenove Micro:Rover (micro:bit)": ("Ground — wheeled", "Differential rover"),
 }
 
 
@@ -90,7 +108,7 @@ def test_taxonomy_tree_shape():
         assert len(set(subs)) == len(subs), f"{cls}: duplicate subtype"
     assert mobility_subtypes("Ground — wheeled") == (
         "Differential rover", "Skid-steer rover", "Mecanum rover",
-        "Car-like", "Mobile manipulator")
+        "Car-like", "Omni-wheel rover", "Mobile manipulator")
     assert mobility_subtypes("Nope") == ()
 
 
@@ -126,9 +144,9 @@ def test_robodex_page_shows_class_paths_and_class_filters():
         assert r.class_path in page, r.name
         assert f'data-mobility="{r.mobility_class}"' in page, r.name
     # every populated class is an enabled chip with its count
-    for cls, n in (("Ground — wheeled", 13), ("Aerial", 2),
-                   ("Legged", 13), ("Stationary", 3),
-                   ("Ground — tracked", 1)):
+    for cls, n in (("Ground — wheeled", 22), ("Aerial", 2),
+                   ("Legged", 20), ("Stationary", 4),
+                   ("Ground — tracked", 2)):
         assert f'data-cfilter="{cls}"' in page, cls
         assert f"{cls} ({n})" in page, cls
         assert f"{cls} — none yet" not in page, cls

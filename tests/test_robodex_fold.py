@@ -145,7 +145,7 @@ def test_one_catalog_spot_beside_the_sighting():
     assert spots == ["Boston Dynamics Spot"], spots
     spot = next(r for r in CATALOG["robots"] if r["name"] == "Boston Dynamics Spot")
     assert spot["source"] == "researched"
-    assert len(names) == 32
+    assert len(names) == 50
 
 
 # ------------------------------------------------------- 4. bring into Workshop
